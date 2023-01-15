@@ -1,0 +1,62 @@
+[workspace]
+members = [
+	"contracts/*",
+	"packages/*",
+	"test-contracts/*",
+	]
+
+[profile.release.package.stake-cw20-external-rewards]
+codegen-units = 1
+incremental = false
+
+[profile.release]
+codegen-units = 1
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+panic = 'abort'
+incremental = false
+# Please do not disable these. Doing so will cause overflow checks in
+# all workspace members to stop working. Overflows should be errors.
+overflow-checks = true
+
+[workspace.dependencies]
+cosmwasm-std = { version = "1.1", features = ["ibc3"] }
+cosmwasm-storage = { version = "1.1" }
+cosmwasm-schema = { version = "1.1" }
+cw-utils = "0.16"
+thiserror = { version = "1.0.30" }
+cw-storage-plus = "0.16"
+cw2 = "0.16"
+cw20 = "1.0.1"
+cw721 = "0.16.0"
+cw20-base = "1.0.1"
+cw-multi-test = "0.16"
+cw721-base = "0.16"
+cw-controllers = "1.0.1"
+anyhow = { version = "1.0.51"}
+cw4-group = "1.0.1"
+rand = "0.8"
+cw4 = "1.0.1"
+serde = "1.0"
+
+#agon dependencies
+cw-competition = { path = "./packages/cw-competition" }
+cw-tokens = { path = "./packages/cw-tokens" }
+cw-disbursement = { path = "./packages/cw-disbursement" }
+
+agon-escrow = { path = "./contracts/agon-escrow" }
+cw4-disbursement = { path = "./contracts/cw4-disbursement" }
+
+#dao dependencies
+cw-paginate = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-core = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-macros = { git = "https://github.com/DA0-DA0/dao-contracts"}
+cw20-stake = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-voting-cw20-staked = { git = "https://github.com/DA0-DA0/dao-contracts"}

@@ -1,0 +1,28 @@
+[package]
+name = "cw-tokens"
+version = "0.1.0"
+authors = ["Gabriel Lopez <glopez11193@gmail.com>"]
+edition = "2018"
+description = "A set of utilities for handling multiple token types."
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "artifacts/*",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw20 = { workspace = true }
+cw721 = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
