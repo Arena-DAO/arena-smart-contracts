@@ -7,10 +7,23 @@
     "title": "InstantiateMsg",
     "type": "object",
     "required": [
-      "due"
+      "due",
+      "stake"
     ],
     "properties": {
+      "arbiter": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
       "due": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/MemberBalance"
+        }
+      },
+      "stake": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/MemberBalance"
@@ -265,9 +278,7 @@
             "type": "string"
           },
           "shares": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
+            "$ref": "#/definitions/Uint128"
           }
         },
         "additionalProperties": false
@@ -282,19 +293,6 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "QueryMsg",
     "oneOf": [
-      {
-        "type": "object",
-        "required": [
-          "admin"
-        ],
-        "properties": {
-          "admin": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
       {
         "type": "object",
         "required": [
@@ -360,21 +358,6 @@
   },
   "sudo": null,
   "responses": {
-    "admin": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AdminResponse",
-      "description": "Returned from Admin.query_admin()",
-      "type": "object",
-      "properties": {
-        "admin": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
     "balance": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Array_of_GenericTokenBalance",

@@ -22,9 +22,9 @@ pub enum ExecuteMsg {
     ReceiveNft(Cw721ReceiveMsg),
 }
 
-#[derive(QueryResponses)]
 #[voting_module_query]
 #[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(AdminResponse)]
     Admin {},

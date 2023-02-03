@@ -5,9 +5,10 @@ use cosmwasm_std::{
 use cw4::{Member, MemberListResponse};
 use cw_disbursement::{MemberBalance, MemberShare};
 use cw_utils::{Duration, Expiration};
+use dao_interface::ModuleInstantiateInfo;
 
 use crate::{
-    models::{ModuleInstantiateInfo, Ruleset, Wager, WagerDAO, WagerStatus},
+    models::{Ruleset, Wager, WagerDAO, WagerStatus},
     msg::ExecuteMsg,
     state::{rulesets, COMPETITION_MODULES, DAO, TAX, TEMP_WAGER, WAGERS, WAGER_COUNT},
     ContractError,
@@ -34,7 +35,7 @@ pub fn update_competition_modules(
     }
     let competition_module_msgs: Vec<SubMsg> = to_add
         .into_iter()
-        .map(|info| info.into_wasm_msg(Some(env.contract.address.to_string())))
+        .map(|info| info.into_wasm_msg(env.contract.address.clone()))
         .map(|wasm| SubMsg::reply_on_success(wasm, COMPETITION_MODULE_REPLY_ID))
         .collect();
 
@@ -209,47 +210,17 @@ pub fn create_wager_proposals(
 
     //scan the proposal modules for a valid module
     for proposal_module in proposal_modules {
-        let config_result: StdResult<dao_proposal_multiple::query::ConfigResponse> =
-            deps.querier.query_wasm_smart(
-                proposal_module.address.to_string(),
-                &dao_proposal_multiple::msg::QueryMsg::Config {},
-            );
-
-        if config_result.is_ok() {
-            let creation_policy_result: StdResult<dao_voting::pre_propose::ProposalCreationPolicy> =
-                deps.querier.query_wasm_smart(
-                    proposal_module.address.to_string(),
-                    &dao_proposal_multiple::msg::QueryMsg::ProposalCreationPolicy {},
-                );
-
-            if creation_policy_result.is_err() {
-                continue;
-            }
-            let contract = &env.contract.address;
-            let creation_policy = creation_policy_result.unwrap();
-
-            let can_propose = match creation_policy {
-                dao_voting::pre_propose::ProposalCreationPolicy::Anyone {} => true,
-                dao_voting::pre_propose::ProposalCreationPolicy::Module { addr } => {
-                    addr == contract.clone()
-                }
-            };
-
-            if !can_propose {
-                continue;
-            }
-            let creation_result = create_wager_proposals_inner(
-                deps,
-                contract,
-                dao,
-                &proposal_module.address,
-                wager_id,
-            );
-            if creation_result.is_err() {
-                continue;
-            }
-            return Ok(creation_result.unwrap());
+        let creation_result = create_wager_proposals_inner(
+            deps,
+            &env.contract.address,
+            dao,
+            &proposal_module.address,
+            wager_id,
+        );
+        if creation_result.is_err() {
+            continue;
         }
+        return Ok(creation_result.unwrap());
     }
     //no proposal multiple module was found
     Err(ContractError::NoProposalMultiple {})
@@ -262,6 +233,31 @@ fn create_wager_proposals_inner(
     proposal_module: &Addr,
     wager_id: Uint128,
 ) -> Result<CosmosMsg, ContractError> {
+    let config: dao_proposal_multiple::query::ConfigResponse = deps.querier.query_wasm_smart(
+        proposal_module.to_string(),
+        &dao_proposal_multiple::msg::QueryMsg::Config {},
+    )?;
+
+    let creation_policy: dao_voting::pre_propose::ProposalCreationPolicy =
+        deps.querier.query_wasm_smart(
+            proposal_module.to_string(),
+            &dao_proposal_multiple::msg::QueryMsg::ProposalCreationPolicy {},
+        )?;
+
+    let can_propose = match creation_policy {
+        dao_voting::pre_propose::ProposalCreationPolicy::Anyone {} => true,
+        dao_voting::pre_propose::ProposalCreationPolicy::Module { addr } => {
+            //prepropose
+            addr == contract.clone()
+        }
+    };
+
+    if !can_propose {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Cannot propose in this proposal module.",
+        )));
+    }
+
     let team_addr: Addr = deps
         .querier
         .query_wasm_smart(dao, &dao_core::msg::QueryMsg::VotingModule {})?;

@@ -1,27 +1,15 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Binary, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_utils::Expiration;
 
 #[cw_serde]
 pub struct DumpStateResponse {
-    pub competition_modules: Vec<CompetitionModuleResponse>,
+    pub competition_modules: Vec<CompetitionModule>,
 }
 
 #[cw_serde]
-pub struct CompetitionModuleInfo {
-    pub name: String,
-    pub description: Option<String>,
-}
-
-/// Information needed to instantiate a proposal or voting module.
-#[cw_serde]
-pub struct ModuleInstantiateInfo {
-    /// Code ID of the contract to be instantiated.
-    pub code_id: u64,
-    /// Instantiate message to be used to create the contract.
-    pub msg: Binary,
-    /// Label for the instantiated contract.
-    pub label: String,
+pub struct CompetitionModule {
+    pub addr: Addr,
 }
 
 #[cw_serde]
@@ -48,12 +36,6 @@ pub enum WagerAmount {
     Existing {
         addr: String,
     },
-}
-
-#[cw_serde]
-pub struct CompetitionModuleResponse {
-    pub addr: Addr,
-    pub info: CompetitionModuleInfo,
 }
 
 #[cw_serde]

@@ -1,15 +1,13 @@
-use crate::models::{
-    CompetitionModuleInfo, DumpStateResponse, ModuleInstantiateInfo, Ruleset, WagerDAO,
-};
+use crate::models::{CompetitionModule, DumpStateResponse, Ruleset, WagerDAO};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_disbursement::{MemberBalance, MemberShare};
 use cw_utils::Expiration;
+use dao_interface::ModuleInstantiateInfo;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// Instantiate information for the contract's
-    /// competition modules.
+    pub dao: String,
     pub competition_modules_instantiate_info: Vec<ModuleInstantiateInfo>,
     pub rulesets: Vec<Ruleset>,
 }
@@ -58,7 +56,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(Vec<CompetitionModuleInfo>)]
+    #[returns(Vec<CompetitionModule>)]
     CompetitionModules {
         start_after: Option<String>,
         limit: Option<u32>,
