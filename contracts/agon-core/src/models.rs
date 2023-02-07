@@ -59,7 +59,7 @@ pub struct Wager {
 
 #[cw_serde]
 pub struct Ruleset {
+    pub id: Uint128,
     pub rules: Vec<String>,
     pub description: String,
-    pub enabled: bool,
 }

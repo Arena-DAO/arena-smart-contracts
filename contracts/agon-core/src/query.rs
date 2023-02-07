@@ -1,9 +1,12 @@
+use std::convert::TryInto;
+
 use crate::{
-    models::{CompetitionModule, DumpStateResponse},
-    state::COMPETITION_MODULES,
+    models::{CompetitionModule, DumpStateResponse, Ruleset},
+    state::{rulesets, COMPETITION_MODULES, TAX},
 };
-use cosmwasm_std::{Deps, StdResult};
+use cosmwasm_std::{Decimal, Deps, Env, Order, StdResult};
 use cw_paginate::paginate_map_values;
+use cw_storage_plus::PrefixBound;
 
 pub fn dump_state(deps: Deps) -> StdResult<DumpStateResponse> {
     Ok(DumpStateResponse {
@@ -27,4 +30,34 @@ pub fn competition_modules(
         limit,
         cosmwasm_std::Order::Descending,
     )?)
+}
+
+pub fn tax(deps: Deps, env: Env, height: Option<u64>) -> StdResult<Decimal> {
+    Ok(TAX
+        .may_load_at_height(deps.storage, height.unwrap_or(env.block.height))?
+        .unwrap_or(Decimal::zero()))
+}
+
+pub fn rulesets_by_description(
+    deps: Deps,
+    skip: Option<u32>,
+    limit: Option<u32>,
+    description: Option<String>,
+) -> StdResult<Vec<Ruleset>> {
+    let limit = limit.unwrap_or(16u32);
+    let skip = skip.unwrap_or_default();
+
+    Ok(rulesets()
+        .idx
+        .description
+        .prefix_range(
+            deps.storage,
+            description.map(PrefixBound::exclusive),
+            None,
+            Order::Ascending,
+        )
+        .skip(skip.try_into().unwrap())
+        .take(limit.try_into().unwrap())
+        .map(|x| x.map(|y| y.1))
+        .collect::<StdResult<_>>()?)
 }

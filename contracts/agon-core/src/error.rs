@@ -2,6 +2,7 @@ use std::num::ParseIntError;
 
 use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
 use cw_utils::ParseReplyError;
+use dao_pre_propose_base::error::PreProposeError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -19,7 +20,7 @@ pub enum ContractError {
     Overflow(#[from] OverflowError),
 
     #[error("{0}")]
-    DecimalExceeded(#[from] DecimalRangeExceeded),
+    DecimalRangeExceeded(#[from] DecimalRangeExceeded),
 
     #[error("{0}")]
     CheckedFromRatio(#[from] CheckedFromRatioError),
@@ -33,8 +34,8 @@ pub enum ContractError {
     #[error("UnknownWagerId")]
     UnknownWagerId { id: u128 },
 
-    #[error("NoProposalMultiple")]
-    NoProposalMultiple {},
+    #[error("{0}")]
+    PrePropose(#[from] PreProposeError),
 
     #[error("Unauthorized")]
     Unauthorized {},

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Order, Response,
-    StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    to_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw4::{Member, MemberListResponse};
 use cw_disbursement::{MemberBalance, MemberShare};
@@ -9,8 +9,8 @@ use dao_interface::ModuleInstantiateInfo;
 
 use crate::{
     models::{Ruleset, Wager, WagerDAO, WagerStatus},
-    msg::ExecuteMsg,
-    state::{rulesets, COMPETITION_MODULES, DAO, TAX, TEMP_WAGER, WAGERS, WAGER_COUNT},
+    msg::{ExecuteExt, ExecuteMsg, PrePropose},
+    state::{rulesets, COMPETITION_MODULES, RULESET_COUNT, TAX, TEMP_WAGER, WAGERS, WAGER_COUNT},
     ContractError,
 };
 
@@ -26,7 +26,7 @@ pub fn update_competition_modules(
     to_add: Vec<ModuleInstantiateInfo>,
     to_remove: Vec<String>,
 ) -> Result<Response, ContractError> {
-    if DAO.load(deps.storage)? != info.sender {
+    if PrePropose::default().dao.load(deps.storage)? != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -42,6 +42,19 @@ pub fn update_competition_modules(
     Ok(Response::new()
         .add_attribute("action", "update_competition_modules")
         .add_submessages(competition_module_msgs))
+}
+
+pub fn update_tax(deps: DepsMut, env: Env, tax: Decimal) -> Result<Response, ContractError> {
+    if tax > Decimal::one() {
+        return Err(ContractError::Std(StdError::GenericErr {
+            msg: "The dao tax cannot be greater than 100%.".to_string(),
+        }));
+    }
+    TAX.save(deps.storage, &tax, env.block.height)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_tax")
+        .add_attribute("tax", tax.to_string()))
 }
 
 pub fn jail_wager(deps: DepsMut, env: Env, id: Uint128) -> Result<Response, ContractError> {
@@ -67,7 +80,7 @@ pub fn jail_wager(deps: DepsMut, env: Env, id: Uint128) -> Result<Response, Cont
         .add_message(create_wager_proposals(
             deps.as_ref(),
             env,
-            &DAO.load(deps.storage)?,
+            &PrePropose::default().dao.load(deps.storage)?,
             id,
         )?))
 }
@@ -86,7 +99,7 @@ pub fn create_wager(
     let wager_count = WAGER_COUNT.update(deps.storage, |x| -> StdResult<_> {
         Ok(x.checked_add(Uint128::one())?)
     })?;
-    let dao = DAO.load(deps.storage)?;
+    let dao = PrePropose::default().dao.load(deps.storage)?;
 
     let mut wager = Wager {
         dao: env.contract.address.clone(),
@@ -199,64 +212,7 @@ pub fn create_wager_proposals(
     dao: &Addr,
     wager_id: Uint128,
 ) -> Result<CosmosMsg, ContractError> {
-    //query for a multiple choice proposal module
-    let proposal_modules: Vec<dao_core::state::ProposalModule> = deps.querier.query_wasm_smart(
-        dao,
-        &dao_core::msg::QueryMsg::ActiveProposalModules {
-            start_after: None,
-            limit: None,
-        },
-    )?;
-
-    //scan the proposal modules for a valid module
-    for proposal_module in proposal_modules {
-        let creation_result = create_wager_proposals_inner(
-            deps,
-            &env.contract.address,
-            dao,
-            &proposal_module.address,
-            wager_id,
-        );
-        if creation_result.is_err() {
-            continue;
-        }
-        return Ok(creation_result.unwrap());
-    }
-    //no proposal multiple module was found
-    Err(ContractError::NoProposalMultiple {})
-}
-
-fn create_wager_proposals_inner(
-    deps: Deps,
-    contract: &Addr,
-    dao: &Addr,
-    proposal_module: &Addr,
-    wager_id: Uint128,
-) -> Result<CosmosMsg, ContractError> {
-    let config: dao_proposal_multiple::query::ConfigResponse = deps.querier.query_wasm_smart(
-        proposal_module.to_string(),
-        &dao_proposal_multiple::msg::QueryMsg::Config {},
-    )?;
-
-    let creation_policy: dao_voting::pre_propose::ProposalCreationPolicy =
-        deps.querier.query_wasm_smart(
-            proposal_module.to_string(),
-            &dao_proposal_multiple::msg::QueryMsg::ProposalCreationPolicy {},
-        )?;
-
-    let can_propose = match creation_policy {
-        dao_voting::pre_propose::ProposalCreationPolicy::Anyone {} => true,
-        dao_voting::pre_propose::ProposalCreationPolicy::Module { addr } => {
-            //prepropose
-            addr == contract.clone()
-        }
-    };
-
-    if !can_propose {
-        return Err(ContractError::Std(StdError::generic_err(
-            "Cannot propose in this proposal module.",
-        )));
-    }
+    let proposal_module = PrePropose::default().proposal_module.load(deps.storage)?;
 
     let team_addr: Addr = deps
         .querier
@@ -278,13 +234,15 @@ fn create_wager_proposals_inner(
                 title: format!("Team {}", team_number),
                 description: "This team is the winner.".to_string(),
                 msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: contract.to_string(),
-                    msg: to_binary(&ExecuteMsg::HandleWager {
-                        id: wager_id,
-                        distribution: Some(vec![MemberShare {
-                            addr: x.addr.clone(),
-                            shares: Uint128::one(),
-                        }]),
+                    contract_addr: env.contract.address.to_string(),
+                    msg: to_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::HandleWager {
+                            id: wager_id,
+                            distribution: Some(vec![MemberShare {
+                                addr: x.addr.clone(),
+                                shares: Uint128::one(),
+                            }]),
+                        },
                     })?,
                     funds: vec![],
                 })],
@@ -312,7 +270,7 @@ pub fn handle_wager(
     distribution: Option<Vec<MemberShare>>,
 ) -> Result<Response, ContractError> {
     let wager = WAGERS.load(deps.storage, id.u128())?;
-    let dao = DAO.load(deps.storage)?;
+    let dao = PrePropose::default().dao.load(deps.storage)?;
 
     match wager.status {
         WagerStatus::Active => {
@@ -373,30 +331,20 @@ pub fn handle_wager(
 pub fn update_rulesets(
     deps: DepsMut,
     to_add: Vec<Ruleset>,
-    to_disable: Vec<Uint128>,
+    to_remove: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
-    for id in to_disable {
-        rulesets().update(deps.storage, id.u128(), |x| -> StdResult<_> {
-            Ok(x.map(|mut ruleset| {
-                ruleset.enabled = false;
-                ruleset
-            })
-            .ok_or(StdError::generic_err("Ruleset not found to be disabled."))?)
-        })?;
+    for id in to_remove {
+        rulesets().remove(deps.storage, id.u128())?;
     }
 
-    let mut id = rulesets()
-        .keys(deps.storage, None, None, Order::Descending)
-        .next()
-        .transpose()?
-        .unwrap_or_default();
-    for mut ruleset in to_add {
-        ruleset.enabled = true;
-        rulesets().save(deps.storage, id, &ruleset)?;
-        id += 1;
+    let mut id = RULESET_COUNT.load(deps.storage)?;
+    for ruleset in to_add {
+        rulesets().save(deps.storage, id.u128(), &ruleset)?;
+        id = id.checked_add(Uint128::one())?;
     }
+    RULESET_COUNT.save(deps.storage, &id)?;
 
     Ok(Response::new()
         .add_attribute("action", "update_rulesets")
-        .add_attribute("rulesets", Uint128::from(id)))
+        .add_attribute("ruleset_count", Uint128::from(id)))
 }

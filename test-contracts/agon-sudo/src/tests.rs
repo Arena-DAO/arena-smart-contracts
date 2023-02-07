@@ -1,4 +1,4 @@
-use cosmwasm_std::{testing::mock_info, to_binary, Addr, Coin, Empty, Uint128};
+use cosmwasm_std::{testing::mock_info, to_binary, Addr, Coin, Decimal, Empty, Uint128};
 use cw20::{Cw20Coin, Cw20ExecuteMsg};
 use cw4_disbursement::{
     contract::{execute, instantiate, query},
@@ -27,6 +27,7 @@ struct Context {
     pub team2: Addr,
     pub team_dao1: Addr,
     pub team_dao2: Addr,
+    pub agon_dao: Addr,
 }
 
 pub fn contract_cw20() -> Box<dyn Contract<Empty>> {
@@ -74,6 +75,26 @@ fn contract_dao_core() -> Box<dyn Contract<Empty>> {
     )
     .with_reply(dao_core::contract::reply)
     .with_migrate(dao_core::contract::migrate);
+    Box::new(contract)
+}
+
+fn contract_agon_core() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        agon_core::contract::execute,
+        agon_core::contract::instantiate,
+        agon_core::contract::query,
+    )
+    .with_reply(agon_core::contract::reply);
+    Box::new(contract)
+}
+
+fn contract_proposal_multiple_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        dao_proposal_multiple::contract::execute,
+        dao_proposal_multiple::contract::instantiate,
+        dao_proposal_multiple::contract::query,
+    )
+    .with_reply(dao_proposal_multiple::contract::reply);
     Box::new(contract)
 }
 
@@ -139,6 +160,8 @@ fn setup_test_case(app: &mut App) -> Context {
     let voting_id = app.store_code(cw20_balances_voting());
     let cw721_id = app.store_code(contract_cw721());
     let cw20_stake_id = app.store_code(contract_cw20_stake());
+    let agon_core_id = app.store_code(contract_agon_core());
+    let proposal_multiple_id = app.store_code(contract_proposal_multiple_contract());
 
     let token = instantiate_cw20(
         app,
@@ -195,6 +218,70 @@ fn setup_test_case(app: &mut App) -> Context {
     let govmod_instantiate = dao_proposal_sudo::msg::InstantiateMsg {
         root: ADDR1.to_string(),
     };
+
+    let agon_dao = instantiate_dao_core(
+        app,
+        dao_core_id,
+        dao_core::msg::InstantiateMsg {
+            admin: None,
+            name: "Agon Protocol".to_string(),
+            description: "Welcome to Decentralized Competition!".to_string(),
+            image_url: None,
+            automatically_add_cw20s: true,
+            automatically_add_cw721s: true,
+            voting_module_instantiate_info: ModuleInstantiateInfo {
+                code_id: voting_id,
+                msg: to_binary(&voting_instantiate).unwrap(),
+                admin: None,
+                label: "voting module".to_string(),
+            },
+            proposal_modules_instantiate_info: vec![
+                ModuleInstantiateInfo {
+                    code_id: govmod_id,
+                    msg: to_binary(&govmod_instantiate).unwrap(),
+                    admin: None,
+                    label: "proposal module".to_string(),
+                },
+                ModuleInstantiateInfo {
+                    code_id: proposal_multiple_id,
+                    msg: to_binary(&dao_proposal_multiple::msg::InstantiateMsg {
+                        voting_strategy:
+                            dao_voting::multiple_choice::VotingStrategy::SingleChoice {
+                                quorum: dao_voting::threshold::PercentageThreshold::Majority {},
+                            },
+                        min_voting_period: None,
+                        max_voting_period: cw_utils::Duration::Time(10000u64),
+                        only_members_execute: false,
+                        allow_revoting: false,
+                        pre_propose_info:
+                            dao_voting::pre_propose::PreProposeInfo::ModuleMayPropose {
+                                info: ModuleInstantiateInfo {
+                                    code_id: agon_core_id,
+                                    msg: to_binary(&agon_core::msg::InstantiateMsg {
+                                        deposit_info: None,
+                                        open_proposal_submission: false,
+                                        extension: agon_core::msg::InstantiateExt {
+                                            competition_modules_instantiate_info: vec![],
+                                            rulesets: vec![],
+                                            tax: Decimal::percent(40),
+                                        },
+                                    })
+                                    .unwrap(),
+                                    admin: None,
+                                    label: "Agon Core".to_string(),
+                                },
+                            },
+                        close_proposal_on_execution_failure: true,
+                    })
+                    .unwrap(),
+                    admin: None,
+                    label: "agon module".to_string(),
+                },
+            ],
+            initial_items: None,
+            dao_uri: None,
+        },
+    );
 
     let team_dao2 = instantiate_dao_core(
         app,
@@ -302,6 +389,7 @@ fn setup_test_case(app: &mut App) -> Context {
         team2,
         team_dao1,
         team_dao2,
+        agon_dao,
     }
 }
 
@@ -328,6 +416,23 @@ fn get_owner_of_nft<T: Into<String>, U: Into<String>>(
     };
     let result: cw721::OwnerOfResponse = app.wrap().query_wasm_smart(contract_addr, &msg).unwrap();
     result.owner
+}
+
+#[test]
+fn initialize_agon() {
+    let mut app = mock_app();
+    let context = setup_test_case(&mut app);
+
+    let result: dao_core::query::GetItemResponse = app
+        .wrap()
+        .query_wasm_smart(
+            context.agon_dao,
+            &dao_core::msg::QueryMsg::GetItem {
+                key: "Agon".to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(result.item.is_some(), true);
 }
 
 #[test]

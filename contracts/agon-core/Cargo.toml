@@ -39,3 +39,4 @@ cw-competition = { workspace = true }
 dao-interface = { workspace = true }
 dao-proposal-multiple = { workspace = true }
 dao-voting = { workspace = true }
+dao-pre-propose-base = { workspace = true }

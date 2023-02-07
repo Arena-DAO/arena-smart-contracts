@@ -17,9 +17,12 @@ library = []
 cosmwasm-std = { workspace = true }
 
 [dev-dependencies]
+agon-core = { workspace = true }
 cw-controllers = { workspace = true }
 cw-utils = { workspace = true }
 dao-interface = { workspace = true }
+dao-proposal-multiple = { workspace = true }
+dao-voting = { workspace = true }
 cw-disbursement = { workspace = true }
 cw4 = { workspace = true }
 cw20 = { workspace = true }

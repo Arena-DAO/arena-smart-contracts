@@ -25,8 +25,6 @@ pub fn rulesets<'a>() -> IndexedMap<'a, u128, Ruleset, RulesetIndexes<'a>> {
     IndexedMap::new("rulesets", indexes)
 }
 
-pub const DAO: Item<Addr> = Item::new("dao");
-//maps a name key to an active competition module
 pub const COMPETITION_MODULES: Map<Addr, CompetitionModule> = Map::new("competition-modules");
 pub const COMPETITION_MODULES_COUNT: Item<Uint128> = Item::new("competition-modules-count");
 pub const WAGERS: Map<u128, Wager> = Map::new("wagers");
@@ -38,4 +36,4 @@ pub const TAX: SnapshotItem<Decimal> = SnapshotItem::new(
     "tax__change",
     cw_storage_plus::Strategy::EveryBlock,
 );
-pub const PROPOSAL_MODULE: Item<Addr> = Item::new("proposal-module");
+pub const RULESET_COUNT: Item<Uint128> = Item::new("ruleset_count");

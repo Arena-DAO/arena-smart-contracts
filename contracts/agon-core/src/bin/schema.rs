@@ -1,4 +1,4 @@
-use agon_core::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use agon_core::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cosmwasm_schema::write_api;
 
 fn main() {
@@ -6,6 +6,5 @@ fn main() {
         instantiate: InstantiateMsg,
         execute: ExecuteMsg,
         query: QueryMsg,
-        migrate: MigrateMsg
     }
 }

@@ -1,72 +1,83 @@
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
-};
-use cw2::set_contract_version;
-use cw_utils::parse_reply_instantiate_data;
-use dao_core::msg::ExecuteMsg as DAOCoreExecuteMsg;
-use dao_interface::{ModuleInstantiateCallback, ModuleInstantiateInfo};
-
 use crate::{
     execute::{
         self, create_wager_proposals, COMPETITION_MODULE_REPLY_ID, COMPETITION_REPLY_ID,
         DAO_REPLY_ID, ESCROW_REPLY_ID,
     },
     models::{CompetitionModule, WagerStatus},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, PrePropose, QueryExt, QueryMsg},
     query,
     state::{
-        COMPETITION_MODULES, COMPETITION_MODULES_COUNT, DAO, PROPOSAL_MODULE, TEMP_WAGER, WAGERS,
+        rulesets, COMPETITION_MODULES, COMPETITION_MODULES_COUNT, RULESET_COUNT, TAX, TEMP_WAGER,
+        WAGERS,
     },
     ContractError,
 };
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_binary, to_binary, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
+    Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+};
+use cw2::set_contract_version;
+use cw_utils::parse_reply_instantiate_data;
+use dao_core::msg::ExecuteMsg as DAOCoreExecuteMsg;
+use dao_interface::ModuleInstantiateCallback;
 
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:agon-core";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const CONTRACT_NAME: &str = "crates.io:dao-pre-propose-multiple";
+pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    let resp =
+        PrePropose::default().instantiate(deps.branch(), env.clone(), info.clone(), msg.clone())?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    let dao = deps.api.addr_validate(&msg.dao)?;
-    Ok(instantiate_contract(
-        deps,
-        &env.contract.address,
-        &dao,
-        &info.sender,
-        msg.competition_modules_instantiate_info,
+    Ok(instantiate_extension(
+        resp,
+        deps.branch(),
+        env,
+        msg.extension,
     )?)
 }
 
-pub fn instantiate_contract(
+pub fn instantiate_extension(
+    prepropose_response: Response,
     deps: DepsMut,
-    contract: &Addr,
-    dao: &Addr,
-    proposal_module: &Addr,
-    competition_modules_instantiate_info: Vec<ModuleInstantiateInfo>,
+    env: Env,
+    extension: InstantiateExt,
 ) -> StdResult<Response> {
-    DAO.save(deps.storage, &dao)?;
-    let msgs: Vec<SubMsg> = competition_modules_instantiate_info
+    let msgs: Vec<SubMsg> = extension
+        .competition_modules_instantiate_info
         .into_iter()
-        .map(|info| info.into_wasm_msg(contract.clone()))
+        .map(|info| info.into_wasm_msg(env.contract.address.clone()))
         .map(|wasm| SubMsg::reply_on_success(wasm, COMPETITION_MODULE_REPLY_ID))
         .collect();
-    PROPOSAL_MODULE.save(deps.storage, proposal_module)?;
-    Ok(Response::new()
+    let dao = PrePropose::default().dao.load(deps.storage)?;
+    if extension.tax > Decimal::one() {
+        return Err(StdError::GenericErr {
+            msg: "The dao tax cannot be greater than 100%.".to_string(),
+        });
+    }
+
+    let mut ruleset_id = 0u128;
+    for ruleset in extension.rulesets {
+        rulesets().save(deps.storage, ruleset_id, &ruleset)?;
+        ruleset_id += 1;
+    }
+    RULESET_COUNT.save(deps.storage, &Uint128::from(ruleset_id))?;
+    TAX.save(deps.storage, &extension.tax, env.block.height)?;
+    Ok(prepropose_response
         .add_submessages(msgs)
         .set_data(to_binary(&ModuleInstantiateCallback {
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: dao.to_string(),
                 msg: to_binary(&DAOCoreExecuteMsg::SetItem {
                     key: "Agon".to_string(),
-                    value: contract.to_string(),
+                    value: env.contract.address.to_string(),
                 })?,
                 funds: vec![],
             })],
@@ -81,35 +92,41 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::UpdateCompetitionModules { to_add, to_disable } => {
-            execute::update_competition_modules(deps, env, info, to_add, to_disable)
-        }
-        ExecuteMsg::CreateWager {
-            wager_dao,
-            expiration,
-            wager_amount,
-            stake,
-            rules,
-            ruleset,
-            escrow_code_id,
-        } => execute::create_wager(
-            deps,
-            env,
-            wager_dao,
-            expiration,
-            escrow_code_id,
-            wager_amount,
-            stake,
-            rules,
-            ruleset,
-        ),
-        ExecuteMsg::HandleWager { id, distribution } => {
-            execute::handle_wager(deps, info, id, distribution)
-        }
-        ExecuteMsg::UpdateRulesets { to_add, to_disable } => {
-            execute::update_rulesets(deps, to_add, to_disable)
-        }
-        ExecuteMsg::JailWager { id } => execute::jail_wager(deps, env, id),
+        ExecuteMsg::Propose { msg: _ } => return Err(ContractError::Unauthorized {}),
+        ExecuteMsg::Extension { msg } => match msg {
+            ExecuteExt::UpdateCompetitionModules { to_add, to_remove } => {
+                execute::update_competition_modules(deps, env, info, to_add, to_remove)
+            }
+            ExecuteExt::CreateWager {
+                wager_dao,
+                expiration,
+                wager_amount,
+                stake,
+                rules,
+                ruleset,
+                escrow_code_id,
+            } => execute::create_wager(
+                deps,
+                env,
+                wager_dao,
+                expiration,
+                escrow_code_id,
+                wager_amount,
+                stake,
+                rules,
+                ruleset,
+            ),
+            ExecuteExt::HandleWager { id, distribution } => {
+                execute::handle_wager(deps, info, id, distribution)
+            }
+            ExecuteExt::UpdateRulesets { to_add, to_disable } => {
+                execute::update_rulesets(deps, to_add, to_disable)
+            }
+            ExecuteExt::JailWager { id } => execute::jail_wager(deps, env, id),
+            ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, env, tax),
+        },
+        // Default pre-propose-base behavior for all other messages
+        _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),
     }
 }
 
@@ -221,16 +238,25 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::CompetitionModules { start_after, limit } => {
-            to_binary(&query::competition_modules(deps, start_after, limit)?)
-        }
-        QueryMsg::DumpState {} => to_binary(&query::dump_state(deps)?),
-        QueryMsg::Rulesets { start_after, limit } => {
-            todo!()
-        }
-        QueryMsg::DAO {} => todo!(),
-        QueryMsg::Tax { height } => todo!(),
+        QueryMsg::QueryExtension { msg } => match msg {
+            QueryExt::CompetitionModules { start_after, limit } => {
+                to_binary(&query::competition_modules(deps, start_after, limit)?)
+            }
+            QueryExt::DumpState {} => to_binary(&query::dump_state(deps)?),
+            QueryExt::Rulesets {
+                skip,
+                limit,
+                description,
+            } => to_binary(&query::rulesets_by_description(
+                deps,
+                skip,
+                limit,
+                description,
+            )?),
+            QueryExt::Tax { height } => to_binary(&query::tax(deps, env, height)?),
+        },
+        _ => PrePropose::default().query(deps, env, msg),
     }
 }
