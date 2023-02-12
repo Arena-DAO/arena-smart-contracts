@@ -1,20 +1,15 @@
 use crate::{
     execute::{self},
-    msg::{ExecuteMsg, MigrateMsg, QueryMsg},
-    query,
-    state::DAO,
-    ContractError,
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    query, ContractError,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
-use cw4_group::{
-    contract::{
-        create, execute_update_members, query_list_members, query_member, query_total_weight,
-    },
-    msg::InstantiateMsg,
+use cw4_group::contract::{
+    create, execute_update_members, query_list_members, query_member, query_total_weight,
 };
 use cw4_group::{
     msg::ExecuteMsg as Cw4GroupExecuteMsg,
@@ -35,8 +30,12 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    create(deps.branch(), msg.admin, msg.members, env.block.height)?;
-    DAO.save(deps.storage, &info.sender)?;
+    create(
+        deps.branch(),
+        Some(info.sender.to_string()),
+        msg.members,
+        env.block.height,
+    )?;
     Ok(Response::default().add_attribute("action", "instantiate"))
 }
 

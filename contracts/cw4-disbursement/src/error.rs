@@ -30,9 +30,6 @@ pub enum ContractError {
     #[error("MemberNotFound")]
     MemberNotFound {},
 
-    #[error("Unauthorized")]
-    Unauthorized {},
-
     #[error("InvalidToken")]
     InvalidToken {},
 

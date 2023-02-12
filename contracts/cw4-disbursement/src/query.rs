@@ -1,16 +1,13 @@
 use cosmwasm_std::{Addr, Deps, Env, StdError, StdResult, Uint128};
 use cw2::get_contract_version;
 use cw4::Member;
-use cw4_group::state::{MEMBERS, TOTAL};
+use cw4_group::state::{ADMIN, MEMBERS, TOTAL};
 use cw_disbursement::DisbursementDataResponse;
 use dao_interface::voting::{
     InfoResponse, TotalPowerAtHeightResponse, VotingPowerAtHeightResponse,
 };
 
-use crate::{
-    model::DumpStateResponse,
-    state::{DAO, DISBURSEMENT_DATA},
-};
+use crate::{model::DumpStateResponse, state::DISBURSEMENT_DATA};
 
 pub fn disbursement_data(deps: Deps, key: Option<String>) -> StdResult<DisbursementDataResponse> {
     if key.is_none() {
@@ -93,5 +90,5 @@ pub fn voting_power_at_height(
 }
 
 pub fn dao(deps: Deps) -> StdResult<Addr> {
-    Ok(DAO.load(deps.storage)?)
+    Ok(ADMIN.get(deps)?.unwrap())
 }
