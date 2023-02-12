@@ -130,7 +130,7 @@ pub fn create_wager(
                     automatically_add_cw721s: true,
                     voting_module_instantiate_info: dao_interface::ModuleInstantiateInfo {
                         code_id: group_code_id,
-                        msg: to_binary(&cw4_disbursement::msg::InstantiateMsg {
+                        msg: to_binary(&cw4_group::msg::InstantiateMsg {
                             members: members
                                 .iter()
                                 .map(|x| Member {
@@ -138,6 +138,7 @@ pub fn create_wager(
                                     weight: 1u64,
                                 })
                                 .collect(),
+                            admin: None,
                         })?,
                         admin: Some(dao_interface::Admin::Address {
                             addr: dao.to_string(),

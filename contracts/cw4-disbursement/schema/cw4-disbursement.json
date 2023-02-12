@@ -10,6 +10,13 @@
       "members"
     ],
     "properties": {
+      "admin": {
+        "description": "The admin is the only account that can update the group state. Omit it to make the group immutable.",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
       "members": {
         "type": "array",
         "items": {

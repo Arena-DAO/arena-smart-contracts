@@ -30,8 +30,8 @@ pub enum ContractError {
     #[error("MemberNotFound")]
     MemberNotFound {},
 
-    #[error("DAONotConfigured")]
-    DAONotConfigured {},
+    #[error("Unauthorized")]
+    Unauthorized {},
 
     #[error("InvalidToken")]
     InvalidToken {},

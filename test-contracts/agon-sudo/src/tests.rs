@@ -2,7 +2,7 @@ use cosmwasm_std::{testing::mock_info, to_binary, Addr, Coin, Decimal, Empty, Ui
 use cw20::{Cw20Coin, Cw20ExecuteMsg};
 use cw4_disbursement::{
     contract::{execute, instantiate, query},
-    msg::{ExecuteMsg, InstantiateMsg},
+    msg::ExecuteMsg,
 };
 use cw721::Cw721ExecuteMsg;
 use cw_disbursement::{CwDisbursementExecuteMsg, MemberShare};
@@ -107,7 +107,12 @@ pub fn contract_cw4_team() -> Box<dyn Contract<Empty>> {
     Box::new(ContractWrapper::new(execute, instantiate, query))
 }
 
-fn instantiate_cw4_team(app: &mut App, code_id: u64, sender: Addr, msg: InstantiateMsg) -> Addr {
+fn instantiate_cw4_team(
+    app: &mut App,
+    code_id: u64,
+    sender: Addr,
+    msg: cw4_group::msg::InstantiateMsg,
+) -> Addr {
     app.instantiate_contract(code_id, sender.clone(), &msg, &[], "cw4-team", None)
         .unwrap()
 }
@@ -314,7 +319,7 @@ fn setup_test_case(app: &mut App) -> Context {
         app,
         cw4_team_id,
         team_dao2.clone(),
-        InstantiateMsg {
+        cw4_group::msg::InstantiateMsg {
             members: vec![
                 cw4::Member {
                     addr: ADDR4.to_string(),
@@ -325,6 +330,7 @@ fn setup_test_case(app: &mut App) -> Context {
                     weight: 1,
                 },
             ],
+            admin: None,
         },
     );
     app.update_block(next_block);
@@ -359,7 +365,7 @@ fn setup_test_case(app: &mut App) -> Context {
         app,
         cw4_team_id,
         team_dao1.clone(),
-        InstantiateMsg {
+        cw4_group::msg::InstantiateMsg {
             members: vec![
                 cw4::Member {
                     addr: ADDR1.to_string(),
@@ -378,6 +384,7 @@ fn setup_test_case(app: &mut App) -> Context {
                     weight: 0,
                 },
             ],
+            admin: None,
         },
     );
     app.update_block(next_block);

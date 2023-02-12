@@ -35,6 +35,7 @@ cw-disbursement = { workspace = true }
 dao-core = { workspace = true }
 agon-escrow = { workspace = true }
 cw4-disbursement = { workspace = true }
+cw4-group = { workspace = true }
 cw-competition = { workspace = true }
 dao-interface = { workspace = true }
 dao-proposal-multiple = { workspace = true }

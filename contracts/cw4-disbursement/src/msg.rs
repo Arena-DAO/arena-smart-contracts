@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cw20::Cw20ReceiveMsg;
-use cw4::{Member, MemberListResponse, MemberResponse, TotalWeightResponse};
+use cw4::{MemberListResponse, MemberResponse, TotalWeightResponse};
 use cw4_group::msg::ExecuteMsg as Cw4GroupExecuteMsg;
 use cw721::Cw721ReceiveMsg;
 use cw_controllers::{AdminResponse, HooksResponse};
@@ -8,11 +8,6 @@ use cw_disbursement::{CwDisbursementExecuteMsg, DisbursementDataResponse};
 use dao_macros::voting_module_query;
 
 use crate::model::DumpStateResponse;
-
-#[cw_serde]
-pub struct InstantiateMsg {
-    pub members: Vec<Member>,
-}
 
 #[cw_serde]
 pub enum ExecuteMsg {
