@@ -92,7 +92,7 @@ fn create_context(app: &mut App) -> Context {
                 }],
             }],
             stake: vec![],
-            arbiter: None,
+            key: "wager1".to_string(),
         },
     );
 

@@ -4,7 +4,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     query,
-    state::{ARBITER, DUE, KEY, STAKE, TOTAL_BALANCE},
+    state::{ADMIN, DUE, KEY, STAKE, TOTAL_BALANCE},
     ContractError,
 };
 use cosmwasm_std::{
@@ -16,7 +16,7 @@ use cw_disbursement::MemberBalance;
 use cw_tokens::{GenericBalanceExtensions, GenericTokenBalance};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:agon-wager";
+const CONTRACT_NAME: &str = "crates.io:agon-escrow";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -27,23 +27,21 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    let arbiter = match msg.arbiter {
-        Some(x) => deps.api.addr_validate(&x)?,
-        None => info.sender,
-    };
-    instantiate_contract(deps, arbiter, msg.due, msg.stake)?;
+    instantiate_contract(deps, info, msg.key, msg.due, msg.stake)?;
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("addr", env.contract.address))
 }
 
 pub fn instantiate_contract(
-    deps: DepsMut,
-    arbiter: Addr,
+    mut deps: DepsMut,
+    info: MessageInfo,
+    key: String,
     due: Vec<MemberBalance>,
     stake: Vec<MemberBalance>,
 ) -> Result<(), ContractError> {
-    ARBITER.save(deps.storage, &arbiter)?;
+    ADMIN.set(deps.branch(), Some(info.sender))?;
+    KEY.save(deps.storage, &key)?;
     let mut stake_set: HashMap<Addr, Vec<GenericTokenBalance>> = HashMap::new();
     for member_balance in stake {
         let addr = deps.api.addr_validate(&member_balance.member)?;
@@ -69,8 +67,6 @@ pub fn instantiate_contract(
         DUE.save(deps.storage, member_balance.0, &member_balance.1)?;
     }
     TOTAL_BALANCE.save(deps.storage, &vec![])?;
-
-    KEY.save(deps.storage, &arbiter)?;
     Ok(())
 }
 
@@ -83,7 +79,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ReceiveNative {} => execute::receive_native(deps, info),
-        ExecuteMsg::Refund {} => execute::refund(deps.storage, deps.querier, &vec![info.sender]),
+        ExecuteMsg::Refund {} => execute::refund(deps, info),
+        ExecuteMsg::Lock {} => execute::lock(deps, info),
+        ExecuteMsg::Unlock {} => execute::unlock(deps, info),
         ExecuteMsg::Receive(cw20_receive_msg) => {
             execute::cw20_receive(deps, info, cw20_receive_msg)
         }
@@ -102,8 +100,10 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::Admin {} => to_binary(&ADMIN.query_admin(deps)?),
         QueryMsg::Balance { member } => to_binary(&query::balance(deps, member)?),
         QueryMsg::Due { member } => to_binary(&query::due(deps, member)?),
         QueryMsg::Total {} => to_binary(&query::total(deps)?),
+        QueryMsg::Stake { member } => to_binary(&query::stake(deps, member)?),
     }
 }

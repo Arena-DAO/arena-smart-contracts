@@ -111,7 +111,7 @@ fn instantiate_cw4_team(
     app: &mut App,
     code_id: u64,
     sender: Addr,
-    msg: cw4_group::msg::InstantiateMsg,
+    msg: cw4_disbursement::msg::InstantiateMsg,
 ) -> Addr {
     app.instantiate_contract(code_id, sender.clone(), &msg, &[], "cw4-team", None)
         .unwrap()
@@ -319,7 +319,7 @@ fn setup_test_case(app: &mut App) -> Context {
         app,
         cw4_team_id,
         team_dao2.clone(),
-        cw4_group::msg::InstantiateMsg {
+        cw4_disbursement::msg::InstantiateMsg {
             members: vec![
                 cw4::Member {
                     addr: ADDR4.to_string(),
@@ -330,7 +330,6 @@ fn setup_test_case(app: &mut App) -> Context {
                     weight: 1,
                 },
             ],
-            admin: None,
         },
     );
     app.update_block(next_block);
@@ -365,7 +364,7 @@ fn setup_test_case(app: &mut App) -> Context {
         app,
         cw4_team_id,
         team_dao1.clone(),
-        cw4_group::msg::InstantiateMsg {
+        cw4_disbursement::msg::InstantiateMsg {
             members: vec![
                 cw4::Member {
                     addr: ADDR1.to_string(),
@@ -384,7 +383,6 @@ fn setup_test_case(app: &mut App) -> Context {
                     weight: 0,
                 },
             ],
-            admin: None,
         },
     );
     app.update_block(next_block);
@@ -446,7 +444,6 @@ fn initialize_agon() {
 fn disbursement_handle_cw20() {
     let mut app = mock_app();
     let context = setup_test_case(&mut app);
-    let info = mock_info(&WAGER1, &[]);
 
     //set disbursement data
     let disbursement_data = vec![
@@ -463,7 +460,7 @@ fn disbursement_handle_cw20() {
         disbursement_data: disbursement_data.clone(),
         key: WAGER1.to_string(),
     });
-    app.execute_contract(info.sender.clone(), context.team2.clone(), &msg, &[])
+    app.execute_contract(context.team_dao2.clone(), context.team2.clone(), &msg, &[])
         .unwrap();
 
     //set disbursement data
@@ -485,7 +482,7 @@ fn disbursement_handle_cw20() {
         disbursement_data: disbursement_data.clone(),
         key: WAGER1.to_string(),
     });
-    app.execute_contract(info.sender, context.team1.clone(), &msg, &[])
+    app.execute_contract(context.team_dao1.clone(), context.team1.clone(), &msg, &[])
         .unwrap();
 
     //execute
@@ -522,7 +519,6 @@ fn disbursement_handle_cw20() {
 fn disbursement_not_configured() {
     let mut app = mock_app();
     let context = setup_test_case(&mut app);
-    let info = mock_info(&WAGER1, &[]);
 
     //set disbursement data
     let disbursement_data = vec![
@@ -539,7 +535,7 @@ fn disbursement_not_configured() {
         disbursement_data: disbursement_data.clone(),
         key: WAGER1.to_string(),
     });
-    app.execute_contract(info.sender.clone(), context.team2.clone(), &msg, &[])
+    app.execute_contract(context.team_dao2.clone(), context.team2.clone(), &msg, &[])
         .unwrap();
 
     //execute
@@ -563,7 +559,6 @@ fn disbursement_not_configured() {
 fn disbursement_handle_nft() {
     let mut app = mock_app();
     let context = setup_test_case(&mut app);
-    let info = mock_info(&WAGER1, &[]);
 
     //set disbursement data
     let disbursement_data = vec![
@@ -580,7 +575,7 @@ fn disbursement_handle_nft() {
         disbursement_data: disbursement_data.clone(),
         key: WAGER1.to_string(),
     });
-    app.execute_contract(info.sender.clone(), context.team2.clone(), &msg, &[])
+    app.execute_contract(context.team_dao2.clone(), context.team2.clone(), &msg, &[])
         .unwrap();
 
     //execute
@@ -626,7 +621,7 @@ fn disbursement_handle_native() {
         disbursement_data: disbursement_data.clone(),
         key: WAGER1.to_string(),
     });
-    app.execute_contract(info.sender.clone(), context.team2.clone(), &msg, &[])
+    app.execute_contract(context.team_dao2.clone(), context.team2.clone(), &msg, &[])
         .unwrap();
 
     //set disbursement data
@@ -648,7 +643,7 @@ fn disbursement_handle_native() {
         disbursement_data: disbursement_data.clone(),
         key: WAGER1.to_string(),
     });
-    app.execute_contract(info.sender.clone(), context.team1.clone(), &msg, &[])
+    app.execute_contract(context.team_dao1.clone(), context.team1.clone(), &msg, &[])
         .unwrap();
 
     //execute

@@ -187,7 +187,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                 .add_attribute("dao_addr", addr.clone())
                 .add_message(create_wager_proposals(
                     deps.as_ref(),
-                    env,
+                    &env.contract.address,
                     &addr,
                     Uint128::from(wager_id),
                 )?))
@@ -256,6 +256,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 description,
             )?),
             QueryExt::Tax { height } => to_binary(&query::tax(deps, env, height)?),
+            QueryExt::Wager { id } => to_binary(&query::wager(deps, id)?),
         },
         _ => PrePropose::default().query(deps, env, msg),
     }

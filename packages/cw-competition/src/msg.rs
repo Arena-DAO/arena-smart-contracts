@@ -5,25 +5,12 @@ use cw_controllers::{AdminResponse, HooksResponse};
 
 #[cw_serde]
 pub enum CwCompetitionExecuteMsg {
-    /// Change the admin
-    UpdateAdmin {
-        admin: Option<String>,
-    },
-    /// Add a new hook to be informed of all membership changes. Must be called by Admin
-    AddHook {
-        addr: String,
-    },
-    /// Remove a hook. Must be called by Admin
-    RemoveHook {
-        addr: String,
-    },
-    SetState {
-        state: CompetitionState,
-    },
+    UpdateAdmin { admin: Option<String> },
+    AddHook { addr: String },
+    RemoveHook { addr: String },
+    SetState { state: CompetitionState },
     Abort {},
-    IncreaseWin {
-        addrs: Vec<String>,
-    },
+    IncreaseWin { addrs: Vec<String> },
 }
 
 impl CwCompetitionExecuteMsg {

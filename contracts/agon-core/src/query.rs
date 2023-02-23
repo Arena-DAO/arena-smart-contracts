@@ -1,8 +1,8 @@
 use std::convert::TryInto;
 
 use crate::{
-    models::{CompetitionModule, DumpStateResponse, Ruleset},
-    state::{rulesets, COMPETITION_MODULES, TAX},
+    models::{CompetitionModule, DumpStateResponse, Ruleset, Wager},
+    state::{rulesets, COMPETITION_MODULES, TAX, WAGERS},
 };
 use cosmwasm_std::{Decimal, Deps, Env, Order, StdResult};
 use cw_paginate::paginate_map_values;
@@ -60,4 +60,8 @@ pub fn rulesets_by_description(
         .take(limit.try_into().unwrap())
         .map(|x| x.map(|y| y.1))
         .collect::<StdResult<_>>()?)
+}
+
+pub fn wager(deps: Deps, id: u128) -> StdResult<Wager> {
+    Ok(WAGERS.load(deps.storage, id)?)
 }

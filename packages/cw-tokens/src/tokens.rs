@@ -1,7 +1,7 @@
 use crate::BalanceError;
 use core::fmt;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Uint128};
+use cosmwasm_std::{Addr, Coin, Deps, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
 use std::hash::{Hash, Hasher};
@@ -63,6 +63,29 @@ pub enum GenericTokenType {
     Native,
     Cw20,
     Cw721,
+}
+
+#[cw_serde]
+pub struct GenericTokenBalanceRaw {
+    pub addr: Option<String>,
+    pub denom: Option<String>,
+    pub amount: Uint128,
+    pub token_type: GenericTokenType,
+}
+
+impl GenericTokenBalanceRaw {
+    fn to_validated(&self, deps: Deps) -> StdResult<GenericTokenBalance> {
+        Ok(GenericTokenBalance {
+            addr: self
+                .addr
+                .clone()
+                .map(|x| deps.api.addr_validate(&x))
+                .transpose()?,
+            denom: self.denom.clone(),
+            amount: self.amount,
+            token_type: self.token_type.clone(),
+        })
+    }
 }
 
 #[cw_serde]

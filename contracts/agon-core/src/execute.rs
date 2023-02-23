@@ -79,7 +79,7 @@ pub fn jail_wager(deps: DepsMut, env: Env, id: Uint128) -> Result<Response, Cont
         .add_attribute("action", "jail_wager")
         .add_message(create_wager_proposals(
             deps.as_ref(),
-            env,
+            &env.contract.address,
             &PrePropose::default().dao.load(deps.storage)?,
             id,
         )?))
@@ -177,7 +177,7 @@ pub fn create_wager(
             wager.dao = deps.api.addr_validate(&addr)?;
             vec![SubMsg::new(create_wager_proposals(
                 deps.as_ref(),
-                env,
+                &env.contract.address,
                 &wager.dao,
                 wager_count,
             )?)]
@@ -191,7 +191,7 @@ pub fn create_wager(
             msg: to_binary(&agon_escrow::msg::InstantiateMsg {
                 due: wager_amount,
                 stake,
-                arbiter: None,
+                key: env.contract.address.to_string() + "_" + &wager_count.to_string(),
             })?,
             funds: vec![],
             label: "Escrow".to_string(),
@@ -209,7 +209,7 @@ pub fn create_wager(
 
 pub fn create_wager_proposals(
     deps: Deps,
-    env: Env,
+    contract_address: &Addr,
     dao: &Addr,
     wager_id: Uint128,
 ) -> Result<CosmosMsg, ContractError> {
@@ -235,7 +235,7 @@ pub fn create_wager_proposals(
                 title: format!("Team {}", team_number),
                 description: "This team is the winner.".to_string(),
                 msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: env.contract.address.to_string(),
+                    contract_addr: contract_address.to_string(),
                     msg: to_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::HandleWager {
                             id: wager_id,

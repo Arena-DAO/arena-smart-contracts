@@ -1,4 +1,4 @@
-use crate::models::{CompetitionModule, DumpStateResponse, Ruleset, WagerDAO};
+use crate::models::{CompetitionModule, DumpStateResponse, Ruleset, Wager, WagerDAO};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Empty, Uint128};
 use cw_disbursement::{MemberBalance, MemberShare};
@@ -78,6 +78,8 @@ pub enum QueryExt {
     Tax { height: Option<u64> },
     #[returns(DumpStateResponse)]
     DumpState {},
+    #[returns(Wager)]
+    Wager { id: u128 },
 }
 
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;

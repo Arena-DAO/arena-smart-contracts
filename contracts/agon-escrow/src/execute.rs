@@ -1,7 +1,4 @@
-use cosmwasm_std::{
-    Addr, Attribute, Coin, DepsMut, Empty, MessageInfo, QuerierWrapper, Response, StdResult,
-    Storage,
-};
+use cosmwasm_std::{Addr, Attribute, Coin, DepsMut, MessageInfo, Response, StdResult, Storage};
 use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
 use cw_competition::{CompetitionState, CwCompetitionResultMsg, CwCompetitionStateChangedMsg};
@@ -14,34 +11,25 @@ use std::collections::HashSet;
 
 use crate::{
     models::EscrowState,
-    state::{ARBITER, BALANCE, DUE, KEY, STATE, TOTAL_BALANCE},
+    state::{ADMIN, BALANCE, DUE, KEY, STATE, TOTAL_BALANCE},
     ContractError,
 };
 
-pub fn refund(
-    storage: &mut dyn Storage,
-    querier: QuerierWrapper<Empty>,
-    addrs: &Vec<Addr>,
-) -> Result<Response, ContractError> {
-    //guards
-    if STATE.may_load(storage)? != Some(EscrowState::Unlocked {}) {
-        return Err(ContractError::InvalidState {});
-    }
-
+fn inner_refund(deps: DepsMut, addrs: Vec<Addr>) -> Result<Response, ContractError> {
     //init
-    let key = KEY.load(storage)?;
+    let key = KEY.load(deps.storage)?;
     let mut contracts = HashSet::new();
-    let mut total_balance = TOTAL_BALANCE.load(storage)?;
+    let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
     let mut msgs = vec![];
     let mut attrs = vec![];
 
     for addr in addrs {
         //get specific balance
-        let balance = BALANCE.load(storage, addr.clone())?;
+        let balance = BALANCE.load(deps.storage, addr.clone())?;
 
         //get disbursement contracts
         if CwDisbursementContract(addr.clone())
-            .is_disbursement_contract(&querier, &Some(key.to_string()))
+            .is_disbursement_contract(&deps.querier, &Some(key.to_string()))
         {
             contracts.insert(addr.clone());
         }
@@ -66,7 +54,7 @@ pub fn refund(
     }
 
     //save total
-    TOTAL_BALANCE.save(storage, &total_balance)?;
+    TOTAL_BALANCE.save(deps.storage, &total_balance)?;
 
     //response
     Ok(Response::new()
@@ -74,6 +62,14 @@ pub fn refund(
         .add_attribute("key", key.to_string())
         .add_attributes(attrs)
         .add_messages(msgs))
+}
+
+pub fn refund(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    if STATE.may_load(deps.storage)? != Some(EscrowState::Unlocked {}) {
+        return Err(ContractError::InvalidState {});
+    }
+
+    inner_refund(deps, vec![info.sender])
 }
 
 pub fn cw721_receive(
@@ -153,11 +149,11 @@ fn receive_generic(
 }
 
 pub fn handle_competition_result(
-    deps: DepsMut,
+    mut deps: DepsMut,
     info: MessageInfo,
     cw_competition_result_msg: CwCompetitionResultMsg,
 ) -> Result<Response, ContractError> {
-    if ARBITER.load(deps.storage)? != info.sender {
+    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
         return Err(ContractError::Unauthorized {});
     }
     if STATE.may_load(deps.storage)? != Some(EscrowState::Locked {}) {
@@ -166,15 +162,15 @@ pub fn handle_competition_result(
 
     let response = match cw_competition_result_msg.distribution {
         None => {
-            let keys: StdResult<Vec<Addr>> = BALANCE
+            let addrs = BALANCE
                 .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-                .collect();
+                .collect::<StdResult<Vec<Addr>>>()?;
 
-            refund(deps.storage, deps.querier, &keys?)?
+            inner_refund(deps.branch(), addrs)?
         }
         Some(members) => {
-            let key = KEY.load(deps.storage)?;
             let total = TOTAL_BALANCE.load(deps.storage)?;
+            let key = KEY.load(deps.storage)?;
 
             let msgs = disburse(
                 deps.as_ref(),
@@ -194,30 +190,49 @@ pub fn handle_competition_result(
     Ok(response.add_attribute("action", "handle_competition_result"))
 }
 
-fn clear_state(deps: DepsMut) {
-    TOTAL_BALANCE.remove(deps.storage);
-    BALANCE.clear(deps.storage);
-    DUE.clear(deps.storage);
-    STATE.remove(deps.storage);
-    KEY.remove(deps.storage);
-}
-
 pub fn handle_competition_state_changed(
     deps: DepsMut,
     info: MessageInfo,
     cw_competition_state_changed_msg: CwCompetitionStateChangedMsg,
 ) -> Result<Response, ContractError> {
-    if ARBITER.load(deps.storage)? != info.sender {
+    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
         return Err(ContractError::Unauthorized {});
     }
-
     let state = match cw_competition_state_changed_msg.new_state {
         CompetitionState::Pending => EscrowState::Unlocked {},
         CompetitionState::Staged => EscrowState::Locked {},
         CompetitionState::Active => EscrowState::Locked {},
-        CompetitionState::Inactive => EscrowState::Locked {},
+        CompetitionState::Inactive => EscrowState::Unlocked {},
     };
 
     STATE.save(deps.storage, &state)?;
-    Ok(Response::new().add_attribute("action", "handle_competition_state_changed"))
+    Ok(Response::new()
+        .add_attribute("action", "handle_competition_state_changed")
+        .add_attribute(
+            "new_state",
+            cw_competition_state_changed_msg.new_state.as_str(),
+        ))
+}
+
+pub fn lock(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
+        return Err(ContractError::Unauthorized {});
+    }
+    STATE.save(deps.storage, &EscrowState::Locked {})?;
+    Ok(Response::new().add_attribute("action", "lock"))
+}
+
+pub fn unlock(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
+        return Err(ContractError::Unauthorized {});
+    }
+    STATE.save(deps.storage, &EscrowState::Unlocked {})?;
+    Ok(Response::new().add_attribute("action", "unlock"))
+}
+
+fn clear_state(deps: DepsMut) {
+    TOTAL_BALANCE.remove(deps.storage);
+    BALANCE.clear(deps.storage);
+    DUE.clear(deps.storage);
+    STATE.remove(deps.storage);
 }
