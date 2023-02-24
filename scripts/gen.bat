@@ -10,5 +10,4 @@ for /d %%f in (..\contracts\*) do (
 )
 REM create typescript types
 cd ..\ts-codegen
-pnpm run gen
-echo Finished!
+call pnpm i && pnpm run gen
