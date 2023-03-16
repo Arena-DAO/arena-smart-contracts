@@ -275,7 +275,7 @@ pub fn handle_wager(
 
     match wager.status {
         WagerStatus::Active => {
-            if wager.dao != info.sender {
+            if wager.dao != info.sender && dao != info.sender {
                 return Err(ContractError::Unauthorized {});
             }
             Ok(())

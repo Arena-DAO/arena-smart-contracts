@@ -24,12 +24,12 @@ cosmwasm-storage = { version = "1.1" }
 cosmwasm-schema = { version = "1.1" }
 cw-utils = "0.16"
 thiserror = { version = "1.0.30" }
-cw-storage-plus = "0.16"
+cw-storage-plus = { git = "https://github.com/DA0-DA0/cw-storage-plus.git", version = "*" }
+cw-multi-test = { git = "https://github.com/DA0-DA0/cw-multi-test.git", version = "*" }
 cw2 = "0.16"
-cw20 = "1.0.1"
+cw20 = "0.16"
 cw721 = "0.16.0"
-cw20-base = "1.0.1"
-cw-multi-test = "0.16"
+cw20-base = "0.16"
 cw721-base = "0.16"
 cw-controllers = "1.0.1"
 anyhow = { version = "1.0.51"}
@@ -42,6 +42,7 @@ serde = "1.0"
 cw-competition = { path = "./packages/cw-competition" }
 cw-tokens = { path = "./packages/cw-tokens" }
 cw-disbursement = { path = "./packages/cw-disbursement" }
+agon-testing = { path = "./packages/agon-testing" }
 
 agon-core = { path = "./contracts/agon-core" }
 agon-escrow = { path = "./contracts/agon-escrow" }
@@ -51,6 +52,7 @@ cw4-disbursement = { path = "./contracts/cw4-disbursement" }
 cw-paginate = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-core = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts"}
+dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-macros = { git = "https://github.com/DA0-DA0/dao-contracts"}
@@ -58,3 +60,4 @@ cw20-stake = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-voting-cw20-staked = { git = "https://github.com/DA0-DA0/dao-contracts"}
 dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts" }
+dao-testing = { git = "https://github.com/DA0-DA0/dao-contracts" }

@@ -1,7 +1,7 @@
 [package]
 name = "cw-tokens"
 version = "0.1.0"
-authors = ["Gabriel Lopez <glopez11193@gmail.com>"]
+authors = ["ismellike <glopez11193@gmail.com>"]
 edition = "2018"
 description = "A set of utilities for handling multiple token types."
 
@@ -26,3 +26,4 @@ cw20 = { workspace = true }
 cw721 = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
+dao-testing = { workspace = true }
