@@ -8,31 +8,25 @@ use thiserror::Error;
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
-    Std(#[from] StdError),
+    StdError(#[from] StdError),
 
     #[error("{0}")]
-    ParseReply(#[from] ParseReplyError),
+    ParseReplyError(#[from] ParseReplyError),
 
     #[error("{0}")]
-    ParseInt(#[from] ParseIntError),
+    ParseIntError(#[from] ParseIntError),
 
     #[error("{0}")]
-    Overflow(#[from] OverflowError),
+    OverflowError(#[from] OverflowError),
 
     #[error("{0}")]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
 
     #[error("{0}")]
-    CheckedFromRatio(#[from] CheckedFromRatioError),
-
-    #[error("InvalidWagerStatus")]
-    InvalidWagerStatus {},
+    CheckedFromRatioError(#[from] CheckedFromRatioError),
 
     #[error("UnknownReplyId")]
     UnknownReplyId { id: u64 },
-
-    #[error("UnknownWagerId")]
-    UnknownWagerId { id: u128 },
 
     #[error("{0}")]
     PrePropose(#[from] PreProposeError),

@@ -2,7 +2,6 @@
 members = [
 	"contracts/*",
 	"packages/*",
-	"test-contracts/*",
 	]
 
 [profile.release]
@@ -40,13 +39,11 @@ serde = "1.0"
 
 #agon dependencies
 cw-competition = { path = "./packages/cw-competition" }
-cw-tokens = { path = "./packages/cw-tokens" }
-cw-disbursement = { path = "./packages/cw-disbursement" }
+cw-balance = { path = "./packages/cw-balance" }
 agon-testing = { path = "./packages/agon-testing" }
 
 agon-core = { path = "./contracts/agon-core" }
 agon-escrow = { path = "./contracts/agon-escrow" }
-cw4-disbursement = { path = "./contracts/cw4-disbursement" }
 
 #dao dependencies
 cw-paginate = { git = "https://github.com/DA0-DA0/dao-contracts"}

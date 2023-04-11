@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "agon-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agon-escrow",
  "agon-testing",
@@ -13,7 +13,6 @@ dependencies = [
  "cosmwasm-storage",
  "cw-competition",
  "cw-controllers 1.0.1",
- "cw-disbursement",
  "cw-multi-test",
  "cw-paginate 2.0.3",
  "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
@@ -21,7 +20,6 @@ dependencies = [
  "cw2 0.16.0",
  "cw20 0.16.0",
  "cw4 1.0.1",
- "cw4-disbursement",
  "cw4-group 1.0.1",
  "dao-core",
  "dao-interface",
@@ -36,69 +34,36 @@ dependencies = [
 
 [[package]]
 name = "agon-escrow"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
+ "agon-testing",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
+ "cw-balance",
  "cw-competition",
  "cw-controllers 1.0.1",
- "cw-disbursement",
  "cw-multi-test",
- "cw-paginate 2.0.3",
  "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
- "cw-tokens",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
  "cw20 0.16.0",
- "cw20-base 0.16.0",
+ "cw4 1.0.1",
  "cw721 0.16.0",
  "serde",
  "thiserror",
 ]
 
 [[package]]
-name = "agon-sudo"
-version = "0.2.0"
-dependencies = [
- "agon-core",
- "cosmwasm-std",
- "cw-controllers 1.0.1",
- "cw-disbursement",
- "cw-multi-test",
- "cw-utils 0.16.0",
- "cw20 0.16.0",
- "cw20-base 0.16.0",
- "cw20-stake 2.0.3",
- "cw4 1.0.1",
- "cw4-disbursement",
- "cw4-group 1.0.1",
- "cw721 0.16.0",
- "cw721-base",
- "dao-core",
- "dao-interface",
- "dao-proposal-multiple",
- "dao-proposal-sudo",
- "dao-voting",
- "dao-voting-cw20-staked",
-]
-
-[[package]]
 name = "agon-testing"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agon-core",
  "agon-escrow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-tokens",
- "cw20 0.16.0",
- "cw4-disbursement",
- "cw721 0.16.0",
  "dao-proposal-multiple",
  "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -322,16 +287,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-competition"
-version = "0.1.0"
+name = "cw-balance"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-controllers 1.0.1",
- "cw-disbursement",
- "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
+ "cw20 0.16.0",
+ "cw721 0.16.0",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "cw-competition"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-balance",
+ "cw-controllers 1.0.1",
+ "dao-interface",
+ "serde",
 ]
 
 [[package]]
@@ -428,19 +404,6 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw20 0.16.0",
- "thiserror",
-]
-
-[[package]]
-name = "cw-disbursement"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-tokens",
- "cw20 0.16.0",
- "cw721 0.16.0",
- "serde",
  "thiserror",
 ]
 
@@ -593,19 +556,6 @@ dependencies = [
  "cosmwasm-std",
  "schemars",
  "serde",
-]
-
-[[package]]
-name = "cw-tokens"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw20 0.16.0",
- "cw721 0.16.0",
- "dao-testing",
- "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -870,29 +820,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw4-disbursement"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-controllers 1.0.1",
- "cw-disbursement",
- "cw-paginate 2.0.3",
- "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
- "cw-tokens",
- "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw20 0.16.0",
- "cw4 1.0.1",
- "cw4-group 1.0.1",
- "cw721 0.16.0",
- "dao-interface",
- "dao-macros",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "cw4-group"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1146,21 +1073,6 @@ dependencies = [
  "dao-voting",
  "thiserror",
  "voting",
-]
-
-[[package]]
-name = "dao-proposal-sudo"
-version = "2.0.3"
-source = "git+https://github.com/DA0-DA0/dao-contracts#8d7ad103c9c4bc3a2477a4d4f50532ef573f4d83"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
- "cw2 0.16.0",
- "dao-interface",
- "dao-macros",
- "thiserror",
 ]
 
 [[package]]

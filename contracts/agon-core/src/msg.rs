@@ -1,13 +1,12 @@
-use crate::models::{CompetitionModule, DumpStateResponse, Ruleset, Wager, WagerDAO};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Empty, Uint128};
-use cw_disbursement::{MemberBalance, MemberShare};
-use cw_utils::Expiration;
+use cosmwasm_std::{Addr, Decimal, Empty, Uint128};
 use dao_interface::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
     state::PreProposeContract,
 };
+
+use crate::{query::DumpStateResponse, state::Ruleset};
 
 #[cw_serde]
 pub struct InstantiateExt {
@@ -20,22 +19,9 @@ pub struct InstantiateExt {
 pub enum ExecuteExt {
     UpdateCompetitionModules {
         to_add: Vec<ModuleInstantiateInfo>,
-        to_remove: Vec<String>,
+        to_disable: Vec<Uint128>,
     },
-    /*CreateWagerPost {
-        members: String,
-        admin: String,
-        start_time: Duration,
-        duration: Duration,
-        group_min: Option<u64>,
-        group_max: Option<u64>,
-        cw20: Option<String>,
-        denom: Option<String>,
-        token_amount: u128,
-        token_stake: u128,
-        rules: Vec<String>,
-    },*/
-    JailWager {
+    /*JailWager {
         id: Uint128,
     },
     CreateWager {
@@ -50,36 +36,35 @@ pub enum ExecuteExt {
     HandleWager {
         id: Uint128,
         distribution: Option<Vec<MemberShare>>,
+    }, */
+    UpdateTax {
+        tax: Decimal,
     },
     UpdateRulesets {
         to_add: Vec<Ruleset>,
         to_disable: Vec<Uint128>,
-    },
-    UpdateTax {
-        tax: Decimal,
     },
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryExt {
-    #[returns(Vec<CompetitionModule>)]
+    #[returns(Vec<Addr>)]
     CompetitionModules {
-        start_after: Option<String>,
+        start_after: Option<u128>,
         limit: Option<u32>,
+        include_disabled: Option<bool>,
     },
     #[returns(Vec<Ruleset>)]
     Rulesets {
-        skip: Option<u32>,
+        skip: Option<u128>,
         limit: Option<u32>,
-        description: Option<String>,
+        include_disabled: Option<bool>,
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
     #[returns(DumpStateResponse)]
     DumpState {},
-    #[returns(Wager)]
-    Wager { id: u128 },
 }
 
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;

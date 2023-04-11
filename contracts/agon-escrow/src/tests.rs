@@ -1,212 +1,110 @@
-use cosmwasm_std::{testing::mock_info, Addr, Binary, Coin, Empty, Uint128};
-use cw20::{Cw20Coin, Cw20ExecuteMsg};
-use cw_competition::{CwCompetitionResultMsg, CwCompetitionStateChangedMsg};
-use cw_disbursement::MemberBalance;
-use cw_disbursement::MemberShare;
-use cw_multi_test::{App, Contract, ContractWrapper, Executor};
-use cw_tokens::GenericTokenBalance;
+use std::collections::{BTreeMap, HashMap};
+
+use cosmwasm_std::{from_binary, Addr, Binary, Decimal, Uint128};
+use cw_balance::Distribution;
+use cw_multi_test::{App, Executor};
 
 use crate::{
-    contract::{self, instantiate},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    ContractError,
 };
 
-fn mock_app() -> App {
-    App::new(|router, _, storage| {
-        // initialization moved to App construction
-        router
-            .bank
-            .init_balance(
-                storage,
-                &Addr::unchecked(ADDR1),
-                vec![Coin {
-                    denom: DENOM.to_string(),
-                    amount: Uint128::from(BEGINNING_BALANCE),
-                }],
-            )
-            .unwrap();
-    })
-}
+const CREATOR: &str = "creator";
 
-fn instantiate_cw20(app: &mut App, code_id: u64, msg: cw20_base::msg::InstantiateMsg) -> Addr {
-    app.instantiate_contract(code_id, Addr::unchecked(ADDR1), &msg, &[], "cw20", None)
-        .unwrap()
-}
-
-fn instantiate_escrow(app: &mut App, code_id: u64, sender: Addr, msg: InstantiateMsg) -> Addr {
-    app.instantiate_contract(code_id, sender.clone(), &msg, &[], "escrow", None)
-        .unwrap()
-}
-
-pub fn contract_cw20() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new(
-        cw20_base::contract::execute,
-        cw20_base::contract::instantiate,
-        cw20_base::contract::query,
-    );
-    Box::new(contract)
-}
-
-pub fn contract_escrow() -> Box<dyn Contract<Empty>> {
-    Box::new(ContractWrapper::new(
-        contract::execute,
-        instantiate,
-        contract::query,
-    ))
-}
-
-fn create_context(app: &mut App) -> Context {
-    let cw20_id = app.store_code(contract_cw20());
-    let escrow_id = app.store_code(contract_escrow());
-
-    let token = instantiate_cw20(
-        app,
-        cw20_id,
-        cw20_base::msg::InstantiateMsg {
-            name: String::from("Agon"),
-            symbol: String::from("AGON"),
-            decimals: 6,
-            initial_balances: vec![{
-                Cw20Coin {
-                    address: String::from(ADDR1),
-                    amount: Uint128::from(BEGINNING_BALANCE),
-                }
-            }],
-            mint: None,
-            marketing: None,
-        },
-    );
-
-    let escrow = instantiate_escrow(
-        app,
-        escrow_id,
-        Addr::unchecked(ADDR1),
-        InstantiateMsg {
-            due: vec![MemberBalance {
-                member: ADDR1.to_string(),
-                balances: vec![GenericTokenBalance {
-                    addr: None,
-                    denom: Some(DENOM.to_string()),
-                    amount: Uint128::from(500u128),
-                    token_type: cw_tokens::GenericTokenType::Native,
-                }],
-            }],
-            stake: vec![],
-            key: "wager1".to_string(),
-        },
-    );
-
-    Context { token, escrow }
-}
-
-pub const DENOM: &str = "AgonN";
-pub const ADDR1: &str = "member-1";
-pub const _ADDR2: &str = "member-2";
-pub const _ADDR3: &str = "member-3";
-pub const _ADDR4: &str = "member-4";
-pub const BEGINNING_BALANCE: u128 = 1000u128;
-
-struct Context {
-    pub token: Addr,
-    pub escrow: Addr,
+fn setup() -> (App, Addr) {
+    let mut app = App::default();
+    let escrow_code_id = app.store_code(agon_testing::contracts::agon_escrow_contract());
+    let contract_addr = app
+        .instantiate_contract(
+            escrow_code_id,
+            Addr::unchecked(CREATOR),
+            &InstantiateMsg {
+                dues: HashMap::new(),
+                stakes: HashMap::new(),
+            },
+            &vec![],
+            "Agon Escrow",
+            None,
+        )
+        .unwrap();
+    (app, contract_addr)
 }
 
 #[test]
-fn tests() {
-    let mut app = mock_app();
-    let context = create_context(&mut app);
+fn test_lock() {
+    let (mut app, contract) = setup();
 
-    let due: Vec<GenericTokenBalance> = app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow.clone(),
-            &QueryMsg::Due {
-                member: ADDR1.to_string(),
-            },
-        )
-        .unwrap();
+    // Try to withdraw when the contract is locked
+    app.execute_contract(
+        Addr::unchecked(CREATOR),
+        contract.clone(),
+        &ExecuteMsg::Lock { value: true },
+        &vec![],
+    )
+    .unwrap();
 
+    let res = app.execute_contract(
+        Addr::unchecked(CREATOR),
+        contract.clone(),
+        &ExecuteMsg::Withdraw {
+            cw20_msg: None,
+            cw721_msg: None,
+        },
+        &vec![],
+    );
     assert_eq!(
-        due,
-        vec![GenericTokenBalance {
-            addr: None,
-            denom: Some(DENOM.to_string()),
-            amount: Uint128::from(500u128),
-            token_type: cw_tokens::GenericTokenType::Native,
-        }]
+        res.unwrap_err().root_cause().to_string(),
+        ContractError::Locked {}.to_string()
     );
 
-    let msg = Cw20ExecuteMsg::Send {
-        contract: context.escrow.to_string(),
-        amount: due.first().unwrap().amount,
-        msg: Binary::default(),
-    };
-    let info = mock_info(ADDR1, &[]);
+    // Try to withdraw when the contract is unlocked
     app.execute_contract(
-        info.sender.clone(),
-        context.token.clone(),
-        &msg,
-        &info.funds,
+        Addr::unchecked(CREATOR),
+        contract.clone(),
+        &ExecuteMsg::Lock { value: false },
+        &vec![],
     )
     .unwrap();
 
-    let due: Vec<GenericTokenBalance> = app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow.clone(),
-            &QueryMsg::Due {
-                member: ADDR1.to_string(),
-            },
-        )
-        .unwrap();
-    assert_eq!(due, vec![]);
-    let balance: Vec<GenericTokenBalance> = app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow.clone(),
-            &QueryMsg::Balance {
-                member: ADDR1.to_string(),
-            },
-        )
-        .unwrap();
-    assert_eq!(
-        balance,
-        vec![GenericTokenBalance {
-            addr: Some(context.token.clone()),
-            denom: None,
-            amount: Uint128::from(500u128),
-            token_type: cw_tokens::GenericTokenType::Cw20,
-        }]
+    let res = app.execute_contract(
+        Addr::unchecked(CREATOR),
+        contract.clone(),
+        &ExecuteMsg::Withdraw {
+            cw20_msg: None,
+            cw721_msg: None,
+        },
+        &vec![],
     );
-    let total_balance: Vec<GenericTokenBalance> = app
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_set_distribution() {
+    let (mut app, contract) = setup();
+
+    let mut distribution = BTreeMap::new();
+    distribution.insert("addr1".to_string(), Decimal::new(Uint128::new(50u128)));
+    distribution.insert("addr2".to_string(), Decimal::new(Uint128::new(30)));
+    distribution.insert("addr3".to_string(), Decimal::new(Uint128::new(20)));
+
+    let res = app.execute_contract(
+        Addr::unchecked("user1"),
+        contract.clone(),
+        &ExecuteMsg::SetDistribution {
+            distribution: distribution.clone(),
+        },
+        &vec![],
+    );
+
+    assert!(res.is_ok());
+
+    let contract_distribution: Option<Distribution> = app
         .wrap()
-        .query_wasm_smart(context.escrow.clone(), &&QueryMsg::Total {})
+        .query_wasm_smart(
+            &contract,
+            &QueryMsg::Distribution {
+                addr: "user1".to_string(),
+            },
+        )
         .unwrap();
-    assert_eq!(balance, total_balance);
-
-    let msg = ExecuteMsg::HandleCompetitionStateChanged(CwCompetitionStateChangedMsg {
-        old_state: cw_competition::CompetitionState::Pending,
-        new_state: cw_competition::CompetitionState::Active,
-    });
-    app.execute_contract(
-        info.sender.clone(),
-        context.escrow.clone(),
-        &msg,
-        &info.funds,
-    )
-    .unwrap();
-
-    let msg = ExecuteMsg::HandleCompetitionResult(CwCompetitionResultMsg {
-        distribution: Some(vec![MemberShare {
-            addr: ADDR1.to_string(),
-            shares: Uint128::one(),
-        }]),
-    });
-    app.execute_contract(
-        info.sender.clone(),
-        context.escrow.clone(),
-        &msg,
-        &info.funds,
-    )
-    .unwrap();
 }

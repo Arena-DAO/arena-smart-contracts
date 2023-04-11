@@ -1,7 +1,5 @@
-mod hook;
 mod msg;
-mod models;
+mod state;
 
-pub use crate::hook::{CwCompetitionResultMsg, CwCompetitionStateChangedMsg};
-pub use crate::msg::{CwCompetitionExecuteMsg, CwCompetitionQueryMsg};
-pub use crate::models::CompetitionState;
+pub use crate::msg::InstantiateBase;
+pub use crate::state::CompetitionState;

@@ -3,16 +3,6 @@ use cosmwasm_std::{Addr, Uint128};
 use cw_utils::Expiration;
 
 #[cw_serde]
-pub struct DumpStateResponse {
-    pub competition_modules: Vec<CompetitionModule>,
-}
-
-#[cw_serde]
-pub struct CompetitionModule {
-    pub addr: Addr,
-}
-
-#[cw_serde]
 pub enum WagerDAO {
     New {
         dao_code_id: u64,
@@ -55,10 +45,4 @@ pub struct Wager {
     pub ruleset: Option<Uint128>,
     pub evidence: Option<String>,
     pub status: WagerStatus,
-}
-
-#[cw_serde]
-pub struct Ruleset {
-    pub rules: Vec<String>,
-    pub description: String,
 }

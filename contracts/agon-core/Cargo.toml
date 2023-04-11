@@ -1,6 +1,6 @@
 [package]
 name = "agon-core"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["ismellike <glopez11193@gmail.com>"]
 edition = "2018"
 
@@ -31,10 +31,8 @@ cw-controllers = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 cw-paginate = { workspace = true }
-cw-disbursement = { workspace = true }
 dao-core = { workspace = true }
 agon-escrow = { workspace = true }
-cw4-disbursement = { workspace = true }
 cw4-group = { workspace = true }
 cw-competition = { workspace = true }
 dao-interface = { workspace = true }

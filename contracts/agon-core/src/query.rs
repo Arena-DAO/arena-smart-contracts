@@ -1,35 +1,57 @@
-use std::convert::TryInto;
+use crate::state::{CompetitionModule, Ruleset, TAX};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Decimal, Deps, Env, StdResult};
+use cw_storage_plus::Bound;
 
-use crate::{
-    models::{CompetitionModule, DumpStateResponse, Ruleset, Wager},
-    state::{rulesets, COMPETITION_MODULES, TAX, WAGERS},
-};
-use cosmwasm_std::{Decimal, Deps, Env, Order, StdResult};
-use cw_paginate::paginate_map_values;
-use cw_storage_plus::PrefixBound;
+#[cw_serde]
+pub struct DumpStateResponse {
+    pub competition_modules: Vec<(u128, CompetitionModule)>,
+}
 
 pub fn dump_state(deps: Deps) -> StdResult<DumpStateResponse> {
     Ok(DumpStateResponse {
-        competition_modules: competition_modules(deps, None, None)?,
+        competition_modules: competition_modules(deps, None, None, None)?,
     })
 }
 
 pub fn competition_modules(
     deps: Deps,
-    start_after: Option<String>,
+    start_after: Option<u128>,
     limit: Option<u32>,
-) -> StdResult<Vec<CompetitionModule>> {
-    let start_after = start_after
-        .map(|x| deps.api.addr_validate(&x))
-        .transpose()?;
+    include_disabled: Option<bool>,
+) -> StdResult<Vec<(u128, CompetitionModule)>> {
+    let start_after_bound = start_after.map(Bound::exclusive);
+    let limit = limit.unwrap_or(10).max(30) as usize;
+    let include_disabled = include_disabled.unwrap_or(false);
 
-    Ok(paginate_map_values(
-        deps,
-        &COMPETITION_MODULES,
-        start_after,
-        limit,
-        cosmwasm_std::Order::Descending,
-    )?)
+    let competition_modules_map = crate::state::competition_modules();
+
+    let items = if include_disabled {
+        competition_modules_map
+            .range(
+                deps.storage,
+                start_after_bound,
+                None,
+                cosmwasm_std::Order::Ascending,
+            )
+            .take(limit)
+            .collect::<StdResult<Vec<_>>>()?
+    } else {
+        competition_modules_map
+            .idx
+            .is_enabled
+            .prefix(true.to_string())
+            .range(
+                deps.storage,
+                start_after_bound,
+                None,
+                cosmwasm_std::Order::Ascending,
+            )
+            .take(limit)
+            .collect::<StdResult<Vec<_>>>()?
+    };
+
+    Ok(items)
 }
 
 pub fn tax(deps: Deps, env: Env, height: Option<u64>) -> StdResult<Decimal> {
@@ -38,30 +60,42 @@ pub fn tax(deps: Deps, env: Env, height: Option<u64>) -> StdResult<Decimal> {
         .unwrap_or(Decimal::zero()))
 }
 
-pub fn rulesets_by_description(
+pub fn rulesets(
     deps: Deps,
-    skip: Option<u32>,
+    start_after: Option<u128>,
     limit: Option<u32>,
-    description: Option<String>,
-) -> StdResult<Vec<Ruleset>> {
-    let limit = limit.unwrap_or(16u32);
-    let skip = skip.unwrap_or_default();
+    include_disabled: Option<bool>,
+) -> StdResult<Vec<(u128, Ruleset)>> {
+    let start_after_bound = start_after.map(Bound::exclusive);
+    let limit = limit.unwrap_or(10).max(30) as usize;
+    let include_disabled = include_disabled.unwrap_or(false);
 
-    Ok(rulesets()
-        .idx
-        .description
-        .prefix_range(
-            deps.storage,
-            description.map(PrefixBound::exclusive),
-            None,
-            Order::Ascending,
-        )
-        .skip(skip.try_into().unwrap())
-        .take(limit.try_into().unwrap())
-        .map(|x| x.map(|y| y.1))
-        .collect::<StdResult<_>>()?)
-}
+    let rulesets_map = crate::state::rulesets();
 
-pub fn wager(deps: Deps, id: u128) -> StdResult<Wager> {
-    Ok(WAGERS.load(deps.storage, id)?)
+    let items = if include_disabled {
+        rulesets_map
+            .range(
+                deps.storage,
+                start_after_bound,
+                None,
+                cosmwasm_std::Order::Ascending,
+            )
+            .take(limit)
+            .collect::<StdResult<Vec<_>>>()?
+    } else {
+        rulesets_map
+            .idx
+            .is_enabled
+            .prefix(true.to_string())
+            .range(
+                deps.storage,
+                start_after_bound,
+                None,
+                cosmwasm_std::Order::Ascending,
+            )
+            .take(limit)
+            .collect::<StdResult<Vec<_>>>()?
+    };
+
+    Ok(items)
 }

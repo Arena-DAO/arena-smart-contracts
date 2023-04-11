@@ -1,7 +1,6 @@
-use cosmwasm_std::StdError;
-use cw_controllers::HookError;
-use cw_disbursement::DisbursementError;
-use cw_tokens::BalanceError;
+use cosmwasm_std::{CheckedFromRatioError, OverflowError, StdError};
+use cw_balance::BalanceError;
+use cw_controllers::{AdminError, HookError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -10,17 +9,20 @@ pub enum ContractError {
     StdError(#[from] StdError),
 
     #[error("{0}")]
-    Hook(#[from] HookError),
+    HookError(#[from] HookError),
 
     #[error("{0}")]
-    Balance(#[from] BalanceError),
+    AdminError(#[from] AdminError),
 
     #[error("{0}")]
-    Disbursement(#[from] DisbursementError),
+    OverflowError(#[from] OverflowError),
 
-    #[error("InvalidState")]
-    InvalidState {},
+    #[error("{0}")]
+    CheckedFromRatioError(#[from] CheckedFromRatioError),
 
-    #[error("Unauthorized")]
-    Unauthorized {},
+    #[error("{0}")]
+    BalanceError(#[from] BalanceError),
+
+    #[error("Locked")]
+    Locked {},
 }

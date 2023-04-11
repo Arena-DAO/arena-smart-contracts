@@ -1,6 +1,6 @@
 use crate::{
-    models::Ruleset,
     msg::{InstantiateExt, InstantiateMsg},
+    state::Ruleset,
 };
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, Decimal, Uint128, WasmMsg};
 use cw20::Cw20Coin;
@@ -83,6 +83,7 @@ fn create_context(app: &mut App) -> Context {
                                                     rulesets: vec![Ruleset {
                                                         rules: vec!["Rule 1".to_string()],
                                                         description: "Test title".to_string(),
+                                                        is_enabled: true,
                                                     }],
                                                     tax: Decimal::percent(15u64),
                                                 },

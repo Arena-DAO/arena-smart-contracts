@@ -1,16 +1,9 @@
-use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult, SubMsg, Uint128, WasmMsg,
-};
-use cw4::{Member, MemberListResponse};
-use cw_disbursement::{MemberBalance, MemberShare};
-use cw_utils::{Duration, Expiration};
+use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, Response, StdError, SubMsg, Uint128};
 use dao_interface::ModuleInstantiateInfo;
 
 use crate::{
-    models::{Ruleset, Wager, WagerDAO, WagerStatus},
-    msg::{ExecuteExt, ExecuteMsg, PrePropose},
-    state::{rulesets, COMPETITION_MODULES, RULESET_COUNT, TAX, TEMP_WAGER, WAGERS, WAGER_COUNT},
+    msg::PrePropose,
+    state::{competition_modules, rulesets, Ruleset, RULESET_COUNT, TAX},
     ContractError,
 };
 
@@ -21,17 +14,25 @@ pub const COMPETITION_REPLY_ID: u64 = 5;
 
 pub fn update_competition_modules(
     deps: DepsMut,
-    env: Env,
+    env: &Env,
     info: MessageInfo,
     to_add: Vec<ModuleInstantiateInfo>,
-    to_remove: Vec<String>,
+    to_disable: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
     if PrePropose::default().dao.load(deps.storage)? != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
-    for addr in to_remove {
-        COMPETITION_MODULES.remove(deps.storage, deps.api.addr_validate(&addr)?);
+    for id in to_disable {
+        competition_modules().update(deps.storage, id.u128(), |x| match x {
+            Some(mut module) => {
+                module.is_enabled = false;
+                Ok(module)
+            }
+            None => Err(StdError::GenericErr {
+                msg: format!("Could not find a competition module with the id {}", id),
+            }),
+        })?;
     }
     let competition_module_msgs: Vec<SubMsg> = to_add
         .into_iter()
@@ -44,9 +45,9 @@ pub fn update_competition_modules(
         .add_submessages(competition_module_msgs))
 }
 
-pub fn update_tax(deps: DepsMut, env: Env, tax: Decimal) -> Result<Response, ContractError> {
+pub fn update_tax(deps: DepsMut, env: &Env, tax: Decimal) -> Result<Response, ContractError> {
     if tax > Decimal::one() {
-        return Err(ContractError::Std(StdError::GenericErr {
+        return Err(ContractError::StdError(StdError::GenericErr {
             msg: "The dao tax cannot be greater than 100%.".to_string(),
         }));
     }
@@ -57,7 +58,7 @@ pub fn update_tax(deps: DepsMut, env: Env, tax: Decimal) -> Result<Response, Con
         .add_attribute("tax", tax.to_string()))
 }
 
-pub fn jail_wager(deps: DepsMut, env: Env, id: Uint128) -> Result<Response, ContractError> {
+/*pub fn jail_wager(deps: DepsMut, env: Env, id: Uint128) -> Result<Response, ContractError> {
     let wager = WAGERS.update(deps.storage, id.u128(), |x| -> Result<_, ContractError> {
         if x.is_none() {
             return Err(ContractError::UnknownWagerId { id: id.u128() });
@@ -319,7 +320,7 @@ pub fn handle_wager(
     let msg = SubMsg::reply_always(
         WasmMsg::Execute {
             contract_addr: wager.escrow.to_string(),
-            msg: to_binary(&cw_competition::CwCompetitionResultMsg { distribution })?,
+            msg: to_binary(&cw_competition::CompetitionResultMsg { distribution })?,
             funds: vec![],
         },
         COMPETITION_REPLY_ID,
@@ -327,15 +328,23 @@ pub fn handle_wager(
     Ok(Response::new()
         .add_attribute("action", "handle_wager")
         .add_submessage(msg))
-}
+}*/
 
 pub fn update_rulesets(
     deps: DepsMut,
     to_add: Vec<Ruleset>,
-    to_remove: Vec<Uint128>,
+    to_disable: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
-    for id in to_remove {
-        rulesets().remove(deps.storage, id.u128())?;
+    for id in to_disable {
+        rulesets().update(deps.storage, id.u128(), |x| match x {
+            Some(mut module) => {
+                module.is_enabled = false;
+                Ok(module)
+            }
+            None => Err(StdError::GenericErr {
+                msg: format!("Could not find a competition module with the id {}", id),
+            }),
+        })?;
     }
 
     let mut id = RULESET_COUNT.load(deps.storage)?;

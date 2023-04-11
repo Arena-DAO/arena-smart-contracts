@@ -17,14 +17,6 @@ pub fn agon_escrow_contract() -> Box<dyn Contract<Empty>> {
     ))
 }
 
-pub fn cw4_disbursement_contract() -> Box<dyn Contract<Empty>> {
-    Box::new(ContractWrapper::new(
-        cw4_disbursement::contract::execute,
-        cw4_disbursement::contract::instantiate,
-        cw4_disbursement::contract::query,
-    ))
-}
-
 pub fn dao_proposal_multiple_contract() -> Box<dyn Contract<Empty>> {
     Box::new(ContractWrapper::new(
         dao_proposal_multiple::contract::execute,

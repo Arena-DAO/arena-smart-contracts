@@ -1,6 +1,6 @@
 [package]
 name = "agon-escrow"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["ismellike <glopez11193@gmail.com>"]
 edition = "2018"
 
@@ -21,20 +21,18 @@ library = []
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw2 = { workspace = true }
+cw4 = { workspace = true }
 cw20 = { workspace = true }
 cw721 = { workspace = true }
 cw-utils = { workspace = true }
 cw-controllers = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-cw-paginate = { workspace = true }
-cw-tokens = { workspace = true }
+cw-balance = { workspace = true }
 cw-competition = { workspace = true }
-cw-disbursement = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
-cw20-base = { workspace = true }
+agon-testing = { workspace = true }

@@ -1,9 +1,9 @@
 [package]
 name = "cw-competition"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["ismellike <glopez11193@gmail.com>"]
 edition = "2018"
-description = "A set of utilities for handling multiple token types."
+description = "A package designed for creating modular competitions in smart contracts."
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -29,8 +29,8 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-cw-controllers = { workspace = true }
-cw-disbursement = { workspace = true }
 serde = { workspace = true }
-cw-storage-plus = { workspace = true }
-thiserror = { workspace = true }
+
+cw-controllers = { workspace = true }
+dao-interface = { workspace = true }
+cw-balance = { workspace = true }

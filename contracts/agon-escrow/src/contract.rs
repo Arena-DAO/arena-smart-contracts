@@ -4,16 +4,14 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     query,
-    state::{ADMIN, DUE, KEY, STAKE, TOTAL_BALANCE},
+    state::{ADMIN, DUE, IS_LOCKED, STAKE, TOTAL_BALANCE, TOTAL_STAKE},
     ContractError,
 };
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult,
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
-use cw_disbursement::MemberBalance;
-use cw_tokens::{GenericBalanceExtensions, GenericTokenBalance};
+use cw_balance::Balance;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:agon-escrow";
@@ -27,7 +25,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.key, msg.due, msg.stake)?;
+    instantiate_contract(deps, info, msg.dues, msg.stakes)?;
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("addr", env.contract.address))
@@ -36,37 +34,27 @@ pub fn instantiate(
 pub fn instantiate_contract(
     mut deps: DepsMut,
     info: MessageInfo,
-    key: String,
-    due: Vec<MemberBalance>,
-    stake: Vec<MemberBalance>,
+    due: HashMap<String, Balance>,
+    stake: HashMap<String, Balance>,
 ) -> Result<(), ContractError> {
     ADMIN.set(deps.branch(), Some(info.sender))?;
-    KEY.save(deps.storage, &key)?;
-    let mut stake_set: HashMap<Addr, Vec<GenericTokenBalance>> = HashMap::new();
-    for member_balance in stake {
-        let addr = deps.api.addr_validate(&member_balance.member)?;
-        if stake_set.contains_key(&addr) {
-            return Err(ContractError::StdError(StdError::generic_err(
-                "Invalid stake set".to_string(),
-            )));
-        }
-        STAKE.save(deps.storage, addr.clone(), &member_balance.balances)?;
-        stake_set.insert(addr, member_balance.balances);
+    IS_LOCKED.save(deps.storage, &false)?;
+    let total_stake = Balance::new();
+    for (addr, balance) in stake {
+        let addr = deps.api.addr_validate(&addr)?;
+        STAKE.save(deps.storage, &addr, &balance)?;
+        total_stake.checked_add(&balance)?;
     }
-    for mut member_balance in due {
-        let addr = deps.api.addr_validate(&member_balance.member)?;
-        let to_add = stake_set.remove(&addr);
-        if to_add.is_some() {
-            member_balance.balances = member_balance
-                .balances
-                .add_balances_checked(&to_add.unwrap())?;
-        }
-        DUE.save(deps.storage, addr, &member_balance.balances)?;
+    for (addr, balance) in due {
+        let addr = deps.api.addr_validate(&addr)?;
+        let total_due = match STAKE.has(deps.storage, &addr) {
+            true => STAKE.load(deps.storage, &addr)?.checked_add(&balance)?,
+            false => balance,
+        };
+        DUE.save(deps.storage, &addr, &total_due)?;
     }
-    for member_balance in stake_set {
-        DUE.save(deps.storage, member_balance.0, &member_balance.1)?;
-    }
-    TOTAL_BALANCE.save(deps.storage, &vec![])?;
+    TOTAL_BALANCE.save(deps.storage, &Balance::new())?;
+    TOTAL_STAKE.save(deps.storage, &total_stake)?;
     Ok(())
 }
 
@@ -79,21 +67,24 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ReceiveNative {} => execute::receive_native(deps, info),
-        ExecuteMsg::Refund {} => execute::refund(deps, info),
-        ExecuteMsg::Lock {} => execute::lock(deps, info),
-        ExecuteMsg::Unlock {} => execute::unlock(deps, info),
+        ExecuteMsg::Withdraw {
+            cw20_msg,
+            cw721_msg,
+        } => execute::withdraw(deps, info, cw20_msg, cw721_msg),
+        ExecuteMsg::SetDistribution { distribution } => {
+            execute::set_distribution(deps, info, distribution)
+        }
         ExecuteMsg::Receive(cw20_receive_msg) => {
-            execute::cw20_receive(deps, info, cw20_receive_msg)
+            execute::receive_cw20(deps, info, cw20_receive_msg)
         }
         ExecuteMsg::ReceiveNft(cw721_receive_msg) => {
-            execute::cw721_receive(deps, info, cw721_receive_msg)
+            execute::receive_cw721(deps, info, cw721_receive_msg)
         }
-        ExecuteMsg::HandleCompetitionResult(cw_competition_result_msg) => {
-            execute::handle_competition_result(deps, info, cw_competition_result_msg)
-        }
-        ExecuteMsg::HandleCompetitionStateChanged(cw_competition_state_changed_msg) => {
-            execute::handle_competition_state_changed(deps, info, cw_competition_state_changed_msg)
-        }
+        ExecuteMsg::Distribute {
+            distribution,
+            remainder_addr,
+        } => execute::distribute(deps, info, distribution, remainder_addr),
+        ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
     }
 }
 
@@ -101,9 +92,12 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Admin {} => to_binary(&ADMIN.query_admin(deps)?),
-        QueryMsg::Balance { member } => to_binary(&query::balance(deps, member)?),
-        QueryMsg::Due { member } => to_binary(&query::due(deps, member)?),
-        QueryMsg::Total {} => to_binary(&query::total(deps)?),
-        QueryMsg::Stake { member } => to_binary(&query::stake(deps, member)?),
+        QueryMsg::Balance { addr } => to_binary(&query::balance(deps, addr)?),
+        QueryMsg::Due { addr } => to_binary(&query::due(deps, addr)?),
+        QueryMsg::TotalBalance {} => to_binary(&query::total_balance(deps)),
+        QueryMsg::Stake { addr } => to_binary(&query::stake(deps, addr)?),
+        QueryMsg::IsLocked {} => to_binary(&query::is_locked(deps)),
+        QueryMsg::DumpState {} => to_binary(&query::dump_state(deps)?),
+        QueryMsg::Distribution { addr } => to_binary(&query::distribution(deps, addr)?),
     }
 }

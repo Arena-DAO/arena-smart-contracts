@@ -1,238 +1,293 @@
-use cosmwasm_std::{Addr, Attribute, Coin, DepsMut, MessageInfo, Response, StdResult, Storage};
+use cosmwasm_std::{
+    Addr, Attribute, Binary, Decimal, Deps, DepsMut, MessageInfo, Response, StdResult,
+};
 use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
-use cw_competition::{CompetitionState, CwCompetitionResultMsg, CwCompetitionStateChangedMsg};
-use cw_disbursement::{disburse, CwDisbursementContract, MemberBalance};
-use cw_tokens::{
-    BalanceError, BatchCoinExtensions, GenericBalanceExtensions, GenericTokenBalance,
-    TokenExtensions,
+use cw_balance::{
+    convert_native_funds, get_validated_distribution, Balance, Distribution, DistributionRaw,
 };
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::{
-    models::EscrowState,
-    state::{ADMIN, BALANCE, DUE, KEY, STATE, TOTAL_BALANCE},
+    query::is_locked,
+    state::{
+        get_distributable_balance, ADMIN, BALANCE, DISTRIBUTION, DUE, IS_LOCKED, STAKE,
+        TOTAL_BALANCE, TOTAL_STAKE,
+    },
     ContractError,
 };
 
-fn inner_refund(deps: DepsMut, addrs: Vec<Addr>) -> Result<Response, ContractError> {
-    //init
-    let key = KEY.load(deps.storage)?;
-    let mut contracts = HashSet::new();
+// This function refunds the balance of given addresses
+fn inner_withdraw(
+    deps: DepsMut,
+    addrs: Vec<Addr>,
+    cw20_msg: Option<Binary>,
+    cw721_msg: Option<Binary>,
+) -> Result<Response, ContractError> {
+    // Load the key and total_balance from storage
     let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
     let mut msgs = vec![];
     let mut attrs = vec![];
 
     for addr in addrs {
-        //get specific balance
-        let balance = BALANCE.load(deps.storage, addr.clone())?;
+        // Load the balance of the current address
+        let balance = BALANCE.may_load(deps.storage, &addr)?;
 
-        //get disbursement contracts
-        if CwDisbursementContract(addr.clone())
-            .is_disbursement_contract(&deps.querier, &Some(key.to_string()))
-        {
-            contracts.insert(addr.clone());
+        // If the balance is empty, skip this address
+        if balance.is_none() || balance.as_ref().unwrap().is_empty() {
+            continue;
         }
 
-        //create transfer messages
-        msgs.append(
-            &mut MemberBalance {
-                member: addr.to_string(),
-                balances: balance.clone(),
-            }
-            .to_msgs(Some(key.to_string()), &contracts)?,
-        );
+        // Prepare messages for the balance transmit
+        msgs.append(&mut balance.as_ref().unwrap().transmit(
+            deps.as_ref(),
+            &addr,
+            cw20_msg.clone(),
+            cw721_msg.clone(),
+        )?);
 
-        //add attributes
+        // Add address as an attribute to the response
         attrs.push(Attribute {
             key: "addr".to_string(),
             value: addr.to_string(),
         });
 
-        //update values
-        total_balance = total_balance.sub_balances_checked(&balance)?;
+        // Update the total_balance by subtracting the refunded balance
+        total_balance = total_balance.checked_sub(&balance.unwrap())?;
     }
 
-    //save total
+    // Save the updated total_balance to storage
     TOTAL_BALANCE.save(deps.storage, &total_balance)?;
 
-    //response
+    // Build and return the response
     Ok(Response::new()
         .add_attribute("action", "refund")
-        .add_attribute("key", key.to_string())
         .add_attributes(attrs)
         .add_messages(msgs))
 }
 
-pub fn refund(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    if STATE.may_load(deps.storage)? != Some(EscrowState::Unlocked {}) {
-        return Err(ContractError::InvalidState {});
-    }
-
-    inner_refund(deps, vec![info.sender])
-}
-
-pub fn cw721_receive(
+// This function handles refunds for the sender
+pub fn withdraw(
     deps: DepsMut,
     info: MessageInfo,
-    cw721_receive_msg: Cw721ReceiveMsg,
+    cw20_msg: Option<Binary>,
+    cw721_msg: Option<Binary>,
 ) -> Result<Response, ContractError> {
-    let sender = deps.api.addr_validate(&cw721_receive_msg.sender)?;
+    if is_locked(deps.as_ref()) {
+        return Err(ContractError::Locked {});
+    }
 
-    Ok(receive_generic(
-        deps.storage,
-        &sender,
-        &info.funds,
-        &mut vec![cw721_receive_msg.to_generic(&info.sender)],
-    )?)
+    inner_withdraw(deps, vec![info.sender], cw20_msg, cw721_msg)
 }
 
-pub fn cw20_receive(
+/// Sets the distribution for the sender based on the provided distribution map.
+///
+/// # Arguments
+///
+/// * `deps` - A mutable reference to the contract's dependencies.
+/// * `info` - The information about the sender and funds.
+/// * `distribution` - The distribution map with keys as addresses in string format and values as Uint128.
+///
+/// # Returns
+///
+/// * `Result<Response, ContractError>` - A result containing a response or a contract error.
+pub fn set_distribution(
+    deps: DepsMut,
+    info: MessageInfo,
+    distribution: DistributionRaw,
+) -> Result<Response, ContractError> {
+    // Convert String keys to Addr
+    let validated_distribution = distribution
+        .into_iter()
+        .map(|(k, v)| {
+            let addr = deps.api.addr_validate(&k)?;
+            Ok((addr, v))
+        })
+        .collect::<StdResult<BTreeMap<Addr, Decimal>>>()?;
+
+    // Save distribution in the state
+    DISTRIBUTION.save(deps.storage, &info.sender, &validated_distribution)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "set_distribution")
+        .add_attribute("sender", info.sender.to_string()))
+}
+
+// This function receives native tokens and updates the balance
+pub fn receive_native(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    let balance = Balance {
+        native: convert_native_funds(&info.funds),
+        cw20: HashMap::new(),
+        cw721: HashMap::new(),
+    };
+
+    receive_balance(deps, info.sender, balance)
+}
+
+// This function receives CW20 tokens and updates the balance
+pub fn receive_cw20(
     deps: DepsMut,
     info: MessageInfo,
     cw20_receive_msg: Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
-    let sender = deps.api.addr_validate(&cw20_receive_msg.sender)?;
-    Ok(receive_generic(
-        deps.storage,
-        &sender,
-        &info.funds,
-        &mut vec![cw20_receive_msg.to_generic(&info.sender)],
-    )?)
-}
+    let sender_addr = deps.api.addr_validate(&cw20_receive_msg.sender)?;
+    let mut cw20_balance = HashMap::new();
+    cw20_balance.insert(sender_addr.clone(), cw20_receive_msg.amount);
 
-pub fn receive_native(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    Ok(receive_generic(
-        deps.storage,
-        &info.sender,
-        &info.funds,
-        &mut vec![],
-    )?)
-}
-
-fn receive_generic(
-    storage: &mut dyn Storage,
-    sender: &Addr,
-    funds: &Vec<Coin>,
-    tokens: &mut Vec<GenericTokenBalance>,
-) -> Result<Response, ContractError> {
-    let mut to_add = funds.to_generic_batch();
-    to_add.append(tokens);
-
-    BALANCE.update(storage, sender.clone(), |x| -> Result<_, BalanceError> {
-        if x.is_none() {
-            return Ok(to_add.clone());
-        } else {
-            return Ok(x.unwrap().add_balances_checked(&to_add)?);
-        }
-    })?;
-
-    DUE.update(storage, sender.clone(), |x| -> Result<_, BalanceError> {
-        if x.is_none() {
-            return Ok(vec![]);
-        } else {
-            let result = x.unwrap().sub_balances_checked(&to_add);
-
-            if result.is_ok() {
-                return Ok(result.unwrap());
-            } else {
-                return Ok(vec![]);
-            }
-        }
-    })?;
-
-    TOTAL_BALANCE.update(storage, |x| -> Result<_, BalanceError> {
-        Ok(x.add_balances_checked(&to_add)?)
-    })?;
-
-    Ok(Response::new())
-}
-
-pub fn handle_competition_result(
-    mut deps: DepsMut,
-    info: MessageInfo,
-    cw_competition_result_msg: CwCompetitionResultMsg,
-) -> Result<Response, ContractError> {
-    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
-        return Err(ContractError::Unauthorized {});
-    }
-    if STATE.may_load(deps.storage)? != Some(EscrowState::Locked {}) {
-        return Err(ContractError::InvalidState {});
-    }
-
-    let response = match cw_competition_result_msg.distribution {
-        None => {
-            let addrs = BALANCE
-                .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-                .collect::<StdResult<Vec<Addr>>>()?;
-
-            inner_refund(deps.branch(), addrs)?
-        }
-        Some(members) => {
-            let total = TOTAL_BALANCE.load(deps.storage)?;
-            let key = KEY.load(deps.storage)?;
-
-            let msgs = disburse(
-                deps.as_ref(),
-                &total,
-                info.sender,
-                Some(members),
-                Some(key.to_string()),
-            )?;
-
-            Response::new()
-                .add_attribute("key", key.to_string())
-                .add_messages(msgs)
-        }
+    let balance = Balance {
+        native: convert_native_funds(&info.funds),
+        cw20: cw20_balance,
+        cw721: HashMap::new(),
     };
 
-    clear_state(deps);
-    Ok(response.add_attribute("action", "handle_competition_result"))
+    receive_balance(deps, sender_addr, balance)
 }
 
-pub fn handle_competition_state_changed(
+// This function receives CW721 tokens and updates the balance
+pub fn receive_cw721(
     deps: DepsMut,
     info: MessageInfo,
-    cw_competition_state_changed_msg: CwCompetitionStateChangedMsg,
+    cw721_receive_msg: Cw721ReceiveMsg,
 ) -> Result<Response, ContractError> {
-    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
-        return Err(ContractError::Unauthorized {});
-    }
-    let state = match cw_competition_state_changed_msg.new_state {
-        CompetitionState::Pending => EscrowState::Unlocked {},
-        CompetitionState::Staged => EscrowState::Locked {},
-        CompetitionState::Active => EscrowState::Locked {},
-        CompetitionState::Inactive => EscrowState::Unlocked {},
+    let sender_addr = deps.api.addr_validate(&cw721_receive_msg.sender)?;
+    let mut cw721_balance = HashMap::new();
+    cw721_balance.insert(sender_addr.clone(), vec![cw721_receive_msg.token_id]);
+
+    let balance = Balance {
+        native: convert_native_funds(&info.funds),
+        cw20: HashMap::new(),
+        cw721: cw721_balance,
     };
 
-    STATE.save(deps.storage, &state)?;
+    receive_balance(deps, sender_addr, balance)
+}
+
+// This function updates the balance
+fn receive_balance(deps: DepsMut, addr: Addr, balance: Balance) -> Result<Response, ContractError> {
+    // Update the balance in storage for the given address
+    BALANCE.update(deps.storage, &addr, |x| -> StdResult<_> {
+        if x.is_none() {
+            return Ok(balance.clone());
+        } else {
+            return Ok(balance.checked_add(&x.as_ref().unwrap())?);
+        }
+    })?;
+
+    // Update the due balance in storage for the given address
+    DUE.update(deps.storage, &addr, |x| -> StdResult<_> {
+        if x.is_none() {
+            return Ok(Balance::default());
+        } else {
+            return Ok(x.as_ref().unwrap().checked_sub(&balance)?);
+        }
+    })?;
+
+    // Update the total balance in storage
+    TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
+        Ok(x.checked_add(&balance)?) //do not factor in stake amount
+    })?;
+
+    // Build and return the response
+    Ok(Response::new()
+        .add_attribute("action", "receive_balance")
+        .add_attribute("balance", balance.to_string()))
+}
+
+pub fn apply_preset_distribution(
+    deps: Deps,
+    input_distribution: Distribution,
+) -> Result<Distribution, ContractError> {
+    let mut output_distribution = Distribution::new();
+
+    for (addr, input_weight) in input_distribution {
+        // Check if there's a preset distribution for the given address
+        if let Some(preset_distribution) =
+            DISTRIBUTION.may_load(deps.storage, &addr).unwrap_or(None)
+        {
+            let preset_total = preset_distribution
+                .values()
+                .cloned()
+                .try_fold(Decimal::zero(), |accumulator, x| accumulator.checked_add(x))?;
+
+            for (preset_addr, preset_weight) in preset_distribution {
+                let new_weight = preset_weight
+                    .checked_mul(input_weight)?
+                    .checked_div(preset_total)?;
+                output_distribution.insert(preset_addr, new_weight);
+            }
+        } else {
+            output_distribution.insert(addr, input_weight);
+        }
+    }
+
+    Ok(output_distribution)
+}
+
+// This function handles the competition result message.
+pub fn distribute(
+    deps: DepsMut,
+    info: MessageInfo,
+    distribution: DistributionRaw,
+    remainder_addr: String,
+) -> Result<Response, ContractError> {
+    // Assert that the sender is an admin.
+    ADMIN.assert_admin(deps.as_ref(), &info.sender)?;
+
+    // Calculate the distributable balance.
+    let distributable_total = get_distributable_balance(deps.as_ref())?;
+
+    // Validate the remainder address.
+    let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
+
+    // Validate the provided distribution.
+    let validated_distribution = get_validated_distribution(deps.as_ref(), &distribution)?;
+
+    // Apply the preset distribution, if any.
+    let validated_distribution = apply_preset_distribution(deps.as_ref(), validated_distribution)?;
+
+    // Calculate the splits based on the distributable total and the validated distribution.
+    let distributed_amounts =
+        distributable_total.split(&validated_distribution, &remainder_addr)?;
+
+    // Retrieve the current stakes.
+    let stakes = STAKE
+        .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
+        .collect::<StdResult<HashMap<Addr, Balance>>>()?;
+
+    // Clear the existing balance storage.
+    BALANCE.clear(deps.storage);
+
+    // Save the new balances based on the calculated splits.
+    for (addr, balance) in distributed_amounts {
+        BALANCE.save(deps.storage, &addr, &balance)?;
+    }
+
+    // Update the balances with the stakes.
+    for (addr, balance) in stakes {
+        BALANCE.update(deps.storage, &addr, |x| -> Result<Balance, ContractError> {
+            Ok(match x {
+                Some(value) => balance.checked_add(&value)?,
+                None => balance,
+            })
+        })?;
+    }
+
+    // Remove the total stake from storage.
+    TOTAL_STAKE.remove(deps.storage);
+
+    // Return the response with the added action attribute.
+    Ok(Response::new().add_attribute("action", "handle_competition_result"))
+}
+
+// This function handles the competition state change message
+pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, ContractError> {
+    ADMIN.assert_admin(deps.as_ref(), &info.sender)?;
+
+    // Save the locked state to storage
+    IS_LOCKED.save(deps.storage, &value)?;
+
+    // Build and return the response
     Ok(Response::new()
         .add_attribute("action", "handle_competition_state_changed")
-        .add_attribute(
-            "new_state",
-            cw_competition_state_changed_msg.new_state.as_str(),
-        ))
-}
-
-pub fn lock(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
-        return Err(ContractError::Unauthorized {});
-    }
-    STATE.save(deps.storage, &EscrowState::Locked {})?;
-    Ok(Response::new().add_attribute("action", "lock"))
-}
-
-pub fn unlock(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    if !ADMIN.is_admin(deps.as_ref(), &info.sender)? {
-        return Err(ContractError::Unauthorized {});
-    }
-    STATE.save(deps.storage, &EscrowState::Unlocked {})?;
-    Ok(Response::new().add_attribute("action", "unlock"))
-}
-
-fn clear_state(deps: DepsMut) {
-    TOTAL_BALANCE.remove(deps.storage);
-    BALANCE.clear(deps.storage);
-    DUE.clear(deps.storage);
-    STATE.remove(deps.storage);
+        .add_attribute("is_locked", value.to_string()))
 }

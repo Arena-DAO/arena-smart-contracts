@@ -3,9 +3,9 @@ use cosmwasm_schema::cw_serde;
 #[cw_serde]
 pub enum CompetitionState {
     Pending,
-    Staged,
     Active,
     Inactive,
+    Jailed,
 }
 
 impl Default for CompetitionState {
@@ -17,7 +17,7 @@ impl CompetitionState {
     pub fn as_str(&self) -> &'static str {
         match self {
             CompetitionState::Pending => "Pending",
-            CompetitionState::Staged => "Staged",
+            CompetitionState::Jailed => "Jailed",
             CompetitionState::Active => "Active",
             CompetitionState::Inactive => "Inactive",
         }
