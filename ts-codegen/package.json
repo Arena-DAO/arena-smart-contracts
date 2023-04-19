@@ -1,5 +1,5 @@
 {
-  "name": "@agon-protocol/contracts",
+  "name": "@arena-dao-protocol/contracts",
   "version": "1.0.0.beta",
   "description": "",
   "main": "src/codegen.ts",

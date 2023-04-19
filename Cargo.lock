@@ -3,11 +3,28 @@
 version = 3
 
 [[package]]
-name = "agon-core"
+name = "ahash"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
+dependencies = [
+ "getrandom",
+ "once_cell",
+ "version_check",
+]
+
+[[package]]
+name = "anyhow"
+version = "1.0.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
+
+[[package]]
+name = "arena-core"
 version = "1.0.0"
 dependencies = [
- "agon-escrow",
- "agon-testing",
+ "arena-escrow",
+ "arena-testing",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -33,41 +50,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "agon-escrow"
-version = "1.0.0"
-dependencies = [
- "agon-testing",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-balance",
- "cw-competition",
- "cw-controllers 1.0.1",
- "cw-multi-test",
- "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
- "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw20 0.16.0",
- "cw4 1.0.1",
- "cw721 0.16.0",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "agon-testing"
-version = "1.0.0"
-dependencies = [
- "agon-core",
- "agon-escrow",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-multi-test",
- "dao-proposal-multiple",
- "serde",
-]
-
-[[package]]
-name = "agon-tournament-module"
+name = "arena-dao-tournament-module"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -84,21 +67,42 @@ dependencies = [
 ]
 
 [[package]]
-name = "ahash"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
+name = "arena-escrow"
+version = "1.0.0"
 dependencies = [
- "getrandom",
- "once_cell",
- "version_check",
+ "arena-testing",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-balance",
+ "cw-competition",
+ "cw-controllers 1.0.1",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw20 0.16.0",
+ "cw20-base 0.16.0",
+ "cw4 1.0.1",
+ "cw721 0.16.0",
+ "cw721-base",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
+name = "arena-testing"
+version = "1.0.0"
+dependencies = [
+ "arena-core",
+ "arena-escrow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw20-base 0.16.0",
+ "cw721-base",
+ "dao-proposal-multiple",
+ "serde",
+]
 
 [[package]]
 name = "base16ct"

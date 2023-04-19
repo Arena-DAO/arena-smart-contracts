@@ -1,4 +1,4 @@
-use agon_escrow::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use arena_escrow::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cosmwasm_schema::write_api;
 
 fn main() {

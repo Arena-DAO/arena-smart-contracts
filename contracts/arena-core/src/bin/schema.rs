@@ -1,4 +1,4 @@
-use agon_core::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use arena_core::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cosmwasm_schema::write_api;
 
 fn main() {

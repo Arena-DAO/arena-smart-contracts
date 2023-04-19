@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -11,10 +9,10 @@ use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
-use cw_balance::Balance;
+use cw_balance::{BalanceVerified, MemberBalance};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:agon-escrow";
+const CONTRACT_NAME: &str = "crates.io:arena-dao-escrow";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -34,26 +32,28 @@ pub fn instantiate(
 pub fn instantiate_contract(
     mut deps: DepsMut,
     info: MessageInfo,
-    due: HashMap<String, Balance>,
-    stake: HashMap<String, Balance>,
+    due: Vec<MemberBalance>,
+    stake: Vec<MemberBalance>,
 ) -> Result<(), ContractError> {
     ADMIN.set(deps.branch(), Some(info.sender))?;
     IS_LOCKED.save(deps.storage, &false)?;
-    let total_stake = Balance::new();
-    for (addr, balance) in stake {
-        let addr = deps.api.addr_validate(&addr)?;
-        STAKE.save(deps.storage, &addr, &balance)?;
-        total_stake.checked_add(&balance)?;
+    let total_stake = BalanceVerified::new();
+    for member_balance in stake {
+        let member_balance = member_balance.to_verified(deps.as_ref())?;
+        STAKE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
+        total_stake.checked_add(&member_balance.balance)?;
     }
-    for (addr, balance) in due {
-        let addr = deps.api.addr_validate(&addr)?;
-        let total_due = match STAKE.has(deps.storage, &addr) {
-            true => STAKE.load(deps.storage, &addr)?.checked_add(&balance)?,
-            false => balance,
+    for member_balance in due {
+        let member_balance = member_balance.to_verified(deps.as_ref())?;
+        let total_due = match STAKE.has(deps.storage, &member_balance.addr) {
+            true => STAKE
+                .load(deps.storage, &member_balance.addr)?
+                .checked_add(&member_balance.balance)?,
+            false => member_balance.balance,
         };
-        DUE.save(deps.storage, &addr, &total_due)?;
+        DUE.save(deps.storage, &member_balance.addr, &total_due)?;
     }
-    TOTAL_BALANCE.save(deps.storage, &Balance::new())?;
+    TOTAL_BALANCE.save(deps.storage, &BalanceVerified::new())?;
     TOTAL_STAKE.save(deps.storage, &total_stake)?;
     Ok(())
 }
@@ -99,5 +99,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsLocked {} => to_binary(&query::is_locked(deps)),
         QueryMsg::DumpState {} => to_binary(&query::dump_state(deps)?),
         QueryMsg::Distribution { addr } => to_binary(&query::distribution(deps, addr)?),
+        QueryMsg::IsFunded { addr } => to_binary(&query::is_funded(deps, addr)?),
+        QueryMsg::IsFullyFunded {} => to_binary(&query::is_fully_funded(deps)?),
+        QueryMsg::DistributableBalance {} => to_binary(&query::distributable_balance(deps)?),
     }
 }

@@ -16,9 +16,9 @@ use cw_utils::parse_reply_instantiate_data;
 use dao_core::msg::ExecuteMsg as DAOCoreExecuteMsg;
 use dao_interface::ModuleInstantiateCallback;
 
-pub(crate) const CONTRACT_NAME: &str = "crates.io:agon-core";
+pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-dao-core";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub(crate) const ITEM_KEY: &str = "AGON";
+pub(crate) const ITEM_KEY: &str = "Arena";
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

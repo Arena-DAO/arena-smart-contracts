@@ -1,5 +1,5 @@
 [package]
-name = "agon-core"
+name = "arena-core"
 version = "1.0.0"
 authors = ["ismellike <glopez11193@gmail.com>"]
 edition = "2018"
@@ -32,7 +32,7 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 cw-paginate = { workspace = true }
 dao-core = { workspace = true }
-agon-escrow = { workspace = true }
+arena-escrow = { workspace = true }
 cw4-group = { workspace = true }
 cw-competition = { workspace = true }
 dao-interface = { workspace = true }
@@ -44,4 +44,4 @@ dao-pre-propose-base = { workspace = true }
 cw-multi-test = { workspace = true }
 dao-testing = { workspace = true }
 dao-proposal-single = { workspace = true }
-agon-testing = { workspace = true }
+arena-testing = { workspace = true }

@@ -1,15 +1,12 @@
 {
-  "contract_name": "agon-core",
+  "contract_name": "arena-dao-core",
   "contract_version": "0.1.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "InstantiateMsg",
     "type": "object",
-    "required": [
-      "extension",
-      "open_proposal_submission"
-    ],
+    "required": ["extension", "open_proposal_submission"],
     "properties": {
       "deposit_info": {
         "description": "Information about the deposit requirements for this module. None if no deposit.",
@@ -43,15 +40,11 @@
           {
             "description": "Set the admin to a specified address.",
             "type": "object",
-            "required": [
-              "address"
-            ],
+            "required": ["address"],
             "properties": {
               "address": {
                 "type": "object",
-                "required": [
-                  "addr"
-                ],
+                "required": ["addr"],
                 "properties": {
                   "addr": {
                     "type": "string"
@@ -65,9 +58,7 @@
           {
             "description": "Sets the admin as the core module address.",
             "type": "object",
-            "required": [
-              "core_module"
-            ],
+            "required": ["core_module"],
             "properties": {
               "core_module": {
                 "type": "object",
@@ -91,23 +82,17 @@
           {
             "description": "Deposits should always be refunded.",
             "type": "string",
-            "enum": [
-              "always"
-            ]
+            "enum": ["always"]
           },
           {
             "description": "Deposits should only be refunded for passed proposals.",
             "type": "string",
-            "enum": [
-              "only_passed"
-            ]
+            "enum": ["only_passed"]
           },
           {
             "description": "Deposits should never be refunded.",
             "type": "string",
-            "enum": [
-              "never"
-            ]
+            "enum": ["never"]
           }
         ]
       },
@@ -117,15 +102,11 @@
           {
             "description": "Use a specific token address as the deposit token.",
             "type": "object",
-            "required": [
-              "token"
-            ],
+            "required": ["token"],
             "properties": {
               "token": {
                 "type": "object",
-                "required": [
-                  "denom"
-                ],
+                "required": ["denom"],
                 "properties": {
                   "denom": {
                     "$ref": "#/definitions/UncheckedDenom"
@@ -139,9 +120,7 @@
           {
             "description": "Use the token address of the associated DAO's voting module. NOTE: in order to use the token address of the voting module the voting module must (1) use a cw20 token and (2) implement the `TokenContract {}` query type defined by `dao_macros::token_query`. Failing to implement that and using this option will cause instantiation to fail.",
             "type": "object",
-            "required": [
-              "voting_module_token"
-            ],
+            "required": ["voting_module_token"],
             "properties": {
               "voting_module_token": {
                 "type": "object",
@@ -154,11 +133,7 @@
       },
       "InstantiateExt": {
         "type": "object",
-        "required": [
-          "competition_modules_instantiate_info",
-          "rulesets",
-          "tax"
-        ],
+        "required": ["competition_modules_instantiate_info", "rulesets", "tax"],
         "properties": {
           "competition_modules_instantiate_info": {
             "type": "array",
@@ -181,11 +156,7 @@
       "ModuleInstantiateInfo": {
         "description": "Information needed to instantiate a module.",
         "type": "object",
-        "required": [
-          "code_id",
-          "label",
-          "msg"
-        ],
+        "required": ["code_id", "label", "msg"],
         "properties": {
           "admin": {
             "description": "CosmWasm level admin of the instantiated contract. See: <https://docs.cosmwasm.com/docs/1.0/smart-contracts/migration>",
@@ -221,11 +192,7 @@
       },
       "Ruleset": {
         "type": "object",
-        "required": [
-          "description",
-          "id",
-          "rules"
-        ],
+        "required": ["description", "id", "rules"],
         "properties": {
           "description": {
             "type": "string"
@@ -252,9 +219,7 @@
           {
             "description": "A native (bank module) asset.",
             "type": "object",
-            "required": [
-              "native"
-            ],
+            "required": ["native"],
             "properties": {
               "native": {
                 "type": "string"
@@ -265,9 +230,7 @@
           {
             "description": "A cw20 asset.",
             "type": "object",
-            "required": [
-              "cw20"
-            ],
+            "required": ["cw20"],
             "properties": {
               "cw20": {
                 "type": "string"
@@ -280,11 +243,7 @@
       "UncheckedDepositInfo": {
         "description": "Information about the deposit required to create a proposal.",
         "type": "object",
-        "required": [
-          "amount",
-          "denom",
-          "refund_policy"
-        ],
+        "required": ["amount", "denom", "refund_policy"],
         "properties": {
           "amount": {
             "description": "The number of tokens that must be deposited to create a proposal. Must be a positive, non-zero number.",
@@ -322,15 +281,11 @@
       {
         "description": "Creates a new proposal in the pre-propose module. MSG will be serialized and used as the proposal creation message.",
         "type": "object",
-        "required": [
-          "propose"
-        ],
+        "required": ["propose"],
         "properties": {
           "propose": {
             "type": "object",
-            "required": [
-              "msg"
-            ],
+            "required": ["msg"],
             "properties": {
               "msg": {
                 "$ref": "#/definitions/Empty"
@@ -344,15 +299,11 @@
       {
         "description": "Updates the configuration of this module. This will completely override the existing configuration. This new configuration will only apply to proposals created after the config is updated. Only the DAO may execute this message.",
         "type": "object",
-        "required": [
-          "update_config"
-        ],
+        "required": ["update_config"],
         "properties": {
           "update_config": {
             "type": "object",
-            "required": [
-              "open_proposal_submission"
-            ],
+            "required": ["open_proposal_submission"],
             "properties": {
               "deposit_info": {
                 "anyOf": [
@@ -376,9 +327,7 @@
       {
         "description": "Withdraws funds inside of this contract to the message sender. The contracts entire balance for the specifed DENOM is withdrawn to the message sender. Only the DAO may call this method.\n\nThis is intended only as an escape hatch in the event of a critical bug in this contract or it's proposal module. Withdrawing funds will cause future attempts to return proposal deposits to fail their transactions as the contract will have insufficent balance to return them. In the case of `cw-proposal-single` this transaction failure will cause the module to remove the pre-propose module from its proposal hook receivers.\n\nMore likely than not, this should NEVER BE CALLED unless a bug in this contract or the proposal module it is associated with has caused it to stop receiving proposal hook messages, or if a critical security vulnerability has been found that allows an attacker to drain proposal deposits.",
         "type": "object",
-        "required": [
-          "withdraw"
-        ],
+        "required": ["withdraw"],
         "properties": {
           "withdraw": {
             "type": "object",
@@ -403,15 +352,11 @@
       {
         "description": "Extension message. Contracts that extend this one should put their custom execute logic here. The default implementation will do nothing if this variant is executed.",
         "type": "object",
-        "required": [
-          "extension"
-        ],
+        "required": ["extension"],
         "properties": {
           "extension": {
             "type": "object",
-            "required": [
-              "msg"
-            ],
+            "required": ["msg"],
             "properties": {
               "msg": {
                 "$ref": "#/definitions/ExecuteExt"
@@ -425,15 +370,11 @@
       {
         "description": "Adds a proposal submitted hook. Fires when a new proposal is submitted to the pre-propose contract. Only the DAO may call this method.",
         "type": "object",
-        "required": [
-          "add_proposal_submitted_hook"
-        ],
+        "required": ["add_proposal_submitted_hook"],
         "properties": {
           "add_proposal_submitted_hook": {
             "type": "object",
-            "required": [
-              "address"
-            ],
+            "required": ["address"],
             "properties": {
               "address": {
                 "type": "string"
@@ -447,15 +388,11 @@
       {
         "description": "Removes a proposal submitted hook. Only the DAO may call this method.",
         "type": "object",
-        "required": [
-          "remove_proposal_submitted_hook"
-        ],
+        "required": ["remove_proposal_submitted_hook"],
         "properties": {
           "remove_proposal_submitted_hook": {
             "type": "object",
-            "required": [
-              "address"
-            ],
+            "required": ["address"],
             "properties": {
               "address": {
                 "type": "string"
@@ -469,16 +406,11 @@
       {
         "description": "Handles proposal hook fired by the associated proposal module when a proposal is completed (ie executed or rejected). By default, the base contract will return deposits proposals, when they are closed, when proposals are executed, or, if it is refunding failed.",
         "type": "object",
-        "required": [
-          "proposal_completed_hook"
-        ],
+        "required": ["proposal_completed_hook"],
         "properties": {
           "proposal_completed_hook": {
             "type": "object",
-            "required": [
-              "new_status",
-              "proposal_id"
-            ],
+            "required": ["new_status", "proposal_id"],
             "properties": {
               "new_status": {
                 "$ref": "#/definitions/Status"
@@ -506,15 +438,11 @@
           {
             "description": "Set the admin to a specified address.",
             "type": "object",
-            "required": [
-              "address"
-            ],
+            "required": ["address"],
             "properties": {
               "address": {
                 "type": "object",
-                "required": [
-                  "addr"
-                ],
+                "required": ["addr"],
                 "properties": {
                   "addr": {
                     "type": "string"
@@ -528,9 +456,7 @@
           {
             "description": "Sets the admin as the core module address.",
             "type": "object",
-            "required": [
-              "core_module"
-            ],
+            "required": ["core_module"],
             "properties": {
               "core_module": {
                 "type": "object",
@@ -554,23 +480,17 @@
           {
             "description": "Deposits should always be refunded.",
             "type": "string",
-            "enum": [
-              "always"
-            ]
+            "enum": ["always"]
           },
           {
             "description": "Deposits should only be refunded for passed proposals.",
             "type": "string",
-            "enum": [
-              "only_passed"
-            ]
+            "enum": ["only_passed"]
           },
           {
             "description": "Deposits should never be refunded.",
             "type": "string",
-            "enum": [
-              "never"
-            ]
+            "enum": ["never"]
           }
         ]
       },
@@ -580,15 +500,11 @@
           {
             "description": "Use a specific token address as the deposit token.",
             "type": "object",
-            "required": [
-              "token"
-            ],
+            "required": ["token"],
             "properties": {
               "token": {
                 "type": "object",
-                "required": [
-                  "denom"
-                ],
+                "required": ["denom"],
                 "properties": {
                   "denom": {
                     "$ref": "#/definitions/UncheckedDenom"
@@ -602,9 +518,7 @@
           {
             "description": "Use the token address of the associated DAO's voting module. NOTE: in order to use the token address of the voting module the voting module must (1) use a cw20 token and (2) implement the `TokenContract {}` query type defined by `dao_macros::token_query`. Failing to implement that and using this option will cause instantiation to fail.",
             "type": "object",
-            "required": [
-              "voting_module_token"
-            ],
+            "required": ["voting_module_token"],
             "properties": {
               "voting_module_token": {
                 "type": "object",
@@ -623,16 +537,11 @@
         "oneOf": [
           {
             "type": "object",
-            "required": [
-              "update_competition_modules"
-            ],
+            "required": ["update_competition_modules"],
             "properties": {
               "update_competition_modules": {
                 "type": "object",
-                "required": [
-                  "to_add",
-                  "to_remove"
-                ],
+                "required": ["to_add", "to_remove"],
                 "properties": {
                   "to_add": {
                     "type": "array",
@@ -654,15 +563,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "jail_wager"
-            ],
+            "required": ["jail_wager"],
             "properties": {
               "jail_wager": {
                 "type": "object",
-                "required": [
-                  "id"
-                ],
+                "required": ["id"],
                 "properties": {
                   "id": {
                     "$ref": "#/definitions/Uint128"
@@ -675,9 +580,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "create_wager"
-            ],
+            "required": ["create_wager"],
             "properties": {
               "create_wager": {
                 "type": "object",
@@ -737,21 +640,14 @@
           },
           {
             "type": "object",
-            "required": [
-              "handle_wager"
-            ],
+            "required": ["handle_wager"],
             "properties": {
               "handle_wager": {
                 "type": "object",
-                "required": [
-                  "id"
-                ],
+                "required": ["id"],
                 "properties": {
                   "distribution": {
-                    "type": [
-                      "array",
-                      "null"
-                    ],
+                    "type": ["array", "null"],
                     "items": {
                       "$ref": "#/definitions/MemberShare"
                     }
@@ -767,16 +663,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "update_rulesets"
-            ],
+            "required": ["update_rulesets"],
             "properties": {
               "update_rulesets": {
                 "type": "object",
-                "required": [
-                  "to_add",
-                  "to_disable"
-                ],
+                "required": ["to_add", "to_disable"],
                 "properties": {
                   "to_add": {
                     "type": "array",
@@ -798,15 +689,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "update_tax"
-            ],
+            "required": ["update_tax"],
             "properties": {
               "update_tax": {
                 "type": "object",
-                "required": [
-                  "tax"
-                ],
+                "required": ["tax"],
                 "properties": {
                   "tax": {
                     "$ref": "#/definitions/Decimal"
@@ -825,9 +712,7 @@
           {
             "description": "AtHeight will expire when `env.block.height` >= height",
             "type": "object",
-            "required": [
-              "at_height"
-            ],
+            "required": ["at_height"],
             "properties": {
               "at_height": {
                 "type": "integer",
@@ -840,9 +725,7 @@
           {
             "description": "AtTime will expire when `env.block.time` >= time",
             "type": "object",
-            "required": [
-              "at_time"
-            ],
+            "required": ["at_time"],
             "properties": {
               "at_time": {
                 "$ref": "#/definitions/Timestamp"
@@ -853,9 +736,7 @@
           {
             "description": "Never will never expire. Used to express the empty variant",
             "type": "object",
-            "required": [
-              "never"
-            ],
+            "required": ["never"],
             "properties": {
               "never": {
                 "type": "object",
@@ -868,10 +749,7 @@
       },
       "GenericTokenBalance": {
         "type": "object",
-        "required": [
-          "amount",
-          "token_type"
-        ],
+        "required": ["amount", "token_type"],
         "properties": {
           "addr": {
             "anyOf": [
@@ -887,10 +765,7 @@
             "$ref": "#/definitions/Uint128"
           },
           "denom": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "token_type": {
             "$ref": "#/definitions/GenericTokenType"
@@ -900,18 +775,11 @@
       },
       "GenericTokenType": {
         "type": "string",
-        "enum": [
-          "native",
-          "cw20",
-          "cw721"
-        ]
+        "enum": ["native", "cw20", "cw721"]
       },
       "MemberBalance": {
         "type": "object",
-        "required": [
-          "balances",
-          "member"
-        ],
+        "required": ["balances", "member"],
         "properties": {
           "balances": {
             "type": "array",
@@ -927,10 +795,7 @@
       },
       "MemberShare": {
         "type": "object",
-        "required": [
-          "addr",
-          "shares"
-        ],
+        "required": ["addr", "shares"],
         "properties": {
           "addr": {
             "type": "string"
@@ -944,11 +809,7 @@
       "ModuleInstantiateInfo": {
         "description": "Information needed to instantiate a module.",
         "type": "object",
-        "required": [
-          "code_id",
-          "label",
-          "msg"
-        ],
+        "required": ["code_id", "label", "msg"],
         "properties": {
           "admin": {
             "description": "CosmWasm level admin of the instantiated contract. See: <https://docs.cosmwasm.com/docs/1.0/smart-contracts/migration>",
@@ -984,11 +845,7 @@
       },
       "Ruleset": {
         "type": "object",
-        "required": [
-          "description",
-          "id",
-          "rules"
-        ],
+        "required": ["description", "id", "rules"],
         "properties": {
           "description": {
             "type": "string"
@@ -1010,44 +867,32 @@
           {
             "description": "The proposal is open for voting.",
             "type": "string",
-            "enum": [
-              "open"
-            ]
+            "enum": ["open"]
           },
           {
             "description": "The proposal has been rejected.",
             "type": "string",
-            "enum": [
-              "rejected"
-            ]
+            "enum": ["rejected"]
           },
           {
             "description": "The proposal has been passed but has not been executed.",
             "type": "string",
-            "enum": [
-              "passed"
-            ]
+            "enum": ["passed"]
           },
           {
             "description": "The proposal has been passed and executed.",
             "type": "string",
-            "enum": [
-              "executed"
-            ]
+            "enum": ["executed"]
           },
           {
             "description": "The proposal has failed or expired and has been closed. A proposal deposit refund has been issued if applicable.",
             "type": "string",
-            "enum": [
-              "closed"
-            ]
+            "enum": ["closed"]
           },
           {
             "description": "The proposal's execution failed.",
             "type": "string",
-            "enum": [
-              "execution_failed"
-            ]
+            "enum": ["execution_failed"]
           }
         ]
       },
@@ -1073,9 +918,7 @@
           {
             "description": "A native (bank module) asset.",
             "type": "object",
-            "required": [
-              "native"
-            ],
+            "required": ["native"],
             "properties": {
               "native": {
                 "type": "string"
@@ -1086,9 +929,7 @@
           {
             "description": "A cw20 asset.",
             "type": "object",
-            "required": [
-              "cw20"
-            ],
+            "required": ["cw20"],
             "properties": {
               "cw20": {
                 "type": "string"
@@ -1101,11 +942,7 @@
       "UncheckedDepositInfo": {
         "description": "Information about the deposit required to create a proposal.",
         "type": "object",
-        "required": [
-          "amount",
-          "denom",
-          "refund_policy"
-        ],
+        "required": ["amount", "denom", "refund_policy"],
         "properties": {
           "amount": {
             "description": "The number of tokens that must be deposited to create a proposal. Must be a positive, non-zero number.",
@@ -1138,9 +975,7 @@
         "oneOf": [
           {
             "type": "object",
-            "required": [
-              "new"
-            ],
+            "required": ["new"],
             "properties": {
               "new": {
                 "type": "object",
@@ -1180,15 +1015,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "existing"
-            ],
+            "required": ["existing"],
             "properties": {
               "existing": {
                 "type": "object",
-                "required": [
-                  "addr"
-                ],
+                "required": ["addr"],
                 "properties": {
                   "addr": {
                     "type": "string"
@@ -1210,9 +1041,7 @@
       {
         "description": "Gets the proposal module that this pre propose module is associated with. Returns `Addr`.",
         "type": "object",
-        "required": [
-          "proposal_module"
-        ],
+        "required": ["proposal_module"],
         "properties": {
           "proposal_module": {
             "type": "object",
@@ -1224,9 +1053,7 @@
       {
         "description": "Gets the DAO (cw-dao-core) module this contract is associated with. Returns `Addr`.",
         "type": "object",
-        "required": [
-          "dao"
-        ],
+        "required": ["dao"],
         "properties": {
           "dao": {
             "type": "object",
@@ -1238,9 +1065,7 @@
       {
         "description": "Gets the module's configuration.",
         "type": "object",
-        "required": [
-          "config"
-        ],
+        "required": ["config"],
         "properties": {
           "config": {
             "type": "object",
@@ -1252,15 +1077,11 @@
       {
         "description": "Gets the deposit info for the proposal identified by PROPOSAL_ID.",
         "type": "object",
-        "required": [
-          "deposit_info"
-        ],
+        "required": ["deposit_info"],
         "properties": {
           "deposit_info": {
             "type": "object",
-            "required": [
-              "proposal_id"
-            ],
+            "required": ["proposal_id"],
             "properties": {
               "proposal_id": {
                 "type": "integer",
@@ -1276,9 +1097,7 @@
       {
         "description": "Returns list of proposal submitted hooks.",
         "type": "object",
-        "required": [
-          "proposal_submitted_hooks"
-        ],
+        "required": ["proposal_submitted_hooks"],
         "properties": {
           "proposal_submitted_hooks": {
             "type": "object",
@@ -1290,15 +1109,11 @@
       {
         "description": "Extension for queries. The default implementation will do nothing if queried for will return `Binary::default()`.",
         "type": "object",
-        "required": [
-          "query_extension"
-        ],
+        "required": ["query_extension"],
         "properties": {
           "query_extension": {
             "type": "object",
-            "required": [
-              "msg"
-            ],
+            "required": ["msg"],
             "properties": {
               "msg": {
                 "$ref": "#/definitions/QueryExt"
@@ -1315,26 +1130,18 @@
         "oneOf": [
           {
             "type": "object",
-            "required": [
-              "competition_modules"
-            ],
+            "required": ["competition_modules"],
             "properties": {
               "competition_modules": {
                 "type": "object",
                 "properties": {
                   "limit": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
+                    "type": ["integer", "null"],
                     "format": "uint32",
                     "minimum": 0.0
                   },
                   "start_after": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   }
                 },
                 "additionalProperties": false
@@ -1344,32 +1151,21 @@
           },
           {
             "type": "object",
-            "required": [
-              "rulesets"
-            ],
+            "required": ["rulesets"],
             "properties": {
               "rulesets": {
                 "type": "object",
                 "properties": {
                   "description": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "limit": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
+                    "type": ["integer", "null"],
                     "format": "uint32",
                     "minimum": 0.0
                   },
                   "skip": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
+                    "type": ["integer", "null"],
                     "format": "uint32",
                     "minimum": 0.0
                   }
@@ -1381,18 +1177,13 @@
           },
           {
             "type": "object",
-            "required": [
-              "tax"
-            ],
+            "required": ["tax"],
             "properties": {
               "tax": {
                 "type": "object",
                 "properties": {
                   "height": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
+                    "type": ["integer", "null"],
                     "format": "uint64",
                     "minimum": 0.0
                   }
@@ -1404,9 +1195,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "dump_state"
-            ],
+            "required": ["dump_state"],
             "properties": {
               "dump_state": {
                 "type": "object",
@@ -1426,9 +1215,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Config",
       "type": "object",
-      "required": [
-        "open_proposal_submission"
-      ],
+      "required": ["open_proposal_submission"],
       "properties": {
         "deposit_info": {
           "description": "Information about the deposit required to create a proposal. If `None`, no deposit is required.",
@@ -1458,9 +1245,7 @@
             {
               "description": "A native (bank module) asset.",
               "type": "object",
-              "required": [
-                "native"
-              ],
+              "required": ["native"],
               "properties": {
                 "native": {
                   "type": "string"
@@ -1471,9 +1256,7 @@
             {
               "description": "A cw20 asset.",
               "type": "object",
-              "required": [
-                "cw20"
-              ],
+              "required": ["cw20"],
               "properties": {
                 "cw20": {
                   "$ref": "#/definitions/Addr"
@@ -1486,11 +1269,7 @@
         "CheckedDepositInfo": {
           "description": "Counterpart to the `DepositInfo` struct which has been processed. This type should never be constructed literally and should always by built by calling `into_checked` on a `DepositInfo` instance.",
           "type": "object",
-          "required": [
-            "amount",
-            "denom",
-            "refund_policy"
-          ],
+          "required": ["amount", "denom", "refund_policy"],
           "properties": {
             "amount": {
               "description": "The number of tokens that must be deposited to create a proposal. This is validated to be non-zero if this struct is constructed by converted via the `into_checked` method on `DepositInfo`.",
@@ -1524,23 +1303,17 @@
             {
               "description": "Deposits should always be refunded.",
               "type": "string",
-              "enum": [
-                "always"
-              ]
+              "enum": ["always"]
             },
             {
               "description": "Deposits should only be refunded for passed proposals.",
               "type": "string",
-              "enum": [
-                "only_passed"
-              ]
+              "enum": ["only_passed"]
             },
             {
               "description": "Deposits should never be refunded.",
               "type": "string",
-              "enum": [
-                "never"
-              ]
+              "enum": ["never"]
             }
           ]
         },
@@ -1560,9 +1333,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DepositInfoResponse",
       "type": "object",
-      "required": [
-        "proposer"
-      ],
+      "required": ["proposer"],
       "properties": {
         "deposit_info": {
           "description": "The deposit that has been paid for the specified proposal.",
@@ -1596,9 +1367,7 @@
             {
               "description": "A native (bank module) asset.",
               "type": "object",
-              "required": [
-                "native"
-              ],
+              "required": ["native"],
               "properties": {
                 "native": {
                   "type": "string"
@@ -1609,9 +1378,7 @@
             {
               "description": "A cw20 asset.",
               "type": "object",
-              "required": [
-                "cw20"
-              ],
+              "required": ["cw20"],
               "properties": {
                 "cw20": {
                   "$ref": "#/definitions/Addr"
@@ -1624,11 +1391,7 @@
         "CheckedDepositInfo": {
           "description": "Counterpart to the `DepositInfo` struct which has been processed. This type should never be constructed literally and should always by built by calling `into_checked` on a `DepositInfo` instance.",
           "type": "object",
-          "required": [
-            "amount",
-            "denom",
-            "refund_policy"
-          ],
+          "required": ["amount", "denom", "refund_policy"],
           "properties": {
             "amount": {
               "description": "The number of tokens that must be deposited to create a proposal. This is validated to be non-zero if this struct is constructed by converted via the `into_checked` method on `DepositInfo`.",
@@ -1662,23 +1425,17 @@
             {
               "description": "Deposits should always be refunded.",
               "type": "string",
-              "enum": [
-                "always"
-              ]
+              "enum": ["always"]
             },
             {
               "description": "Deposits should only be refunded for passed proposals.",
               "type": "string",
-              "enum": [
-                "only_passed"
-              ]
+              "enum": ["only_passed"]
             },
             {
               "description": "Deposits should never be refunded.",
               "type": "string",
-              "enum": [
-                "never"
-              ]
+              "enum": ["never"]
             }
           ]
         },
@@ -1698,9 +1455,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "HooksResponse",
       "type": "object",
-      "required": [
-        "hooks"
-      ],
+      "required": ["hooks"],
       "properties": {
         "hooks": {
           "type": "array",

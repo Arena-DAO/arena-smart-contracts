@@ -37,13 +37,13 @@ rand = "0.8"
 cw4 = "1.0.1"
 serde = "1.0"
 
-#agon dependencies
+#arena_dao dependencies
 cw-competition = { path = "./packages/cw-competition" }
 cw-balance = { path = "./packages/cw-balance" }
-agon-testing = { path = "./packages/agon-testing" }
+arena-testing = { path = "./packages/arena-testing" }
 
-agon-core = { path = "./contracts/agon-core" }
-agon-escrow = { path = "./contracts/agon-escrow" }
+arena-core = { path = "./contracts/arena-core" }
+arena-escrow = { path = "./contracts/arena-escrow" }
 
 #dao dependencies
 cw-paginate = { git = "https://github.com/DA0-DA0/dao-contracts"}

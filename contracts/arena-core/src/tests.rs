@@ -13,7 +13,7 @@ const MAIN_ADDR: &str = "main";
 struct Context {
     dao: Addr,
     spm_addr: Addr,
-    agon_module: Addr,
+    arena_dao_module: Addr,
 }
 
 fn create_context(app: &mut App) -> Context {
@@ -42,8 +42,8 @@ fn create_context(app: &mut App) -> Context {
     );
 
     let proposal_multiple_id =
-        app.store_code(agon_testing::contracts::dao_proposal_multiple_contract());
-    let agon_code_id = app.store_code(agon_testing::contracts::agon_core_contract());
+        app.store_code(arena_testing::contracts::dao_proposal_multiple_contract());
+    let arena_dao_code_id = app.store_code(arena_testing::contracts::arena_dao_core_contract());
 
     let proposal_modules = get_active_modules(app, dao.clone());
     assert_eq!(proposal_modules.len(), 1);
@@ -54,7 +54,7 @@ fn create_context(app: &mut App) -> Context {
         spm_addr.clone(),
         &dao_proposal_single::msg::ExecuteMsg::Propose(
             dao_voting::proposal::SingleChoiceProposeMsg {
-                title: "Agon Proposal Module".to_string(),
+                title: "Arena Proposal Module".to_string(),
                 description: "Enable Decentralized Competition!".to_string(),
                 msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: dao.to_string(),
@@ -74,7 +74,7 @@ fn create_context(app: &mut App) -> Context {
                                 pre_propose_info:
                                     dao_voting::pre_propose::PreProposeInfo::ModuleMayPropose {
                                         info: ModuleInstantiateInfo {
-                                            code_id: agon_code_id,
+                                            code_id: arena_dao_code_id,
                                             msg: to_binary(&InstantiateMsg {
                                                 deposit_info: None,
                                                 open_proposal_submission: true,
@@ -90,14 +90,14 @@ fn create_context(app: &mut App) -> Context {
                                             })
                                             .unwrap(),
                                             admin: None,
-                                            label: "Agon Core".to_string(),
+                                            label: "Arena Core".to_string(),
                                         },
                                     },
                                 close_proposal_on_execution_failure: true,
                             })
                             .unwrap(),
                             admin: None,
-                            label: "Agon Core".to_string(),
+                            label: "Arena Core".to_string(),
                         }],
                         to_disable: vec![],
                     })
@@ -137,7 +137,7 @@ fn create_context(app: &mut App) -> Context {
     Context {
         dao,
         spm_addr,
-        agon_module: Addr::unchecked("test"),
+        arena_dao_module: Addr::unchecked("test"),
     }
 }
 

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw20::Cw20CoinVerified;
 
-use crate::{Balance, Cw721TokensVerified, MemberShareValidated};
+use crate::{balance::BalanceVerified, Cw721CollectionVerified, MemberShareVerified};
 
 #[test]
 fn test_add_native_balances() {
@@ -14,12 +14,12 @@ fn test_add_native_balances() {
         amount: Uint128::from(20u128),
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: native_balance_a,
         cw20: vec![],
         cw721: vec![],
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: native_balance_b,
         cw20: vec![],
         cw721: vec![],
@@ -47,12 +47,12 @@ fn test_add_cw20_balances() {
         amount: Uint128::from(20u128),
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: vec![],
         cw20: cw20_balance_a,
         cw721: vec![],
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: vec![],
         cw20: cw20_balance_b,
         cw721: vec![],
@@ -71,21 +71,21 @@ fn test_add_cw20_balances() {
 #[test]
 fn test_add_cw721_balances() {
     let addr = Addr::unchecked("cw721token");
-    let cw721_balance_a = vec![Cw721TokensVerified {
+    let cw721_balance_a = vec![Cw721CollectionVerified {
         addr: addr.clone(),
         token_ids: vec!["token1".to_string(), "token2".to_string()],
     }];
-    let cw721_balance_b = vec![Cw721TokensVerified {
+    let cw721_balance_b = vec![Cw721CollectionVerified {
         addr: addr.clone(),
         token_ids: vec!["token3".to_string(), "token4".to_string()],
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: vec![],
         cw20: vec![],
         cw721: cw721_balance_a,
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: vec![],
         cw20: vec![],
         cw721: cw721_balance_b,
@@ -123,12 +123,12 @@ fn test_subtract_native_balances() {
         amount: Uint128::from(20u128),
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: native_balance_a,
         cw20: vec![],
         cw721: vec![],
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: native_balance_b,
         cw20: vec![],
         cw721: vec![],
@@ -156,12 +156,12 @@ fn test_subtract_cw20_balances() {
         amount: Uint128::from(20u128),
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: vec![],
         cw20: cw20_balance_a,
         cw721: vec![],
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: vec![],
         cw20: cw20_balance_b,
         cw721: vec![],
@@ -180,7 +180,7 @@ fn test_subtract_cw20_balances() {
 #[test]
 fn test_subtract_cw721_balances() {
     let addr = Addr::unchecked("cw721token");
-    let cw721_balance_a = vec![Cw721TokensVerified {
+    let cw721_balance_a = vec![Cw721CollectionVerified {
         addr: addr.clone(),
         token_ids: vec![
             "token1".to_string(),
@@ -189,17 +189,17 @@ fn test_subtract_cw721_balances() {
             "token4".to_string(),
         ],
     }];
-    let cw721_balance_b = vec![Cw721TokensVerified {
+    let cw721_balance_b = vec![Cw721CollectionVerified {
         addr: addr.clone(),
         token_ids: vec!["token1".to_string(), "token2".to_string()],
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: vec![],
         cw20: vec![],
         cw721: cw721_balance_a,
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: vec![],
         cw20: vec![],
         cw721: cw721_balance_b,
@@ -208,7 +208,7 @@ fn test_subtract_cw721_balances() {
     let remaining_balance = balance_a.checked_sub(&balance_b).unwrap();
     assert_eq!(
         remaining_balance.cw721,
-        vec![Cw721TokensVerified {
+        vec![Cw721CollectionVerified {
             addr: addr.clone(),
             token_ids: vec!["token3".to_string(), "token4".to_string()],
         }]
@@ -226,12 +226,12 @@ fn test_add_different_native_denoms() {
         amount: Uint128::from(20u128),
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: native_balance_a,
         cw20: vec![],
         cw721: vec![],
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: native_balance_b,
         cw20: vec![],
         cw721: vec![],
@@ -264,12 +264,12 @@ fn test_subtract_insufficient_native_balance() {
         amount: Uint128::from(20u128),
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: native_balance_a,
         cw20: vec![],
         cw721: vec![],
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: native_balance_b,
         cw20: vec![],
         cw721: vec![],
@@ -280,8 +280,8 @@ fn test_subtract_insufficient_native_balance() {
 
 #[test]
 fn test_add_empty_balances() {
-    let balance_a = Balance::default();
-    let balance_b = Balance::default();
+    let balance_a = BalanceVerified::default();
+    let balance_b = BalanceVerified::default();
 
     let combined_balance = balance_a.checked_add(&balance_b).unwrap();
     assert_eq!(combined_balance.native.len(), 0);
@@ -291,8 +291,8 @@ fn test_add_empty_balances() {
 
 #[test]
 fn test_subtract_empty_balances() {
-    let balance_a = Balance::default();
-    let balance_b = Balance::default();
+    let balance_a = BalanceVerified::default();
+    let balance_b = BalanceVerified::default();
 
     let remaining_balance = balance_a.checked_sub(&balance_b).unwrap();
     assert_eq!(remaining_balance.native.len(), 0);
@@ -325,12 +325,12 @@ fn test_add_multiple_cw20_contract_addresses() {
         },
     ];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: vec![],
         cw20: cw20_balance_a,
         cw721: vec![],
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: vec![],
         cw20: cw20_balance_b,
         cw721: vec![],
@@ -362,21 +362,21 @@ fn test_add_multiple_cw20_contract_addresses() {
 fn test_subtract_nonexistent_cw721_tokens() {
     let addr = Addr::unchecked("cw721token");
 
-    let cw721_balance_a = vec![Cw721TokensVerified {
+    let cw721_balance_a = vec![Cw721CollectionVerified {
         addr: addr.clone(),
         token_ids: vec!["token1".to_string(), "token2".to_string()],
     }];
-    let cw721_balance_b = vec![Cw721TokensVerified {
+    let cw721_balance_b = vec![Cw721CollectionVerified {
         addr: addr.clone(),
         token_ids: vec!["token3".to_string(), "token4".to_string()],
     }];
 
-    let balance_a = Balance {
+    let balance_a = BalanceVerified {
         native: vec![],
         cw20: vec![],
         cw721: cw721_balance_a,
     };
-    let balance_b = Balance {
+    let balance_b = BalanceVerified {
         native: vec![],
         cw20: vec![],
         cw721: cw721_balance_b,
@@ -392,7 +392,7 @@ fn test_split_balances() {
     let addr_b = Addr::unchecked("addr_b");
     let addr_c = Addr::unchecked("addr_c");
 
-    let balance = Balance {
+    let balance = BalanceVerified {
         native: vec![
             Coin {
                 denom: "native1".to_string(),
@@ -413,15 +413,18 @@ fn test_split_balances() {
                 amount: Uint128::from(50u128),
             },
         ],
-        cw721: vec![],
+        cw721: vec![Cw721CollectionVerified {
+            addr: Addr::unchecked("cw721token1"),
+            token_ids: vec!["1".to_string(), "2".to_string()],
+        }],
     };
 
     let distribution = vec![
-        MemberShareValidated {
+        MemberShareVerified {
             addr: addr_a.clone(),
             shares: Uint128::new(50u128),
         },
-        MemberShareValidated {
+        MemberShareVerified {
             addr: addr_b.clone(),
             shares: Uint128::new(30u128),
         },
@@ -452,83 +455,87 @@ fn test_split_balances() {
         .clone();
 
     // Check split amounts
-    assert_eq!(
-        member_a_balance.native,
-        vec![
-            Coin {
-                denom: "native1".to_string(),
-                amount: Uint128::from(125u128),
-            },
-            Coin {
-                denom: "native2".to_string(),
-                amount: Uint128::from(62u128),
-            },
-        ]
-    );
-    assert_eq!(
-        member_a_balance.cw20,
-        vec![
-            Cw20CoinVerified {
-                address: Addr::unchecked("cw20token1"),
-                amount: Uint128::from(93u128),
-            },
-            Cw20CoinVerified {
-                address: Addr::unchecked("cw20token2"),
-                amount: Uint128::from(31u128),
-            },
-        ]
-    );
-    assert_eq!(
-        member_b_balance.native,
-        vec![
-            Coin {
-                denom: "native1".to_string(),
-                amount: Uint128::from(56u128),
-            },
-            Coin {
-                denom: "native2".to_string(),
-                amount: Uint128::from(37u128),
-            },
-        ]
-    );
-    assert_eq!(
-        member_b_balance.cw20,
-        vec![
-            Cw20CoinVerified {
-                address: Addr::unchecked("cw20token1"),
-                amount: Uint128::from(45u128),
-            },
-            Cw20CoinVerified {
-                address: Addr::unchecked("cw20token2"),
-                amount: Uint128::from(15u128),
-            },
-        ]
-    );
-    // Check remainder
-    assert_eq!(
-        remainder_balance.native,
-        vec![
-            Coin {
-                denom: "native1".to_string(),
-                amount: Uint128::from(40u128),
-            },
-            Coin {
-                denom: "native2".to_string(),
-                amount: Uint128::from(20u128),
-            },
-        ]
-    );
-    assert_eq!(
-        remainder_balance.cw20,
-        vec![
-            Cw20CoinVerified {
-                address: Addr::unchecked("cw20token1"),
-                amount: Uint128::from(30u128),
-            },
-            Cw20CoinVerified {
-                address: Addr::unchecked("cw20token2"),
-                amount: Uint128::from(10u128),
-            },
-        ]
-    );
+    let member_a_native1 = member_a_balance
+        .native
+        .iter()
+        .find(|coin| coin.denom == "native1")
+        .unwrap();
+    let member_a_native2 = member_a_balance
+        .native
+        .iter()
+        .find(|coin| coin.denom == "native2")
+        .unwrap();
+    assert_eq!(member_a_native1.amount, Uint128::from(125u128));
+    assert_eq!(member_a_native2.amount, Uint128::from(62u128));
+
+    let member_a_cw20token1 = member_a_balance
+        .cw20
+        .iter()
+        .find(|coin| coin.address == Addr::unchecked("cw20token1"))
+        .unwrap();
+    let member_a_cw20token2 = member_a_balance
+        .cw20
+        .iter()
+        .find(|coin| coin.address == Addr::unchecked("cw20token2"))
+        .unwrap();
+    assert_eq!(member_a_cw20token1.amount, Uint128::from(93u128));
+    assert_eq!(member_a_cw20token2.amount, Uint128::from(31u128));
+
+    let member_b_native1 = member_b_balance
+        .native
+        .iter()
+        .find(|coin| coin.denom == "native1")
+        .unwrap();
+    let member_b_native2 = member_b_balance
+        .native
+        .iter()
+        .find(|coin| coin.denom == "native2")
+        .unwrap();
+    assert_eq!(member_b_native1.amount, Uint128::from(75u128));
+    assert_eq!(member_b_native2.amount, Uint128::from(37u128));
+
+    let member_b_cw20token1 = member_b_balance
+        .cw20
+        .iter()
+        .find(|coin| coin.address == Addr::unchecked("cw20token1"))
+        .unwrap();
+    let member_b_cw20token2 = member_b_balance
+        .cw20
+        .iter()
+        .find(|coin| coin.address == Addr::unchecked("cw20token2"))
+        .unwrap();
+    assert_eq!(member_b_cw20token1.amount, Uint128::from(56u128));
+    assert_eq!(member_b_cw20token2.amount, Uint128::from(18u128));
+
+    let remainder_native1 = remainder_balance
+        .native
+        .iter()
+        .find(|coin| coin.denom == "native1")
+        .unwrap();
+    let remainder_native2 = remainder_balance
+        .native
+        .iter()
+        .find(|coin| coin.denom == "native2")
+        .unwrap();
+    assert_eq!(remainder_native1.amount, Uint128::from(0u128));
+    assert_eq!(remainder_native2.amount, Uint128::from(1u128));
+
+    let remainder_cw20token1 = remainder_balance
+        .cw20
+        .iter()
+        .find(|coin| coin.address == Addr::unchecked("cw20token1"))
+        .unwrap();
+    let remainder_cw20token2 = remainder_balance
+        .cw20
+        .iter()
+        .find(|coin| coin.address == Addr::unchecked("cw20token2"))
+        .unwrap();
+    let remainder_cw721token1 = remainder_balance
+        .cw721
+        .iter()
+        .find(|coin| coin.addr == Addr::unchecked("cw721token1"))
+        .unwrap();
+    assert_eq!(remainder_cw20token1.amount, Uint128::from(1u128));
+    assert_eq!(remainder_cw20token2.amount, Uint128::from(1u128));
+    assert_eq!(remainder_cw721token1.token_ids, vec!["1", "2"]);
 }

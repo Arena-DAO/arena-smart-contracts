@@ -3,27 +3,86 @@ use cosmwasm_std::{
     to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, OverflowError,
     OverflowOperation, StdResult, Uint128, WasmMsg,
 };
-use cw20::{Cw20CoinVerified, Cw20ExecuteMsg};
+use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
 use cw721::Cw721ExecuteMsg;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-use crate::{is_contract, BalanceError, Cw721TokensVerified, MemberShareValidated};
+use crate::{
+    is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberShareVerified,
+};
+
+#[cw_serde]
+pub struct MemberBalanceVerified {
+    pub addr: Addr,
+    pub balance: BalanceVerified,
+}
 
 #[cw_serde]
 pub struct MemberBalance {
-    pub addr: Addr,
+    pub addr: String,
     pub balance: Balance,
+}
+
+impl MemberBalance {
+    pub fn to_verified(self, deps: Deps) -> StdResult<MemberBalanceVerified> {
+        Ok(MemberBalanceVerified {
+            addr: deps.api.addr_validate(&self.addr)?,
+            balance: self.balance.to_verified(deps)?,
+        })
+    }
 }
 
 #[cw_serde]
 pub struct Balance {
     pub native: Vec<Coin>,
-    pub cw20: Vec<Cw20CoinVerified>,
-    pub cw721: Vec<Cw721TokensVerified>,
+    pub cw20: Vec<Cw20Coin>,
+    pub cw721: Vec<Cw721Collection>,
 }
 
-impl Default for Balance {
+#[cw_serde]
+pub enum TokenType {
+    Native,
+    Cw20,
+    Cw721,
+}
+
+impl Balance {
+    pub fn to_verified(self, deps: Deps) -> StdResult<BalanceVerified> {
+        Ok(BalanceVerified {
+            native: self.native,
+            cw20: self
+                .cw20
+                .iter()
+                .map(|x| {
+                    Ok(Cw20CoinVerified {
+                        address: deps.api.addr_validate(&x.address)?,
+                        amount: x.amount,
+                    })
+                })
+                .collect::<StdResult<Vec<Cw20CoinVerified>>>()?,
+            cw721: self
+                .cw721
+                .iter()
+                .map(|x| {
+                    Ok(Cw721CollectionVerified {
+                        addr: deps.api.addr_validate(&x.addr)?,
+                        token_ids: x.token_ids.clone(),
+                    })
+                })
+                .collect::<StdResult<Vec<Cw721CollectionVerified>>>()?,
+        })
+    }
+}
+
+#[cw_serde]
+pub struct BalanceVerified {
+    pub native: Vec<Coin>,
+    pub cw20: Vec<Cw20CoinVerified>,
+    pub cw721: Vec<Cw721CollectionVerified>,
+}
+
+impl Default for BalanceVerified {
     fn default() -> Self {
         Self {
             native: vec![],
@@ -33,7 +92,7 @@ impl Default for Balance {
     }
 }
 
-impl Display for Balance {
+impl Display for BalanceVerified {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         writeln!(f, "Native:")?;
         for coin in &self.native {
@@ -54,7 +113,7 @@ impl Display for Balance {
     }
 }
 
-impl Balance {
+impl BalanceVerified {
     pub fn new() -> Self {
         Self::default()
     }
@@ -63,7 +122,111 @@ impl Balance {
         self.native.is_empty() && self.cw20.is_empty() && self.cw721.is_empty()
     }
 
-    pub fn checked_add(&self, other: &Balance) -> StdResult<Balance> {
+    pub fn is_ge(&self, other: &BalanceVerified) -> bool {
+        // Helper function for comparing native tokens
+        fn native_ge(self_native: &Vec<Coin>, other_native: &Vec<Coin>) -> bool {
+            let self_map: HashMap<&str, &Coin> = self_native
+                .iter()
+                .map(|coin| (coin.denom.as_str(), coin))
+                .collect();
+
+            for other_coin in other_native {
+                if let Some(self_coin) = self_map.get(&other_coin.denom.as_str()) {
+                    if self_coin.amount < other_coin.amount {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            true
+        }
+
+        // Helper function for comparing cw20 tokens
+        fn cw20_ge(self_cw20: &Vec<Cw20CoinVerified>, other_cw20: &Vec<Cw20CoinVerified>) -> bool {
+            let self_map: HashMap<&Addr, &Cw20CoinVerified> =
+                self_cw20.iter().map(|coin| (&coin.address, coin)).collect();
+
+            for other_coin in other_cw20 {
+                if let Some(self_coin) = self_map.get(&other_coin.address) {
+                    if self_coin.amount < other_coin.amount {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            true
+        }
+
+        // Helper function for comparing cw721 tokens
+        fn cw721_ge(
+            self_cw721: &Vec<Cw721CollectionVerified>,
+            other_cw721: &Vec<Cw721CollectionVerified>,
+        ) -> bool {
+            let self_map: HashMap<&Addr, &Vec<String>> = self_cw721
+                .iter()
+                .map(|collection| (&collection.addr, &collection.token_ids))
+                .collect();
+
+            for other_collection in other_cw721 {
+                if let Some(self_token_ids) = self_map.get(&other_collection.addr) {
+                    let self_token_ids: HashSet<&String> = self_token_ids.iter().collect();
+
+                    for token_id in &other_collection.token_ids {
+                        if !self_token_ids.contains(token_id) {
+                            return false;
+                        }
+                    }
+                } else {
+                    return false;
+                }
+            }
+            true
+        }
+
+        let native_ge_result = native_ge(&self.native, &other.native);
+        let cw20_ge_result = cw20_ge(&self.cw20, &other.cw20);
+        let cw721_ge_result = cw721_ge(&self.cw721, &other.cw721);
+
+        native_ge_result && cw20_ge_result && cw721_ge_result
+    }
+
+    pub fn get_amount(&self, token_type: TokenType, identifier: &String) -> Uint128 {
+        match token_type {
+            TokenType::Native => self
+                .native
+                .iter()
+                .find(|coin| coin.denom == *identifier)
+                .map(|coin| coin.amount),
+            TokenType::Cw20 => self
+                .cw20
+                .iter()
+                .find(|cw20_coin| cw20_coin.address.to_string() == *identifier)
+                .map(|cw20_coin| cw20_coin.amount),
+            TokenType::Cw721 => {
+                if self
+                    .cw721
+                    .iter()
+                    .any(|cw721_tokens| cw721_tokens.token_ids.contains(identifier))
+                {
+                    Some(Uint128::one())
+                } else {
+                    None
+                }
+            }
+        }
+        .unwrap_or(Uint128::zero())
+    }
+
+    pub fn checked_add(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
+        if self.is_empty() {
+            return Ok(other.to_owned());
+        }
+        if other.is_empty() {
+            return Ok(self.to_owned());
+        }
+
         let mut native_map: HashMap<String, Uint128> = self
             .native
             .iter()
@@ -100,7 +263,7 @@ impl Balance {
             entry.extend(token.token_ids.clone());
         }
 
-        Ok(Balance {
+        Ok(BalanceVerified {
             native: native_map
                 .into_iter()
                 .map(|(denom, amount)| Coin { denom, amount })
@@ -111,12 +274,16 @@ impl Balance {
                 .collect(),
             cw721: cw721_map
                 .into_iter()
-                .map(|(addr, token_ids)| Cw721TokensVerified { addr, token_ids })
+                .map(|(addr, token_ids)| Cw721CollectionVerified { addr, token_ids })
                 .collect(),
         })
     }
 
-    pub fn checked_sub(&self, other: &Balance) -> StdResult<Balance> {
+    pub fn checked_sub(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
+        if other.is_empty() {
+            return Ok(self.to_owned());
+        }
+
         let mut native_map: HashMap<String, Uint128> = self
             .native
             .iter()
@@ -162,7 +329,7 @@ impl Balance {
             }
         }
 
-        Ok(Balance {
+        Ok(BalanceVerified {
             native: native_map
                 .into_iter()
                 .map(|(denom, amount)| Coin { denom, amount })
@@ -173,7 +340,7 @@ impl Balance {
                 .collect(),
             cw721: cw721_map
                 .into_iter()
-                .map(|(addr, tokens)| Cw721TokensVerified {
+                .map(|(addr, tokens)| Cw721CollectionVerified {
                     addr,
                     token_ids: tokens,
                 })
@@ -181,7 +348,7 @@ impl Balance {
         })
     }
 
-    pub fn transmit(
+    pub fn transmit_all(
         &self,
         deps: Deps,
         recipient: &Addr,
@@ -189,100 +356,132 @@ impl Balance {
         cw721_msg: Option<Binary>,
     ) -> StdResult<Vec<CosmosMsg>> {
         match is_contract(deps, recipient.to_string()) {
-            true => self.transfer(recipient),
-            false => self.send(recipient, cw20_msg, cw721_msg),
+            false => self.transfer_all(recipient),
+            true => self.send_all(recipient, cw20_msg, cw721_msg),
         }
     }
 
-    pub fn transfer(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
+    pub fn transfer_all(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
         let mut messages: Vec<CosmosMsg> = Vec::new();
 
         // Send native tokens
-        messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: recipient.to_string(),
-            amount: self.native.clone(),
-        }));
+        messages.extend(self.send_native(recipient.to_string()));
 
         // Send CW20 tokens
-        for cw20_coin in &self.cw20 {
-            let send_msg = Cw20ExecuteMsg::Transfer {
-                recipient: recipient.to_string(),
-                amount: cw20_coin.amount,
-            };
-            let exec_msg = WasmMsg::Execute {
-                contract_addr: cw20_coin.address.to_string(),
-                msg: to_binary(&send_msg)?,
-                funds: vec![],
-            };
-            messages.push(CosmosMsg::Wasm(exec_msg));
-        }
+        messages.extend(self.transfer_cw20(recipient.to_string())?);
 
         // Send CW721 tokens
-        for cw721_tokens in &self.cw721 {
-            for token_id in &cw721_tokens.token_ids {
-                let transfer_msg = Cw721ExecuteMsg::TransferNft {
-                    recipient: recipient.to_string(),
-                    token_id: token_id.clone(),
-                };
-                let exec_msg = WasmMsg::Execute {
-                    contract_addr: cw721_tokens.addr.to_string(),
-                    msg: to_binary(&transfer_msg)?,
-                    funds: vec![],
-                };
-                messages.push(CosmosMsg::Wasm(exec_msg));
-            }
-        }
+        messages.extend(self.transfer_cw721(recipient.to_string())?);
 
         Ok(messages)
     }
 
-    pub fn send(
+    pub fn send_all(
         &self,
-        recipient: &Addr,
+        contract_addr: &Addr,
         cw20_msg: Option<Binary>,
         cw721_msg: Option<Binary>,
     ) -> StdResult<Vec<CosmosMsg>> {
         let mut messages: Vec<CosmosMsg> = Vec::new();
 
         // Send native tokens
-        messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: recipient.to_string(),
-            amount: self.native.clone(),
-        }));
+        messages.extend(self.send_native(contract_addr.to_string()));
 
         // Send CW20 tokens
-        for cw20_coin in &self.cw20 {
-            let send_msg = Cw20ExecuteMsg::Send {
-                contract: recipient.to_string(),
-                msg: cw20_msg.clone().unwrap_or(Binary::default()),
-                amount: cw20_coin.amount,
-            };
-            let exec_msg = WasmMsg::Execute {
-                contract_addr: cw20_coin.address.to_string(),
-                msg: to_binary(&send_msg)?,
-                funds: vec![],
-            };
-            messages.push(CosmosMsg::Wasm(exec_msg));
-        }
+        messages.extend(self.send_cw20(contract_addr.to_string(), cw20_msg.unwrap_or_default())?);
 
         // Send CW721 tokens
-        for cw721_tokens in &self.cw721 {
-            for token_id in &cw721_tokens.token_ids {
-                let transfer_msg = Cw721ExecuteMsg::SendNft {
-                    contract: recipient.to_string(),
-                    msg: cw721_msg.clone().unwrap_or(Binary::default()),
-                    token_id: token_id.clone(),
-                };
-                let exec_msg = WasmMsg::Execute {
-                    contract_addr: cw721_tokens.addr.to_string(),
-                    msg: to_binary(&transfer_msg)?,
-                    funds: vec![],
-                };
-                messages.push(CosmosMsg::Wasm(exec_msg));
-            }
-        }
+        messages.extend(self.send_cw721(contract_addr.to_string(), cw721_msg.unwrap_or_default())?);
 
         Ok(messages)
+    }
+
+    pub fn send_native(&self, to_address: String) -> Vec<CosmosMsg> {
+        if self.native.is_empty() {
+            vec![]
+        } else {
+            vec![CosmosMsg::Bank(BankMsg::Send {
+                to_address,
+                amount: self.native.clone(),
+            })]
+        }
+    }
+
+    pub fn send_cw20(&self, contract: String, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
+        self.cw20
+            .iter()
+            .map(|cw20_coin| {
+                let exec_msg = WasmMsg::Execute {
+                    contract_addr: cw20_coin.address.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Send {
+                        contract: contract.clone(),
+                        amount: cw20_coin.amount,
+                        msg: msg.clone(),
+                    })?,
+                    funds: vec![],
+                };
+                Ok(CosmosMsg::Wasm(exec_msg))
+            })
+            .collect()
+    }
+
+    pub fn send_cw721(&self, contract: String, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
+        self.cw721
+            .iter()
+            .flat_map(|cw721_collection| {
+                let contract = contract.clone();
+                let msg = msg.clone();
+                cw721_collection.token_ids.iter().map(move |token_id| {
+                    let exec_msg = WasmMsg::Execute {
+                        contract_addr: cw721_collection.addr.to_string(),
+                        msg: to_binary(&Cw721ExecuteMsg::SendNft {
+                            contract: contract.clone(),
+                            token_id: token_id.clone(),
+                            msg: msg.clone(),
+                        })?,
+                        funds: vec![],
+                    };
+                    Ok(CosmosMsg::Wasm(exec_msg))
+                })
+            })
+            .collect()
+    }
+
+    pub fn transfer_cw721(&self, recipient: String) -> StdResult<Vec<CosmosMsg>> {
+        self.cw721
+            .iter()
+            .flat_map(|cw721_collection| {
+                let recipient = recipient.clone();
+                cw721_collection.token_ids.iter().map(move |token_id| {
+                    let exec_msg = WasmMsg::Execute {
+                        contract_addr: cw721_collection.addr.to_string(),
+                        msg: to_binary(&Cw721ExecuteMsg::TransferNft {
+                            recipient: recipient.to_string(),
+                            token_id: token_id.clone(),
+                        })?,
+                        funds: vec![],
+                    };
+                    Ok(CosmosMsg::Wasm(exec_msg))
+                })
+            })
+            .collect()
+    }
+
+    pub fn transfer_cw20(&self, recipient: String) -> StdResult<Vec<CosmosMsg>> {
+        self.cw20
+            .iter()
+            .map(|cw20_coin| {
+                let exec_msg = WasmMsg::Execute {
+                    contract_addr: cw20_coin.address.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                        recipient: recipient.clone(),
+                        amount: cw20_coin.amount,
+                    })?,
+                    funds: vec![],
+                };
+                Ok(CosmosMsg::Wasm(exec_msg))
+            })
+            .collect()
     }
 
     /// Splits a given `Balance` among multiple users based on their assigned weights.
@@ -305,15 +504,15 @@ impl Balance {
     /// * Subtraction underflow when updating the remainders for native and CW20 tokens.
     pub fn split(
         &self,
-        distribution: &Vec<MemberShareValidated>,
+        distribution: &Vec<MemberShareVerified>,
         remainder_address: &Addr,
-    ) -> Result<Vec<MemberBalance>, BalanceError> {
+    ) -> Result<Vec<MemberBalanceVerified>, BalanceError> {
         let total_weight = distribution
             .iter()
             .try_fold(Uint128::zero(), |accumulator, x| {
                 accumulator.checked_add(x.shares)
             })?;
-        let mut split_balances: Vec<MemberBalance> = Vec::new();
+        let mut split_balances: Vec<MemberBalanceVerified> = Vec::new();
 
         let mut remainders_native: HashMap<String, Uint128> = self
             .native
@@ -355,7 +554,7 @@ impl Balance {
                 split_cw20.insert(cw20_coin.address.clone(), split_amount);
             }
 
-            let split_balance = Balance {
+            let split_balance = BalanceVerified {
                 native: split_native
                     .into_iter()
                     .map(|(denom, amount)| Coin { denom, amount })
@@ -367,7 +566,7 @@ impl Balance {
                 cw721: vec![],
             };
 
-            let member_balance = MemberBalance {
+            let member_balance = MemberBalanceVerified {
                 addr: member_share.addr.clone(),
                 balance: split_balance,
             };
@@ -376,7 +575,7 @@ impl Balance {
         }
 
         // Apply the remainder_balance to the corresponding split_balances entry
-        let remainder_balance = Balance {
+        let remainder_balance = BalanceVerified {
             native: remainders_native
                 .into_iter()
                 .map(|(denom, amount)| Coin { denom, amount })
@@ -398,9 +597,9 @@ impl Balance {
                 .balance
                 .checked_add(&remainder_balance)?;
         } else {
-            let remainder_member_balance = MemberBalance {
+            let remainder_member_balance = MemberBalanceVerified {
                 addr: remainder_address.clone(),
-                balance: remainder_balance.clone(),
+                balance: remainder_balance,
             };
             split_balances.push(remainder_member_balance);
         }

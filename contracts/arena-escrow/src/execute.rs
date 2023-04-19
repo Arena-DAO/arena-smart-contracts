@@ -1,18 +1,13 @@
-use cosmwasm_std::{
-    Addr, Attribute, Binary, Decimal, Deps, DepsMut, MessageInfo, Response, StdResult,
-};
-use cw20::Cw20ReceiveMsg;
+use cosmwasm_std::{Addr, Attribute, Binary, DepsMut, MessageInfo, Response, StdResult};
+use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{
-    convert_native_funds, get_validated_distribution, Balance, Distribution, DistributionRaw,
-};
-use std::collections::{BTreeMap, HashMap};
+use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare, MemberShareVerified};
 
 use crate::{
     query::is_locked,
     state::{
-        get_distributable_balance, ADMIN, BALANCE, DISTRIBUTION, DUE, IS_LOCKED, STAKE,
-        TOTAL_BALANCE, TOTAL_STAKE,
+        get_distributable_balance, is_fully_funded, ADMIN, BALANCE, DUE, IS_FUNDED, IS_LOCKED,
+        PRESET_DISTRIBUTION, STAKE, TOTAL_BALANCE, TOTAL_STAKE,
     },
     ContractError,
 };
@@ -31,29 +26,31 @@ fn inner_withdraw(
 
     for addr in addrs {
         // Load the balance of the current address
-        let balance = BALANCE.may_load(deps.storage, &addr)?;
+        if let Some(balance) = BALANCE.may_load(deps.storage, &addr)? {
+            // If the balance is empty, skip this address
+            if balance.is_empty() {
+                continue;
+            }
 
-        // If the balance is empty, skip this address
-        if balance.is_none() || balance.as_ref().unwrap().is_empty() {
-            continue;
+            // Prepare messages for the balance transmit
+            msgs.append(&mut balance.transmit_all(
+                deps.as_ref(),
+                &addr,
+                cw20_msg.clone(),
+                cw721_msg.clone(),
+            )?);
+
+            // Add address as an attribute to the response
+            attrs.push(Attribute {
+                key: "addr".to_string(),
+                value: addr.to_string(),
+            });
+
+            // Update the total_balance by subtracting the refunded balance
+            total_balance = total_balance.checked_sub(&balance)?;
+            BALANCE.remove(deps.storage, &addr);
+            IS_FUNDED.save(deps.storage, &addr, &false)?;
         }
-
-        // Prepare messages for the balance transmit
-        msgs.append(&mut balance.as_ref().unwrap().transmit(
-            deps.as_ref(),
-            &addr,
-            cw20_msg.clone(),
-            cw721_msg.clone(),
-        )?);
-
-        // Add address as an attribute to the response
-        attrs.push(Attribute {
-            key: "addr".to_string(),
-            value: addr.to_string(),
-        });
-
-        // Update the total_balance by subtracting the refunded balance
-        total_balance = total_balance.checked_sub(&balance.unwrap())?;
     }
 
     // Save the updated total_balance to storage
@@ -94,19 +91,16 @@ pub fn withdraw(
 pub fn set_distribution(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: DistributionRaw,
+    distribution: Vec<MemberShare>,
 ) -> Result<Response, ContractError> {
     // Convert String keys to Addr
     let validated_distribution = distribution
         .into_iter()
-        .map(|(k, v)| {
-            let addr = deps.api.addr_validate(&k)?;
-            Ok((addr, v))
-        })
-        .collect::<StdResult<BTreeMap<Addr, Decimal>>>()?;
+        .map(|x| x.to_verified(deps.as_ref()))
+        .collect::<StdResult<Vec<MemberShareVerified>>>()?;
 
     // Save distribution in the state
-    DISTRIBUTION.save(deps.storage, &info.sender, &validated_distribution)?;
+    PRESET_DISTRIBUTION.save(deps.storage, &info.sender, &validated_distribution)?;
 
     Ok(Response::new()
         .add_attribute("action", "set_distribution")
@@ -115,10 +109,10 @@ pub fn set_distribution(
 
 // This function receives native tokens and updates the balance
 pub fn receive_native(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    let balance = Balance {
-        native: convert_native_funds(&info.funds),
-        cw20: HashMap::new(),
-        cw721: HashMap::new(),
+    let balance = BalanceVerified {
+        native: info.funds,
+        cw20: vec![],
+        cw721: vec![],
     };
 
     receive_balance(deps, info.sender, balance)
@@ -131,13 +125,15 @@ pub fn receive_cw20(
     cw20_receive_msg: Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
     let sender_addr = deps.api.addr_validate(&cw20_receive_msg.sender)?;
-    let mut cw20_balance = HashMap::new();
-    cw20_balance.insert(sender_addr.clone(), cw20_receive_msg.amount);
+    let cw20_balance = vec![Cw20CoinVerified {
+        address: info.sender,
+        amount: cw20_receive_msg.amount,
+    }];
 
-    let balance = Balance {
-        native: convert_native_funds(&info.funds),
+    let balance = BalanceVerified {
+        native: info.funds,
         cw20: cw20_balance,
-        cw721: HashMap::new(),
+        cw721: vec![],
     };
 
     receive_balance(deps, sender_addr, balance)
@@ -150,12 +146,14 @@ pub fn receive_cw721(
     cw721_receive_msg: Cw721ReceiveMsg,
 ) -> Result<Response, ContractError> {
     let sender_addr = deps.api.addr_validate(&cw721_receive_msg.sender)?;
-    let mut cw721_balance = HashMap::new();
-    cw721_balance.insert(sender_addr.clone(), vec![cw721_receive_msg.token_id]);
+    let cw721_balance = vec![Cw721CollectionVerified {
+        addr: info.sender,
+        token_ids: vec![cw721_receive_msg.token_id],
+    }];
 
-    let balance = Balance {
-        native: convert_native_funds(&info.funds),
-        cw20: HashMap::new(),
+    let balance = BalanceVerified {
+        native: info.funds,
+        cw20: vec![],
         cw721: cw721_balance,
     };
 
@@ -163,23 +161,19 @@ pub fn receive_cw721(
 }
 
 // This function updates the balance
-fn receive_balance(deps: DepsMut, addr: Addr, balance: Balance) -> Result<Response, ContractError> {
-    // Update the balance in storage for the given address
-    BALANCE.update(deps.storage, &addr, |x| -> StdResult<_> {
-        if x.is_none() {
-            return Ok(balance.clone());
-        } else {
-            return Ok(balance.checked_add(&x.as_ref().unwrap())?);
-        }
-    })?;
+fn receive_balance(
+    deps: DepsMut,
+    addr: Addr,
+    balance: BalanceVerified,
+) -> Result<Response, ContractError> {
+    // Verify the addr
+    if !DUE.has(deps.storage, &addr) {
+        return Err(ContractError::NoneDue {});
+    }
 
-    // Update the due balance in storage for the given address
-    DUE.update(deps.storage, &addr, |x| -> StdResult<_> {
-        if x.is_none() {
-            return Ok(Balance::default());
-        } else {
-            return Ok(x.as_ref().unwrap().checked_sub(&balance)?);
-        }
+    // Update the balance in storage for the given address
+    let balance = BALANCE.update(deps.storage, &addr, |x| -> StdResult<_> {
+        Ok(balance.checked_add(&x.unwrap_or(BalanceVerified::default()))?)
     })?;
 
     // Update the total balance in storage
@@ -187,51 +181,29 @@ fn receive_balance(deps: DepsMut, addr: Addr, balance: Balance) -> Result<Respon
         Ok(x.checked_add(&balance)?) //do not factor in stake amount
     })?;
 
+    if balance.is_ge(&DUE.load(deps.storage, &addr)?) {
+        IS_FUNDED.save(deps.storage, &addr, &true)?;
+    }
+
     // Build and return the response
     Ok(Response::new()
         .add_attribute("action", "receive_balance")
         .add_attribute("balance", balance.to_string()))
 }
 
-pub fn apply_preset_distribution(
-    deps: Deps,
-    input_distribution: Distribution,
-) -> Result<Distribution, ContractError> {
-    let mut output_distribution = Distribution::new();
-
-    for (addr, input_weight) in input_distribution {
-        // Check if there's a preset distribution for the given address
-        if let Some(preset_distribution) =
-            DISTRIBUTION.may_load(deps.storage, &addr).unwrap_or(None)
-        {
-            let preset_total = preset_distribution
-                .values()
-                .cloned()
-                .try_fold(Decimal::zero(), |accumulator, x| accumulator.checked_add(x))?;
-
-            for (preset_addr, preset_weight) in preset_distribution {
-                let new_weight = preset_weight
-                    .checked_mul(input_weight)?
-                    .checked_div(preset_total)?;
-                output_distribution.insert(preset_addr, new_weight);
-            }
-        } else {
-            output_distribution.insert(addr, input_weight);
-        }
-    }
-
-    Ok(output_distribution)
-}
-
 // This function handles the competition result message.
 pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: DistributionRaw,
+    distribution: Vec<MemberShare>,
     remainder_addr: String,
 ) -> Result<Response, ContractError> {
     // Assert that the sender is an admin.
     ADMIN.assert_admin(deps.as_ref(), &info.sender)?;
+
+    if !is_fully_funded(deps.as_ref())? {
+        return Err(ContractError::NotFunded {});
+    }
 
     // Calculate the distributable balance.
     let distributable_total = get_distributable_balance(deps.as_ref())?;
@@ -240,10 +212,10 @@ pub fn distribute(
     let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
 
     // Validate the provided distribution.
-    let validated_distribution = get_validated_distribution(deps.as_ref(), &distribution)?;
-
-    // Apply the preset distribution, if any.
-    let validated_distribution = apply_preset_distribution(deps.as_ref(), validated_distribution)?;
+    let validated_distribution = distribution
+        .iter()
+        .map(|x| x.to_verified(deps.as_ref()))
+        .collect::<StdResult<_>>()?;
 
     // Calculate the splits based on the distributable total and the validated distribution.
     let distributed_amounts =
@@ -252,25 +224,50 @@ pub fn distribute(
     // Retrieve the current stakes.
     let stakes = STAKE
         .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
-        .collect::<StdResult<HashMap<Addr, Balance>>>()?;
+        .collect::<StdResult<Vec<(Addr, BalanceVerified)>>>()?;
 
     // Clear the existing balance storage.
     BALANCE.clear(deps.storage);
 
     // Save the new balances based on the calculated splits.
-    for (addr, balance) in distributed_amounts {
-        BALANCE.save(deps.storage, &addr, &balance)?;
+    for distributed_amount in distributed_amounts {
+        // Check if there is a preset distribution for the address
+        if let Some(preset) =
+            PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
+        {
+            // If there is a preset distribution, apply it to the balance
+            let new_balances = distributed_amount
+                .balance
+                .split(&preset, &distributed_amount.addr)?;
+
+            // Save the new balances
+            for new_balance in new_balances {
+                BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
+            }
+        } else {
+            // If there is no preset distribution, save the balance as is
+            BALANCE.save(
+                deps.storage,
+                &distributed_amount.addr,
+                &distributed_amount.balance,
+            )?;
+        }
     }
 
     // Update the balances with the stakes.
     for (addr, balance) in stakes {
-        BALANCE.update(deps.storage, &addr, |x| -> Result<Balance, ContractError> {
-            Ok(match x {
-                Some(value) => balance.checked_add(&value)?,
-                None => balance,
-            })
-        })?;
+        BALANCE.update(
+            deps.storage,
+            &addr,
+            |x| -> Result<BalanceVerified, ContractError> {
+                Ok(match x {
+                    Some(value) => balance.checked_add(&value)?,
+                    None => balance,
+                })
+            },
+        )?;
     }
+    STAKE.clear(deps.storage);
 
     // Remove the total stake from storage.
     TOTAL_STAKE.remove(deps.storage);

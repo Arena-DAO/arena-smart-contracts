@@ -124,8 +124,8 @@ pub fn create_wager(
                 code_id: dao_code_id,
                 msg: to_binary(&dao_core::msg::InstantiateMsg {
                     admin: Some(dao.to_string()),
-                    name: format!("Agon Wager {} DAO", wager_count).to_string(),
-                    description: "This is an Agon wager DAO.".to_string(),
+                    name: format!("Arena Wager {} DAO", wager_count).to_string(),
+                    description: "This is an Arena wager DAO.".to_string(),
                     image_url: None,
                     automatically_add_cw20s: true,
                     automatically_add_cw721s: true,
@@ -189,7 +189,7 @@ pub fn create_wager(
         WasmMsg::Instantiate {
             admin: Some(dao.to_string()),
             code_id: escrow_code_id,
-            msg: to_binary(&agon_escrow::msg::InstantiateMsg {
+            msg: to_binary(&arena_escrow::msg::InstantiateMsg {
                 due: wager_amount,
                 stake,
                 key: env.contract.address.to_string() + "_" + &wager_count.to_string(),
@@ -256,7 +256,7 @@ pub fn create_wager_proposals(
     return Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: proposal_module.to_string(),
         msg: to_binary(&dao_proposal_multiple::msg::ExecuteMsg::Propose {
-            title: "Agon Result".to_string(),
+            title: "Arena Result".to_string(),
             description: "Decide the competition's winner".to_string(),
             choices: dao_voting::multiple_choice::MultipleChoiceOptions { options },
             proposer: None,

@@ -4,10 +4,10 @@ mod shares;
 mod tokens;
 mod util;
 
-pub use balance::Balance;
+pub use balance::{Balance, BalanceVerified, MemberBalance, MemberBalanceVerified, TokenType};
 pub use error::BalanceError;
-pub use shares::{MemberShare, MemberShareValidated};
-pub use tokens::{Cw721Tokens, Cw721TokensVerified};
+pub use shares::{MemberShare, MemberShareVerified};
+pub use tokens::{Cw721Collection, Cw721CollectionVerified};
 pub use util::is_contract;
 
 #[cfg(test)]
