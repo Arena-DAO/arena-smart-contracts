@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex, SnapshotItem};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, SnapshotItem};
 
 #[cw_serde]
 pub struct Ruleset {
@@ -33,12 +33,13 @@ pub fn rulesets<'a>() -> IndexedMap<'a, u128, Ruleset, RulesetIndexes<'a>> {
 
 #[cw_serde]
 pub struct CompetitionModule {
+    pub key: String,
     pub addr: Addr,
     pub is_enabled: bool,
 }
 
 pub struct CompetitionModuleIndexes<'a> {
-    pub is_enabled: MultiIndex<'a, String, CompetitionModule, u128>,
+    pub is_enabled: MultiIndex<'a, String, CompetitionModule, Addr>,
 }
 
 impl<'a> IndexList<CompetitionModule> for CompetitionModuleIndexes<'a> {
@@ -49,7 +50,7 @@ impl<'a> IndexList<CompetitionModule> for CompetitionModuleIndexes<'a> {
 }
 
 pub fn competition_modules<'a>(
-) -> IndexedMap<'a, u128, CompetitionModule, CompetitionModuleIndexes<'a>> {
+) -> IndexedMap<'a, Addr, CompetitionModule, CompetitionModuleIndexes<'a>> {
     let indexes = CompetitionModuleIndexes {
         is_enabled: MultiIndex::new(
             |_x, d: &CompetitionModule| d.is_enabled.to_string(),
@@ -68,9 +69,4 @@ pub const TAX: SnapshotItem<Decimal> = SnapshotItem::new(
     cw_storage_plus::Strategy::EveryBlock,
 );
 pub const RULESET_COUNT: Item<Uint128> = Item::new("ruleset_count");
-
-/*
-pub const WAGERS: Map<u128, Wager> = Map::new("wagers");
-pub const WAGER_COUNT: Item<Uint128> = Item::new("wager-count");
-pub const TEMP_WAGER: Item<u128> = Item::new("temp_wager");
- */
+pub const KEYS: Map<String, Addr> = Map::new("keys");

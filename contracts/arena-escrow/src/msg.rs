@@ -3,12 +3,13 @@ use cosmwasm_std::{Addr, Binary};
 use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
 use cw_balance::{BalanceVerified, MemberBalance, MemberShare, MemberShareVerified};
+use cw_competition::escrow::CompetitionEscrowDistributeMsg;
 use cw_controllers::AdminResponse;
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub dues: Vec<MemberBalance>,
-    pub stakes: Vec<MemberBalance>,
+    pub lock_when_funded: bool,
 }
 
 #[cw_serde]
@@ -23,10 +24,7 @@ pub enum ExecuteMsg {
     ReceiveNative {},
     Receive(Cw20ReceiveMsg),
     ReceiveNft(Cw721ReceiveMsg),
-    Distribute {
-        distribution: Vec<MemberShare>,
-        remainder_addr: String,
-    },
+    Distribute(CompetitionEscrowDistributeMsg),
     Lock {
         value: bool,
     },
@@ -41,14 +39,10 @@ pub enum QueryMsg {
     Balance { addr: String },
     #[returns(BalanceVerified)]
     Due { addr: String },
-    #[returns(BalanceVerified)]
-    Stake { addr: String },
     #[returns(bool)]
     IsFunded { addr: String },
     #[returns(bool)]
     IsFullyFunded {},
-    #[returns(BalanceVerified)]
-    DistributableBalance {},
     #[returns(BalanceVerified)]
     TotalBalance {},
     #[returns(bool)]

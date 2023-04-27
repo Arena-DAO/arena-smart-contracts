@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Empty, Uint128};
+use cw_competition::core::CompetitionCoreJailMsg;
 use dao_interface::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
@@ -19,24 +20,9 @@ pub struct InstantiateExt {
 pub enum ExecuteExt {
     UpdateCompetitionModules {
         to_add: Vec<ModuleInstantiateInfo>,
-        to_disable: Vec<Uint128>,
+        to_disable: Vec<String>,
     },
-    /*JailWager {
-        id: Uint128,
-    },
-    CreateWager {
-        wager_dao: WagerDAO,
-        expiration: Expiration,
-        escrow_code_id: u64,
-        wager_amount: Vec<MemberBalance>,
-        stake: Vec<MemberBalance>,
-        rules: Vec<String>,
-        ruleset: Option<Uint128>,
-    },
-    HandleWager {
-        id: Uint128,
-        distribution: Option<Vec<MemberShare>>,
-    }, */
+    Jail(CompetitionCoreJailMsg),
     UpdateTax {
         tax: Decimal,
     },
@@ -51,7 +37,7 @@ pub enum ExecuteExt {
 pub enum QueryExt {
     #[returns(Vec<Addr>)]
     CompetitionModules {
-        start_after: Option<u128>,
+        start_after: Option<String>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
     },
@@ -63,6 +49,8 @@ pub enum QueryExt {
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
+    #[returns(Addr)]
+    CompetitionModule { key: String },
     #[returns(DumpStateResponse)]
     DumpState {},
 }

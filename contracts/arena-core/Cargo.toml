@@ -6,7 +6,8 @@ edition = "2018"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "artifacts/*",
+  "contract.wasm",
+  "hash.txt",
 ]
 
 [lib]
@@ -17,6 +18,13 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+
+[package.metadata.scripts]
+optimize = """docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/rust-optimizer:0.12.10
+"""
 
 [dependencies]
 cosmwasm-schema = { workspace = true }
@@ -30,14 +38,13 @@ cw-utils = { workspace = true }
 cw-controllers = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-cw-paginate = { workspace = true }
 dao-core = { workspace = true }
-arena-escrow = { workspace = true }
 cw4-group = { workspace = true }
 cw-competition = { workspace = true }
 dao-interface = { workspace = true }
 dao-proposal-multiple = { workspace = true }
 dao-voting = { workspace = true }
+dao-voting-cw4 = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 
 [dev-dependencies]
@@ -45,3 +52,5 @@ cw-multi-test = { workspace = true }
 dao-testing = { workspace = true }
 dao-proposal-single = { workspace = true }
 arena-testing = { workspace = true }
+cw-utils = "0.16"
+cw20 = "0.16"

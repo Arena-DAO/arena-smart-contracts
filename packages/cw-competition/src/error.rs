@@ -1,20 +1,20 @@
-use std::num::ParseIntError;
-
 use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cw_controllers::AdminError;
 use cw_utils::ParseReplyError;
-use dao_pre_propose_base::error::PreProposeError;
 use thiserror::Error;
 
+use crate::state::CompetitionStatus;
+
 #[derive(Error, Debug, PartialEq)]
-pub enum ContractError {
+pub enum CompetitionError {
     #[error("{0}")]
     StdError(#[from] StdError),
 
     #[error("{0}")]
-    ParseReplyError(#[from] ParseReplyError),
+    AdminError(#[from] AdminError),
 
     #[error("{0}")]
-    ParseIntError(#[from] ParseIntError),
+    ParseReplyError(#[from] ParseReplyError),
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
@@ -25,15 +25,21 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedFromRatioError(#[from] CheckedFromRatioError),
 
+    #[error("Unauthorized")]
+    Unauthorized {},
+
+    #[error("UnknownCompetitionId")]
+    UnknownCompetitionId { id: u128 },
+
+    #[error("CompetitionNotExpired")]
+    CompetitionNotExpired {},
+
     #[error("UnknownReplyId")]
     UnknownReplyId { id: u64 },
 
-    #[error("{0}")]
-    PrePropose(#[from] PreProposeError),
+    #[error("InvalidCompetitionStatus")]
+    InvalidCompetitionStatus { current_status: CompetitionStatus },
 
-    #[error("CompetitionModuleDoesNotExist")]
-    CompetitionModuleDoesNotExist {},
-
-    #[error("Unauthorized")]
-    Unauthorized {},
+    #[error("AttributeNotFound")]
+    AttributeNotFound { key: String },
 }

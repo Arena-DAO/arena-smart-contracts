@@ -1,5 +1,7 @@
-mod msg;
-mod state;
-
-pub use crate::msg::InstantiateBase;
-pub use crate::state::CompetitionState;
+pub mod contract;
+pub mod core;
+pub mod error;
+pub mod escrow;
+pub mod msg;
+pub mod proposal;
+pub mod state;

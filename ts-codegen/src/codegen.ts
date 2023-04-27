@@ -1,23 +1,45 @@
 import codegen, { ContractFile } from "@cosmwasm/ts-codegen";
 import { glob } from "glob";
+import { join } from "path";
 
-glob("../@(contracts|packages)/**/schema", (err, matches) => {
-  if (err) console.log(err);
-
+glob("../@(contracts)/**/schema").then((matches) => {
   let contracts: ContractFile[] = [];
 
-  matches.forEach((x) => {
-    let split = x.split("/");
-    console.log(split[split.length - 2]);
+  for (const x of matches) {
+    let split = x.split("\\");
+    let name = split[split.length - 2];
+    let dir = join(__dirname, "..", x).replaceAll("\\", "/");
+
+    console.log(dir);
+    console.log(name);
     contracts.push({
-      name: split[split.length - 2],
-      dir: x,
+      name: name,
+      dir: dir,
     });
-  });
+  }
 
   codegen({
     contracts,
     outPath: "./output",
+    options: {
+      bundle: {
+        bundleFile: "index.ts",
+      },
+      types: {
+        enabled: true,
+      },
+      client: {
+        enabled: true,
+      },
+      reactQuery: {
+        enabled: true,
+        optionalClient: true,
+        version: "v4",
+        mutations: true,
+        queryKeys: true,
+        queryFactory: true,
+      },
+    },
   }).then(() => {
     console.log("✨ all done!");
   });

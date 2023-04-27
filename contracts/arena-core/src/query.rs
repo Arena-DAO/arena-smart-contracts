@@ -1,11 +1,12 @@
-use crate::state::{CompetitionModule, Ruleset, TAX};
+use crate::state::{CompetitionModule, Ruleset, KEYS, TAX};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Deps, Env, StdResult};
+use cosmwasm_std::{Addr, Decimal, Deps, Env, StdResult};
 use cw_storage_plus::Bound;
+use cw_utils::maybe_addr;
 
 #[cw_serde]
 pub struct DumpStateResponse {
-    pub competition_modules: Vec<(u128, CompetitionModule)>,
+    pub competition_modules: Vec<(Addr, CompetitionModule)>,
 }
 
 pub fn dump_state(deps: Deps) -> StdResult<DumpStateResponse> {
@@ -16,11 +17,11 @@ pub fn dump_state(deps: Deps) -> StdResult<DumpStateResponse> {
 
 pub fn competition_modules(
     deps: Deps,
-    start_after: Option<u128>,
+    start_after: Option<String>,
     limit: Option<u32>,
     include_disabled: Option<bool>,
-) -> StdResult<Vec<(u128, CompetitionModule)>> {
-    let start_after_bound = start_after.map(Bound::exclusive);
+) -> StdResult<Vec<(Addr, CompetitionModule)>> {
+    let start_after_bound = maybe_addr(deps.api, start_after)?.map(Bound::exclusive);
     let limit = limit.unwrap_or(10).max(30) as usize;
     let include_disabled = include_disabled.unwrap_or(false);
 
@@ -98,4 +99,8 @@ pub fn rulesets(
     };
 
     Ok(items)
+}
+
+pub fn competition_module(deps: Deps, key: String) -> StdResult<Addr> {
+    Ok(KEYS.load(deps.storage, key)?)
 }

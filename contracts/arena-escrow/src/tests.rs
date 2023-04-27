@@ -1,6 +1,7 @@
 use cosmwasm_std::{Addr, Binary, Coin, Empty, Uint128};
 use cw20::Cw20Coin;
 use cw_balance::{Balance, BalanceVerified, Cw721Collection, MemberBalance, MemberShare};
+use cw_competition::escrow::CompetitionEscrowDistributeMsg;
 use cw_multi_test::{App, Executor};
 
 use crate::{
@@ -104,7 +105,7 @@ fn setup() -> Context {
         app.execute_contract(
             Addr::unchecked(CREATOR),
             cw721_addr.clone(),
-            &cw721_base::ExecuteMsg::<Option<Empty>, Empty>::Mint(cw721_base::MintMsg {
+            &cw721_base::ExecuteMsg::<Option<Empty>, Empty>::Mint {
                 token_id: i.to_string(),
                 owner: match i <= 6 {
                     true => ADDR1,
@@ -113,7 +114,7 @@ fn setup() -> Context {
                 .to_string(),
                 token_uri: None,
                 extension: None,
-            }),
+            },
             &vec![],
         )
         .unwrap();
@@ -172,54 +173,7 @@ fn setup() -> Context {
                         },
                     },
                 ],
-                stakes: vec![
-                    MemberBalance {
-                        addr: ADDR1.to_string(),
-                        balance: Balance {
-                            native: vec![
-                                Coin {
-                                    denom: "native1".to_string(),
-                                    amount: Uint128::from(150u128),
-                                },
-                                Coin {
-                                    denom: "native2".to_string(),
-                                    amount: Uint128::from(75u128),
-                                },
-                            ],
-                            cw20: vec![Cw20Coin {
-                                address: cw20_addr.to_string(),
-                                amount: Uint128::from(225u128),
-                            }],
-                            cw721: vec![Cw721Collection {
-                                addr: cw721_addr.to_string(),
-                                token_ids: vec![4.to_string(), 5.to_string(), 6.to_string()],
-                            }],
-                        },
-                    },
-                    MemberBalance {
-                        addr: ADDR2.to_string(),
-                        balance: Balance {
-                            native: vec![
-                                Coin {
-                                    denom: "native1".to_string(),
-                                    amount: Uint128::from(250u128),
-                                },
-                                Coin {
-                                    denom: "native2".to_string(),
-                                    amount: Uint128::from(125u128),
-                                },
-                            ],
-                            cw20: vec![Cw20Coin {
-                                address: cw20_addr.to_string(),
-                                amount: Uint128::from(375u128),
-                            }],
-                            cw721: vec![Cw721Collection {
-                                addr: cw721_addr.to_string(),
-                                token_ids: vec![10.to_string(), 11.to_string(), 12.to_string()],
-                            }],
-                        },
-                    },
-                ],
+                lock_when_funded: true,
             },
             &vec![],
             "Arena Escrow",
@@ -233,46 +187,6 @@ fn setup() -> Context {
         cw20_addr,
         cw721_addr,
     }
-}
-
-#[test]
-fn test_stake_query() {
-    let context = setup();
-
-    // Member addresses
-    let addr1 = Addr::unchecked(ADDR1.to_string());
-    let addr2 = Addr::unchecked(ADDR2.to_string());
-
-    // Query
-    let balance_addr1: BalanceVerified = context
-        .app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow_addr.clone(),
-            &QueryMsg::Stake {
-                addr: addr1.to_string(),
-            },
-        )
-        .unwrap();
-    let balance_addr2: BalanceVerified = context
-        .app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow_addr.clone(),
-            &QueryMsg::Stake {
-                addr: addr2.to_string(),
-            },
-        )
-        .unwrap();
-
-    assert_eq!(
-        balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(225u128)
-    );
-    assert_eq!(
-        balance_addr2.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(375u128)
-    );
 }
 
 #[test]
@@ -553,10 +467,10 @@ fn test_distribute_without_preset_distribution() {
         .execute_contract(
             creator.clone(),
             context.escrow_addr.clone(),
-            &ExecuteMsg::Distribute {
-                distribution,
+            &ExecuteMsg::Distribute(CompetitionEscrowDistributeMsg {
+                distribution: Some(distribution),
                 remainder_addr: remainder.to_string(),
-            },
+            }),
             &vec![],
         )
         .unwrap();

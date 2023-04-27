@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     query,
-    state::{ADMIN, DUE, IS_LOCKED, STAKE, TOTAL_BALANCE, TOTAL_STAKE},
+    state::{ADMIN, DUE, IS_LOCKED, LOCK_WHEN_FUNDED, TOTAL_BALANCE},
     ContractError,
 };
 use cosmwasm_std::{
@@ -23,7 +23,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.dues, msg.stakes)?;
+    instantiate_contract(deps, info, msg.lock_when_funded, msg.dues)?;
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("addr", env.contract.address))
@@ -32,29 +32,18 @@ pub fn instantiate(
 pub fn instantiate_contract(
     mut deps: DepsMut,
     info: MessageInfo,
+    lock_when_funded: bool,
     due: Vec<MemberBalance>,
-    stake: Vec<MemberBalance>,
 ) -> Result<(), ContractError> {
     ADMIN.set(deps.branch(), Some(info.sender))?;
     IS_LOCKED.save(deps.storage, &false)?;
-    let total_stake = BalanceVerified::new();
-    for member_balance in stake {
-        let member_balance = member_balance.to_verified(deps.as_ref())?;
-        STAKE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
-        total_stake.checked_add(&member_balance.balance)?;
-    }
     for member_balance in due {
         let member_balance = member_balance.to_verified(deps.as_ref())?;
-        let total_due = match STAKE.has(deps.storage, &member_balance.addr) {
-            true => STAKE
-                .load(deps.storage, &member_balance.addr)?
-                .checked_add(&member_balance.balance)?,
-            false => member_balance.balance,
-        };
-        DUE.save(deps.storage, &member_balance.addr, &total_due)?;
+        DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
     }
     TOTAL_BALANCE.save(deps.storage, &BalanceVerified::new())?;
-    TOTAL_STAKE.save(deps.storage, &total_stake)?;
+    LOCK_WHEN_FUNDED.save(deps.storage, &lock_when_funded)?;
+
     Ok(())
 }
 
@@ -80,10 +69,12 @@ pub fn execute(
         ExecuteMsg::ReceiveNft(cw721_receive_msg) => {
             execute::receive_cw721(deps, info, cw721_receive_msg)
         }
-        ExecuteMsg::Distribute {
-            distribution,
-            remainder_addr,
-        } => execute::distribute(deps, info, distribution, remainder_addr),
+        ExecuteMsg::Distribute(competition_escrow_distribute_msg) => execute::distribute(
+            deps,
+            info,
+            competition_escrow_distribute_msg.distribution,
+            competition_escrow_distribute_msg.remainder_addr,
+        ),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
     }
 }
@@ -95,12 +86,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Balance { addr } => to_binary(&query::balance(deps, addr)?),
         QueryMsg::Due { addr } => to_binary(&query::due(deps, addr)?),
         QueryMsg::TotalBalance {} => to_binary(&query::total_balance(deps)),
-        QueryMsg::Stake { addr } => to_binary(&query::stake(deps, addr)?),
         QueryMsg::IsLocked {} => to_binary(&query::is_locked(deps)),
         QueryMsg::DumpState {} => to_binary(&query::dump_state(deps)?),
         QueryMsg::Distribution { addr } => to_binary(&query::distribution(deps, addr)?),
         QueryMsg::IsFunded { addr } => to_binary(&query::is_funded(deps, addr)?),
         QueryMsg::IsFullyFunded {} => to_binary(&query::is_fully_funded(deps)?),
-        QueryMsg::DistributableBalance {} => to_binary(&query::distributable_balance(deps)?),
     }
 }

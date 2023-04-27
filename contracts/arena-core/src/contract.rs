@@ -2,21 +2,21 @@ use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
     msg::{ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, PrePropose, QueryExt, QueryMsg},
     query,
-    state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, TAX},
+    state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, KEYS, TAX},
     ContractError,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-    StdResult, Uint128, WasmMsg,
+    StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 use dao_core::msg::ExecuteMsg as DAOCoreExecuteMsg;
 use dao_interface::ModuleInstantiateCallback;
 
-pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-dao-core";
+pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-core";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(crate) const ITEM_KEY: &str = "Arena";
 
@@ -88,6 +88,9 @@ pub fn execute(
                 execute::update_rulesets(deps, to_add, to_disable)
             }
             ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, tax),
+            ExecuteExt::Jail(competition_core_jail_msg) => {
+                execute::jail_competition(deps, info, competition_core_jail_msg.id)
+            }
         },
         // Default pre-propose-base behavior for all other messages
         _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),
@@ -98,24 +101,35 @@ pub fn execute(
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         COMPETITION_MODULE_REPLY_ID => {
-            let res = parse_reply_instantiate_data(msg)?;
+            let res = parse_reply_instantiate_data(msg.clone())?;
             let module_addr = deps.api.addr_validate(&res.contract_address)?;
+            let key = msg
+                .result
+                .unwrap() //this result is handled in parse_reply
+                .events
+                .iter()
+                .find_map(|e| {
+                    e.attributes.iter().find_map(|attr| {
+                        if attr.key == "key" {
+                            Some(attr.value.clone())
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .ok_or_else(|| StdError::generic_err(format!("Unable to find the module key.")))?;
 
             let competition_module = CompetitionModule {
                 addr: module_addr.clone(),
                 is_enabled: true,
+                key: key.clone(),
             };
 
-            let competition_modules_count = COMPETITION_MODULES_COUNT.load(deps.storage)?;
-            competition_modules().save(
-                deps.storage,
-                competition_modules_count.u128(),
-                &competition_module,
-            )?;
-            COMPETITION_MODULES_COUNT.save(
-                deps.storage,
-                &competition_modules_count.checked_add(Uint128::one())?,
-            )?;
+            competition_modules().save(deps.storage, module_addr.clone(), &competition_module)?;
+            KEYS.save(deps.storage, key.clone(), &module_addr)?;
+            COMPETITION_MODULES_COUNT.update(deps.storage, |x| -> StdResult<_> {
+                Ok(x.checked_add(Uint128::one())?)
+            })?;
 
             // Check for module instantiation callbacks
             let callback_msgs = match res.data {
@@ -126,84 +140,10 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             };
 
             Ok(Response::default()
+                .add_attribute("key", key)
                 .add_attribute("competition_module".to_string(), res.contract_address)
                 .add_messages(callback_msgs))
         }
-        /*DAO_REPLY_ID => {
-            let result = parse_reply_instantiate_data(msg)?;
-            let addr = deps.api.addr_validate(&result.contract_address)?;
-
-            let wager_id = TEMP_WAGER.may_load(deps.storage)?;
-            if wager_id.is_none() {
-                return Err(ContractError::UnknownWagerId { id: 0u128 });
-            }
-            let wager_id = wager_id.unwrap();
-
-            WAGERS.update(deps.storage, wager_id, |x| -> Result<_, ContractError> {
-                match x {
-                    Some(mut wager) => {
-                        if wager.dao != env.contract.address {
-                            return Err(ContractError::Unauthorized {});
-                        }
-                        wager.dao = addr.clone();
-                        Ok(wager)
-                    }
-                    None => Err(ContractError::UnknownWagerId { id: wager_id }),
-                }
-            })?;
-
-            Ok(Response::new()
-                .add_attribute("action", "reply_dao")
-                .add_attribute("wager", Uint128::from(wager_id))
-                .add_attribute("dao_addr", addr.clone())
-                .add_message(create_wager_proposals(
-                    deps.as_ref(),
-                    &env.contract.address,
-                    &addr,
-                    Uint128::from(wager_id),
-                )?))
-        }
-        ESCROW_REPLY_ID => {
-            let result = parse_reply_instantiate_data(msg)?;
-            let addr = deps.api.addr_validate(&result.contract_address)?;
-            let wager_id = TEMP_WAGER.load(deps.storage)?;
-
-            WAGERS.update(deps.storage, wager_id, |x| -> Result<_, ContractError> {
-                match x {
-                    Some(mut wager) => {
-                        if wager.escrow != env.contract.address {
-                            return Err(ContractError::Unauthorized {});
-                        }
-                        wager.escrow = addr.clone();
-                        Ok(wager)
-                    }
-                    None => Err(ContractError::UnknownWagerId { id: wager_id }),
-                }
-            })?;
-
-            Ok(Response::new()
-                .add_attribute("action", "reply_escrow")
-                .add_attribute("wager", Uint128::from(wager_id))
-                .add_attribute("escrow_addr", addr))
-        }
-        COMPETITION_REPLY_ID => {
-            parse_reply_instantiate_data(msg)?;
-            let wager_id = TEMP_WAGER.load(deps.storage)?;
-
-            WAGERS.update(deps.storage, wager_id, |x| -> Result<_, ContractError> {
-                match x {
-                    Some(mut wager) => {
-                        wager.status = WagerStatus::Inactive;
-                        Ok(wager)
-                    }
-                    None => Err(ContractError::UnknownWagerId { id: wager_id }),
-                }
-            })?;
-
-            Ok(Response::new()
-                .add_attribute("action", "reply_result")
-                .add_attribute("wager", Uint128::from(wager_id)))
-        }*/
         _ => Err(ContractError::UnknownReplyId { id: msg.id }),
     }
 }
@@ -229,6 +169,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 include_disabled,
             } => to_binary(&query::rulesets(deps, skip, limit, include_disabled)?),
             QueryExt::Tax { height } => to_binary(&query::tax(deps, env, height)?),
+            QueryExt::CompetitionModule { key } => {
+                to_binary(&query::competition_module(deps, key)?)
+            }
         },
         _ => PrePropose::default().query(deps, env, msg),
     }
