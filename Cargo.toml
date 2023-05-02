@@ -4,6 +4,12 @@ members = [
 	"packages/*",
 	]
 
+[workspace.package]
+edition = "2021"
+license = "BSD-3-Clause"
+repository = "https://github.com/Arena-DAO/arena-smart-contracts"
+version = "0.1.0"
+
 [profile.release]
 opt-level = 3
 debug = false
@@ -34,6 +40,7 @@ cw4-group = "1.0.1"
 rand = "0.8"
 cw4 = "1.0.1"
 serde = "1.0"
+getrandom = { version = "0.2.9", features = ["js"] }
 
 #arena_dao dependencies
 cw-competition = { path = "./packages/cw-competition" }
@@ -45,15 +52,15 @@ arena-escrow = { path = "./contracts/arena-escrow" }
 arena-wager-module = { path = "./contracts/arena-wager-module" }
 
 #dao dependencies
-dao-core = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-macros = { git = "https://github.com/DA0-DA0/dao-contracts"}
-cw20-stake = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-voting-cw20-staked = { git = "https://github.com/DA0-DA0/dao-contracts"}
-dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts" }
+dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts" }
+dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts" }
+dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+dao-macros = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+cw20-stake = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+dao-voting-cw20-staked = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
+dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
 dao-testing = { git = "https://github.com/DA0-DA0/dao-contracts" }
