@@ -19,7 +19,6 @@ struct Context {
     pub app: App,
     pub escrow_addr: Addr,
     pub cw20_addr: Addr,
-    pub cw721_addr: Addr,
 }
 
 fn setup() -> Context {
@@ -185,7 +184,6 @@ fn setup() -> Context {
         app,
         escrow_addr,
         cw20_addr,
-        cw721_addr,
     }
 }
 
@@ -372,38 +370,6 @@ fn test_deposit_withdraw_and_check_balances() {
         balance_total.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
         Uint128::from(0u128)
     );
-}
-
-fn deposit_full(mut context: Context) {
-    let addr1 = Addr::unchecked(ADDR1.to_string());
-    let addr2 = Addr::unchecked(ADDR2.to_string());
-
-    context
-        .app
-        .execute_contract(
-            addr1.clone(),
-            context.cw20_addr.clone(),
-            &cw20::Cw20ExecuteMsg::Send {
-                contract: context.escrow_addr.to_string(),
-                amount: Uint128::from(1000u128),
-                msg: Binary::default(),
-            },
-            &vec![],
-        )
-        .unwrap();
-    context
-        .app
-        .execute_contract(
-            addr2.clone(),
-            context.cw20_addr.clone(),
-            &cw20::Cw20ExecuteMsg::Send {
-                contract: context.escrow_addr.to_string(),
-                amount: Uint128::from(1000u128),
-                msg: Binary::default(),
-            },
-            &vec![],
-        )
-        .unwrap();
 }
 
 #[test]

@@ -15,7 +15,7 @@ use crate::{
     core::CompetitionCoreJailMsg,
     error::CompetitionError,
     escrow::CompetitionEscrowDistributeMsg,
-    msg::{ExecuteBase, InstantiateBase, QueryBase},
+    msg::{CoreQueryMsg, ExecuteBase, InstantiateBase, QueryBase},
     proposal::create_competition_proposals,
     state::{Competition, CompetitionStatus, Config},
 };
@@ -93,7 +93,6 @@ where
             &Config {
                 key: msg.key,
                 description: msg.description,
-                tax: msg.tax,
             },
         )?;
         self.admin.set(deps.branch(), Some(info.sender))?;
@@ -123,6 +122,7 @@ where
                 extension,
             } => self.execute_create_competition(
                 deps,
+                env,
                 competition_dao,
                 escrow,
                 name,
@@ -180,6 +180,7 @@ where
     pub fn execute_create_competition(
         &self,
         deps: DepsMut,
+        env: Env,
         competition_dao: dao_interface::ModuleInstantiateInfo,
         escrow: dao_interface::ModuleInstantiateInfo,
         name: String,
@@ -195,6 +196,7 @@ where
                 Ok(x.checked_add(Uint128::one())?)
             })?;
         let competition = Competition {
+            start_height: env.block.height,
             id,
             dao: Addr::unchecked("temp"),
             escrow: Addr::unchecked("temp"),
@@ -255,7 +257,13 @@ where
         // Apply tax
         let distribution = match distribution {
             Some(mut member_shares) => {
-                let tax = self.config.load(deps.storage)?.tax;
+                let arena_core = self.admin.get(deps.as_ref())?.unwrap();
+                let tax: Decimal = deps.querier.query_wasm_smart(
+                    arena_core,
+                    &CoreQueryMsg::Tax {
+                        height: Some(competition.start_height),
+                    },
+                )?;
                 let sum = member_shares
                     .iter()
                     .try_fold(Uint128::zero(), |accumulator, x| {

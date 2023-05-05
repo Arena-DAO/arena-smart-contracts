@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::Uint128;
 use cw_balance::MemberShare;
 use cw_controllers::AdminResponse;
 use cw_utils::Expiration;
@@ -11,7 +11,6 @@ use dao_interface::ModuleInstantiateInfo;
 pub struct InstantiateBase<InstantiateExt> {
     pub key: String, //this is used to map a key (wager) to a module
     pub description: String,
-    pub tax: Decimal,
     pub extension: InstantiateExt,
 }
 
@@ -58,4 +57,9 @@ where
     #[serde(skip)]
     #[returns(PhantomData<CompetitionExt>)]
     _Phantom(PhantomData<CompetitionExt>),
+}
+
+#[cw_serde]
+pub enum CoreQueryMsg {
+    Tax { height: Option<u64> },
 }

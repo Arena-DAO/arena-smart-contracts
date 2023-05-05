@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_utils::Expiration;
 
 #[cw_serde]
@@ -33,6 +33,7 @@ pub struct Competition<CompetitionExt> {
     pub escrow: Addr,
     pub name: String,
     pub description: String,
+    pub start_height: u64,
     pub expiration: Expiration,
     pub rules: Vec<String>,
     pub ruleset: Option<Uint128>,
@@ -44,5 +45,4 @@ pub struct Competition<CompetitionExt> {
 pub struct Config {
     pub key: String,
     pub description: String,
-    pub tax: Decimal,
 }

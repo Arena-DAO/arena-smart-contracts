@@ -54,13 +54,9 @@ arena-wager-module = { path = "./contracts/arena-wager-module" }
 #dao dependencies
 dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
 dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts" }
-dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
 dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
 dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts" }
 dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
-dao-macros = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
-cw20-stake = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
 dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
-dao-voting-cw20-staked = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
 dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
 dao-testing = { git = "https://github.com/DA0-DA0/dao-contracts" }
