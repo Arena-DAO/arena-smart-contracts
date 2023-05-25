@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, Response, StdError, SubMsg, Uint128};
+use cosmwasm_std::{Addr, Decimal, DepsMut, Env, Response, StdError, SubMsg, Uint128};
 use cw_competition::proposal::create_competition_proposals;
 use dao_interface::ModuleInstantiateInfo;
 
@@ -16,11 +16,11 @@ pub const COMPETITION_REPLY_ID: u64 = 5;
 pub fn update_competition_modules(
     deps: DepsMut,
     env: &Env,
-    info: MessageInfo,
+    sender: Addr,
     to_add: Vec<ModuleInstantiateInfo>,
     to_disable: Vec<String>,
 ) -> Result<Response, ContractError> {
-    if PrePropose::default().dao.load(deps.storage)? != info.sender {
+    if PrePropose::default().dao.load(deps.storage)? != sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -46,7 +46,15 @@ pub fn update_competition_modules(
         .add_submessages(competition_module_msgs))
 }
 
-pub fn update_tax(deps: DepsMut, env: &Env, tax: Decimal) -> Result<Response, ContractError> {
+pub fn update_tax(
+    deps: DepsMut,
+    env: &Env,
+    sender: Addr,
+    tax: Decimal,
+) -> Result<Response, ContractError> {
+    if PrePropose::default().dao.load(deps.storage)? != sender {
+        return Err(ContractError::Unauthorized {});
+    }
     if tax > Decimal::one() {
         return Err(ContractError::StdError(StdError::GenericErr {
             msg: "The dao tax cannot be greater than 100%.".to_string(),
@@ -61,9 +69,14 @@ pub fn update_tax(deps: DepsMut, env: &Env, tax: Decimal) -> Result<Response, Co
 
 pub fn update_rulesets(
     deps: DepsMut,
+    sender: Addr,
     to_add: Vec<Ruleset>,
     to_disable: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
+    if PrePropose::default().dao.load(deps.storage)? != sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
     for id in to_disable {
         rulesets().update(deps.storage, id.u128(), |x| match x {
             Some(mut module) => {
@@ -76,7 +89,7 @@ pub fn update_rulesets(
         })?;
     }
 
-    let mut id = RULESET_COUNT.load(deps.storage)?;
+    let mut id = RULESET_COUNT.may_load(deps.storage)?.unwrap_or_default();
     for ruleset in to_add {
         rulesets().save(deps.storage, id.u128(), &ruleset)?;
         id = id.checked_add(Uint128::one())?;
@@ -90,11 +103,13 @@ pub fn update_rulesets(
 
 pub fn jail_competition(
     deps: DepsMut,
-    info: MessageInfo,
+    sender: Addr,
     id: Uint128,
 ) -> Result<Response, ContractError> {
     //assert the sender is a competition module
-    if !competition_modules().has(deps.storage, info.sender.clone()) {
+    if !competition_modules().has(deps.storage, sender.clone())
+        || PrePropose::default().dao.load(deps.storage)? != sender
+    {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -110,12 +125,12 @@ pub fn jail_competition(
 
     Ok(Response::new()
         .add_attribute("action", "jail_competition")
-        .add_attribute("sender", info.sender.to_string())
+        .add_attribute("sender", sender.to_string())
         .add_attribute("id", id)
         .add_message(create_competition_proposals(
             deps.as_ref(),
             Uint128::from(id),
-            &info.sender,
+            &sender,
             &cw4_group,
             &proposal_module,
         )?))

@@ -2,7 +2,7 @@ use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
     msg::{ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, PrePropose, QueryExt, QueryMsg},
     query,
-    state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, KEYS, TAX},
+    state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, KEYS},
     ContractError,
 };
 #[cfg(not(feature = "library"))]
@@ -33,7 +33,6 @@ pub fn instantiate(
     Ok(instantiate_extension(
         resp,
         deps.branch(),
-        info,
         env,
         msg.extension,
     )?)
@@ -42,21 +41,19 @@ pub fn instantiate(
 pub fn instantiate_extension(
     prepropose_response: Response,
     mut deps: DepsMut,
-    info: MessageInfo,
     env: Env,
     extension: InstantiateExt,
 ) -> Result<Response, ContractError> {
     let dao = PrePropose::default().dao.load(deps.storage)?;
-    crate::execute::update_tax(deps.branch(), &env, extension.tax)?;
-    crate::execute::update_rulesets(deps.branch(), extension.rulesets, vec![])?;
+    crate::execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
+    crate::execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
         &env,
-        info,
+        dao.clone(),
         extension.competition_modules_instantiate_info,
         vec![],
     )?;
-    TAX.save(deps.storage, &extension.tax, env.block.height)?;
     Ok(prepropose_response
         .add_submessages(competition_response.messages)
         .set_data(to_binary(&ModuleInstantiateCallback {
@@ -82,14 +79,14 @@ pub fn execute(
         ExecuteMsg::Propose { msg: _ } => return Err(ContractError::Unauthorized {}),
         ExecuteMsg::Extension { msg } => match msg {
             ExecuteExt::UpdateCompetitionModules { to_add, to_disable } => {
-                execute::update_competition_modules(deps, &env, info, to_add, to_disable)
+                execute::update_competition_modules(deps, &env, info.sender, to_add, to_disable)
             }
             ExecuteExt::UpdateRulesets { to_add, to_disable } => {
-                execute::update_rulesets(deps, to_add, to_disable)
+                execute::update_rulesets(deps, info.sender, to_add, to_disable)
             }
-            ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, tax),
+            ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, info.sender, tax),
             ExecuteExt::Jail(competition_core_jail_msg) => {
-                execute::jail_competition(deps, info, competition_core_jail_msg.id)
+                execute::jail_competition(deps, info.sender, competition_core_jail_msg.id)
             }
         },
         // Default pre-propose-base behavior for all other messages

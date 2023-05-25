@@ -40,6 +40,8 @@ dependencies = [
  "dao-interface",
  "dao-pre-propose-base",
  "dao-proposal-multiple",
+ "dao-proposal-single",
+ "dao-proposal-sudo",
  "dao-testing",
  "dao-voting",
  "dao-voting-cw4",
@@ -1260,6 +1262,21 @@ dependencies = [
  "dao-voting",
  "thiserror",
  "voting",
+]
+
+[[package]]
+name = "dao-proposal-sudo"
+version = "2.1.0"
+source = "git+https://github.com/DA0-DA0/dao-contracts#9261bb355ca9830cd18536d8576bf1cc20a6848a"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 1.0.1 (git+https://github.com/CosmWasm/cw-storage-plus?rev=6db957ce730a95141a3ab4dc5ab76fb38e8c0c42)",
+ "cw2 0.16.0",
+ "dao-interface",
+ "dao-macros",
+ "thiserror",
 ]
 
 [[package]]

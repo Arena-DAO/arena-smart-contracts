@@ -18,11 +18,14 @@ pub fn arena_dao_escrow_contract() -> Box<dyn Contract<Empty>> {
 }
 
 pub fn dao_proposal_multiple_contract() -> Box<dyn Contract<Empty>> {
-    Box::new(ContractWrapper::new(
-        dao_proposal_multiple::contract::execute,
-        dao_proposal_multiple::contract::instantiate,
-        dao_proposal_multiple::contract::query,
-    ))
+    Box::new(
+        ContractWrapper::new(
+            dao_proposal_multiple::contract::execute,
+            dao_proposal_multiple::contract::instantiate,
+            dao_proposal_multiple::contract::query,
+        )
+        .with_reply(dao_proposal_multiple::contract::reply),
+    )
 }
 
 pub fn cw20_base_contract() -> Box<dyn Contract<Empty>> {
