@@ -1,4 +1,4 @@
-use arena_wager_module::contract::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use arena_wager_module::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cosmwasm_schema::write_api;
 
 fn main() {

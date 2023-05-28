@@ -15,7 +15,6 @@ pub const COMPETITION_REPLY_ID: u64 = 5;
 
 pub fn update_competition_modules(
     deps: DepsMut,
-    env: &Env,
     sender: Addr,
     to_add: Vec<ModuleInstantiateInfo>,
     to_disable: Vec<String>,
@@ -37,7 +36,7 @@ pub fn update_competition_modules(
     }
     let competition_module_msgs: Vec<SubMsg> = to_add
         .into_iter()
-        .map(|info| info.into_wasm_msg(env.contract.address.clone()))
+        .map(|info| info.into_wasm_msg(sender.clone()))
         .map(|wasm| SubMsg::reply_on_success(wasm, COMPETITION_MODULE_REPLY_ID))
         .collect();
 

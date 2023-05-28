@@ -2,11 +2,14 @@ use cosmwasm_std::Empty;
 use cw_multi_test::{Contract, ContractWrapper};
 
 pub fn arena_dao_core_contract() -> Box<dyn Contract<Empty>> {
-    Box::new(ContractWrapper::new(
-        arena_core::contract::execute,
-        arena_core::contract::instantiate,
-        arena_core::contract::query,
-    ))
+    Box::new(
+        ContractWrapper::new(
+            arena_core::contract::execute,
+            arena_core::contract::instantiate,
+            arena_core::contract::query,
+        )
+        .with_reply(arena_core::contract::reply),
+    )
 }
 
 pub fn arena_dao_escrow_contract() -> Box<dyn Contract<Empty>> {
@@ -15,6 +18,17 @@ pub fn arena_dao_escrow_contract() -> Box<dyn Contract<Empty>> {
         arena_escrow::contract::instantiate,
         arena_escrow::contract::query,
     ))
+}
+
+pub fn arena_wager_module_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new(
+            arena_wager_module::contract::execute,
+            arena_wager_module::contract::instantiate,
+            arena_wager_module::contract::query,
+        )
+        .with_reply(arena_wager_module::contract::reply),
+    )
 }
 
 pub fn dao_proposal_multiple_contract() -> Box<dyn Contract<Empty>> {

@@ -24,6 +24,7 @@ name = "arena-core"
 version = "0.1.0"
 dependencies = [
  "arena-testing",
+ "arena-wager-module",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -80,6 +81,7 @@ version = "0.1.0"
 dependencies = [
  "arena-core",
  "arena-escrow",
+ "arena-wager-module",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",

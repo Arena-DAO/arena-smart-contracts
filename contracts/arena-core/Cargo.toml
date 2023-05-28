@@ -43,3 +43,4 @@ cw-utils = "0.16"
 cw20 = "0.16"
 dao-proposal-sudo = { workspace = true }
 dao-proposal-multiple = { workspace = true }
+arena-wager-module = { workspace = true }

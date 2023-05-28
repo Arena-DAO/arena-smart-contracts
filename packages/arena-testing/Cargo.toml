@@ -14,6 +14,7 @@ getrandom = { workspace = true }
 serde = { workspace = true }
 arena-core = { workspace = true }
 arena-escrow = { workspace = true }
+arena-wager-module = { workspace = true }
 dao-proposal-multiple = { workspace = true }
 cw-multi-test = { workspace = true }
 

@@ -23,6 +23,7 @@ fn attach_arena_core() {
     let govmod_id = app.store_code(sudo_proposal_contract());
     let dpm_id = app.store_code(arena_testing::contracts::dao_proposal_multiple_contract());
     let arena_id = app.store_code(arena_testing::contracts::arena_dao_core_contract());
+    let wager_module_id = app.store_code(arena_testing::contracts::arena_wager_module_contract());
 
     let govmod_instantiate = dao_proposal_sudo::msg::InstantiateMsg {
         root: CREATOR.to_owned(),
@@ -88,7 +89,7 @@ fn attach_arena_core() {
                                     quorum: dao_voting::threshold::PercentageThreshold::Majority {},
                                 },
                             min_voting_period: None,
-                            max_voting_period: cw_utils::Duration::Time(604800u64),
+                            max_voting_period: cw_utils::Duration::Time(1209600u64),
                             only_members_execute: false,
                             allow_revoting: false,
                             pre_propose_info:
@@ -99,22 +100,32 @@ fn attach_arena_core() {
                                             deposit_info: None,
                                             open_proposal_submission: false,
                                             extension: InstantiateExt {
-                                                competition_modules_instantiate_info: vec![],
+                                                competition_modules_instantiate_info: vec![
+                                                    ModuleInstantiateInfo {
+                                                        code_id: wager_module_id,
+                                                        msg: to_binary(&arena_wager_module::msg::InstantiateMsg { 
+                                                            key: "wagers".to_string(), 
+                                                            description: "The Arena Protocol Wager Module".to_string(), 
+                                                            extension: Empty {}}).unwrap(),
+                                                        admin: Some(Admin::CoreModule {}),
+                                                        label: "Arena Wager Module".to_string(),
+                                                    },
+                                                ],
                                                 rulesets: vec![],
                                                 tax: Decimal::new(Uint128::from(
-                                                    150000000000000u128,
+                                                    150000000000000000u128,
                                                 )),
                                             },
                                         })
                                         .unwrap(),
-                                        admin: Some(Admin::CoreModule {}),
+                                        admin: Some(Admin::CoreModule {  }),
                                         label: "Arena Core".to_string(),
                                     },
                                 },
                             close_proposal_on_execution_failure: true,
                         })
                         .unwrap(),
-                        admin: Some(Admin::CoreModule {}),
+                        admin: Some(Admin::Address { addr: gov_addr.to_string() }),
                         label: "Proposal Multiple".to_string(),
                     }],
                     to_disable: vec![],

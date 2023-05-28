@@ -63,9 +63,6 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt> Default
     for CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
 {
     fn default() -> Self {
-        // Call into constant function here. Presumably, the compiler
-        // is clever enough to inline this. This gives us
-        // "more-or-less" constant evaluation for our default method.
         Self::new(
             "admin",
             "config",
@@ -91,15 +88,17 @@ where
         self.config.save(
             deps.storage,
             &Config {
-                key: msg.key,
-                description: msg.description,
+                key: msg.key.clone(),
+                description: msg.description.clone(),
             },
         )?;
         self.admin.set(deps.branch(), Some(info.sender))?;
         self.competition_count
             .save(deps.storage, &Uint128::zero())?;
 
-        Ok(Response::new())
+        Ok(Response::new()
+            .add_attribute("key", msg.key)
+            .add_attribute("description", msg.description))
     }
 
     pub fn execute(

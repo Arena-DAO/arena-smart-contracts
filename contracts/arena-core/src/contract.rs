@@ -47,9 +47,9 @@ pub fn instantiate_extension(
     let dao = PrePropose::default().dao.load(deps.storage)?;
     crate::execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
     crate::execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
+    COMPETITION_MODULES_COUNT.save(deps.storage, &Uint128::zero())?;
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
-        &env,
         dao.clone(),
         extension.competition_modules_instantiate_info,
         vec![],
@@ -79,7 +79,7 @@ pub fn execute(
         ExecuteMsg::Propose { msg: _ } => return Err(ContractError::Unauthorized {}),
         ExecuteMsg::Extension { msg } => match msg {
             ExecuteExt::UpdateCompetitionModules { to_add, to_disable } => {
-                execute::update_competition_modules(deps, &env, info.sender, to_add, to_disable)
+                execute::update_competition_modules(deps, info.sender, to_add, to_disable)
             }
             ExecuteExt::UpdateRulesets { to_add, to_disable } => {
                 execute::update_rulesets(deps, info.sender, to_add, to_disable)
