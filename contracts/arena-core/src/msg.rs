@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Empty, Uint128};
 use cw_competition::core::CompetitionCoreJailMsg;
-use dao_interface::ModuleInstantiateInfo;
+use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
     state::PreProposeContract,

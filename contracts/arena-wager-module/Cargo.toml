@@ -28,7 +28,6 @@ cw-utils = { workspace = true }
 cw-controllers = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-dao-core = { workspace = true }
 arena-escrow = { workspace = true }
 cw4-group = { workspace = true }
 cw-competition = { workspace = true }

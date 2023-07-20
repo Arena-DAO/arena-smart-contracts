@@ -5,7 +5,7 @@ use cosmwasm_std::Uint128;
 use cw_balance::MemberShare;
 use cw_controllers::AdminResponse;
 use cw_utils::Expiration;
-use dao_interface::ModuleInstantiateInfo;
+use dao_interface::state::ModuleInstantiateInfo;
 
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {

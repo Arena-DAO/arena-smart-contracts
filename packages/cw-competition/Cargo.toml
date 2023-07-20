@@ -30,7 +30,6 @@ cw-controllers = { workspace = true }
 cw-balance = { workspace = true }
 
 dao-interface = { workspace = true }
-dao-core = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 dao-voting = { workspace = true }
 dao-voting-cw4 = { workspace = true }

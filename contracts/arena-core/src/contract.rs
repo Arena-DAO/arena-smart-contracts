@@ -13,8 +13,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
-use dao_core::msg::ExecuteMsg as DAOCoreExecuteMsg;
-use dao_interface::ModuleInstantiateCallback;
+use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::ModuleInstantiateCallback};
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-core";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");

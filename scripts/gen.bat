@@ -11,4 +11,4 @@ for /d %%f in (.\contracts\*) do (
 )
 REM create typescript types
 cd .\ts-codegen
-call pnpm i && pnpm run gen
+call npm i && npm run gen

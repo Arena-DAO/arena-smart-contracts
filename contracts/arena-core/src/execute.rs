@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Decimal, DepsMut, Env, Response, StdError, SubMsg, Uint128};
 use cw_competition::proposal::create_competition_proposals;
-use dao_interface::ModuleInstantiateInfo;
+use dao_interface::state::ModuleInstantiateInfo;
 
 use crate::{
     msg::PrePropose,
@@ -116,7 +116,7 @@ pub fn jail_competition(
     let proposal_module = PrePropose::default().proposal_module.load(deps.storage)?;
     let voting_module: Addr = deps
         .querier
-        .query_wasm_smart(dao, &dao_core::msg::QueryMsg::VotingModule {})?;
+        .query_wasm_smart(dao, &dao_interface::msg::QueryMsg::VotingModule {})?;
     let cw4_group: Addr = deps.querier.query_wasm_smart(
         voting_module,
         &dao_voting_cw4::msg::QueryMsg::GroupContract {},

@@ -27,7 +27,6 @@ cw-utils = { workspace = true }
 cw-controllers = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-dao-core = { workspace = true }
 cw-competition = { workspace = true }
 dao-interface = { workspace = true }
 dao-voting-cw4 = { workspace = true }
