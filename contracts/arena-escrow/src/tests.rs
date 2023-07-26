@@ -397,19 +397,6 @@ fn test_distribute_without_preset_distribution() {
             &vec![],
         )
         .unwrap();
-    context
-        .app
-        .execute_contract(
-            addr2.clone(),
-            context.cw20_addr.clone(),
-            &cw20::Cw20ExecuteMsg::Send {
-                contract: context.escrow_addr.to_string(),
-                amount: Uint128::from(1000u128),
-                msg: Binary::default(),
-            },
-            &vec![],
-        )
-        .unwrap();
 
     // Set up the distribution.
     let distribution = vec![

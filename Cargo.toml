@@ -41,7 +41,7 @@ rand = "0.8"
 cw4 = "1.1.0"
 serde = "1.0"
 getrandom = { version = "0.2.10", features = ["js"] }
-bnum = "0.7.0"
+bnum = "0.8.0"
 
 #arena_dao dependencies
 cw-competition = { path = "./packages/cw-competition" }
