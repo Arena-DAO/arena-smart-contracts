@@ -101,6 +101,6 @@ pub fn rulesets(
     Ok(items)
 }
 
-pub fn competition_module(deps: Deps, key: String) -> StdResult<Addr> {
-    Ok(KEYS.load(deps.storage, key)?)
+pub fn competition_module(deps: Deps, key: String) -> StdResult<Option<Addr>> {
+    Ok(KEYS.may_load(deps.storage, key)?)
 }

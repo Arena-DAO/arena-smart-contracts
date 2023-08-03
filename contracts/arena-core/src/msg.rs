@@ -7,7 +7,10 @@ use dao_pre_propose_base::{
     state::PreProposeContract,
 };
 
-use crate::{query::DumpStateResponse, state::Ruleset};
+use crate::{
+    query::DumpStateResponse,
+    state::{CompetitionModule, Ruleset},
+};
 
 #[cw_serde]
 pub struct InstantiateExt {
@@ -35,21 +38,21 @@ pub enum ExecuteExt {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryExt {
-    #[returns(Vec<Addr>)]
+    #[returns(Vec<(Addr, CompetitionModule)>)]
     CompetitionModules {
         start_after: Option<String>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
     },
-    #[returns(Vec<Ruleset>)]
+    #[returns(Vec<(u128, Ruleset)>)]
     Rulesets {
-        skip: Option<u128>,
+        start_after: Option<u128>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
-    #[returns(Addr)]
+    #[returns(Option<Addr>)]
     CompetitionModule { key: String },
     #[returns(DumpStateResponse)]
     DumpState {},
