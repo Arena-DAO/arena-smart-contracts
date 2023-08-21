@@ -1,6 +1,6 @@
 use crate::{
     execute,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
     state::{ADMIN, DUE, IS_LOCKED, LOCK_WHEN_FUNDED, TOTAL_BALANCE},
     ContractError,
@@ -92,4 +92,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsFunded { addr } => to_binary(&query::is_funded(deps, addr)?),
         QueryMsg::IsFullyFunded {} => to_binary(&query::is_fully_funded(deps)?),
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
 }

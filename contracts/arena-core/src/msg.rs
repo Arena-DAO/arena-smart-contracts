@@ -58,6 +58,9 @@ pub enum QueryExt {
     DumpState {},
 }
 
+#[cw_serde]
+pub enum MigrateMsg {}
+
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
 pub type ExecuteMsg = ExecuteBase<Empty, ExecuteExt>;
 pub type QueryMsg = QueryBase<QueryExt>;

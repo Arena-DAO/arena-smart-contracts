@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Respon
 use cw2::set_contract_version;
 use cw_competition::{contract::CompetitionModuleContract, error::CompetitionError};
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub const CONTRACT_NAME: &str = "crates.io:arena-wager-module";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -40,4 +40,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Competitio
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     CompetitionModule::default().query(deps, env, msg)
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, CompetitionError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
 }

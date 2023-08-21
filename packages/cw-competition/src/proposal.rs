@@ -58,7 +58,7 @@ pub fn create_competition_proposals(
             title: "Competition Result".to_string(),
             description: "This proposal allows members to vote on the winner of the competition. Each choice represents a different team. Select the team that you believe should win the competition.".to_string(),
             choices: dao_voting::multiple_choice::MultipleChoiceOptions { options },
-            proposer: Some(competition_module.to_string()),
+            proposer: None
         })?,
         funds: vec![],
     }))

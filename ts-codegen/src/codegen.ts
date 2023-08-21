@@ -30,6 +30,7 @@ glob("../@(contracts)/**/schema").then((matches) => {
       },
       client: {
         enabled: true,
+        execExtendsQuery: true,
       },
       reactQuery: {
         enabled: true,

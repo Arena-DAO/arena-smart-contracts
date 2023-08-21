@@ -252,10 +252,6 @@ fn test_set_distribution() {
             addr: ADDR2.to_string(),
             shares: Uint128::new(30),
         },
-        MemberShare {
-            addr: "addr1".to_string(),
-            shares: Uint128::new(20),
-        },
     ];
 
     let res = context.app.execute_contract(

@@ -1,6 +1,9 @@
 use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
-    msg::{ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, PrePropose, QueryExt, QueryMsg},
+    msg::{
+        ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
+        QueryMsg,
+    },
     query,
     state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, KEYS},
     ContractError,
@@ -176,4 +179,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         },
         _ => PrePropose::default().query(deps, env, msg),
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
 }
