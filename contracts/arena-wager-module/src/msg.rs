@@ -6,7 +6,9 @@ use cw_competition::{
 };
 
 #[cw_serde]
-pub enum MigrateMsg {}
+pub enum MigrateMsg {
+    FromV1 {},
+}
 
 pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<Empty, Empty>;

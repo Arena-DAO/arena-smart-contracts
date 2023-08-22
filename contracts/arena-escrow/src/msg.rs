@@ -61,4 +61,6 @@ pub struct DumpStateResponse {
 }
 
 #[cw_serde]
-pub enum MigrateMsg {}
+pub enum MigrateMsg {
+    FromV1 {},
+}
