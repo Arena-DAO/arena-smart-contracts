@@ -1,5 +1,6 @@
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, StdError, Uint128, WasmMsg};
 use cw_balance::{Balance, MemberBalance};
+use cw_competition::state::CompetitionStatus;
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use cw_utils::Expiration;
 use dao_interface::{
@@ -188,7 +189,7 @@ fn attach_arena_core() {
 }
 
 #[test]
-fn create_and_process_wager() {
+fn create_wager_with_proposals() {
     let mut context = setup_app();
     execute_attach_arena_core(&mut context);
     let escrow_code_id = context
@@ -349,5 +350,14 @@ fn create_and_process_wager() {
         )
         .unwrap();
 
-    assert!(wager.dao != wager.escrow);
+    assert!(wager.status == CompetitionStatus::Created);
+
+    let res = context.app.execute_contract(
+        addr1.clone(),
+        wager_module_addr.clone(),
+        &arena_wager_module::msg::ExecuteMsg::GenerateProposals { id: wager.id },
+        &[],
+    );
+
+    assert!(res.is_ok());
 }

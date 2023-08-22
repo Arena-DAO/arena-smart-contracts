@@ -2,13 +2,14 @@ use std::marker::PhantomData;
 
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Decimal, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply,
-    Response, StdResult, SubMsg, Uint128,
+    to_binary, Addr, Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response,
+    StdError, StdResult, SubMsg, Uint128,
 };
 use cw_balance::MemberShare;
 use cw_controllers::Admin;
 use cw_storage_plus::{Item, Map};
 use cw_utils::{parse_reply_execute_data, parse_reply_instantiate_data};
+use dao_interface::state::ProposalModule;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
@@ -23,6 +24,7 @@ use crate::{
 pub const DAO_REPLY_ID: u64 = 1;
 pub const ESCROW_REPLY_ID: u64 = 2;
 pub const PROCESS_REPLY_ID: u64 = 3;
+pub const PROPOSALS_REPLY_ID: u64 = 4;
 
 pub struct CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt> {
     pub admin: Admin<'static>,
@@ -134,8 +136,78 @@ where
             ExecuteBase::ProcessCompetition { id, distribution } => {
                 self.execute_process_competition(deps, info, id, distribution)
             }
+            ExecuteBase::GenerateProposals { id } => self.execute_generate_proposals(deps, env, id),
             ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
+    }
+
+    pub fn execute_generate_proposals(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        id: Uint128,
+    ) -> Result<Response, CompetitionError> {
+        let competition = self.competitions.may_load(deps.storage, id.u128())?;
+
+        if competition.is_none() {
+            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+        }
+
+        let competition = competition.unwrap();
+
+        if competition.status != CompetitionStatus::Created {
+            return Err(CompetitionError::InvalidCompetitionStatus {
+                current_status: competition.status,
+            });
+        }
+
+        let proposal_modules: Vec<ProposalModule> = deps.querier.query_wasm_smart(
+            competition.dao.clone(),
+            &dao_interface::msg::QueryMsg::ActiveProposalModules {
+                start_after: None,
+                limit: None,
+            },
+        )?;
+
+        if proposal_modules.len() == 0 {
+            return Err(CompetitionError::StdError(StdError::GenericErr {
+                msg: "No active proposal module found".to_string(),
+            }));
+        }
+
+        let proposal_module = &proposal_modules.first().unwrap().address;
+
+        let _config: dao_proposal_multiple::state::Config = deps.querier.query_wasm_smart(
+            proposal_module,
+            &dao_proposal_multiple::msg::QueryMsg::Config {},
+        )?;
+
+        let voting_module: Addr = deps.querier.query_wasm_smart(
+            competition.dao,
+            &dao_interface::msg::QueryMsg::VotingModule {},
+        )?;
+        let cw4_group: Addr = deps.querier.query_wasm_smart(
+            voting_module,
+            &dao_voting_cw4::msg::QueryMsg::GroupContract {},
+        )?;
+
+        self.temp_competition.save(deps.storage, &id.u128())?;
+
+        let sub_msg = SubMsg::reply_on_success(
+            create_competition_proposals(
+                deps.as_ref(),
+                id,
+                &env.contract.address,
+                &cw4_group,
+                proposal_module,
+            )?,
+            PROPOSALS_REPLY_ID,
+        );
+
+        Ok(Response::new()
+            .add_attribute("action", "generate_proposals")
+            .add_attribute("id", id)
+            .add_submessage(sub_msg))
     }
 
     pub fn execute_jail_competition(
@@ -204,7 +276,7 @@ where
             expiration,
             rules,
             ruleset,
-            status: CompetitionStatus::Pending,
+            status: CompetitionStatus::Created,
             extension,
         };
         let dao = self.query_dao(deps.as_ref())?;
@@ -328,21 +400,22 @@ where
         Ok(dao)
     }
 
-    pub fn reply(&self, deps: DepsMut, env: Env, msg: Reply) -> Result<Response, CompetitionError> {
+    pub fn reply(
+        &self,
+        deps: DepsMut,
+        _env: Env,
+        msg: Reply,
+    ) -> Result<Response, CompetitionError> {
         match msg.id {
-            DAO_REPLY_ID => self.reply_dao(deps, env, msg),
+            DAO_REPLY_ID => self.reply_dao(deps, msg),
             ESCROW_REPLY_ID => self.reply_escrow(deps, msg),
             PROCESS_REPLY_ID => self.reply_process(deps, msg),
+            PROPOSALS_REPLY_ID => self.reply_proposals(deps),
             _ => Err(CompetitionError::UnknownReplyId { id: msg.id }),
         }
     }
 
-    pub fn reply_dao(
-        &self,
-        deps: DepsMut,
-        env: Env,
-        msg: Reply,
-    ) -> Result<Response, CompetitionError> {
+    pub fn reply_dao(&self, deps: DepsMut, msg: Reply) -> Result<Response, CompetitionError> {
         let result = parse_reply_instantiate_data(msg.clone())?;
         let addr = deps.api.addr_validate(&result.contract_address)?;
         let id = self.temp_competition.load(deps.storage)?;
@@ -358,43 +431,28 @@ where
                 }
             })?;
 
-        fn extract_attribute_value(
-            events: &[Event],
-            key: &str,
-        ) -> Result<String, CompetitionError> {
-            for event in events {
-                for attribute in &event.attributes {
-                    if attribute.key == key {
-                        return Ok(attribute.value.clone());
-                    }
-                }
-            }
-            Err(CompetitionError::AttributeNotFound {
-                key: key.to_string(),
-            })
-        }
-
-        const GROUP_KEY: &str = "group_contract_address";
-        const PROPOSAL_KEY: &str = "prop_module";
-        let events = msg.result.unwrap().events;
-        let cw4_group = deps
-            .api
-            .addr_validate(&extract_attribute_value(&events, GROUP_KEY)?)?;
-        let proposal_module = deps
-            .api
-            .addr_validate(&extract_attribute_value(&events, PROPOSAL_KEY)?)?;
-
         Ok(Response::new()
             .add_attribute("action", "reply_dao")
             .add_attribute("id", Uint128::from(id))
-            .add_attribute("dao_addr", addr.clone())
-            .add_message(create_competition_proposals(
-                deps.as_ref(),
-                Uint128::from(id),
-                &env.contract.address,
-                &cw4_group,
-                &proposal_module,
-            )?))
+            .add_attribute("dao_addr", addr))
+    }
+
+    pub fn reply_proposals(&self, deps: DepsMut) -> Result<Response, CompetitionError> {
+        let id = self.temp_competition.load(deps.storage)?;
+
+        self.competitions
+            .update(deps.storage, id, |x| -> Result<_, CompetitionError> {
+                match x {
+                    Some(mut competition) => {
+                        competition.status = CompetitionStatus::Pending;
+
+                        Ok(competition)
+                    }
+                    None => Err(CompetitionError::UnknownCompetitionId { id }),
+                }
+            })?;
+
+        Ok(Response::new().add_attribute("action", "reply_proposals"))
     }
 
     pub fn reply_escrow(&self, deps: DepsMut, msg: Reply) -> Result<Response, CompetitionError> {

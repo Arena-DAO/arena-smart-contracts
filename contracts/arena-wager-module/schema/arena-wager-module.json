@@ -116,6 +116,27 @@
       {
         "type": "object",
         "required": [
+          "generate_proposals"
+        ],
+        "properties": {
+          "generate_proposals": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
           "process_competition"
         ],
         "properties": {
@@ -529,6 +550,7 @@
         "CompetitionStatus": {
           "type": "string",
           "enum": [
+            "created",
             "pending",
             "active",
             "inactive",

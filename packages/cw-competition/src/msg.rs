@@ -29,6 +29,9 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
         ruleset: Option<Uint128>,
         extension: CompetitionExt,
     },
+    GenerateProposals {
+        id: Uint128,
+    },
     ProcessCompetition {
         id: Uint128,
         distribution: Option<Vec<MemberShare>>,

@@ -4,6 +4,7 @@ use cw_utils::Expiration;
 
 #[cw_serde]
 pub enum CompetitionStatus {
+    Created,
     Pending,
     Active,
     Inactive,
@@ -18,6 +19,7 @@ impl Default for CompetitionStatus {
 impl CompetitionStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
+            CompetitionStatus::Created => "Created",
             CompetitionStatus::Pending => "Pending",
             CompetitionStatus::Jailed => "Jailed",
             CompetitionStatus::Active => "Active",
