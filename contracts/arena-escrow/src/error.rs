@@ -1,6 +1,6 @@
 use cosmwasm_std::{CheckedFromRatioError, OverflowError, StdError};
 use cw_balance::BalanceError;
-use cw_controllers::{AdminError, HookError};
+use cw_ownable::OwnershipError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -9,10 +9,7 @@ pub enum ContractError {
     StdError(#[from] StdError),
 
     #[error("{0}")]
-    HookError(#[from] HookError),
-
-    #[error("{0}")]
-    AdminError(#[from] AdminError),
+    OwnershipError(#[from] OwnershipError),
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),

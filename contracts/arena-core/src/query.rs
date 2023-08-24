@@ -1,19 +1,7 @@
 use crate::state::{CompetitionModule, Ruleset, KEYS, TAX};
-use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Deps, Env, StdResult};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
-
-#[cw_serde]
-pub struct DumpStateResponse {
-    pub competition_modules: Vec<(Addr, CompetitionModule)>,
-}
-
-pub fn dump_state(deps: Deps) -> StdResult<DumpStateResponse> {
-    Ok(DumpStateResponse {
-        competition_modules: competition_modules(deps, None, None, None)?,
-    })
-}
 
 pub fn competition_modules(
     deps: Deps,
@@ -68,21 +56,19 @@ pub fn rulesets(
     include_disabled: Option<bool>,
 ) -> StdResult<Vec<(u128, Ruleset)>> {
     let start_after_bound = start_after.map(Bound::exclusive);
-    let limit = limit.unwrap_or(10).max(30) as usize;
+    let limit = limit.unwrap_or(10).max(30);
     let include_disabled = include_disabled.unwrap_or(false);
 
     let rulesets_map = crate::state::rulesets();
 
-    let items = if include_disabled {
-        rulesets_map
-            .range(
-                deps.storage,
-                start_after_bound,
-                None,
-                cosmwasm_std::Order::Ascending,
-            )
-            .take(limit)
-            .collect::<StdResult<Vec<_>>>()?
+    if include_disabled {
+        cw_paginate::paginate_indexed_map(
+            &rulesets_map,
+            deps.storage,
+            start_after_bound,
+            Some(limit),
+            |x, y| Ok((x, y)),
+        )
     } else {
         rulesets_map
             .idx
@@ -94,11 +80,9 @@ pub fn rulesets(
                 None,
                 cosmwasm_std::Order::Ascending,
             )
-            .take(limit)
-            .collect::<StdResult<Vec<_>>>()?
-    };
-
-    Ok(items)
+            .take(limit as usize)
+            .collect::<StdResult<Vec<_>>>()
+    }
 }
 
 pub fn competition_module(deps: Deps, key: String) -> StdResult<Option<Addr>> {

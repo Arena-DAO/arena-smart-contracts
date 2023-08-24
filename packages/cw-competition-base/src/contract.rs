@@ -6,20 +6,19 @@ use cosmwasm_std::{
     StdError, StdResult, SubMsg, Uint128,
 };
 use cw_balance::MemberShare;
-use cw_controllers::Admin;
-use cw_storage_plus::{Item, Map};
-use cw_utils::{parse_reply_execute_data, parse_reply_instantiate_data};
-use dao_interface::state::ProposalModule;
-use serde::{de::DeserializeOwned, Serialize};
-
-use crate::{
+use cw_competition::{
     core::CompetitionCoreJailMsg,
-    error::CompetitionError,
     escrow::CompetitionEscrowDistributeMsg,
     msg::{CoreQueryMsg, ExecuteBase, InstantiateBase, QueryBase},
     proposal::create_competition_proposals,
     state::{Competition, CompetitionStatus, Config},
 };
+use cw_storage_plus::{Item, Map};
+use cw_utils::{parse_reply_execute_data, parse_reply_instantiate_data};
+use dao_interface::state::ProposalModule;
+use serde::{de::DeserializeOwned, Serialize};
+
+use crate::error::CompetitionError;
 
 pub const DAO_REPLY_ID: u64 = 1;
 pub const ESCROW_REPLY_ID: u64 = 2;
@@ -27,7 +26,6 @@ pub const PROCESS_REPLY_ID: u64 = 3;
 pub const PROPOSALS_REPLY_ID: u64 = 4;
 
 pub struct CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt> {
-    pub admin: Admin<'static>,
     pub config: Item<'static, Config>,
     pub competition_count: Item<'static, Uint128>,
     pub competitions: Map<'static, u128, Competition<CompetitionExt>>,
@@ -42,14 +40,12 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
     CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
 {
     const fn new(
-        admin_key: &'static str,
         config_key: &'static str,
         competition_count_key: &'static str,
         competitions_key: &'static str,
         temp_competition_key: &'static str,
     ) -> Self {
         Self {
-            admin: Admin::new(admin_key),
             config: Item::new(config_key),
             competition_count: Item::new(competition_count_key),
             competitions: Map::new(competitions_key),
@@ -66,7 +62,6 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt> Default
 {
     fn default() -> Self {
         Self::new(
-            "admin",
             "config",
             "competition_count",
             "competitions",
@@ -83,7 +78,7 @@ where
 {
     pub fn instantiate(
         &self,
-        mut deps: DepsMut,
+        deps: DepsMut,
         info: MessageInfo,
         msg: InstantiateBase<InstantiateExt>,
     ) -> StdResult<Response> {
@@ -94,7 +89,7 @@ where
                 description: msg.description.clone(),
             },
         )?;
-        self.admin.set(deps.branch(), Some(info.sender))?;
+        cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
         self.competition_count
             .save(deps.storage, &Uint128::zero())?;
 
@@ -137,6 +132,11 @@ where
                 self.execute_process_competition(deps, info, id, distribution)
             }
             ExecuteBase::GenerateProposals { id } => self.execute_generate_proposals(deps, env, id),
+            ExecuteBase::UpdateOwnership(action) => {
+                let ownership =
+                    cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
+                Ok(Response::new().add_attributes(ownership.into_attributes()))
+            }
             ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
     }
@@ -216,7 +216,13 @@ where
         env: Env,
         id: Uint128,
     ) -> Result<Response, CompetitionError> {
-        let core = self.admin.get(deps.as_ref())?.unwrap();
+        let core = cw_ownable::get_ownership(deps.storage)?;
+        if core.owner.is_none() {
+            return Err(CompetitionError::OwnershipError(
+                cw_ownable::OwnershipError::NoOwner,
+            ));
+        }
+
         let competition = self.competitions.update(
             deps.storage,
             id.u128(),
@@ -241,7 +247,8 @@ where
             },
         )?;
 
-        let msg = CompetitionCoreJailMsg { id: competition.id }.into_cosmos_msg(core)?;
+        let msg =
+            CompetitionCoreJailMsg { id: competition.id }.into_cosmos_msg(core.owner.unwrap())?;
 
         Ok(Response::new()
             .add_attribute("action", "jail_wager")
@@ -279,7 +286,7 @@ where
             status: CompetitionStatus::Created,
             extension,
         };
-        let dao = self.query_dao(deps.as_ref())?;
+        let dao = self.get_dao(deps.as_ref())?;
         let msgs = vec![
             SubMsg::reply_always(competition_dao.into_wasm_msg(dao.clone()), DAO_REPLY_ID),
             SubMsg::reply_always(escrow.into_wasm_msg(dao.clone()), ESCROW_REPLY_ID),
@@ -305,11 +312,11 @@ where
             Some(val) => Ok(val),
             None => Err(CompetitionError::UnknownCompetitionId { id: id.u128() }),
         }?;
-        let dao = self.query_dao(deps.as_ref())?;
+        let dao = self.get_dao(deps.as_ref())?;
 
         match competition.status {
             CompetitionStatus::Active => {
-                if competition.dao != info.sender && dao != info.sender {
+                if competition.dao != info.sender || dao != info.sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
                 Ok(())
@@ -328,32 +335,36 @@ where
         // Apply tax
         let distribution = match distribution {
             Some(mut member_shares) => {
-                let arena_core = self.admin.get(deps.as_ref())?.unwrap();
+                let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
                 let tax: Decimal = deps.querier.query_wasm_smart(
                     arena_core,
                     &CoreQueryMsg::Tax {
                         height: Some(competition.start_height),
                     },
                 )?;
-                let sum = member_shares
-                    .iter()
-                    .try_fold(Uint128::zero(), |accumulator, x| {
-                        accumulator.checked_add(x.shares)
-                    })?;
-                let dao_shares = tax
-                    .checked_mul(Decimal::from_atomics(sum, 0u32)?)?
-                    .checked_div(Decimal::one().checked_sub(tax)?)?;
-                let dao_shares = dao_shares
-                    .checked_div(Decimal::from_atomics(
-                        Uint128::new(10u128).checked_pow(dao_shares.decimal_places())?,
-                        0u32,
-                    )?)?
-                    .atomics();
 
-                member_shares.push(MemberShare {
-                    addr: dao.to_string(),
-                    shares: dao_shares,
-                });
+                if !tax.is_zero() {
+                    let sum = member_shares
+                        .iter()
+                        .try_fold(Uint128::zero(), |accumulator, x| {
+                            accumulator.checked_add(x.shares)
+                        })?;
+
+                    let dao_shares = tax
+                        .checked_mul(Decimal::from_atomics(sum, 0u32)?)?
+                        .checked_div(Decimal::one().checked_sub(tax)?)?;
+                    let dao_shares = dao_shares
+                        .checked_div(Decimal::from_atomics(
+                            Uint128::new(10u128).checked_pow(dao_shares.decimal_places())?,
+                            0u32,
+                        )?)?
+                        .atomics();
+                    member_shares.push(MemberShare {
+                        addr: dao.to_string(),
+                        shares: dao_shares,
+                    });
+                }
+
                 Some(member_shares)
             }
             None => None,
@@ -380,24 +391,25 @@ where
         msg: QueryBase<QueryExt, CompetitionExt>,
     ) -> StdResult<Binary> {
         match msg {
-            QueryBase::DAO {} => to_binary(&self.query_dao(deps)?),
             QueryBase::Config {} => to_binary(&self.config.load(deps.storage)?),
             QueryBase::Competition { id } => {
                 to_binary(&self.competitions.load(deps.storage, id.u128())?)
             }
-            QueryBase::Admin {} => to_binary(&self.admin.query_admin(deps)?),
+            QueryBase::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
         }
     }
 
-    pub fn query_dao(&self, deps: Deps) -> StdResult<Addr> {
-        let core = self.admin.get(deps)?.unwrap();
-        let dao: Addr = deps
-            .querier
-            .query_wasm_smart(core, &dao_pre_propose_base::msg::QueryMsg::<Empty>::Dao {})?;
-
-        Ok(dao)
+    fn get_dao(&self, deps: Deps) -> Result<Addr, cw_ownable::OwnershipError> {
+        let core = cw_ownable::get_ownership(deps.storage)?;
+        if core.owner.is_none() {
+            return Err(cw_ownable::OwnershipError::NoOwner);
+        }
+        Ok(deps.querier.query_wasm_smart(
+            core.owner.unwrap(),
+            &dao_pre_propose_base::msg::QueryMsg::<Empty>::Dao {},
+        )?)
     }
 
     pub fn reply(

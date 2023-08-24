@@ -1,10 +1,9 @@
-use cosmwasm_std::{Deps, StdResult};
+use cosmwasm_std::{Addr, Deps, StdResult};
 use cw_balance::{BalanceVerified, MemberShareVerified};
+use cw_storage_plus::Bound;
+use cw_utils::maybe_addr;
 
-use crate::{
-    msg::DumpStateResponse,
-    state::{ADMIN, BALANCE, DUE, IS_FUNDED, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE},
-};
+use crate::state::{BALANCE, DUE, IS_FUNDED, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE};
 
 pub fn balance(deps: Deps, addr: String) -> StdResult<BalanceVerified> {
     let addr = deps.api.addr_validate(&addr)?;
@@ -24,14 +23,6 @@ pub fn is_locked(deps: Deps) -> bool {
     IS_LOCKED.load(deps.storage).unwrap_or_default()
 }
 
-pub fn dump_state(deps: Deps) -> StdResult<DumpStateResponse> {
-    Ok(DumpStateResponse {
-        admin: ADMIN.get(deps)?.unwrap(),
-        is_locked: is_locked(deps),
-        total_balance: total_balance(deps),
-    })
-}
-
 pub fn distribution(deps: Deps, addr: String) -> StdResult<Option<Vec<MemberShareVerified>>> {
     let addr = deps.api.addr_validate(&addr)?;
     Ok(PRESET_DISTRIBUTION.may_load(deps.storage, &addr)?)
@@ -44,4 +35,24 @@ pub fn is_funded(deps: Deps, addr: String) -> StdResult<bool> {
 
 pub fn is_fully_funded(deps: Deps) -> StdResult<bool> {
     Ok(crate::state::is_fully_funded(deps)?)
+}
+
+pub fn balances(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<(Addr, BalanceVerified)>> {
+    let binding = maybe_addr(deps.api, start_after)?;
+    let start = binding.as_ref().map(Bound::exclusive);
+    cw_paginate::paginate_map(&BALANCE, deps.storage, start, limit, |k, v| Ok((k, v)))
+}
+
+pub fn dues(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<(Addr, BalanceVerified)>> {
+    let binding = maybe_addr(deps.api, start_after)?;
+    let start = binding.as_ref().map(Bound::exclusive);
+    cw_paginate::paginate_map(&DUE, deps.storage, start, limit, |k, v| Ok((k, v)))
 }

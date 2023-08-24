@@ -1,9 +1,8 @@
 use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
-use cw_controllers::AdminError;
+use cw_competition::state::CompetitionStatus;
+use cw_ownable::OwnershipError;
 use cw_utils::ParseReplyError;
 use thiserror::Error;
-
-use crate::state::CompetitionStatus;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum CompetitionError {
@@ -11,13 +10,13 @@ pub enum CompetitionError {
     StdError(#[from] StdError),
 
     #[error("{0}")]
-    AdminError(#[from] AdminError),
-
-    #[error("{0}")]
     ParseReplyError(#[from] ParseReplyError),
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
+
+    #[error("{0}")]
+    OwnershipError(#[from] OwnershipError),
 
     #[error("{0}")]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),

@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult};
 use cw2::set_contract_version;
-use cw_competition::{contract::CompetitionModuleContract, error::CompetitionError};
+use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 

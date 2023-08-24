@@ -8,7 +8,7 @@ members = [
 edition = "2021"
 license = "BSD-3-Clause"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "0.1.0"
+version = "0.2.0"
 
 [profile.release]
 opt-level = 3
@@ -22,31 +22,33 @@ incremental = false
 overflow-checks = true
 
 [workspace.dependencies]
-cosmwasm-std = { version = "1.3.0", features = ["ibc3"] }
-cosmwasm-storage = { version = "1.3.0" }
-cosmwasm-schema = { version = "1.3.0" }
+cosmwasm-std = "1.3.3"
+cosmwasm-storage = "1.3.3"
+cosmwasm-schema = "1.3.3"
 cw-utils = "1.0.1"
-thiserror = { version = "1.0.43" }
+thiserror = "1.0.47"
 cw-storage-plus = "1.1.0"
-cw-multi-test = "0.16" 
+cw-multi-test = "0.16.5" 
 cw2 = "1.1.0"
 cw20 = "1.1.0"
 cw721 = "0.18.0"
 cw20-base = "1.1.0"
 cw721-base = "0.18"
-cw-controllers = "1.1.0"
-anyhow = { version = "1.0.72"}
+anyhow = "1.0.75"
 cw4-group = "1.1.0"
-rand = "0.8"
+rand = "0.8.5"
 cw4 = "1.1.0"
-serde = "1.0"
+serde = "1.0.186"
 getrandom = { version = "0.2.10", features = ["js"] }
 bnum = "0.8.0"
+cw-paginate = "0.2.1"
+cw-ownable = "0.5.1"
 
 #arena_dao dependencies
-cw-competition = { path = "./packages/cw-competition" }
-cw-balance = { path = "./packages/cw-balance" }
+cw-competition-base = { path = "./packages/cw-competition-base", features = ["library"] }
+cw-balance = { path = "./packages/cw-balance", features = ["library"] }
 arena-testing = { path = "./packages/arena-testing" }
+cw-competition = { path = "./packages/cw-competition", features = ["library"] }
 
 arena-core = { path = "./contracts/arena-core" }
 arena-escrow = { path = "./contracts/arena-escrow" }

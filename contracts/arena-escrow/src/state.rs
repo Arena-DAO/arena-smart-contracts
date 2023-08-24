@@ -1,9 +1,7 @@
 use cosmwasm_std::{Addr, Deps, StdResult};
 use cw_balance::{BalanceVerified, MemberShareVerified};
-use cw_controllers::Admin;
 use cw_storage_plus::{Item, Map};
 
-pub const ADMIN: Admin = Admin::new("admin");
 pub const TOTAL_BALANCE: Item<BalanceVerified> = Item::new("total");
 pub const BALANCE: Map<&Addr, BalanceVerified> = Map::new("balance");
 pub const DUE: Map<&Addr, BalanceVerified> = Map::new("due");

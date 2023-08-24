@@ -161,7 +161,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 limit,
                 include_disabled,
             )?),
-            QueryExt::DumpState {} => to_binary(&query::dump_state(deps)?),
             QueryExt::Rulesets {
                 start_after,
                 limit,

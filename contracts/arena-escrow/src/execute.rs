@@ -2,12 +2,13 @@ use cosmwasm_std::{Addr, Attribute, Binary, DepsMut, MessageInfo, Response, StdR
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
 use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare, MemberShareVerified};
+use cw_ownable::assert_owner;
 
 use crate::{
     query::is_locked,
     state::{
-        is_fully_funded, ADMIN, BALANCE, DUE, IS_FUNDED, IS_LOCKED, LOCK_WHEN_FUNDED,
-        PRESET_DISTRIBUTION, TOTAL_BALANCE,
+        is_fully_funded, BALANCE, DUE, IS_FUNDED, IS_LOCKED, LOCK_WHEN_FUNDED, PRESET_DISTRIBUTION,
+        TOTAL_BALANCE,
     },
     ContractError,
 };
@@ -204,8 +205,7 @@ pub fn distribute(
     distribution: Option<Vec<MemberShare>>,
     remainder_addr: String,
 ) -> Result<Response, ContractError> {
-    // Assert that the sender is an admin.
-    ADMIN.assert_admin(deps.as_ref(), &info.sender)?;
+    assert_owner(deps.storage, &info.sender)?;
 
     if !is_fully_funded(deps.as_ref())? {
         return Err(ContractError::NotFunded {});
@@ -266,7 +266,7 @@ pub fn distribute(
 
 // This function handles the competition state change message
 pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, ContractError> {
-    ADMIN.assert_admin(deps.as_ref(), &info.sender)?;
+    assert_owner(deps.storage, &info.sender)?;
 
     // Save the locked state to storage
     IS_LOCKED.save(deps.storage, &value)?;

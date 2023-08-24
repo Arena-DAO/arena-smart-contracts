@@ -21,15 +21,15 @@ cosmwasm-std = { workspace = true }
 getrandom = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw2 = { workspace = true }
-cw4 = { workspace = true }
 cw20 = { workspace = true }
 cw721 = { workspace = true }
 cw-utils = { workspace = true }
-cw-controllers = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 cw-balance = { workspace = true }
 cw-competition = { workspace = true }
+cw-paginate = { workspace = true }
+cw-ownable = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

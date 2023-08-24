@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw_balance::MemberShare;
-use cw_controllers::AdminResponse;
+use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
 
@@ -14,6 +14,7 @@ pub struct InstantiateBase<InstantiateExt> {
     pub extension: InstantiateExt,
 }
 
+#[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     JailCompetition {
@@ -41,22 +42,19 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     },
 }
 
+#[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryBase<QueryExt, CompetitionExt>
 where
     QueryExt: JsonSchema,
 {
-    #[returns(cosmwasm_std::Addr)]
-    DAO {},
     #[returns(crate::state::Config)]
     Config {},
     #[returns(crate::state::Competition<CompetitionExt>)]
     Competition { id: Uint128 },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },
-    #[returns(AdminResponse)]
-    Admin {},
     #[serde(skip)]
     #[returns(PhantomData<CompetitionExt>)]
     _Phantom(PhantomData<CompetitionExt>),

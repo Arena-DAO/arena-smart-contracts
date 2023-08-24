@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{ADMIN, DUE, IS_LOCKED, LOCK_WHEN_FUNDED, TOTAL_BALANCE},
+    state::{DUE, IS_LOCKED, LOCK_WHEN_FUNDED, TOTAL_BALANCE},
     ContractError,
 };
 use cosmwasm_std::{
@@ -30,12 +30,12 @@ pub fn instantiate(
 }
 
 pub fn instantiate_contract(
-    mut deps: DepsMut,
+    deps: DepsMut,
     info: MessageInfo,
     lock_when_funded: bool,
     due: Vec<MemberBalance>,
 ) -> Result<(), ContractError> {
-    ADMIN.set(deps.branch(), Some(info.sender))?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
     for member_balance in due {
         let member_balance = member_balance.to_verified(deps.as_ref())?;
@@ -50,7 +50,7 @@ pub fn instantiate_contract(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -76,21 +76,28 @@ pub fn execute(
             competition_escrow_distribute_msg.remainder_addr,
         ),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
+        ExecuteMsg::UpdateOwnership(action) => {
+            let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
+            Ok(Response::new().add_attributes(ownership.into_attributes()))
+        }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Admin {} => to_binary(&ADMIN.query_admin(deps)?),
         QueryMsg::Balance { addr } => to_binary(&query::balance(deps, addr)?),
         QueryMsg::Due { addr } => to_binary(&query::due(deps, addr)?),
         QueryMsg::TotalBalance {} => to_binary(&query::total_balance(deps)),
         QueryMsg::IsLocked {} => to_binary(&query::is_locked(deps)),
-        QueryMsg::DumpState {} => to_binary(&query::dump_state(deps)?),
         QueryMsg::Distribution { addr } => to_binary(&query::distribution(deps, addr)?),
         QueryMsg::IsFunded { addr } => to_binary(&query::is_funded(deps, addr)?),
         QueryMsg::IsFullyFunded {} => to_binary(&query::is_fully_funded(deps)?),
+        QueryMsg::Balances { start_after, limit } => {
+            to_binary(&query::balances(deps, start_after, limit)?)
+        }
+        QueryMsg::Dues { start_after, limit } => to_binary(&query::dues(deps, start_after, limit)?),
+        QueryMsg::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
     }
 }
 
