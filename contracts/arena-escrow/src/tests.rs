@@ -172,7 +172,6 @@ fn setup() -> Context {
                         },
                     },
                 ],
-                lock_when_funded: true,
             },
             &vec![],
             "Arena Escrow",

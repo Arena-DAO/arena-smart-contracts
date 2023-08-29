@@ -33,6 +33,9 @@ pub enum CompetitionError {
     #[error("CompetitionNotExpired")]
     CompetitionNotExpired {},
 
+    #[error("UnknownEscrow")]
+    UnknownEscrow { addr: String },
+
     #[error("UnknownReplyId")]
     UnknownReplyId { id: u64 },
 

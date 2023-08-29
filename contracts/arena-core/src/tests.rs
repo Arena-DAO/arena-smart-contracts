@@ -318,7 +318,6 @@ fn create_wager_with_proposals() {
                         },
                     },
                 ],
-                lock_when_funded: true,
             })
             .unwrap(),
             admin: None,

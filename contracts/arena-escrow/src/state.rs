@@ -8,7 +8,6 @@ pub const DUE: Map<&Addr, BalanceVerified> = Map::new("due");
 pub const IS_LOCKED: Item<bool> = Item::new("is_locked");
 pub const PRESET_DISTRIBUTION: Map<&Addr, Vec<MemberShareVerified>> = Map::new("distribution");
 pub const IS_FUNDED: Map<&Addr, bool> = Map::new("is_funded");
-pub const LOCK_WHEN_FUNDED: Item<bool> = Item::new("lock_when_funded");
 
 pub fn is_fully_funded(deps: Deps) -> StdResult<bool> {
     // Load all funded bits

@@ -7,6 +7,8 @@ use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
 
+use crate::core::CompetitionCoreActivateMsg;
+
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
     pub key: String, //this is used to map a key (wager) to a module
@@ -20,6 +22,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     JailCompetition {
         id: Uint128,
     },
+    Activate(CompetitionCoreActivateMsg),
     CreateCompetition {
         competition_dao: ModuleInstantiateInfo,
         escrow: ModuleInstantiateInfo,

@@ -29,7 +29,9 @@ pub struct CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, Compe
     pub config: Item<'static, Config>,
     pub competition_count: Item<'static, Uint128>,
     pub competitions: Map<'static, u128, Competition<CompetitionExt>>,
+    pub escrows: Map<'static, Addr, u128>,
     pub temp_competition: Item<'static, u128>,
+    pub temp_status: Item<'static, CompetitionStatus>,
 
     instantiate_type: PhantomData<InstantiateExt>,
     execute_type: PhantomData<ExecuteExt>,
@@ -43,13 +45,17 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
         config_key: &'static str,
         competition_count_key: &'static str,
         competitions_key: &'static str,
+        escrows_key: &'static str,
         temp_competition_key: &'static str,
+        temp_status_key: &'static str,
     ) -> Self {
         Self {
             config: Item::new(config_key),
             competition_count: Item::new(competition_count_key),
             competitions: Map::new(competitions_key),
+            escrows: Map::new(escrows_key),
             temp_competition: Item::new(temp_competition_key),
+            temp_status: Item::new(temp_status_key),
             instantiate_type: PhantomData,
             execute_type: PhantomData,
             query_type: PhantomData,
@@ -65,7 +71,9 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt> Default
             "config",
             "competition_count",
             "competitions",
+            "escrows",
             "temp_competition",
+            "temp_status",
         )
     }
 }
@@ -131,14 +139,59 @@ where
             ExecuteBase::ProcessCompetition { id, distribution } => {
                 self.execute_process_competition(deps, info, id, distribution)
             }
-            ExecuteBase::GenerateProposals { id } => self.execute_generate_proposals(deps, env, id),
+            ExecuteBase::GenerateProposals { id } => {
+                self.execute_generate_proposals(deps, env, id, None)
+            }
             ExecuteBase::UpdateOwnership(action) => {
                 let ownership =
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
+            ExecuteBase::Activate(_competition_core_activate_msg) => {
+                self.execute_activate(deps, info, env)
+            }
             ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
+    }
+
+    pub fn execute_activate(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        env: Env,
+    ) -> Result<Response, CompetitionError> {
+        let id = self.escrows.may_load(deps.storage, info.sender.clone())?;
+
+        if id.is_none() {
+            return Err(CompetitionError::UnknownEscrow {
+                addr: info.sender.to_string(),
+            });
+        }
+
+        let id = Uint128::from(id.unwrap());
+
+        let competition = self.competitions.may_load(deps.storage, id.u128())?;
+
+        if competition.is_none() {
+            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+        }
+
+        let mut competition = competition.unwrap();
+
+        let mut response = Response::new().add_attribute("id", id.clone());
+        if competition.status == CompetitionStatus::Created {
+            response =
+                self.execute_generate_proposals(deps, env, id, Some(CompetitionStatus::Active))?;
+        } else {
+            competition.status = CompetitionStatus::Active;
+
+            self.competitions
+                .save(deps.storage, id.u128(), &competition)?;
+        }
+
+        Ok(response
+            .add_attribute("action", "activate")
+            .add_attribute("escrow", info.sender))
     }
 
     pub fn execute_generate_proposals(
@@ -146,6 +199,7 @@ where
         deps: DepsMut,
         env: Env,
         id: Uint128,
+        status: Option<CompetitionStatus>,
     ) -> Result<Response, CompetitionError> {
         let competition = self.competitions.may_load(deps.storage, id.u128())?;
 
@@ -192,6 +246,8 @@ where
         )?;
 
         self.temp_competition.save(deps.storage, &id.u128())?;
+        self.temp_status
+            .save(deps.storage, &status.unwrap_or(CompetitionStatus::Pending))?;
 
         let sub_msg = SubMsg::reply_on_success(
             create_competition_proposals(
@@ -451,12 +507,13 @@ where
 
     pub fn reply_proposals(&self, deps: DepsMut) -> Result<Response, CompetitionError> {
         let id = self.temp_competition.load(deps.storage)?;
+        let status = self.temp_status.load(deps.storage)?;
 
         self.competitions
             .update(deps.storage, id, |x| -> Result<_, CompetitionError> {
                 match x {
                     Some(mut competition) => {
-                        competition.status = CompetitionStatus::Pending;
+                        competition.status = status;
 
                         Ok(competition)
                     }
@@ -482,6 +539,7 @@ where
                     None => Err(CompetitionError::UnknownCompetitionId { id }),
                 }
             })?;
+        self.escrows.save(deps.storage, addr.clone(), &id)?;
 
         Ok(Response::new()
             .add_attribute("action", "reply_escrow")

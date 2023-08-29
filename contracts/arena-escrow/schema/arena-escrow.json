@@ -7,8 +7,7 @@
     "title": "InstantiateMsg",
     "type": "object",
     "required": [
-      "dues",
-      "lock_when_funded"
+      "dues"
     ],
     "properties": {
       "dues": {
@@ -16,9 +15,6 @@
         "items": {
           "$ref": "#/definitions/MemberBalance"
         }
-      },
-      "lock_when_funded": {
-        "type": "boolean"
       }
     },
     "additionalProperties": false,

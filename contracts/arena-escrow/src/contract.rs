@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{DUE, IS_LOCKED, LOCK_WHEN_FUNDED, TOTAL_BALANCE},
+    state::{DUE, IS_LOCKED, TOTAL_BALANCE},
     ContractError,
 };
 use cosmwasm_std::{
@@ -23,7 +23,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.lock_when_funded, msg.dues)?;
+    instantiate_contract(deps, info, msg.dues)?;
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("addr", env.contract.address))
@@ -32,7 +32,6 @@ pub fn instantiate(
 pub fn instantiate_contract(
     deps: DepsMut,
     info: MessageInfo,
-    lock_when_funded: bool,
     due: Vec<MemberBalance>,
 ) -> Result<(), ContractError> {
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
@@ -42,7 +41,6 @@ pub fn instantiate_contract(
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
     }
     TOTAL_BALANCE.save(deps.storage, &BalanceVerified::new())?;
-    LOCK_WHEN_FUNDED.save(deps.storage, &lock_when_funded)?;
 
     Ok(())
 }

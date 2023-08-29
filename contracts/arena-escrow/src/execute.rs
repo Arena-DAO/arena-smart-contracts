@@ -1,14 +1,14 @@
-use cosmwasm_std::{Addr, Attribute, Binary, DepsMut, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Addr, Attribute, Binary, CosmosMsg, DepsMut, MessageInfo, Response, StdResult};
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
 use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare, MemberShareVerified};
-use cw_ownable::assert_owner;
+use cw_competition::core::CompetitionCoreActivateMsg;
+use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
     query::is_locked,
     state::{
-        is_fully_funded, BALANCE, DUE, IS_FUNDED, IS_LOCKED, LOCK_WHEN_FUNDED, PRESET_DISTRIBUTION,
-        TOTAL_BALANCE,
+        is_fully_funded, BALANCE, DUE, IS_FUNDED, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE,
     },
     ContractError,
 };
@@ -183,19 +183,26 @@ fn receive_balance(
     })?;
 
     // Populate the is funded flag
+    let mut msgs: Vec<CosmosMsg> = vec![];
     if balance.is_ge(&DUE.load(deps.storage, &addr)?) {
         IS_FUNDED.save(deps.storage, &addr, &true)?;
 
-        // Lock if specified and funded
-        if LOCK_WHEN_FUNDED.load(deps.storage)? && is_fully_funded(deps.as_ref())? {
+        // Lock if funded
+        if is_fully_funded(deps.as_ref())? {
             IS_LOCKED.save(deps.storage, &true)?;
+
+            let owner = get_ownership(deps.storage)?.owner;
+            if owner.is_some() {
+                msgs.push(CompetitionCoreActivateMsg {}.into_cosmos_msg(owner.unwrap())?);
+            }
         }
     }
 
     // Build and return the response
     Ok(Response::new()
         .add_attribute("action", "receive_balance")
-        .add_attribute("balance", balance.to_string()))
+        .add_attribute("balance", balance.to_string())
+        .add_messages(msgs))
 }
 
 // This function handles the competition result message.
