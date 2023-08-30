@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{DUE, IS_LOCKED, TOTAL_BALANCE},
+    state::{DUE, IS_FUNDED, IS_LOCKED, TOTAL_BALANCE},
     ContractError,
 };
 use cosmwasm_std::{
@@ -39,6 +39,7 @@ pub fn instantiate_contract(
     for member_balance in due {
         let member_balance = member_balance.to_verified(deps.as_ref())?;
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
+        IS_FUNDED.save(deps.storage, &member_balance.addr, &false)?;
     }
     TOTAL_BALANCE.save(deps.storage, &BalanceVerified::new())?;
 

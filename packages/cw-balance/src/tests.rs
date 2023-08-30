@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw20::Cw20CoinVerified;
 
@@ -145,6 +147,32 @@ fn test_subtract_native_balances() {
 }
 
 #[test]
+fn test_subtract_native_balances_empty() {
+    let native_balance_a = vec![Coin {
+        denom: "token1".to_string(),
+        amount: Uint128::from(30u128),
+    }];
+    let native_balance_b = vec![Coin {
+        denom: "token1".to_string(),
+        amount: Uint128::from(30u128),
+    }];
+
+    let balance_a = BalanceVerified {
+        native: native_balance_a,
+        cw20: vec![],
+        cw721: vec![],
+    };
+    let balance_b = BalanceVerified {
+        native: native_balance_b,
+        cw20: vec![],
+        cw721: vec![],
+    };
+
+    let remaining_balance = balance_a.checked_sub(&balance_b).unwrap();
+    assert_eq!(remaining_balance.native, vec![]);
+}
+
+#[test]
 fn test_subtract_cw20_balances() {
     let addr = Addr::unchecked("cw20token");
     let cw20_balance_a = vec![Cw20CoinVerified {
@@ -206,12 +234,18 @@ fn test_subtract_cw721_balances() {
     };
 
     let remaining_balance = balance_a.checked_sub(&balance_b).unwrap();
+
+    // Convert the result's token_ids into a HashSet
+    let result_tokens: HashSet<_> = remaining_balance.cw721[0]
+        .token_ids
+        .iter()
+        .cloned()
+        .collect();
+
+    // Assert the token_ids are equivalent
     assert_eq!(
-        remaining_balance.cw721,
-        vec![Cw721CollectionVerified {
-            addr: addr.clone(),
-            token_ids: vec!["token3".to_string(), "token4".to_string()],
-        }]
+        result_tokens,
+        ["token3", "token4"].iter().map(|s| s.to_string()).collect()
     );
 }
 

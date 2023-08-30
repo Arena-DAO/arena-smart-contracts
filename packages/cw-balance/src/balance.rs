@@ -5,6 +5,7 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
 use cw721::Cw721ExecuteMsg;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
@@ -233,11 +234,10 @@ impl BalanceVerified {
             .map(|coin| (coin.denom.clone(), coin.amount))
             .collect();
         for coin in &other.native {
-            let total_amount = native_map
+            let entry = native_map
                 .entry(coin.denom.clone())
-                .or_insert(Uint128::zero())
-                .checked_add(coin.amount)?;
-            native_map.insert(coin.denom.clone(), total_amount);
+                .or_insert(Uint128::zero());
+            *entry = entry.checked_add(coin.amount)?;
         }
 
         let mut cw20_map: HashMap<Addr, Uint128> = self
@@ -246,21 +246,36 @@ impl BalanceVerified {
             .map(|coin| (coin.address.clone(), coin.amount))
             .collect();
         for coin in &other.cw20 {
-            let total_amount = cw20_map
+            let entry = cw20_map
                 .entry(coin.address.clone())
-                .or_insert(Uint128::zero())
-                .checked_add(coin.amount)?;
-            cw20_map.insert(coin.address.clone(), total_amount);
+                .or_insert(Uint128::zero());
+            *entry = entry.checked_add(coin.amount)?;
         }
 
-        let mut cw721_map: HashMap<Addr, Vec<String>> = self
+        let mut cw721_map: HashMap<Addr, HashSet<String>> = self
             .cw721
             .iter()
-            .map(|token| (token.addr.clone(), token.token_ids.clone()))
+            .map(|token| {
+                (
+                    token.addr.clone(),
+                    token.token_ids.iter().cloned().collect(),
+                )
+            })
             .collect();
+
         for token in &other.cw721 {
-            let entry = cw721_map.entry(token.addr.clone()).or_insert_with(Vec::new);
-            entry.extend(token.token_ids.clone());
+            let entry = cw721_map
+                .entry(token.addr.clone())
+                .or_insert_with(HashSet::new);
+
+            for token_id in &token.token_ids {
+                // If the token_id is already present, it's a duplicate and we return an error.
+                if !entry.insert(token_id.clone()) {
+                    return Err(cosmwasm_std::StdError::Overflow {
+                        source: OverflowError::new(OverflowOperation::Add, self, other),
+                    });
+                }
+            }
         }
 
         Ok(BalanceVerified {
@@ -274,7 +289,10 @@ impl BalanceVerified {
                 .collect(),
             cw721: cw721_map
                 .into_iter()
-                .map(|(addr, token_ids)| Cw721CollectionVerified { addr, token_ids })
+                .map(|(addr, token_ids)| Cw721CollectionVerified {
+                    addr,
+                    token_ids: token_ids.into_iter().collect(),
+                })
                 .collect(),
         })
     }
@@ -290,11 +308,26 @@ impl BalanceVerified {
             .map(|coin| (coin.denom.clone(), coin.amount))
             .collect();
         for coin in &other.native {
-            let total_amount = native_map
-                .get_mut(&coin.denom)
-                .unwrap_or(&mut Uint128::zero())
-                .checked_sub(coin.amount)?;
-            native_map.insert(coin.denom.clone(), total_amount);
+            match native_map.entry(coin.denom.clone()) {
+                Entry::Occupied(mut entry) => {
+                    let total_amount = entry.get_mut().checked_sub(coin.amount)?;
+                    if total_amount.is_zero() {
+                        entry.remove();
+                    } else {
+                        *entry.get_mut() = total_amount;
+                    }
+                }
+
+                Entry::Vacant(_) => {
+                    return Err(cosmwasm_std::StdError::Overflow {
+                        source: cosmwasm_std::OverflowError::new(
+                            OverflowOperation::Sub,
+                            self,
+                            other,
+                        ),
+                    });
+                }
+            }
         }
 
         let mut cw20_map: HashMap<Addr, Uint128> = self
@@ -303,29 +336,54 @@ impl BalanceVerified {
             .map(|coin| (coin.address.clone(), coin.amount))
             .collect();
         for coin in &other.cw20 {
-            let total_amount = cw20_map
-                .get_mut(&coin.address)
-                .unwrap_or(&mut Uint128::zero())
-                .checked_sub(coin.amount)?;
-            cw20_map.insert(coin.address.clone(), total_amount);
+            match cw20_map.entry(coin.address.clone()) {
+                Entry::Occupied(mut entry) => {
+                    let total_amount = entry.get_mut().checked_sub(coin.amount)?;
+                    if total_amount.is_zero() {
+                        entry.remove();
+                    } else {
+                        *entry.get_mut() = total_amount;
+                    }
+                }
+
+                Entry::Vacant(_) => {
+                    return Err(cosmwasm_std::StdError::Overflow {
+                        source: cosmwasm_std::OverflowError::new(
+                            OverflowOperation::Sub,
+                            self,
+                            other,
+                        ),
+                    });
+                }
+            }
         }
 
-        let mut cw721_map: HashMap<Addr, Vec<String>> = self
+        let mut cw721_map: HashMap<Addr, HashSet<String>> = self
             .cw721
             .iter()
-            .map(|token| (token.addr.clone(), token.token_ids.clone()))
+            .map(|token| {
+                (
+                    token.addr.clone(),
+                    token.token_ids.iter().cloned().collect(),
+                )
+            })
             .collect();
         for token in &other.cw721 {
-            let entry = cw721_map
-                .get_mut(&token.addr)
-                .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other))?;
-
-            for token_id in &token.token_ids {
-                entry
-                    .iter()
-                    .position(|x| x == token_id)
-                    .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other))
-                    .map(|i| entry.remove(i))?;
+            if let Some(entry_set) = cw721_map.get_mut(&token.addr) {
+                for token_id in &token.token_ids {
+                    // Removes the token_id from the set if it exists; no-op if it doesn't
+                    if !entry_set.remove(token_id) {
+                        // Return error if a token_id is missing
+                        return Err(cosmwasm_std::StdError::Overflow {
+                            source: OverflowError::new(OverflowOperation::Sub, self, other),
+                        });
+                    }
+                }
+            } else {
+                // Return error if a corresponding addr is missing
+                return Err(cosmwasm_std::StdError::Overflow {
+                    source: OverflowError::new(OverflowOperation::Sub, self, other),
+                });
             }
         }
 
@@ -342,7 +400,7 @@ impl BalanceVerified {
                 .into_iter()
                 .map(|(addr, tokens)| Cw721CollectionVerified {
                     addr,
-                    token_ids: tokens,
+                    token_ids: tokens.into_iter().collect(),
                 })
                 .collect(),
         })

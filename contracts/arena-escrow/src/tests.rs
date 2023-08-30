@@ -316,11 +316,26 @@ fn test_deposit_withdraw_and_check_balances() {
         balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
         Uint128::from(100u128)
     );
+    let due_addr1: BalanceVerified = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.escrow_addr.clone(),
+            &QueryMsg::Due {
+                addr: addr1.to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        due_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        Uint128::from(50u128)
+    );
     let balance_total: BalanceVerified = context
         .app
         .wrap()
         .query_wasm_smart(context.escrow_addr.clone(), &QueryMsg::TotalBalance {})
         .unwrap();
+
     assert_eq!(
         balance_total.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
         Uint128::from(100u128)
@@ -356,7 +371,20 @@ fn test_deposit_withdraw_and_check_balances() {
         .wrap()
         .query_wasm_smart(context.escrow_addr.clone(), &QueryMsg::TotalBalance {})
         .unwrap();
-
+    let due_addr1: BalanceVerified = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.escrow_addr.clone(),
+            &QueryMsg::Due {
+                addr: addr1.to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        due_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        Uint128::from(150u128)
+    );
     assert_eq!(
         balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
         Uint128::from(0u128)

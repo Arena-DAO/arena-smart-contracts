@@ -51,6 +51,12 @@ fn inner_withdraw(
             total_balance = total_balance.checked_sub(&balance)?;
             BALANCE.remove(deps.storage, &addr);
             IS_FUNDED.save(deps.storage, &addr, &false)?;
+            DUE.update(deps.storage, &addr, |x| -> Result<_, ContractError> {
+                if x.is_none() {
+                    return Ok(balance);
+                }
+                Ok(x.unwrap().checked_add(&balance)?)
+            })?;
         }
     }
 
@@ -177,6 +183,15 @@ fn receive_balance(
         Ok(balance.checked_add(&x.unwrap_or(BalanceVerified::default()))?)
     })?;
 
+    let due = DUE.load(deps.storage, &addr)?;
+    let new_due = due.checked_sub(&balance)?;
+
+    if new_due.is_empty() {
+        DUE.remove(deps.storage, &addr);
+    } else {
+        DUE.save(deps.storage, &addr, &new_due)?;
+    }
+
     // Update the total balance in storage
     TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
         Ok(x.checked_add(&balance)?) //do not factor in stake amount
@@ -266,6 +281,11 @@ pub fn distribute(
     }
 
     IS_LOCKED.save(deps.storage, &false)?;
+
+    // Free up space
+    DUE.clear(deps.storage);
+    IS_FUNDED.clear(deps.storage);
+    PRESET_DISTRIBUTION.clear(deps.storage);
 
     // Return the response with the added action attribute.
     Ok(Response::new().add_attribute("action", "handle_competition_result"))
