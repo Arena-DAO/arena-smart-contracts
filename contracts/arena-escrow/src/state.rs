@@ -10,17 +10,11 @@ pub const PRESET_DISTRIBUTION: Map<&Addr, Vec<MemberShareVerified>> = Map::new("
 pub const IS_FUNDED: Map<&Addr, bool> = Map::new("is_funded");
 
 pub fn is_fully_funded(deps: Deps) -> StdResult<bool> {
-    // Load all funded bits
-    let is_funded = IS_FUNDED
+    let all_funded = IS_FUNDED
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .collect::<StdResult<Vec<(Addr, bool)>>>()?;
+        .try_fold(true, |acc, result| {
+            result.map(|(_addr, value)| acc && value)
+        })?;
 
-    // Iterate through each entry
-    for (_addr, value) in is_funded {
-        if !value {
-            return Ok(false);
-        }
-    }
-
-    Ok(true)
+    Ok(all_funded)
 }

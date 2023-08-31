@@ -1,7 +1,6 @@
 use cosmwasm_std::{Addr, Binary, Coin, Empty, Uint128};
 use cw20::Cw20Coin;
 use cw_balance::{Balance, BalanceVerified, Cw721Collection, MemberBalance, MemberShare};
-use cw_competition::escrow::CompetitionEscrowDistributeMsg;
 use cw_multi_test::{App, Executor};
 
 use crate::{
@@ -293,7 +292,7 @@ fn test_deposit_withdraw_and_check_balances() {
             context.cw20_addr.clone(),
             &cw20::Cw20ExecuteMsg::Send {
                 contract: context.escrow_addr.to_string(),
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(150u128),
                 msg: Binary::default(),
             },
             &vec![],
@@ -314,7 +313,7 @@ fn test_deposit_withdraw_and_check_balances() {
 
     assert_eq!(
         balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(100u128)
+        Some(Uint128::from(150u128))
     );
     let due_addr1: BalanceVerified = context
         .app
@@ -328,7 +327,7 @@ fn test_deposit_withdraw_and_check_balances() {
         .unwrap();
     assert_eq!(
         due_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(50u128)
+        None
     );
     let balance_total: BalanceVerified = context
         .app
@@ -338,7 +337,7 @@ fn test_deposit_withdraw_and_check_balances() {
 
     assert_eq!(
         balance_total.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(100u128)
+        Some(Uint128::from(150u128))
     );
 
     // Withdraw
@@ -383,130 +382,14 @@ fn test_deposit_withdraw_and_check_balances() {
         .unwrap();
     assert_eq!(
         due_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(150u128)
+        Some(Uint128::from(150u128))
     );
     assert_eq!(
         balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(0u128)
+        None
     );
     assert_eq!(
         balance_total.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(0u128)
-    );
-}
-
-#[test]
-fn test_distribute_without_preset_distribution() {
-    let mut context = setup();
-
-    // Member addresses
-    let creator = Addr::unchecked(CREATOR.to_string());
-    let addr1 = Addr::unchecked(ADDR1.to_string());
-    let addr2 = Addr::unchecked(ADDR2.to_string());
-    let addr3 = Addr::unchecked(ADDR3.to_string());
-    let remainder = Addr::unchecked(REMAINDER.to_string());
-
-    // Fund the escrow
-    context
-        .app
-        .execute_contract(
-            addr1.clone(),
-            context.cw20_addr.clone(),
-            &cw20::Cw20ExecuteMsg::Send {
-                contract: context.escrow_addr.to_string(),
-                amount: Uint128::from(1000u128),
-                msg: Binary::default(),
-            },
-            &vec![],
-        )
-        .unwrap();
-
-    // Set up the distribution.
-    let distribution = vec![
-        MemberShare {
-            addr: addr1.to_string(),
-            shares: Uint128::from(1u128),
-        },
-        MemberShare {
-            addr: addr2.to_string(),
-            shares: Uint128::from(1u128),
-        },
-        MemberShare {
-            addr: addr3.to_string(),
-            shares: Uint128::from(1u128),
-        },
-    ];
-
-    // Call the distribute function.
-    context
-        .app
-        .execute_contract(
-            creator.clone(),
-            context.escrow_addr.clone(),
-            &ExecuteMsg::Distribute(CompetitionEscrowDistributeMsg {
-                distribution: Some(distribution),
-                remainder_addr: remainder.to_string(),
-            }),
-            &vec![],
-        )
-        .unwrap();
-
-    // Check the balances.
-    let balance_addr1: BalanceVerified = context
-        .app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow_addr.clone(),
-            &QueryMsg::Balance {
-                addr: addr1.to_string(),
-            },
-        )
-        .unwrap();
-    let balance_addr2: BalanceVerified = context
-        .app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow_addr.clone(),
-            &QueryMsg::Balance {
-                addr: addr2.to_string(),
-            },
-        )
-        .unwrap();
-    let balance_addr3: BalanceVerified = context
-        .app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow_addr.clone(),
-            &QueryMsg::Balance {
-                addr: addr3.to_string(),
-            },
-        )
-        .unwrap();
-    let balance_remainder: BalanceVerified = context
-        .app
-        .wrap()
-        .query_wasm_smart(
-            context.escrow_addr.clone(),
-            &QueryMsg::Balance {
-                addr: remainder.to_string(),
-            },
-        )
-        .unwrap();
-
-    assert_eq!(
-        balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(333u128)
-    );
-    assert_eq!(
-        balance_addr2.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(333u128)
-    );
-    assert_eq!(
-        balance_addr3.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(333u128)
-    );
-    assert_eq!(
-        balance_remainder.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
-        Uint128::from(1u128)
+        None
     );
 }

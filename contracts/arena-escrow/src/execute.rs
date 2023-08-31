@@ -185,21 +185,11 @@ fn receive_balance(
 
     let due = DUE.load(deps.storage, &addr)?;
     let new_due = due.checked_sub(&balance)?;
+    let mut msgs: Vec<CosmosMsg> = vec![];
 
     if new_due.is_empty() {
         DUE.remove(deps.storage, &addr);
-    } else {
-        DUE.save(deps.storage, &addr, &new_due)?;
-    }
 
-    // Update the total balance in storage
-    TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
-        Ok(x.checked_add(&balance)?) //do not factor in stake amount
-    })?;
-
-    // Populate the is funded flag
-    let mut msgs: Vec<CosmosMsg> = vec![];
-    if balance.is_ge(&DUE.load(deps.storage, &addr)?) {
         IS_FUNDED.save(deps.storage, &addr, &true)?;
 
         // Lock if funded
@@ -211,7 +201,14 @@ fn receive_balance(
                 msgs.push(CompetitionCoreActivateMsg {}.into_cosmos_msg(owner.unwrap())?);
             }
         }
+    } else {
+        DUE.save(deps.storage, &addr, &new_due)?;
     }
+
+    // Update the total balance in storage
+    TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
+        Ok(x.checked_add(&balance)?)
+    })?;
 
     // Build and return the response
     Ok(Response::new()

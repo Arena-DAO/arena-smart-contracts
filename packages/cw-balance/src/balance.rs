@@ -193,7 +193,7 @@ impl BalanceVerified {
         native_ge_result && cw20_ge_result && cw721_ge_result
     }
 
-    pub fn get_amount(&self, token_type: TokenType, identifier: &String) -> Uint128 {
+    pub fn get_amount(&self, token_type: TokenType, identifier: &String) -> Option<Uint128> {
         match token_type {
             TokenType::Native => self
                 .native
@@ -217,7 +217,6 @@ impl BalanceVerified {
                 }
             }
         }
-        .unwrap_or(Uint128::zero())
     }
 
     pub fn checked_add(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
