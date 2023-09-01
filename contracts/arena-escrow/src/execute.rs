@@ -19,9 +19,13 @@ fn inner_withdraw(
     addrs: Vec<Addr>,
     cw20_msg: Option<Binary>,
     cw721_msg: Option<Binary>,
+    is_processing: bool,
 ) -> Result<Response, ContractError> {
-    // Load the key and total_balance from storage
-    let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
+    // Load the key and total_balance from storage if not processing
+    let mut total_balance = match is_processing {
+        false => TOTAL_BALANCE.load(deps.storage)?,
+        true => BalanceVerified::new(),
+    };
     let mut msgs = vec![];
     let mut attrs = vec![];
 
@@ -48,24 +52,31 @@ fn inner_withdraw(
             });
 
             // Update the total_balance by subtracting the refunded balance
-            total_balance = total_balance.checked_sub(&balance)?;
             BALANCE.remove(deps.storage, &addr);
-            IS_FUNDED.save(deps.storage, &addr, &false)?;
-            DUE.update(deps.storage, &addr, |x| -> Result<_, ContractError> {
-                if x.is_none() {
-                    return Ok(balance);
-                }
-                Ok(x.unwrap().checked_add(&balance)?)
-            })?;
+            if !is_processing {
+                total_balance = total_balance.checked_sub(&balance)?;
+
+                IS_FUNDED.save(deps.storage, &addr, &false)?;
+                DUE.update(deps.storage, &addr, |x| -> Result<_, ContractError> {
+                    if x.is_none() {
+                        return Ok(balance);
+                    }
+                    Ok(x.unwrap().checked_add(&balance)?)
+                })?;
+            }
         }
     }
 
     // Save the updated total_balance to storage
-    TOTAL_BALANCE.save(deps.storage, &total_balance)?;
+    if !is_processing {
+        TOTAL_BALANCE.save(deps.storage, &total_balance)?;
+    } else {
+        TOTAL_BALANCE.remove(deps.storage);
+    }
 
     // Build and return the response
     Ok(Response::new()
-        .add_attribute("action", "refund")
+        .add_attribute("action", "withdraw")
         .add_attributes(attrs)
         .add_messages(msgs))
 }
@@ -81,7 +92,7 @@ pub fn withdraw(
         return Err(ContractError::Locked {});
     }
 
-    inner_withdraw(deps, vec![info.sender], cw20_msg, cw721_msg)
+    inner_withdraw(deps, vec![info.sender], cw20_msg, cw721_msg, false)
 }
 
 /// Sets the distribution for the sender based on the provided distribution map.
@@ -285,7 +296,17 @@ pub fn distribute(
     PRESET_DISTRIBUTION.clear(deps.storage);
 
     // Return the response with the added action attribute.
-    Ok(Response::new().add_attribute("action", "handle_competition_result"))
+    let keys = BALANCE
+        .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+        .try_fold(Vec::new(), |mut acc, res| match res {
+            Ok(addr) => {
+                acc.push(addr);
+                Ok(acc)
+            }
+            Err(e) => Err(e),
+        })?;
+    let response = inner_withdraw(deps, keys, None, None, true)?;
+    Ok(response.add_attribute("action", "handle_competition_result"))
 }
 
 // This function handles the competition state change message

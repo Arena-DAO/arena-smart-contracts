@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, StdError, Uint128, WasmMsg};
 use cw_balance::{Balance, MemberBalance};
 use cw_competition::state::CompetitionStatus;
-use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
 use cw_utils::Expiration;
 use dao_interface::{
     query::GetItemResponse,
@@ -12,11 +12,24 @@ use crate::msg::{InstantiateExt, InstantiateMsg, QueryMsg};
 
 const CREATOR: &str = "ismellike";
 const WAGER_KEY: &str = "wager";
+const DENOM: &str = "juno";
+const ADDR1: &str = "addr1";
+const ADDR2: &str = "addr2";
 struct Context {
     app: App,
     dao_core_id: u64,
     dao_addr: Addr,
-    // You can add more fields here as needed.
+}
+
+fn get_attr_value(response: &AppResponse, key: &str) -> Option<String> {
+    for event in &response.events {
+        for attribute in &event.attributes {
+            if attribute.key == key {
+                return Some(attribute.value.clone());
+            }
+        }
+    }
+    None
 }
 
 fn sudo_proposal_contract() -> Box<dyn Contract<Empty>> {
@@ -29,7 +42,31 @@ fn sudo_proposal_contract() -> Box<dyn Contract<Empty>> {
 }
 
 fn setup_app() -> Context {
-    let mut app = App::default();
+    let mut app = App::new(|router, _, storage| {
+        // initialization moved to App construction
+        router
+            .bank
+            .init_balance(
+                storage,
+                &Addr::unchecked(ADDR1),
+                vec![Coin {
+                    denom: DENOM.to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            )
+            .unwrap();
+        router
+            .bank
+            .init_balance(
+                storage,
+                &Addr::unchecked(ADDR2),
+                vec![Coin {
+                    denom: DENOM.to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            )
+            .unwrap();
+    });
     let dao_core_id = app.store_code(dao_testing::contracts::dao_dao_contract());
     let sudo_id = app.store_code(sudo_proposal_contract());
 
@@ -166,6 +203,7 @@ fn execute_attach_arena_core(context: &mut Context) {
         },
         &vec![],
     ).unwrap();
+    context.app.update_block(|x| x.height += 1);
 }
 
 #[test]
@@ -231,8 +269,12 @@ fn create_wager_with_proposals() {
 
     let wager_module_addr = res.unwrap().unwrap();
 
-    let addr1 = Addr::unchecked("addr1".to_string());
-    let addr2 = Addr::unchecked("addr2".to_string());
+    let addr1 = Addr::unchecked(ADDR1);
+    let addr2 = Addr::unchecked(ADDR2);
+    let due = Coin {
+        denom: DENOM.to_string(),
+        amount: Uint128::from(100u64),
+    };
 
     let wager_instantiate_msg = arena_wager_module::msg::ExecuteMsg::CreateCompetition {
         competition_dao: ModuleInstantiateInfo {
@@ -298,10 +340,7 @@ fn create_wager_with_proposals() {
                     MemberBalance {
                         addr: addr1.to_string(),
                         balance: Balance {
-                            native: vec![Coin {
-                                denom: "juno".to_string(),
-                                amount: Uint128::from(14u128),
-                            }],
+                            native: vec![due.clone()],
                             cw20: vec![],
                             cw721: vec![],
                         },
@@ -309,10 +348,7 @@ fn create_wager_with_proposals() {
                     MemberBalance {
                         addr: addr2.to_string(),
                         balance: Balance {
-                            native: vec![Coin {
-                                denom: "juno".to_string(),
-                                amount: Uint128::from(20u128),
-                            }],
+                            native: vec![due.clone()],
                             cw20: vec![],
                             cw721: vec![],
                         },
@@ -339,6 +375,12 @@ fn create_wager_with_proposals() {
     );
 
     assert!(res.is_ok());
+    let prop_module = get_attr_value(&res.as_ref().unwrap(), "prop_module");
+    assert!(prop_module.is_some());
+
+    let prop_module = Addr::unchecked(prop_module.unwrap());
+
+    context.app.update_block(|x| x.height += 1);
 
     let wager: arena_wager_module::msg::Wager = context
         .app
@@ -359,4 +401,84 @@ fn create_wager_with_proposals() {
     );
 
     assert!(res.is_ok());
+
+    // Fund the escrow
+    context
+        .app
+        .execute_contract(
+            addr1.clone(),
+            wager.escrow.clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &vec![due.clone()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            addr2.clone(),
+            wager.escrow.clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &vec![due.clone()],
+        )
+        .unwrap();
+
+    // Vote on the winner
+    context
+        .app
+        .execute_contract(
+            addr1.clone(),
+            prop_module.clone(),
+            &dao_proposal_multiple::msg::ExecuteMsg::Vote {
+                proposal_id: 1u64,
+                vote: dao_voting::multiple_choice::MultipleChoiceVote { option_id: 0u32 },
+                rationale: None,
+            },
+            &vec![],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            addr2.clone(),
+            prop_module.clone(),
+            &dao_proposal_multiple::msg::ExecuteMsg::Vote {
+                proposal_id: 1u64,
+                vote: dao_voting::multiple_choice::MultipleChoiceVote { option_id: 0u32 },
+                rationale: None,
+            },
+            &vec![],
+        )
+        .unwrap();
+
+    // Execute the proposal
+    context
+        .app
+        .execute_contract(
+            addr1.clone(),
+            prop_module.clone(),
+            &dao_proposal_multiple::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
+            &vec![],
+        )
+        .unwrap();
+
+    // Assure state is inactive
+    let wager: arena_wager_module::msg::Wager = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            wager_module_addr.clone(),
+            &arena_wager_module::msg::QueryMsg::Competition { id: Uint128::one() },
+        )
+        .unwrap();
+
+    assert!(wager.status == CompetitionStatus::Inactive);
+
+    // View final balance
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(addr1.to_string(), DENOM)
+        .unwrap();
+
+    assert_eq!(balance.amount, Uint128::from(1070u128));
 }

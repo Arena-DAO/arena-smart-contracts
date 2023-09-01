@@ -14,7 +14,7 @@ use cw_competition::{
     state::{Competition, CompetitionStatus, Config},
 };
 use cw_storage_plus::{Item, Map};
-use cw_utils::{parse_reply_execute_data, parse_reply_instantiate_data};
+use cw_utils::parse_reply_instantiate_data;
 use dao_interface::state::ProposalModule;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -372,7 +372,7 @@ where
 
         match competition.status {
             CompetitionStatus::Active => {
-                if competition.dao != info.sender || dao != info.sender {
+                if competition.dao != info.sender && dao != info.sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
                 Ok(())
@@ -394,12 +394,15 @@ where
                 let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
                 let tax: Decimal = deps.querier.query_wasm_smart(
                     arena_core,
-                    &CoreQueryMsg::Tax {
-                        height: Some(competition.start_height),
+                    &CoreQueryMsg::QueryExtension {
+                        msg: cw_competition::msg::CoreExtensionMsg::Tax {
+                            height: Some(competition.start_height),
+                        },
                     },
                 )?;
 
                 if !tax.is_zero() {
+                    let precision_multiplier = Uint128::from(10000u128);
                     let sum = member_shares
                         .iter()
                         .try_fold(Uint128::zero(), |accumulator, x| {
@@ -410,11 +413,17 @@ where
                         .checked_mul(Decimal::from_atomics(sum, 0u32)?)?
                         .checked_div(Decimal::one().checked_sub(tax)?)?;
                     let dao_shares = dao_shares
+                        .checked_mul(Decimal::from_atomics(precision_multiplier, 0u32)?)?
                         .checked_div(Decimal::from_atomics(
                             Uint128::new(10u128).checked_pow(dao_shares.decimal_places())?,
                             0u32,
                         )?)?
                         .atomics();
+
+                    for member in &mut member_shares {
+                        member.shares = member.shares.checked_mul(precision_multiplier)?;
+                    }
+
                     member_shares.push(MemberShare {
                         addr: dao.to_string(),
                         shares: dao_shares,
@@ -547,8 +556,7 @@ where
             .add_attribute("escrow_addr", addr))
     }
 
-    pub fn reply_process(&self, deps: DepsMut, msg: Reply) -> Result<Response, CompetitionError> {
-        parse_reply_execute_data(msg)?;
+    pub fn reply_process(&self, deps: DepsMut, _msg: Reply) -> Result<Response, CompetitionError> {
         let id = self.temp_competition.load(deps.storage)?;
 
         self.competitions

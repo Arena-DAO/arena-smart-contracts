@@ -11,8 +11,6 @@ use crate::{
 const CREATOR: &str = "creator";
 const ADDR1: &str = "addr1";
 const ADDR2: &str = "addr2";
-const ADDR3: &str = "addr3";
-const REMAINDER: &str = "remainder";
 
 struct Context {
     pub app: App,
