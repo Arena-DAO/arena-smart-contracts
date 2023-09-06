@@ -257,6 +257,7 @@ where
                 &env.contract.address,
                 &cw4_group,
                 proposal_module,
+                None,
             )?,
             PROPOSALS_REPLY_ID,
         );

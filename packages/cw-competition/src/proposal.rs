@@ -10,6 +10,7 @@ pub fn create_competition_proposals(
     competition_module: &Addr,
     cw4_group: &Addr,
     proposal_module: &Addr,
+    proposer: Option<String>,
 ) -> StdResult<CosmosMsg> {
     // Retrieve all team members from the CW4 group contract
     let teams = get_all_members(deps, cw4_group)?;
@@ -58,7 +59,7 @@ pub fn create_competition_proposals(
             title: "Competition Result".to_string(),
             description: "This proposal allows members to vote on the winner of the competition. Each choice represents a different team. Select the team that you believe should win the competition.".to_string(),
             choices: dao_voting::multiple_choice::MultipleChoiceOptions { options },
-            proposer: None
+            proposer
         })?,
         funds: vec![],
     }))

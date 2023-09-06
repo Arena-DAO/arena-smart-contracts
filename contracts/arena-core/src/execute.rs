@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Env, Response, StdError, SubMsg, Uint128};
-use cw_competition::proposal::create_competition_proposals;
+use cosmwasm_std::{Addr, Decimal, DepsMut, Empty, Env, Response, StdError, SubMsg, Uint128};
+use cw_competition::{proposal::create_competition_proposals, state::CompetitionResponse};
 use dao_interface::state::ModuleInstantiateInfo;
 
 use crate::{
@@ -110,11 +110,15 @@ pub fn jail_competition(
         return Err(ContractError::Unauthorized {});
     }
 
-    let dao = PrePropose::default().dao.load(deps.storage)?;
     let proposal_module = PrePropose::default().proposal_module.load(deps.storage)?;
-    let voting_module: Addr = deps
-        .querier
-        .query_wasm_smart(dao, &dao_interface::msg::QueryMsg::VotingModule {})?;
+    let competition: CompetitionResponse<Empty> = deps.querier.query_wasm_smart(
+        sender.clone(),
+        &cw_competition::msg::QueryBase::<Empty, Empty>::Competition { id: id.clone() },
+    )?;
+    let voting_module: Addr = deps.querier.query_wasm_smart(
+        competition.dao.clone(),
+        &dao_interface::msg::QueryMsg::VotingModule {},
+    )?;
     let cw4_group: Addr = deps.querier.query_wasm_smart(
         voting_module,
         &dao_voting_cw4::msg::QueryMsg::GroupContract {},
@@ -126,9 +130,10 @@ pub fn jail_competition(
         .add_attribute("id", id)
         .add_message(create_competition_proposals(
             deps.as_ref(),
-            Uint128::from(id),
+            id,
             &sender,
             &cw4_group,
             &proposal_module,
+            Some(competition.dao.to_string()),
         )?))
 }
