@@ -1,8 +1,8 @@
 use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
     msg::{
-        ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose,
-        ProposeMessageInternal, QueryExt, QueryMsg,
+        ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
+        QueryMsg,
     },
     query,
     state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, KEYS},
@@ -17,8 +17,6 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::ModuleInstantiateCallback};
-use dao_pre_propose_base::msg::ExecuteMsg as ExecuteBase;
-use dao_pre_propose_multiple::ProposeMessage;
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-core";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -79,48 +77,8 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    type ExecuteInternal = ExecuteBase<ProposeMessageInternal, ExecuteExt>;
-    let internalized = match msg.clone() {
-        ExecuteMsg::Propose {
-            msg:
-                ProposeMessage::Propose {
-                    title,
-                    description,
-                    choices,
-                },
-        } => ExecuteInternal::Propose {
-            msg: ProposeMessageInternal::Propose {
-                proposer: Some(info.sender.to_string()),
-                title,
-                description,
-                choices,
-            },
-        },
-        ExecuteMsg::Extension { msg } => ExecuteInternal::Extension { msg },
-        ExecuteMsg::Withdraw { denom } => ExecuteInternal::Withdraw { denom },
-        ExecuteMsg::UpdateConfig {
-            deposit_info,
-            open_proposal_submission,
-        } => ExecuteInternal::UpdateConfig {
-            deposit_info,
-            open_proposal_submission,
-        },
-        ExecuteMsg::AddProposalSubmittedHook { address } => {
-            ExecuteInternal::AddProposalSubmittedHook { address }
-        }
-        ExecuteMsg::RemoveProposalSubmittedHook { address } => {
-            ExecuteInternal::RemoveProposalSubmittedHook { address }
-        }
-        ExecuteBase::ProposalCompletedHook {
-            proposal_id,
-            new_status,
-        } => ExecuteInternal::ProposalCompletedHook {
-            proposal_id,
-            new_status,
-        },
-    };
-
     match msg {
+        ExecuteMsg::Propose { msg } => Ok(execute::propose(deps, env, info, msg)?),
         ExecuteMsg::Extension { msg } => match msg {
             ExecuteExt::UpdateCompetitionModules { to_add, to_disable } => {
                 execute::update_competition_modules(deps, info.sender, to_add, to_disable)
@@ -136,7 +94,7 @@ pub fn execute(
             } => execute::jail_competition(deps, env, info, id, title, description),
         },
         // Default pre-propose-base behavior for all other messages
-        _ => Ok(PrePropose::default().execute(deps, env, info, internalized)?),
+        _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),
     }
 }
 

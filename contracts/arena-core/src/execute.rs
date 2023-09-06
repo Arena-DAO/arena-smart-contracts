@@ -1,11 +1,13 @@
 use cosmwasm_std::{
-    Addr, Decimal, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, Uint128,
+    to_binary, Addr, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg,
+    Uint128, WasmMsg,
 };
 use cw_competition::{proposal::get_competition_choices, state::CompetitionResponse};
 use dao_interface::state::ModuleInstantiateInfo;
+use dao_pre_propose_base::error::PreProposeError;
 
 use crate::{
-    msg::PrePropose,
+    msg::{PrePropose, ProposeMessage},
     state::{competition_modules, rulesets, Ruleset, KEYS, RULESET_COUNT, TAX},
     ContractError,
 };
@@ -134,7 +136,7 @@ pub fn jail_competition(
         deps,
         env,
         info,
-        crate::msg::ProposeMessageInternal::Propose {
+        crate::msg::ProposeMessage::Propose {
             title,
             description,
             choices,
@@ -146,4 +148,81 @@ pub fn jail_competition(
         .add_attribute("action", "jail_competition")
         .add_attribute("sender", proposer)
         .add_attribute("id", id))
+}
+
+pub fn check_can_submit(
+    deps: Deps,
+    who: Addr,
+    config: &dao_pre_propose_base::state::Config,
+) -> Result<(), PreProposeError> {
+    if !config.open_proposal_submission {
+        if !competition_modules().has(deps.storage, who.clone()) {
+            return Err(PreProposeError::Unauthorized {});
+        }
+
+        if !competition_modules().load(deps.storage, who)?.is_enabled {
+            return Err(PreProposeError::Unauthorized {});
+        }
+    }
+
+    Ok(())
+}
+
+pub fn propose(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ProposeMessage,
+) -> Result<Response, PreProposeError> {
+    let config = PrePropose::default().config.load(deps.storage)?;
+    check_can_submit(deps.as_ref(), info.sender.clone(), &config)?;
+
+    let deposit_messages = if let Some(ref deposit_info) = config.deposit_info {
+        deposit_info.check_native_deposit_paid(&info)?;
+        deposit_info.get_take_deposit_messages(&info.sender, &env.contract.address)?
+    } else {
+        vec![]
+    };
+
+    let proposal_module = PrePropose::default().proposal_module.load(deps.storage)?;
+
+    // Snapshot the deposit using the ID of the proposal that we
+    // will create.
+    let next_id = deps.querier.query_wasm_smart(
+        &proposal_module,
+        &dao_interface::proposal::Query::NextProposalId {},
+    )?;
+    PrePropose::default().deposits.save(
+        deps.storage,
+        next_id,
+        &(config.deposit_info, info.sender.clone()),
+    )?;
+
+    let propose_messsage = WasmMsg::Execute {
+        contract_addr: proposal_module.into_string(),
+        msg: to_binary(&msg)?,
+        funds: vec![],
+    };
+
+    let hooks_msgs = PrePropose::default()
+        .proposal_submitted_hooks
+        .prepare_hooks(deps.storage, |a| {
+            let execute = WasmMsg::Execute {
+                contract_addr: a.into_string(),
+                msg: to_binary(&msg)?,
+                funds: vec![],
+            };
+            Ok(SubMsg::new(execute))
+        })?;
+
+    Ok(Response::default()
+        .add_attribute("method", "execute_propose")
+        .add_attribute("sender", info.sender)
+        // It's important that the propose message is
+        // first. Otherwise, a hook receiver could create a
+        // proposal before us and invalidate our `NextProposalId
+        // {}` query.
+        .add_message(propose_messsage)
+        .add_submessages(hooks_msgs)
+        .add_messages(deposit_messages))
 }

@@ -22,7 +22,6 @@ cosmwasm-std = { workspace = true }
 getrandom = { workspace = true }
 serde = { workspace = true }
 cw-utils = { workspace= true }
-cw-storage-plus = { workspace = true }
 thiserror = { workspace = true }
 
 cw4 = { workspace = true }

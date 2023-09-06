@@ -7,7 +7,6 @@ use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
     state::PreProposeContract,
 };
-use dao_pre_propose_multiple::ProposeMessage;
 use dao_voting::multiple_choice::MultipleChoiceOptions;
 
 #[cw_serde]
@@ -64,7 +63,7 @@ pub enum MigrateMsg {
 }
 
 #[cw_serde]
-pub enum ProposeMessageInternal {
+pub enum ProposeMessage {
     Propose {
         title: String,
         description: String,
@@ -76,5 +75,4 @@ pub enum ProposeMessageInternal {
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
 pub type ExecuteMsg = ExecuteBase<ProposeMessage, ExecuteExt>;
 pub type QueryMsg = QueryBase<QueryExt>;
-pub type PrePropose =
-    PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, ProposeMessageInternal>;
+pub type PrePropose = PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, ProposeMessage>;

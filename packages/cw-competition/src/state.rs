@@ -56,6 +56,7 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
     pub has_generated_proposals: bool,
+    pub expiration: Expiration,
 }
 
 impl<CompetitionExt> Competition<CompetitionExt> {
@@ -75,6 +76,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             status: self.status,
             extension: self.extension,
             has_generated_proposals: self.has_generated_proposals,
+            expiration: self.expiration,
         }
     }
 }
