@@ -22,11 +22,11 @@ incremental = false
 overflow-checks = true
 
 [workspace.dependencies]
-cosmwasm-std = "1.3.3"
-cosmwasm-storage = "1.3.3"
-cosmwasm-schema = "1.3.3"
+cosmwasm-std = "1.4.0"
+cosmwasm-storage = "1.4.0"
+cosmwasm-schema = "1.4.0"
 cw-utils = "1.0.1"
-thiserror = "1.0.47"
+thiserror = "1.0.48"
 cw-storage-plus = "1.1.0"
 cw-multi-test = "0.16.5" 
 cw2 = "1.1.0"
@@ -38,7 +38,7 @@ anyhow = "1.0.75"
 cw4-group = "1.1.0"
 rand = "0.8.5"
 cw4 = "1.1.0"
-serde = "1.0.186"
+serde = "1.0.188"
 getrandom = { version = "0.2.10", features = ["js"] }
 bnum = "0.8.0"
 cw-paginate = "0.2.1"

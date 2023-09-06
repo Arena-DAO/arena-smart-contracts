@@ -54,7 +54,7 @@ where
 {
     #[returns(crate::state::Config)]
     Config {},
-    #[returns(crate::state::Competition<CompetitionExt>)]
+    #[returns(crate::state::CompetitionResponse<CompetitionExt>)]
     Competition { id: Uint128 },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },

@@ -452,14 +452,17 @@ where
     pub fn query(
         &self,
         deps: Deps,
-        _env: Env,
+        env: Env,
         msg: QueryBase<QueryExt, CompetitionExt>,
     ) -> StdResult<Binary> {
         match msg {
             QueryBase::Config {} => to_binary(&self.config.load(deps.storage)?),
-            QueryBase::Competition { id } => {
-                to_binary(&self.competitions.load(deps.storage, id.u128())?)
-            }
+            QueryBase::Competition { id } => to_binary(
+                &self
+                    .competitions
+                    .load(deps.storage, id.u128())?
+                    .to_response(&env.block),
+            ),
             QueryBase::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
