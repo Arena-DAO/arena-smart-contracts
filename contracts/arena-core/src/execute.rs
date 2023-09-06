@@ -106,9 +106,7 @@ pub fn jail_competition(
     id: Uint128,
 ) -> Result<Response, ContractError> {
     //assert the sender is a competition module
-    if !competition_modules().has(deps.storage, sender.clone())
-        || PrePropose::default().dao.load(deps.storage)? != sender
-    {
+    if !competition_modules().has(deps.storage, sender.clone()) {
         return Err(ContractError::Unauthorized {});
     }
 

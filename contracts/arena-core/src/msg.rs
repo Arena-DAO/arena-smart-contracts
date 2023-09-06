@@ -1,13 +1,12 @@
+#[allow(unused_imports)]
+use crate::state::{CompetitionModule, Ruleset};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Empty, Uint128};
-use cw_competition::core::CompetitionCoreJailMsg;
+use cosmwasm_std::{Decimal, Empty, Uint128};
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
     state::PreProposeContract,
 };
-
-use crate::state::{CompetitionModule, Ruleset};
 
 #[cw_serde]
 pub struct InstantiateExt {
@@ -22,7 +21,9 @@ pub enum ExecuteExt {
         to_add: Vec<ModuleInstantiateInfo>,
         to_disable: Vec<String>,
     },
-    Jail(CompetitionCoreJailMsg),
+    Jail {
+        id: Uint128,
+    },
     UpdateTax {
         tax: Decimal,
     },
@@ -35,7 +36,7 @@ pub enum ExecuteExt {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryExt {
-    #[returns(Vec<(Addr, CompetitionModule)>)]
+    #[returns(Vec<(String, CompetitionModule)>)]
     CompetitionModules {
         start_after: Option<String>,
         limit: Option<u32>,
@@ -49,7 +50,7 @@ pub enum QueryExt {
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
-    #[returns(Option<Addr>)]
+    #[returns(Option<String>)]
     CompetitionModule { key: String },
 }
 

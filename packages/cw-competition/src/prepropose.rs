@@ -1,13 +1,30 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, WasmMsg};
+use cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, Uint128, WasmMsg};
 
 #[cw_serde]
-pub struct CompetitionCoreActivateMsg {}
+pub enum PreProposeQueryMsg {
+    QueryExtension { msg: PreProposeQueryExtensionMsg },
+}
 
-impl CompetitionCoreActivateMsg {
+#[cw_serde]
+pub enum PreProposeQueryExtensionMsg {
+    Tax { height: Option<u64> },
+}
+
+#[cw_serde]
+pub enum PreProposeExecuteMsg {
+    Extension { msg: PreProposeExecuteExtensionMsg },
+}
+
+#[cw_serde]
+pub enum PreProposeExecuteExtensionMsg {
+    Jail { id: Uint128 },
+}
+
+impl PreProposeExecuteExtensionMsg {
     /// serializes the message
     pub fn into_binary(self) -> StdResult<Binary> {
-        let msg = CompetitionCoreExecuteMsg::Activate(self);
+        let msg = PreProposeExecuteMsg::Extension { msg: self };
         to_binary(&msg)
     }
 
@@ -21,9 +38,4 @@ impl CompetitionCoreActivateMsg {
         };
         Ok(execute.into())
     }
-}
-
-#[cw_serde]
-enum CompetitionCoreExecuteMsg {
-    Activate(CompetitionCoreActivateMsg),
 }

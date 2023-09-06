@@ -62,13 +62,3 @@ where
     #[returns(PhantomData<CompetitionExt>)]
     _Phantom(PhantomData<CompetitionExt>),
 }
-
-#[cw_serde]
-pub enum CoreQueryMsg {
-    QueryExtension { msg: CoreExtensionMsg },
-}
-
-#[cw_serde]
-pub enum CoreExtensionMsg {
-    Tax { height: Option<u64> },
-}

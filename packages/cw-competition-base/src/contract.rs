@@ -7,12 +7,13 @@ use cosmwasm_std::{
 };
 use cw_balance::MemberShare;
 use cw_competition::{
-    core::CompetitionCoreJailMsg,
     escrow::CompetitionEscrowDistributeMsg,
-    msg::{CoreQueryMsg, ExecuteBase, InstantiateBase, QueryBase},
+    msg::{ExecuteBase, InstantiateBase, QueryBase},
+    prepropose::{PreProposeExecuteExtensionMsg, PreProposeQueryMsg},
     proposal::create_competition_proposals,
     state::{Competition, CompetitionStatus, Config},
 };
+use cw_ownable::get_ownership;
 use cw_storage_plus::{Item, Map};
 use cw_utils::parse_reply_instantiate_data;
 use dao_interface::state::ProposalModule;
@@ -272,8 +273,9 @@ where
         env: Env,
         id: Uint128,
     ) -> Result<Response, CompetitionError> {
-        let core = cw_ownable::get_ownership(deps.storage)?;
-        if core.owner.is_none() {
+        let dao = get_ownership(deps.storage)?;
+
+        if dao.owner.is_none() {
             return Err(CompetitionError::OwnershipError(
                 cw_ownable::OwnershipError::NoOwner,
             ));
@@ -303,8 +305,8 @@ where
             },
         )?;
 
-        let msg =
-            CompetitionCoreJailMsg { id: competition.id }.into_cosmos_msg(core.owner.unwrap())?;
+        let msg = PreProposeExecuteExtensionMsg::Jail { id: competition.id }
+            .into_cosmos_msg(dao.owner.unwrap())?;
 
         Ok(Response::new()
             .add_attribute("action", "jail_wager")
@@ -394,8 +396,8 @@ where
                 let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
                 let tax: Decimal = deps.querier.query_wasm_smart(
                     arena_core,
-                    &CoreQueryMsg::QueryExtension {
-                        msg: cw_competition::msg::CoreExtensionMsg::Tax {
+                    &PreProposeQueryMsg::QueryExtension {
+                        msg: cw_competition::prepropose::PreProposeQueryExtensionMsg::Tax {
                             height: Some(competition.start_height),
                         },
                     },
