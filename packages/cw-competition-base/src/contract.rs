@@ -2,15 +2,15 @@ use std::marker::PhantomData;
 
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response,
-    StdError, StdResult, SubMsg, Uint128,
+    to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply,
+    Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::MemberShare;
 use cw_competition::{
     escrow::CompetitionEscrowDistributeMsg,
     msg::{ExecuteBase, InstantiateBase, QueryBase},
     prepropose::{PreProposeExecuteExtensionMsg, PreProposeQueryMsg},
-    proposal::create_competition_proposals,
+    proposal::get_competition_choices,
     state::{Competition, CompetitionStatus, Config},
 };
 use cw_ownable::get_ownership;
@@ -32,7 +32,6 @@ pub struct CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, Compe
     pub competitions: Map<'static, u128, Competition<CompetitionExt>>,
     pub escrows: Map<'static, Addr, u128>,
     pub temp_competition: Item<'static, u128>,
-    pub temp_status: Item<'static, CompetitionStatus>,
 
     instantiate_type: PhantomData<InstantiateExt>,
     execute_type: PhantomData<ExecuteExt>,
@@ -48,7 +47,6 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
         competitions_key: &'static str,
         escrows_key: &'static str,
         temp_competition_key: &'static str,
-        temp_status_key: &'static str,
     ) -> Self {
         Self {
             config: Item::new(config_key),
@@ -56,7 +54,6 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
             competitions: Map::new(competitions_key),
             escrows: Map::new(escrows_key),
             temp_competition: Item::new(temp_competition_key),
-            temp_status: Item::new(temp_status_key),
             instantiate_type: PhantomData,
             execute_type: PhantomData,
             query_type: PhantomData,
@@ -74,7 +71,6 @@ impl<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt> Default
             "competitions",
             "escrows",
             "temp_competition",
-            "temp_status",
         )
     }
 }
@@ -115,7 +111,11 @@ where
         msg: ExecuteBase<ExecuteExt, CompetitionExt>,
     ) -> Result<Response, CompetitionError> {
         match msg {
-            ExecuteBase::JailCompetition { id } => self.execute_jail_competition(deps, env, id),
+            ExecuteBase::JailCompetition {
+                id,
+                title,
+                description,
+            } => self.execute_jail_competition(deps, env, id, title, description),
             ExecuteBase::CreateCompetition {
                 competition_dao,
                 escrow,
@@ -140,16 +140,18 @@ where
             ExecuteBase::ProcessCompetition { id, distribution } => {
                 self.execute_process_competition(deps, info, id, distribution)
             }
-            ExecuteBase::GenerateProposals { id } => {
-                self.execute_generate_proposals(deps, env, id, None)
-            }
+            ExecuteBase::GenerateProposals {
+                id,
+                title,
+                description,
+            } => self.execute_generate_proposals(deps, env, id, title, description),
             ExecuteBase::UpdateOwnership(action) => {
                 let ownership =
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
             ExecuteBase::Activate(_competition_core_activate_msg) => {
-                self.execute_activate(deps, info, env)
+                self.execute_activate(deps, info)
             }
             ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
@@ -159,7 +161,6 @@ where
         &self,
         deps: DepsMut,
         info: MessageInfo,
-        env: Env,
     ) -> Result<Response, CompetitionError> {
         let id = self.escrows.may_load(deps.storage, info.sender.clone())?;
 
@@ -169,28 +170,22 @@ where
             });
         }
 
-        let id = Uint128::from(id.unwrap());
+        let id = id.unwrap();
 
-        let competition = self.competitions.may_load(deps.storage, id.u128())?;
+        let competition = self.competitions.may_load(deps.storage, id)?;
 
         if competition.is_none() {
-            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+            return Err(CompetitionError::UnknownCompetitionId { id });
         }
 
         let mut competition = competition.unwrap();
 
-        let mut response = Response::new().add_attribute("id", id.clone());
-        if competition.status == CompetitionStatus::Created {
-            response =
-                self.execute_generate_proposals(deps, env, id, Some(CompetitionStatus::Active))?;
-        } else {
-            competition.status = CompetitionStatus::Active;
+        competition.status = CompetitionStatus::Active;
 
-            self.competitions
-                .save(deps.storage, id.u128(), &competition)?;
-        }
+        self.competitions.save(deps.storage, id, &competition)?;
 
-        Ok(response
+        Ok(Response::new()
+            .add_attribute("id", id.to_string())
             .add_attribute("action", "activate")
             .add_attribute("escrow", info.sender))
     }
@@ -200,7 +195,8 @@ where
         deps: DepsMut,
         env: Env,
         id: Uint128,
-        status: Option<CompetitionStatus>,
+        title: String,
+        description: String,
     ) -> Result<Response, CompetitionError> {
         let competition = self.competitions.may_load(deps.storage, id.u128())?;
 
@@ -210,10 +206,8 @@ where
 
         let competition = competition.unwrap();
 
-        if competition.status != CompetitionStatus::Created {
-            return Err(CompetitionError::InvalidCompetitionStatus {
-                current_status: competition.status,
-            });
+        if competition.has_generated_proposals {
+            return Err(CompetitionError::ProposalsAlreadyGenerated {});
         }
 
         let proposal_modules: Vec<ProposalModule> = deps.querier.query_wasm_smart(
@@ -247,18 +241,23 @@ where
         )?;
 
         self.temp_competition.save(deps.storage, &id.u128())?;
-        self.temp_status
-            .save(deps.storage, &status.unwrap_or(CompetitionStatus::Pending))?;
 
         let sub_msg = SubMsg::reply_on_success(
-            create_competition_proposals(
-                deps.as_ref(),
-                id,
-                &env.contract.address,
-                &cw4_group,
-                proposal_module,
-                None,
-            )?,
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: proposal_module.to_string(),
+                msg: to_binary(&dao_proposal_multiple::msg::ExecuteMsg::Propose {
+                    title,
+                    description,
+                    choices: get_competition_choices(
+                        deps.as_ref(),
+                        id,
+                        &env.contract.address,
+                        &cw4_group,
+                    )?,
+                    proposer: None,
+                })?,
+                funds: vec![],
+            }),
             PROPOSALS_REPLY_ID,
         );
 
@@ -273,6 +272,8 @@ where
         deps: DepsMut,
         env: Env,
         id: Uint128,
+        title: String,
+        description: String,
     ) -> Result<Response, CompetitionError> {
         let dao = get_ownership(deps.storage)?;
 
@@ -282,7 +283,7 @@ where
             ));
         }
 
-        let competition = self.competitions.update(
+        self.competitions.update(
             deps.storage,
             id.u128(),
             |x| -> Result<_, CompetitionError> {
@@ -306,11 +307,16 @@ where
             },
         )?;
 
-        let msg = PreProposeExecuteExtensionMsg::Jail { id: competition.id }
-            .into_cosmos_msg(dao.owner.unwrap())?;
+        let msg = PreProposeExecuteExtensionMsg::Jail {
+            id: id.clone(),
+            title,
+            description,
+        }
+        .into_cosmos_msg(dao.owner.unwrap())?;
 
         Ok(Response::new()
             .add_attribute("action", "jail_wager")
+            .add_attribute("id", id)
             .add_message(msg))
     }
 
@@ -342,8 +348,9 @@ where
             expiration,
             rules,
             ruleset,
-            status: CompetitionStatus::Created,
+            status: CompetitionStatus::Pending,
             extension,
+            has_generated_proposals: false,
         };
         let dao = self.get_dao(deps.as_ref())?;
         let msgs = vec![
@@ -522,13 +529,12 @@ where
 
     pub fn reply_proposals(&self, deps: DepsMut) -> Result<Response, CompetitionError> {
         let id = self.temp_competition.load(deps.storage)?;
-        let status = self.temp_status.load(deps.storage)?;
 
         self.competitions
             .update(deps.storage, id, |x| -> Result<_, CompetitionError> {
                 match x {
                     Some(mut competition) => {
-                        competition.status = status;
+                        competition.has_generated_proposals = true;
 
                         Ok(competition)
                     }

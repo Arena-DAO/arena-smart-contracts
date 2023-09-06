@@ -382,7 +382,7 @@ fn create_wager_with_proposals() {
 
     context.app.update_block(|x| x.height += 1);
 
-    let wager: arena_wager_module::msg::Wager = context
+    let wager: arena_wager_module::msg::WagerResponse = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -391,12 +391,16 @@ fn create_wager_with_proposals() {
         )
         .unwrap();
 
-    assert!(wager.status == CompetitionStatus::Created);
+    assert!(wager.status == CompetitionStatus::Pending);
 
     let res = context.app.execute_contract(
         addr1.clone(),
         wager_module_addr.clone(),
-        &arena_wager_module::msg::ExecuteMsg::GenerateProposals { id: wager.id },
+        &arena_wager_module::msg::ExecuteMsg::GenerateProposals {
+            id: wager.id,
+            title: "Test Title".to_string(),
+            description: "Test description".to_string(),
+        },
         &[],
     );
 
@@ -462,7 +466,7 @@ fn create_wager_with_proposals() {
         .unwrap();
 
     // Assure state is inactive
-    let wager: arena_wager_module::msg::Wager = context
+    let wager: arena_wager_module::msg::WagerResponse = context
         .app
         .wrap()
         .query_wasm_smart(

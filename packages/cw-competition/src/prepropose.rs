@@ -18,7 +18,11 @@ pub enum PreProposeExecuteMsg {
 
 #[cw_serde]
 pub enum PreProposeExecuteExtensionMsg {
-    Jail { id: Uint128 },
+    Jail {
+        id: Uint128,
+        title: String,
+        description: String,
+    },
 }
 
 impl PreProposeExecuteExtensionMsg {

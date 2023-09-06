@@ -4,7 +4,6 @@ use cw_utils::Expiration;
 
 #[cw_serde]
 pub enum CompetitionStatus {
-    Created,
     Pending,
     Active,
     Inactive,
@@ -19,7 +18,6 @@ impl Default for CompetitionStatus {
 impl CompetitionStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
-            CompetitionStatus::Created => "Created",
             CompetitionStatus::Pending => "Pending",
             CompetitionStatus::Jailed => "Jailed",
             CompetitionStatus::Active => "Active",
@@ -41,6 +39,7 @@ pub struct Competition<CompetitionExt> {
     pub ruleset: Option<Uint128>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
+    pub has_generated_proposals: bool,
 }
 
 #[cw_serde]
@@ -56,6 +55,7 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub ruleset: Option<Uint128>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
+    pub has_generated_proposals: bool,
 }
 
 impl<CompetitionExt> Competition<CompetitionExt> {
@@ -74,6 +74,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             ruleset: self.ruleset,
             status: self.status,
             extension: self.extension,
+            has_generated_proposals: self.has_generated_proposals,
         }
     }
 }

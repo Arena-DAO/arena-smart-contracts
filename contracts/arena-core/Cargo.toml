@@ -27,8 +27,10 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 cw-competition = { workspace = true }
 dao-interface = { workspace = true }
+dao-voting = { workspace = true }
 dao-voting-cw4 = { workspace = true }
 dao-pre-propose-base = { workspace = true }
+dao-pre-propose-multiple = { workspace = true }
 cw-paginate = { workspace = true }
 
 [dev-dependencies]

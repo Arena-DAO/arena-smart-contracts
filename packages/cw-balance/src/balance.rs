@@ -193,23 +193,23 @@ impl BalanceVerified {
         native_ge_result && cw20_ge_result && cw721_ge_result
     }
 
-    pub fn get_amount(&self, token_type: TokenType, identifier: &String) -> Option<Uint128> {
+    pub fn get_amount(&self, token_type: TokenType, identifier: &str) -> Option<Uint128> {
         match token_type {
             TokenType::Native => self
                 .native
                 .iter()
-                .find(|coin| coin.denom == *identifier)
+                .find(|coin| coin.denom == identifier)
                 .map(|coin| coin.amount),
             TokenType::Cw20 => self
                 .cw20
                 .iter()
-                .find(|cw20_coin| cw20_coin.address.to_string() == *identifier)
+                .find(|cw20_coin| cw20_coin.address.to_string() == identifier)
                 .map(|cw20_coin| cw20_coin.amount),
             TokenType::Cw721 => {
                 if self
                     .cw721
                     .iter()
-                    .any(|cw721_tokens| cw721_tokens.token_ids.contains(identifier))
+                    .any(|cw721_tokens| cw721_tokens.token_ids.contains(&identifier.to_string()))
                 {
                     Some(Uint128::one())
                 } else {

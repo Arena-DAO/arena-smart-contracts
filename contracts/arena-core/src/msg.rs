@@ -1,12 +1,14 @@
 #[allow(unused_imports)]
 use crate::state::{CompetitionModule, Ruleset};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Empty, Uint128};
+use cosmwasm_std::{Decimal, Uint128};
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
     state::PreProposeContract,
 };
+use dao_pre_propose_multiple::ProposeMessage;
+use dao_voting::multiple_choice::MultipleChoiceOptions;
 
 #[cw_serde]
 pub struct InstantiateExt {
@@ -23,6 +25,8 @@ pub enum ExecuteExt {
     },
     Jail {
         id: Uint128,
+        title: String,
+        description: String,
     },
     UpdateTax {
         tax: Decimal,
@@ -59,7 +63,18 @@ pub enum MigrateMsg {
     FromV1 {},
 }
 
+#[cw_serde]
+pub enum ProposeMessageInternal {
+    Propose {
+        title: String,
+        description: String,
+        choices: MultipleChoiceOptions,
+        proposer: Option<String>,
+    },
+}
+
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
-pub type ExecuteMsg = ExecuteBase<Empty, ExecuteExt>;
+pub type ExecuteMsg = ExecuteBase<ProposeMessage, ExecuteExt>;
 pub type QueryMsg = QueryBase<QueryExt>;
-pub type PrePropose = PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, Empty>;
+pub type PrePropose =
+    PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, ProposeMessageInternal>;

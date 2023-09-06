@@ -1,17 +1,16 @@
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, Deps, Empty, StdResult, Uint128, WasmMsg};
 use cw4::{Member, MemberListResponse};
 use cw_balance::MemberShare;
+use dao_voting::multiple_choice::MultipleChoiceOptions;
 
 use crate::msg::ExecuteBase;
 
-pub fn create_competition_proposals(
+pub fn get_competition_choices(
     deps: Deps,
     id: Uint128,
     competition_module: &Addr,
     cw4_group: &Addr,
-    proposal_module: &Addr,
-    proposer: Option<String>,
-) -> StdResult<CosmosMsg> {
+) -> StdResult<MultipleChoiceOptions> {
     // Retrieve all team members from the CW4 group contract
     let teams = get_all_members(deps, cw4_group)?;
 
@@ -53,16 +52,7 @@ pub fn create_competition_proposals(
     });
 
     // Create a proposal message for the competition result
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: proposal_module.to_string(),
-        msg: to_binary(&dao_proposal_multiple::msg::ExecuteMsg::Propose {
-            title: "Competition Result".to_string(),
-            description: "This proposal allows members to vote on the winner of the competition. Each choice represents a different team. Select the team that you believe should win the competition.".to_string(),
-            choices: dao_voting::multiple_choice::MultipleChoiceOptions { options },
-            proposer
-        })?,
-        funds: vec![],
-    }))
+    Ok(MultipleChoiceOptions { options })
 }
 
 fn get_all_members(deps: Deps, cw4_group_addr: &Addr) -> StdResult<Vec<Member>> {

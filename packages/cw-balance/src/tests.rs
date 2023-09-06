@@ -272,18 +272,14 @@ fn test_add_different_native_denoms() {
     };
 
     let combined_balance = balance_a.checked_add(&balance_b).unwrap();
+
     assert_eq!(
-        combined_balance.native,
-        vec![
-            Coin {
-                denom: "token1".to_string(),
-                amount: Uint128::from(10u128),
-            },
-            Coin {
-                denom: "token2".to_string(),
-                amount: Uint128::from(20u128),
-            }
-        ]
+        combined_balance.get_amount(crate::TokenType::Native, "token1"),
+        Some(Uint128::from(10u128))
+    );
+    assert_eq!(
+        combined_balance.get_amount(crate::TokenType::Native, "token2"),
+        Some(Uint128::from(20u128))
     );
 }
 

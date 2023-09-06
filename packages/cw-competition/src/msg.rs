@@ -21,6 +21,8 @@ pub struct InstantiateBase<InstantiateExt> {
 pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     JailCompetition {
         id: Uint128,
+        title: String,
+        description: String,
     },
     Activate(CompetitionCoreActivateMsg),
     CreateCompetition {
@@ -35,6 +37,8 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     },
     GenerateProposals {
         id: Uint128,
+        title: String,
+        description: String,
     },
     ProcessCompetition {
         id: Uint128,

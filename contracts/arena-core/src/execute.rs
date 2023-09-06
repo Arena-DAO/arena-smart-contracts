@@ -1,5 +1,7 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Empty, Env, Response, StdError, SubMsg, Uint128};
-use cw_competition::{proposal::create_competition_proposals, state::CompetitionResponse};
+use cosmwasm_std::{
+    Addr, Decimal, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, Uint128,
+};
+use cw_competition::{proposal::get_competition_choices, state::CompetitionResponse};
 use dao_interface::state::ModuleInstantiateInfo;
 
 use crate::{
@@ -102,17 +104,19 @@ pub fn update_rulesets(
 
 pub fn jail_competition(
     deps: DepsMut,
-    sender: Addr,
+    env: Env,
+    info: MessageInfo,
     id: Uint128,
+    title: String,
+    description: String,
 ) -> Result<Response, ContractError> {
     //assert the sender is a competition module
-    if !competition_modules().has(deps.storage, sender.clone()) {
+    if !competition_modules().has(deps.storage, info.sender.clone()) {
         return Err(ContractError::Unauthorized {});
     }
 
-    let proposal_module = PrePropose::default().proposal_module.load(deps.storage)?;
     let competition: CompetitionResponse<Empty> = deps.querier.query_wasm_smart(
-        sender.clone(),
+        info.sender.clone(),
         &cw_competition::msg::QueryBase::<Empty, Empty>::Competition { id: id.clone() },
     )?;
     let voting_module: Addr = deps.querier.query_wasm_smart(
@@ -124,16 +128,22 @@ pub fn jail_competition(
         &dao_voting_cw4::msg::QueryMsg::GroupContract {},
     )?;
 
+    let choices = get_competition_choices(deps.as_ref(), id.clone(), &info.sender, &cw4_group)?;
+    let proposer = info.sender.to_string();
+    PrePropose::default().execute_propose(
+        deps,
+        env,
+        info,
+        crate::msg::ProposeMessageInternal::Propose {
+            title,
+            description,
+            choices,
+            proposer: Some(proposer.clone()),
+        },
+    )?;
+
     Ok(Response::new()
         .add_attribute("action", "jail_competition")
-        .add_attribute("sender", sender.to_string())
-        .add_attribute("id", id)
-        .add_message(create_competition_proposals(
-            deps.as_ref(),
-            id,
-            &sender,
-            &cw4_group,
-            &proposal_module,
-            Some(competition.dao.to_string()),
-        )?))
+        .add_attribute("sender", proposer)
+        .add_attribute("id", id))
 }
