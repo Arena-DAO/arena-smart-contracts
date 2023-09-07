@@ -63,7 +63,7 @@ where
     Config {},
     #[returns(CompetitionResponse<CompetitionExt>)]
     Competition { id: Uint128 },
-    #[returns(Vec<CompetitionResponse<CompetitionExt>>)]
+    #[returns(Vec<(u128, CompetitionResponse<CompetitionExt>)>)]
     Competitions {
         start_after: Option<Uint128>,
         limit: Option<u32>,
