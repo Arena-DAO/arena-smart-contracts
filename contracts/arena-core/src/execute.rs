@@ -112,11 +112,6 @@ pub fn jail_competition(
     title: String,
     description: String,
 ) -> Result<Response, ContractError> {
-    //assert the sender is a competition module
-    if !competition_modules().has(deps.storage, info.sender.clone()) {
-        return Err(ContractError::Unauthorized {});
-    }
-
     let competition: CompetitionResponse<Empty> = deps.querier.query_wasm_smart(
         info.sender.clone(),
         &cw_competition::msg::QueryBase::<Empty, Empty>::Competition { id: id.clone() },
@@ -132,11 +127,11 @@ pub fn jail_competition(
 
     let choices = get_competition_choices(deps.as_ref(), id.clone(), &info.sender, &cw4_group)?;
     let proposer = info.sender.to_string();
-    PrePropose::default().execute_propose(
+    let response = propose(
         deps,
         env,
         info,
-        crate::msg::ProposeMessage::Propose {
+        ProposeMessage::Propose {
             title,
             description,
             choices,
@@ -144,9 +139,8 @@ pub fn jail_competition(
         },
     )?;
 
-    Ok(Response::new()
+    Ok(response
         .add_attribute("action", "jail_competition")
-        .add_attribute("sender", proposer)
         .add_attribute("id", id))
 }
 
