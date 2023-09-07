@@ -11,10 +11,10 @@ use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase},
     prepropose::{PreProposeExecuteExtensionMsg, PreProposeQueryMsg},
     proposal::get_competition_choices,
-    state::{Competition, CompetitionStatus, Config},
+    state::{Competition, CompetitionResponse, CompetitionStatus, Config},
 };
 use cw_ownable::get_ownership;
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::{Bound, Item, Map};
 use cw_utils::parse_reply_instantiate_data;
 use dao_interface::state::ProposalModule;
 use serde::{de::DeserializeOwned, Serialize};
@@ -473,6 +473,9 @@ where
                     .load(deps.storage, id.u128())?
                     .to_response(&env.block),
             ),
+            QueryBase::Competitions { start_after, limit } => {
+                to_binary(&self.query_competitions(deps, env, start_after, limit)?)
+            }
             QueryBase::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
@@ -488,6 +491,25 @@ where
             core.owner.unwrap(),
             &dao_pre_propose_base::msg::QueryMsg::<Empty>::Dao {},
         )?)
+    }
+
+    fn query_competitions(
+        &self,
+        deps: Deps,
+        env: Env,
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+    ) -> StdResult<Vec<(u128, CompetitionResponse<CompetitionExt>)>> {
+        let start_after_bound = start_after.map(Bound::exclusive);
+        let limit = limit.unwrap_or(10).max(30);
+
+        cw_paginate::paginate_map(
+            &self.competitions,
+            deps.storage,
+            start_after_bound,
+            Some(limit),
+            |x, y| Ok((x, y.to_response(&env.block))),
+        )
     }
 
     pub fn reply(
@@ -523,7 +545,6 @@ where
 
         Ok(Response::new()
             .add_attribute("action", "reply_dao")
-            .add_attribute("id", Uint128::from(id))
             .add_attribute("dao_addr", addr))
     }
 
@@ -564,7 +585,6 @@ where
 
         Ok(Response::new()
             .add_attribute("action", "reply_escrow")
-            .add_attribute("wager", Uint128::from(id))
             .add_attribute("escrow_addr", addr))
     }
 
@@ -582,8 +602,6 @@ where
                 }
             })?;
 
-        Ok(Response::new()
-            .add_attribute("action", "reply_process")
-            .add_attribute("wager", Uint128::from(id)))
+        Ok(Response::new().add_attribute("action", "reply_process"))
     }
 }

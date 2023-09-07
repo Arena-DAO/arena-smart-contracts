@@ -1,13 +1,16 @@
 use std::marker::PhantomData;
 
+#[allow(unused_imports)]
+use crate::{
+    core::CompetitionCoreActivateMsg,
+    state::{CompetitionResponse, Config},
+};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw_balance::MemberShare;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
-
-use crate::core::CompetitionCoreActivateMsg;
 
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
@@ -56,10 +59,15 @@ pub enum QueryBase<QueryExt, CompetitionExt>
 where
     QueryExt: JsonSchema,
 {
-    #[returns(crate::state::Config)]
+    #[returns(Config)]
     Config {},
-    #[returns(crate::state::CompetitionResponse<CompetitionExt>)]
+    #[returns(CompetitionResponse<CompetitionExt>)]
     Competition { id: Uint128 },
+    #[returns(Vec<CompetitionResponse<CompetitionExt>>)]
+    Competitions {
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+    },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },
     #[serde(skip)]

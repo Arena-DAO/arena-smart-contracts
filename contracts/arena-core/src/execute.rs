@@ -63,6 +63,7 @@ pub fn update_tax(
             msg: "The dao tax cannot be greater than 100%.".to_string(),
         }));
     }
+
     TAX.save(deps.storage, &tax, env.block.height)?;
 
     Ok(Response::new()

@@ -24,8 +24,8 @@ pub fn rulesets<'a>() -> IndexedMap<'a, u128, Ruleset, RulesetIndexes<'a>> {
     let indexes = RulesetIndexes {
         is_enabled: MultiIndex::new(
             |_x, d: &Ruleset| d.is_enabled.to_string(),
-            "is_enabled",
-            "is_enabled__ruleset",
+            "rulesets",
+            "rulesets__is_enabled",
         ),
     };
     IndexedMap::new("rulesets", indexes)
@@ -54,8 +54,8 @@ pub fn competition_modules<'a>(
     let indexes = CompetitionModuleIndexes {
         is_enabled: MultiIndex::new(
             |_x, d: &CompetitionModule| d.is_enabled.to_string(),
-            "is_enabled",
-            "is_enabled__competition_module",
+            "competition_modules",
+            "competition_modules__is_enabled",
         ),
     };
     IndexedMap::new("competition_modules", indexes)
