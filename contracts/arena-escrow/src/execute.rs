@@ -191,7 +191,7 @@ fn receive_balance(
 
     // Update the balance in storage for the given address
     let balance = BALANCE.update(deps.storage, &addr, |x| -> StdResult<_> {
-        balance.checked_add(&x.unwrap_or(BalanceVerified::default()))
+        balance.checked_add(&x.unwrap_or_default())
     })?;
 
     let due = DUE.load(deps.storage, &addr)?;

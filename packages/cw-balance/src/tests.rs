@@ -218,7 +218,7 @@ fn test_subtract_cw721_balances() {
         ],
     }];
     let cw721_balance_b = vec![Cw721CollectionVerified {
-        addr: addr,
+        addr,
         token_ids: vec!["token1".to_string(), "token2".to_string()],
     }];
 
@@ -397,7 +397,7 @@ fn test_subtract_nonexistent_cw721_tokens() {
         token_ids: vec!["token1".to_string(), "token2".to_string()],
     }];
     let cw721_balance_b = vec![Cw721CollectionVerified {
-        addr: addr,
+        addr,
         token_ids: vec!["token3".to_string(), "token4".to_string()],
     }];
 

@@ -254,9 +254,7 @@ impl BalanceVerified {
             .collect();
 
         for token in &other.cw721 {
-            let entry = cw721_map
-                .entry(token.addr.clone())
-                .or_insert_with(HashSet::new);
+            let entry = cw721_map.entry(token.addr.clone()).or_default();
 
             for token_id in &token.token_ids {
                 // If the token_id is already present, it's a duplicate and we return an error.
