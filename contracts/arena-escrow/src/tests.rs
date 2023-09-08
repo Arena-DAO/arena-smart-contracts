@@ -76,7 +76,7 @@ fn setup() -> Context {
                 mint: None,
                 marketing: None,
             },
-            &vec![],
+            &[],
             "TestToken",
             None,
         )
@@ -91,7 +91,7 @@ fn setup() -> Context {
                 symbol: "TESTNFT".to_string(),
                 minter: CREATOR.to_string(),
             },
-            &vec![],
+            &[],
             "TestToken",
             None,
         )
@@ -111,7 +111,7 @@ fn setup() -> Context {
                 token_uri: None,
                 extension: None,
             },
-            &vec![],
+            &[],
         )
         .unwrap();
     }
@@ -170,7 +170,7 @@ fn setup() -> Context {
                     },
                 ],
             },
-            &vec![],
+            &[],
             "Arena Escrow",
             None,
         )
@@ -194,7 +194,7 @@ fn test_lock() {
             Addr::unchecked(CREATOR),
             context.escrow_addr.clone(),
             &ExecuteMsg::Lock { value: true },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -205,7 +205,7 @@ fn test_lock() {
             cw20_msg: None,
             cw721_msg: None,
         },
-        &vec![],
+        &[],
     );
     assert_eq!(
         res.unwrap_err().root_cause().to_string(),
@@ -219,7 +219,7 @@ fn test_lock() {
             Addr::unchecked(CREATOR),
             context.escrow_addr.clone(),
             &ExecuteMsg::Lock { value: false },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -230,7 +230,7 @@ fn test_lock() {
             cw20_msg: None,
             cw721_msg: None,
         },
-        &vec![],
+        &[],
     );
     assert!(res.is_ok());
 }
@@ -256,7 +256,7 @@ fn test_set_distribution() {
         &ExecuteMsg::SetDistribution {
             distribution: distribution.clone(),
         },
-        &vec![],
+        &[],
     );
 
     assert!(res.is_ok());
@@ -293,7 +293,7 @@ fn test_deposit_withdraw_and_check_balances() {
                 amount: Uint128::from(150u128),
                 msg: Binary::default(),
             },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -310,7 +310,7 @@ fn test_deposit_withdraw_and_check_balances() {
         .unwrap();
 
     assert_eq!(
-        balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        balance_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
         Some(Uint128::from(150u128))
     );
     let due_addr1: BalanceVerified = context
@@ -324,7 +324,7 @@ fn test_deposit_withdraw_and_check_balances() {
         )
         .unwrap();
     assert_eq!(
-        due_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        due_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
         None
     );
     let balance_total: BalanceVerified = context
@@ -334,7 +334,7 @@ fn test_deposit_withdraw_and_check_balances() {
         .unwrap();
 
     assert_eq!(
-        balance_total.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        balance_total.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
         Some(Uint128::from(150u128))
     );
 
@@ -348,7 +348,7 @@ fn test_deposit_withdraw_and_check_balances() {
                 cw20_msg: None,
                 cw721_msg: None,
             },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -379,15 +379,15 @@ fn test_deposit_withdraw_and_check_balances() {
         )
         .unwrap();
     assert_eq!(
-        due_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        due_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
         Some(Uint128::from(150u128))
     );
     assert_eq!(
-        balance_addr1.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        balance_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
         None
     );
     assert_eq!(
-        balance_total.get_amount(cw_balance::TokenType::Cw20, &context.cw20_addr.to_string()),
+        balance_total.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
         None
     );
 }

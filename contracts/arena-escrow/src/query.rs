@@ -25,7 +25,7 @@ pub fn is_locked(deps: Deps) -> bool {
 
 pub fn distribution(deps: Deps, addr: String) -> StdResult<Option<Vec<MemberShareVerified>>> {
     let addr = deps.api.addr_validate(&addr)?;
-    Ok(PRESET_DISTRIBUTION.may_load(deps.storage, &addr)?)
+    PRESET_DISTRIBUTION.may_load(deps.storage, &addr)
 }
 
 pub fn is_funded(deps: Deps, addr: String) -> StdResult<bool> {
@@ -34,7 +34,7 @@ pub fn is_funded(deps: Deps, addr: String) -> StdResult<bool> {
 }
 
 pub fn is_fully_funded(deps: Deps) -> StdResult<bool> {
-    Ok(crate::state::is_fully_funded(deps)?)
+    crate::state::is_fully_funded(deps)
 }
 
 pub fn balances(

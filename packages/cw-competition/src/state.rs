@@ -3,18 +3,16 @@ use cosmwasm_std::{Addr, BlockInfo, Uint128};
 use cw_utils::Expiration;
 
 #[cw_serde]
+#[derive(Default)]
 pub enum CompetitionStatus {
     Pending,
     Active,
+    #[default]
     Inactive,
     Jailed,
 }
 
-impl Default for CompetitionStatus {
-    fn default() -> Self {
-        CompetitionStatus::Inactive
-    }
-}
+
 impl CompetitionStatus {
     pub fn as_str(&self) -> &'static str {
         match self {

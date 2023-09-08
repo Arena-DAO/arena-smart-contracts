@@ -86,5 +86,5 @@ pub fn rulesets(
 }
 
 pub fn competition_module(deps: Deps, key: String) -> StdResult<Option<Addr>> {
-    Ok(KEYS.may_load(deps.storage, key)?)
+    KEYS.may_load(deps.storage, key)
 }

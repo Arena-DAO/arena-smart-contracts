@@ -102,7 +102,7 @@ pub fn update_rulesets(
 
     Ok(Response::new()
         .add_attribute("action", "update_rulesets")
-        .add_attribute("ruleset_count", Uint128::from(id)))
+        .add_attribute("ruleset_count", id))
 }
 
 pub fn jail_competition(
@@ -115,10 +115,10 @@ pub fn jail_competition(
 ) -> Result<Response, ContractError> {
     let competition: CompetitionResponse<Empty> = deps.querier.query_wasm_smart(
         info.sender.clone(),
-        &cw_competition::msg::QueryBase::<Empty, Empty>::Competition { id: id.clone() },
+        &cw_competition::msg::QueryBase::<Empty, Empty>::Competition { id },
     )?;
     let voting_module: Addr = deps.querier.query_wasm_smart(
-        competition.dao.clone(),
+        competition.dao,
         &dao_interface::msg::QueryMsg::VotingModule {},
     )?;
     let cw4_group: Addr = deps.querier.query_wasm_smart(
@@ -126,7 +126,7 @@ pub fn jail_competition(
         &dao_voting_cw4::msg::QueryMsg::GroupContract {},
     )?;
 
-    let choices = get_competition_choices(deps.as_ref(), id.clone(), &info.sender, &cw4_group)?;
+    let choices = get_competition_choices(deps.as_ref(), id, &info.sender, &cw4_group)?;
     let proposer = info.sender.to_string();
     let response = propose(
         deps,
@@ -136,7 +136,7 @@ pub fn jail_competition(
             title,
             description,
             choices,
-            proposer: Some(proposer.clone()),
+            proposer: Some(proposer),
         },
     )?;
 

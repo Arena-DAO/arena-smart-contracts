@@ -191,7 +191,7 @@ fn receive_balance(
 
     // Update the balance in storage for the given address
     let balance = BALANCE.update(deps.storage, &addr, |x| -> StdResult<_> {
-        Ok(balance.checked_add(&x.unwrap_or(BalanceVerified::default()))?)
+        balance.checked_add(&x.unwrap_or(BalanceVerified::default()))
     })?;
 
     let due = DUE.load(deps.storage, &addr)?;
@@ -218,7 +218,7 @@ fn receive_balance(
 
     // Update the total balance in storage
     TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
-        Ok(x.checked_add(&balance)?)
+        x.checked_add(&balance)
     })?;
 
     // Build and return the response
@@ -241,9 +241,7 @@ pub fn distribute(
         return Err(ContractError::NotFunded {});
     }
 
-    if distribution.is_some() {
-        let distribution = distribution.unwrap();
-
+    if let Some(distribution) = distribution {
         // Calculate the distributable balance.
         let total_balance = TOTAL_BALANCE.load(deps.storage)?;
 

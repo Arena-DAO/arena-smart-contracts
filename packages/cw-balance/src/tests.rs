@@ -64,7 +64,7 @@ fn test_add_cw20_balances() {
     assert_eq!(
         combined_balance.cw20,
         vec![Cw20CoinVerified {
-            address: addr.clone(),
+            address: addr,
             amount: Uint128::from(30u128)
         }]
     );
@@ -199,7 +199,7 @@ fn test_subtract_cw20_balances() {
     assert_eq!(
         remaining_balance.cw20,
         vec![Cw20CoinVerified {
-            address: addr.clone(),
+            address: addr,
             amount: Uint128::from(10u128),
         }]
     );
@@ -218,7 +218,7 @@ fn test_subtract_cw721_balances() {
         ],
     }];
     let cw721_balance_b = vec![Cw721CollectionVerified {
-        addr: addr.clone(),
+        addr: addr,
         token_ids: vec!["token1".to_string(), "token2".to_string()],
     }];
 
@@ -397,7 +397,7 @@ fn test_subtract_nonexistent_cw721_tokens() {
         token_ids: vec!["token1".to_string(), "token2".to_string()],
     }];
     let cw721_balance_b = vec![Cw721CollectionVerified {
-        addr: addr.clone(),
+        addr: addr,
         token_ids: vec!["token3".to_string(), "token4".to_string()],
     }];
 

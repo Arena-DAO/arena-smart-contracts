@@ -30,14 +30,14 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     let resp =
-        PrePropose::default().instantiate(deps.branch(), env.clone(), info.clone(), msg.clone())?;
+        PrePropose::default().instantiate(deps.branch(), env.clone(), info, msg.clone())?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    Ok(instantiate_extension(
+    instantiate_extension(
         resp,
         deps.branch(),
         env,
         msg.extension,
-    )?)
+    )
 }
 
 pub fn instantiate_extension(
@@ -118,7 +118,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                         }
                     })
                 })
-                .ok_or_else(|| StdError::generic_err(format!("Unable to find the module key.")))?;
+                .ok_or_else(|| StdError::generic_err("Unable to find the module key.".to_string()))?;
 
             let competition_module = CompetitionModule {
                 addr: module_addr.clone(),

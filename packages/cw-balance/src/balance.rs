@@ -77,20 +77,11 @@ impl Balance {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct BalanceVerified {
     pub native: Vec<Coin>,
     pub cw20: Vec<Cw20CoinVerified>,
     pub cw721: Vec<Cw721CollectionVerified>,
-}
-
-impl Default for BalanceVerified {
-    fn default() -> Self {
-        Self {
-            native: vec![],
-            cw20: vec![],
-            cw721: vec![],
-        }
-    }
 }
 
 impl Display for BalanceVerified {
@@ -125,7 +116,7 @@ impl BalanceVerified {
 
     pub fn is_ge(&self, other: &BalanceVerified) -> bool {
         // Helper function for comparing native tokens
-        fn native_ge(self_native: &Vec<Coin>, other_native: &Vec<Coin>) -> bool {
+        fn native_ge(self_native: &[Coin], other_native: &[Coin]) -> bool {
             let self_map: HashMap<&str, &Coin> = self_native
                 .iter()
                 .map(|coin| (coin.denom.as_str(), coin))
@@ -144,7 +135,7 @@ impl BalanceVerified {
         }
 
         // Helper function for comparing cw20 tokens
-        fn cw20_ge(self_cw20: &Vec<Cw20CoinVerified>, other_cw20: &Vec<Cw20CoinVerified>) -> bool {
+        fn cw20_ge(self_cw20: &[Cw20CoinVerified], other_cw20: &[Cw20CoinVerified]) -> bool {
             let self_map: HashMap<&Addr, &Cw20CoinVerified> =
                 self_cw20.iter().map(|coin| (&coin.address, coin)).collect();
 
@@ -162,8 +153,8 @@ impl BalanceVerified {
 
         // Helper function for comparing cw721 tokens
         fn cw721_ge(
-            self_cw721: &Vec<Cw721CollectionVerified>,
-            other_cw721: &Vec<Cw721CollectionVerified>,
+            self_cw721: &[Cw721CollectionVerified],
+            other_cw721: &[Cw721CollectionVerified],
         ) -> bool {
             let self_map: HashMap<&Addr, &Vec<String>> = self_cw721
                 .iter()
@@ -203,7 +194,7 @@ impl BalanceVerified {
             TokenType::Cw20 => self
                 .cw20
                 .iter()
-                .find(|cw20_coin| cw20_coin.address.to_string() == identifier)
+                .find(|cw20_coin| cw20_coin.address == identifier)
                 .map(|cw20_coin| cw20_coin.amount),
             TokenType::Cw721 => {
                 if self

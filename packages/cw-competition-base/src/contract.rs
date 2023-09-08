@@ -218,7 +218,7 @@ where
             },
         )?;
 
-        if proposal_modules.len() == 0 {
+        if proposal_modules.is_empty() {
             return Err(CompetitionError::StdError(StdError::GenericErr {
                 msg: "No active proposal module found".to_string(),
             }));
@@ -308,7 +308,7 @@ where
         )?;
 
         let msg = PreProposeExecuteExtensionMsg::Jail {
-            id: id.clone(),
+            id,
             title,
             description,
         }
@@ -320,6 +320,7 @@ where
             .add_message(msg))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn execute_create_competition(
         &self,
         deps: DepsMut,
@@ -355,7 +356,7 @@ where
         let dao = self.get_dao(deps.as_ref())?;
         let msgs = vec![
             SubMsg::reply_always(competition_dao.into_wasm_msg(dao.clone()), DAO_REPLY_ID),
-            SubMsg::reply_always(escrow.into_wasm_msg(dao.clone()), ESCROW_REPLY_ID),
+            SubMsg::reply_always(escrow.into_wasm_msg(dao), ESCROW_REPLY_ID),
         ];
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
@@ -531,7 +532,7 @@ where
     }
 
     pub fn reply_dao(&self, deps: DepsMut, msg: Reply) -> Result<Response, CompetitionError> {
-        let result = parse_reply_instantiate_data(msg.clone())?;
+        let result = parse_reply_instantiate_data(msg)?;
         let addr = deps.api.addr_validate(&result.contract_address)?;
         let id = self.temp_competition.load(deps.storage)?;
 

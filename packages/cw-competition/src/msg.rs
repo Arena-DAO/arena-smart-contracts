@@ -21,6 +21,7 @@ pub struct InstantiateBase<InstantiateExt> {
 
 #[cw_ownable_execute]
 #[cw_serde]
+#[allow(clippy::large_enum_variant)]
 pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     JailCompetition {
         id: Uint128,

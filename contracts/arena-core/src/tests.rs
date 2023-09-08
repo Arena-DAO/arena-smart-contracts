@@ -201,7 +201,7 @@ fn execute_attach_arena_core(context: &mut Context) {
             }
             .into()],
         },
-        &vec![],
+        &[],
     ).unwrap();
     context.app.update_block(|x| x.height += 1);
 }
@@ -375,7 +375,7 @@ fn create_wager_with_proposals() {
     );
 
     assert!(res.is_ok());
-    let prop_module = get_attr_value(&res.as_ref().unwrap(), "prop_module");
+    let prop_module = get_attr_value(res.as_ref().unwrap(), "prop_module");
     assert!(prop_module.is_some());
 
     let prop_module = Addr::unchecked(prop_module.unwrap());
@@ -413,16 +413,16 @@ fn create_wager_with_proposals() {
             addr1.clone(),
             wager.escrow.clone(),
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
-            &vec![due.clone()],
+            &[due.clone()],
         )
         .unwrap();
     context
         .app
         .execute_contract(
             addr2.clone(),
-            wager.escrow.clone(),
+            wager.escrow,
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
-            &vec![due.clone()],
+            &[due],
         )
         .unwrap();
 
@@ -437,20 +437,20 @@ fn create_wager_with_proposals() {
                 vote: dao_voting::multiple_choice::MultipleChoiceVote { option_id: 0u32 },
                 rationale: None,
             },
-            &vec![],
+            &[],
         )
         .unwrap();
     context
         .app
         .execute_contract(
-            addr2.clone(),
+            addr2,
             prop_module.clone(),
             &dao_proposal_multiple::msg::ExecuteMsg::Vote {
                 proposal_id: 1u64,
                 vote: dao_voting::multiple_choice::MultipleChoiceVote { option_id: 0u32 },
                 rationale: None,
             },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -459,9 +459,9 @@ fn create_wager_with_proposals() {
         .app
         .execute_contract(
             addr1.clone(),
-            prop_module.clone(),
+            prop_module,
             &dao_proposal_multiple::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -470,7 +470,7 @@ fn create_wager_with_proposals() {
         .app
         .wrap()
         .query_wasm_smart(
-            wager_module_addr.clone(),
+            wager_module_addr,
             &arena_wager_module::msg::QueryMsg::Competition { id: Uint128::one() },
         )
         .unwrap();
