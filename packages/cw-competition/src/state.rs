@@ -12,7 +12,6 @@ pub enum CompetitionStatus {
     Jailed,
 }
 
-
 impl CompetitionStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
