@@ -477,6 +477,9 @@ where
                 to_binary(&self.query_competitions(deps, env, start_after, limit)?)
             }
             QueryBase::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
+            QueryBase::CompetitionCount {} => {
+                to_binary(&self.competition_count.load(deps.storage)?)
+            }
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
         }

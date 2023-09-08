@@ -61,6 +61,8 @@ where
 {
     #[returns(Config)]
     Config {},
+    #[returns(Uint128)]
+    CompetitionCount {},
     #[returns(CompetitionResponse<CompetitionExt>)]
     Competition { id: Uint128 },
     #[returns(Vec<(u128, CompetitionResponse<CompetitionExt>)>)]
