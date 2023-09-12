@@ -1,9 +1,13 @@
+#[allow(unused_imports)]
+use crate::query::DumpStateResponse;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
 #[allow(unused_imports)]
-use cw_balance::{BalanceVerified, MemberBalance, MemberShare, MemberShareVerified};
+use cw_balance::{
+    BalanceVerified, MemberBalance, MemberBalanceVerified, MemberShare, MemberShareVerified,
+};
 use cw_competition::escrow::CompetitionEscrowDistributeMsg;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
@@ -35,7 +39,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(Vec<(String, BalanceVerified)>)]
+    #[returns(Vec<MemberBalanceVerified>)]
     Balances {
         start_after: Option<String>,
         limit: Option<u32>,
@@ -44,7 +48,7 @@ pub enum QueryMsg {
     Balance { addr: String },
     #[returns(BalanceVerified)]
     Due { addr: String },
-    #[returns(Vec<(String, BalanceVerified)>)]
+    #[returns(Vec<MemberBalanceVerified>)]
     Dues {
         start_after: Option<String>,
         limit: Option<u32>,
@@ -59,9 +63,11 @@ pub enum QueryMsg {
     IsLocked {},
     #[returns(Option<Vec<MemberShareVerified>>)]
     Distribution { addr: String },
+    #[returns(DumpStateResponse)]
+    DumpState { addr: Option<String> },
 }
 
 #[cw_serde]
 pub enum MigrateMsg {
-    FromV1 {},
+    FromCompatible {},
 }

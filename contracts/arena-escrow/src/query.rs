@@ -1,9 +1,18 @@
-use cosmwasm_std::{Addr, Deps, StdResult};
-use cw_balance::{BalanceVerified, MemberShareVerified};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Deps, StdResult};
+use cw_balance::{BalanceVerified, MemberBalanceVerified, MemberShareVerified};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
 use crate::state::{BALANCE, DUE, IS_FUNDED, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE};
+
+#[cw_serde]
+pub struct DumpStateResponse {
+    pub dues: Vec<MemberBalanceVerified>,
+    pub is_locked: bool,
+    pub total_balance: BalanceVerified,
+    pub balance: BalanceVerified,
+}
 
 pub fn balance(deps: Deps, addr: String) -> StdResult<BalanceVerified> {
     let addr = deps.api.addr_validate(&addr)?;
@@ -41,18 +50,43 @@ pub fn balances(
     deps: Deps,
     start_after: Option<String>,
     limit: Option<u32>,
-) -> StdResult<Vec<(Addr, BalanceVerified)>> {
+) -> StdResult<Vec<MemberBalanceVerified>> {
     let binding = maybe_addr(deps.api, start_after)?;
     let start = binding.as_ref().map(Bound::exclusive);
-    cw_paginate::paginate_map(&BALANCE, deps.storage, start, limit, |k, v| Ok((k, v)))
+    cw_paginate::paginate_map(&BALANCE, deps.storage, start, limit, |k, v| {
+        Ok(MemberBalanceVerified {
+            addr: k,
+            balance: v,
+        })
+    })
 }
 
 pub fn dues(
     deps: Deps,
     start_after: Option<String>,
     limit: Option<u32>,
-) -> StdResult<Vec<(Addr, BalanceVerified)>> {
+) -> StdResult<Vec<MemberBalanceVerified>> {
     let binding = maybe_addr(deps.api, start_after)?;
     let start = binding.as_ref().map(Bound::exclusive);
-    cw_paginate::paginate_map(&DUE, deps.storage, start, limit, |k, v| Ok((k, v)))
+    cw_paginate::paginate_map(&DUE, deps.storage, start, limit, |k, v| {
+        Ok(MemberBalanceVerified {
+            addr: k,
+            balance: v,
+        })
+    })
+}
+
+pub fn dump_state(deps: Deps, addr: Option<String>) -> StdResult<DumpStateResponse> {
+    let maybe_addr = maybe_addr(deps.api, addr)?;
+    let balance = maybe_addr
+        .map(|x| balance(deps, x.to_string()))
+        .transpose()?
+        .unwrap_or_default();
+
+    Ok(DumpStateResponse {
+        dues: dues(deps, None, None)?,
+        is_locked: is_locked(deps),
+        total_balance: total_balance(deps),
+        balance,
+    })
 }

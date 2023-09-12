@@ -113,9 +113,14 @@ where
         match msg {
             ExecuteBase::JailCompetition {
                 id,
-                title,
-                description,
-            } => self.execute_jail_competition(deps, env, id, title, description),
+                proposal_details,
+            } => self.execute_jail_competition(
+                deps,
+                env,
+                id,
+                proposal_details.title,
+                proposal_details.description,
+            ),
             ExecuteBase::CreateCompetition {
                 competition_dao,
                 escrow,
@@ -142,17 +147,20 @@ where
             }
             ExecuteBase::GenerateProposals {
                 id,
-                title,
-                description,
-            } => self.execute_generate_proposals(deps, env, id, title, description),
+                proposal_details,
+            } => self.execute_generate_proposals(
+                deps,
+                env,
+                id,
+                proposal_details.title,
+                proposal_details.description,
+            ),
             ExecuteBase::UpdateOwnership(action) => {
                 let ownership =
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
-            ExecuteBase::Activate(_competition_core_activate_msg) => {
-                self.execute_activate(deps, info)
-            }
+            ExecuteBase::Activate {} => self.execute_activate(deps, info),
             ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
     }
@@ -503,7 +511,7 @@ where
         env: Env,
         start_after: Option<Uint128>,
         limit: Option<u32>,
-    ) -> StdResult<Vec<(u128, CompetitionResponse<CompetitionExt>)>> {
+    ) -> StdResult<Vec<CompetitionResponse<CompetitionExt>>> {
         let start_after_bound = start_after.map(Bound::exclusive);
         let limit = limit.unwrap_or(10).max(30);
 
@@ -512,7 +520,7 @@ where
             deps.storage,
             start_after_bound,
             Some(limit),
-            |x, y| Ok((x, y.to_response(&env.block))),
+            |_x, y| Ok(y.to_response(&env.block)),
         )
     }
 

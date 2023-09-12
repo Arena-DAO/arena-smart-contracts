@@ -10,19 +10,12 @@
   "author": "ismellike",
   "license": "ISC",
   "dependencies": {
-    "@cosmjs/amino": "^0.31.1",
-    "@cosmjs/cosmwasm-stargate": "^0.31.1",
-    "@cosmjs/proto-signing": "^0.31.1",
-    "@cosmjs/stargate": "^0.31.1",
-    "@cosmjs/stream": "^0.31.1",
-    "@cosmjs/tendermint-rpc": "^0.31.1",
     "@cosmwasm/ts-codegen": "^0.35.3",
-    "@tanstack/react-query": "^4.33.0",
     "@types/glob": "^8.1.0",
-    "@types/node": "^20.5.1",
-    "glob": "^10.3.3",
+    "@types/node": "^20.6.0",
+    "glob": "^10.3.4",
     "react": "^18.2.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.2.2"
   }
 }

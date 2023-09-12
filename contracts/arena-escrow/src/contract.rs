@@ -97,6 +97,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::Dues { start_after, limit } => to_binary(&query::dues(deps, start_after, limit)?),
         QueryMsg::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
+        QueryMsg::DumpState { addr } => to_binary(&query::dump_state(deps, addr)?),
     }
 }
 

@@ -7,7 +7,7 @@ use cw_competition::{
 
 #[cw_serde]
 pub enum MigrateMsg {
-    FromV1 {},
+    FromCompatible {},
 }
 
 pub type InstantiateMsg = InstantiateBase<Empty>;

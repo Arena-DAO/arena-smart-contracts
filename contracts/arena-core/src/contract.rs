@@ -173,6 +173,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             QueryExt::CompetitionModule { key } => {
                 to_binary(&query::competition_module(deps, key)?)
             }
+            QueryExt::DumpState {} => to_binary(&query::dump_state(deps, env)?),
         },
         _ => PrePropose::default().query(deps, env, msg),
     }

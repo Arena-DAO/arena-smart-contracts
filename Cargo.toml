@@ -9,15 +9,15 @@ resolver = "2"
 edition = "2021"
 license = "BSD-3-Clause"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "0.6.1"
+version = "0.7.0"
 
 [profile.release]
+codegen-units = 1
 opt-level = 3
 debug = false
 rpath = false
 lto = true
 debug-assertions = false
-codegen-units = 1
 panic = 'abort'
 incremental = false
 overflow-checks = true
@@ -39,7 +39,7 @@ anyhow = "1.0.75"
 cw4-group = "1.1.0"
 rand = "0.8.5"
 cw4 = "1.1.0"
-serde = "1.0.188"
+serde = { version = "1.0.188", default-features = false, features = ["derive"]}
 getrandom = { version = "0.2.10", features = ["js"] }
 bnum = "0.8.0"
 cw-paginate = "0.2.1"

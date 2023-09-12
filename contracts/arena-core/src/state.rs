@@ -4,6 +4,7 @@ use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, Snaps
 
 #[cw_serde]
 pub struct Ruleset {
+    pub id: Uint128,
     pub rules: Vec<String>,
     pub description: String,
     pub is_enabled: bool,

@@ -1,10 +1,7 @@
 use std::marker::PhantomData;
 
 #[allow(unused_imports)]
-use crate::{
-    core::CompetitionCoreActivateMsg,
-    state::{CompetitionResponse, Config},
-};
+use crate::state::{CompetitionResponse, Config};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw_balance::MemberShare;
@@ -25,10 +22,9 @@ pub struct InstantiateBase<InstantiateExt> {
 pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     JailCompetition {
         id: Uint128,
-        title: String,
-        description: String,
+        proposal_details: ProposalDetails,
     },
-    Activate(CompetitionCoreActivateMsg),
+    Activate {},
     CreateCompetition {
         competition_dao: ModuleInstantiateInfo,
         escrow: ModuleInstantiateInfo,
@@ -41,8 +37,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     },
     GenerateProposals {
         id: Uint128,
-        title: String,
-        description: String,
+        proposal_details: ProposalDetails,
     },
     ProcessCompetition {
         id: Uint128,
@@ -51,6 +46,12 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     Extension {
         msg: ExecuteExt,
     },
+}
+
+#[cw_serde]
+pub struct ProposalDetails {
+    pub title: String,
+    pub description: String,
 }
 
 #[cw_ownable_query]
@@ -66,7 +67,7 @@ where
     CompetitionCount {},
     #[returns(CompetitionResponse<CompetitionExt>)]
     Competition { id: Uint128 },
-    #[returns(Vec<(u128, CompetitionResponse<CompetitionExt>)>)]
+    #[returns(Vec<CompetitionResponse<CompetitionExt>>)]
     Competitions {
         start_after: Option<Uint128>,
         limit: Option<u32>,

@@ -1,6 +1,6 @@
-use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, StdError, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, StdResult, Uint128, WasmMsg};
 use cw_balance::{Balance, MemberBalance};
-use cw_competition::state::CompetitionStatus;
+use cw_competition::{msg::ProposalDetails, state::CompetitionStatus};
 use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
 use cw_utils::Expiration;
 use dao_interface::{
@@ -8,7 +8,10 @@ use dao_interface::{
     state::{Admin, ModuleInstantiateInfo, ProposalModule},
 };
 
-use crate::msg::{InstantiateExt, InstantiateMsg, QueryMsg};
+use crate::{
+    msg::{InstantiateExt, InstantiateMsg, QueryMsg},
+    query::CompetitionModuleResponse,
+};
 
 const CREATOR: &str = "ismellike";
 const WAGER_KEY: &str = "wager";
@@ -255,7 +258,7 @@ fn create_wager_with_proposals() {
         .unwrap();
     let arena_core_addr = item_response.item.unwrap();
 
-    let res: Result<Option<Addr>, StdError> = context.app.wrap().query_wasm_smart(
+    let res: StdResult<Option<CompetitionModuleResponse>> = context.app.wrap().query_wasm_smart(
         arena_core_addr,
         &QueryMsg::QueryExtension {
             msg: crate::msg::QueryExt::CompetitionModule {
@@ -267,7 +270,7 @@ fn create_wager_with_proposals() {
     assert!(res.is_ok());
     assert!(res.as_ref().unwrap().is_some());
 
-    let wager_module_addr = res.unwrap().unwrap();
+    let wager_module_addr = res.unwrap().unwrap().addr;
 
     let addr1 = Addr::unchecked(ADDR1);
     let addr2 = Addr::unchecked(ADDR2);
@@ -398,8 +401,10 @@ fn create_wager_with_proposals() {
         wager_module_addr.clone(),
         &arena_wager_module::msg::ExecuteMsg::GenerateProposals {
             id: wager.id,
-            title: "Test Title".to_string(),
-            description: "Test description".to_string(),
+            proposal_details: ProposalDetails {
+                title: "Test Title".to_string(),
+                description: "Test description".to_string(),
+            },
         },
         &[],
     );

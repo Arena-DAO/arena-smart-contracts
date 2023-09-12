@@ -1,5 +1,7 @@
 #[allow(unused_imports)]
-use crate::state::{CompetitionModule, Ruleset};
+use crate::query::{CompetitionModuleResponse, DumpStateResponse};
+#[allow(unused_imports)]
+use crate::state::Ruleset;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Uint128};
 use dao_interface::state::ModuleInstantiateInfo;
@@ -39,27 +41,36 @@ pub enum ExecuteExt {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryExt {
-    #[returns(Vec<(String, CompetitionModule)>)]
+    #[returns(Vec<CompetitionModuleResponse>)]
     CompetitionModules {
         start_after: Option<String>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
     },
-    #[returns(Vec<(u128, Ruleset)>)]
+    #[returns(Vec<Ruleset>)]
     Rulesets {
-        start_after: Option<u128>,
+        start_after: Option<Uint128>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
-    #[returns(Option<String>)]
+    #[returns(Option<CompetitionModuleResponse>)]
     CompetitionModule { key: String },
+    #[returns(DumpStateResponse)]
+    DumpState {},
 }
 
 #[cw_serde]
 pub enum MigrateMsg {
-    FromV1 {},
+    FromCompatible {},
+}
+
+/// This is used to completely generate schema types
+/// QueryExt response types are hidden by the QueryBase mapping to Binary output
+#[cw_serde]
+pub struct SudoMsg {
+    pub dump_state_response: DumpStateResponse,
 }
 
 #[cw_serde]

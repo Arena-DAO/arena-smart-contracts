@@ -1,8 +1,9 @@
-use cosmwasm_std::{Addr, Attribute, Binary, CosmosMsg, DepsMut, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_binary, Addr, Attribute, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response, StdResult,
+};
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
 use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare, MemberShareVerified};
-use cw_competition::core::CompetitionCoreActivateMsg;
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
@@ -208,8 +209,12 @@ fn receive_balance(
             IS_LOCKED.save(deps.storage, &true)?;
 
             let owner = get_ownership(deps.storage)?.owner;
-            if owner.is_some() {
-                msgs.push(CompetitionCoreActivateMsg {}.into_cosmos_msg(owner.unwrap())?);
+            if let Some(owner) = owner {
+                msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: owner.to_string(),
+                    msg: to_binary(&cw_competition::msg::ExecuteBase::<Empty, Empty>::Activate {})?,
+                    funds: vec![],
+                }));
             }
         }
     } else {

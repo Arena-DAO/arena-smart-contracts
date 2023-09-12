@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-wager-module",
-  "contract_version": "0.6.0",
+  "contract_version": "0.7.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -43,19 +43,15 @@
           "jail_competition": {
             "type": "object",
             "required": [
-              "description",
               "id",
-              "title"
+              "proposal_details"
             ],
             "properties": {
-              "description": {
-                "type": "string"
-              },
               "id": {
                 "$ref": "#/definitions/Uint128"
               },
-              "title": {
-                "type": "string"
+              "proposal_details": {
+                "$ref": "#/definitions/ProposalDetails"
               }
             },
             "additionalProperties": false
@@ -70,7 +66,8 @@
         ],
         "properties": {
           "activate": {
-            "$ref": "#/definitions/CompetitionCoreActivateMsg"
+            "type": "object",
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -142,19 +139,15 @@
           "generate_proposals": {
             "type": "object",
             "required": [
-              "description",
               "id",
-              "title"
+              "proposal_details"
             ],
             "properties": {
-              "description": {
-                "type": "string"
-              },
               "id": {
                 "$ref": "#/definitions/Uint128"
               },
-              "title": {
-                "type": "string"
+              "proposal_details": {
+                "$ref": "#/definitions/ProposalDetails"
               }
             },
             "additionalProperties": false
@@ -324,10 +317,6 @@
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
       },
-      "CompetitionCoreActivateMsg": {
-        "type": "object",
-        "additionalProperties": false
-      },
       "Empty": {
         "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
         "type": "object"
@@ -436,6 +425,22 @@
         },
         "additionalProperties": false
       },
+      "ProposalDetails": {
+        "type": "object",
+        "required": [
+          "description",
+          "title"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
         "allOf": [
@@ -474,6 +479,19 @@
       {
         "type": "object",
         "required": [
+          "competition_count"
+        ],
+        "properties": {
+          "competition_count": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
           "competition"
         ],
         "properties": {
@@ -485,6 +503,39 @@
             "properties": {
               "id": {
                 "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "competitions"
+        ],
+        "properties": {
+          "competitions": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -539,7 +590,25 @@
       }
     }
   },
-  "migrate": null,
+  "migrate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MigrateMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "from_compatible"
+        ],
+        "properties": {
+          "from_compatible": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
   "sudo": null,
   "responses": {
     "__phantom": {
@@ -550,11 +619,13 @@
     "competition": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CompetitionResponse_for_Empty",
+      "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
       "type": "object",
       "required": [
         "dao",
         "description",
         "escrow",
+        "expiration",
         "extension",
         "has_generated_proposals",
         "id",
@@ -573,6 +644,9 @@
         },
         "escrow": {
           "$ref": "#/definitions/Addr"
+        },
+        "expiration": {
+          "$ref": "#/definitions/Expiration"
         },
         "extension": {
           "$ref": "#/definitions/Empty"
@@ -633,8 +707,235 @@
           "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
           "type": "object"
         },
+        "Expiration": {
+          "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+          "oneOf": [
+            {
+              "description": "AtHeight will expire when `env.block.height` >= height",
+              "type": "object",
+              "required": [
+                "at_height"
+              ],
+              "properties": {
+                "at_height": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "AtTime will expire when `env.block.time` >= time",
+              "type": "object",
+              "required": [
+                "at_time"
+              ],
+              "properties": {
+                "at_time": {
+                  "$ref": "#/definitions/Timestamp"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Never will never expire. Used to express the empty variant",
+              "type": "object",
+              "required": [
+                "never"
+              ],
+              "properties": {
+                "never": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Timestamp": {
+          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint64"
+            }
+          ]
+        },
         "Uint128": {
           "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        },
+        "Uint64": {
+          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "competition_count": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Uint128",
+      "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+      "type": "string"
+    },
+    "competitions": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_CompetitionResponse_for_Empty",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CompetitionResponse_for_Empty"
+      },
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
+        "CompetitionResponse_for_Empty": {
+          "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
+          "type": "object",
+          "required": [
+            "dao",
+            "description",
+            "escrow",
+            "expiration",
+            "extension",
+            "has_generated_proposals",
+            "id",
+            "is_expired",
+            "name",
+            "rules",
+            "start_height",
+            "status"
+          ],
+          "properties": {
+            "dao": {
+              "$ref": "#/definitions/Addr"
+            },
+            "description": {
+              "type": "string"
+            },
+            "escrow": {
+              "$ref": "#/definitions/Addr"
+            },
+            "expiration": {
+              "$ref": "#/definitions/Expiration"
+            },
+            "extension": {
+              "$ref": "#/definitions/Empty"
+            },
+            "has_generated_proposals": {
+              "type": "boolean"
+            },
+            "id": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "is_expired": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "ruleset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "start_height": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "status": {
+              "$ref": "#/definitions/CompetitionStatus"
+            }
+          },
+          "additionalProperties": false
+        },
+        "CompetitionStatus": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "active",
+            "inactive",
+            "jailed"
+          ]
+        },
+        "Empty": {
+          "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
+          "type": "object"
+        },
+        "Expiration": {
+          "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+          "oneOf": [
+            {
+              "description": "AtHeight will expire when `env.block.height` >= height",
+              "type": "object",
+              "required": [
+                "at_height"
+              ],
+              "properties": {
+                "at_height": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "AtTime will expire when `env.block.time` >= time",
+              "type": "object",
+              "required": [
+                "at_time"
+              ],
+              "properties": {
+                "at_time": {
+                  "$ref": "#/definitions/Timestamp"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Never will never expire. Used to express the empty variant",
+              "type": "object",
+              "required": [
+                "never"
+              ],
+              "properties": {
+                "never": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Timestamp": {
+          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint64"
+            }
+          ]
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        },
+        "Uint64": {
+          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
         }
       }

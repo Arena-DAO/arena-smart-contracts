@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Uint128};
 use cw_utils::Expiration;
+use std::fmt;
 
 #[cw_serde]
 #[derive(Default)]
@@ -12,13 +13,13 @@ pub enum CompetitionStatus {
     Jailed,
 }
 
-impl CompetitionStatus {
-    pub fn as_str(&self) -> &'static str {
+impl fmt::Display for CompetitionStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            CompetitionStatus::Pending => "Pending",
-            CompetitionStatus::Jailed => "Jailed",
-            CompetitionStatus::Active => "Active",
-            CompetitionStatus::Inactive => "Inactive",
+            CompetitionStatus::Pending => write!(f, "Pending"),
+            CompetitionStatus::Jailed => write!(f, "Jailed"),
+            CompetitionStatus::Active => write!(f, "Active"),
+            CompetitionStatus::Inactive => write!(f, "Inactive"),
         }
     }
 }
@@ -39,6 +40,8 @@ pub struct Competition<CompetitionExt> {
     pub has_generated_proposals: bool,
 }
 
+/// CompetitionResponse has all of the same fields as Competition
+/// is_expired is appended
 #[cw_serde]
 pub struct CompetitionResponse<CompetitionExt> {
     pub id: Uint128,
