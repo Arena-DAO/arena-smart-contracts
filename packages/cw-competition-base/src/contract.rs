@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use arena_core_interface::msg::ProposalDetails;
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
     to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply,
@@ -9,7 +10,6 @@ use cw_balance::MemberShare;
 use cw_competition::{
     escrow::CompetitionEscrowDistributeMsg,
     msg::{ExecuteBase, InstantiateBase, QueryBase},
-    prepropose::{PreProposeExecuteExtensionMsg, PreProposeQueryMsg},
     proposal::get_competition_choices,
     state::{Competition, CompetitionResponse, CompetitionStatus, Config},
 };
@@ -315,12 +315,16 @@ where
             },
         )?;
 
-        let msg = PreProposeExecuteExtensionMsg::Jail {
-            id,
-            title,
-            description,
-        }
-        .into_cosmos_msg(dao.owner.unwrap())?;
+        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: dao.owner.unwrap().to_string(),
+            msg: to_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                msg: arena_core_interface::msg::ExecuteExt::Jail {
+                    id,
+                    proposal_details: ProposalDetails { title, description },
+                },
+            })?,
+            funds: vec![],
+        });
 
         Ok(Response::new()
             .add_attribute("action", "jail_wager")
@@ -413,8 +417,8 @@ where
                 let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
                 let tax: Decimal = deps.querier.query_wasm_smart(
                     arena_core,
-                    &PreProposeQueryMsg::QueryExtension {
-                        msg: cw_competition::prepropose::PreProposeQueryExtensionMsg::Tax {
+                    &arena_core_interface::msg::QueryMsg::QueryExtension {
+                        msg: arena_core_interface::msg::QueryExt::Tax {
                             height: Some(competition.start_height),
                         },
                     },
@@ -476,15 +480,26 @@ where
     ) -> StdResult<Binary> {
         match msg {
             QueryBase::Config {} => to_binary(&self.config.load(deps.storage)?),
-            QueryBase::Competition { id } => to_binary(
+            QueryBase::Competition {
+                id,
+                include_ruleset,
+            } => to_binary(
                 &self
                     .competitions
                     .load(deps.storage, id.u128())?
-                    .to_response(&env.block),
+                    .to_response(deps, &env.block, include_ruleset)?,
             ),
-            QueryBase::Competitions { start_after, limit } => {
-                to_binary(&self.query_competitions(deps, env, start_after, limit)?)
-            }
+            QueryBase::Competitions {
+                start_after,
+                limit,
+                include_ruleset,
+            } => to_binary(&self.query_competitions(
+                deps,
+                env,
+                start_after,
+                limit,
+                include_ruleset,
+            )?),
             QueryBase::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
             QueryBase::CompetitionCount {} => {
                 to_binary(&self.competition_count.load(deps.storage)?)
@@ -511,6 +526,7 @@ where
         env: Env,
         start_after: Option<Uint128>,
         limit: Option<u32>,
+        include_ruleset: Option<bool>,
     ) -> StdResult<Vec<CompetitionResponse<CompetitionExt>>> {
         let start_after_bound = start_after.map(Bound::exclusive);
         let limit = limit.unwrap_or(10).max(30);
@@ -520,7 +536,7 @@ where
             deps.storage,
             start_after_bound,
             Some(limit),
-            |_x, y| Ok(y.to_response(&env.block)),
+            |_x, y| y.to_response(deps, &env.block, include_ruleset),
         )
     }
 

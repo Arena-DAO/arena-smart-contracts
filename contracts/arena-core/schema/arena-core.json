@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-core",
-  "contract_version": "0.7.0",
+  "contract_version": "0.7.5",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -822,19 +822,15 @@
               "jail": {
                 "type": "object",
                 "required": [
-                  "description",
                   "id",
-                  "title"
+                  "proposal_details"
                 ],
                 "properties": {
-                  "description": {
-                    "type": "string"
-                  },
                   "id": {
                     "$ref": "#/definitions/Uint128"
                   },
-                  "title": {
-                    "type": "string"
+                  "proposal_details": {
+                    "$ref": "#/definitions/ProposalDetails"
                   }
                 },
                 "additionalProperties": false
@@ -1163,6 +1159,22 @@
             "items": {
               "$ref": "#/definitions/MultipleChoiceOption"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProposalDetails": {
+        "type": "object",
+        "required": [
+          "description",
+          "title"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -1686,6 +1698,27 @@
                       "string",
                       "null"
                     ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "ruleset"
+            ],
+            "properties": {
+              "ruleset": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "$ref": "#/definitions/Uint128"
                   }
                 },
                 "additionalProperties": false

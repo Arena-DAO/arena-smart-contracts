@@ -1,3 +1,4 @@
+use arena_core_interface::msg::{PrePropose, ProposeMessage, Ruleset};
 use cosmwasm_std::{
     to_binary, Addr, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg,
     Uint128, WasmMsg,
@@ -7,8 +8,7 @@ use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::error::PreProposeError;
 
 use crate::{
-    msg::{PrePropose, ProposeMessage},
-    state::{competition_modules, rulesets, Ruleset, KEYS, RULESET_COUNT, TAX},
+    state::{competition_modules, rulesets, KEYS, RULESET_COUNT, TAX},
     ContractError,
 };
 
@@ -115,7 +115,10 @@ pub fn jail_competition(
 ) -> Result<Response, ContractError> {
     let competition: CompetitionResponse<Empty> = deps.querier.query_wasm_smart(
         info.sender.clone(),
-        &cw_competition::msg::QueryBase::<Empty, Empty>::Competition { id },
+        &cw_competition::msg::QueryBase::<Empty, Empty>::Competition {
+            id,
+            include_ruleset: Some(false),
+        },
     )?;
     let voting_module: Addr = deps.querier.query_wasm_smart(
         competition.dao,

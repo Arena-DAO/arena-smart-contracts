@@ -1,7 +1,7 @@
 [package]
-name = "cw-competition"
+name = "arena-core-interface"
 authors = ["ismellike <glopez11193@gmail.com>"]
-description = "An interface for interacting with cw-competition."
+description = "An interface for interacting with the Arena-Core."
 edition = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
@@ -19,18 +19,8 @@ library = []
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-getrandom = { workspace = true }
 serde = { workspace = true }
-cw-utils = { workspace= true }
-thiserror = { workspace = true }
-
-cw4 = { workspace = true }
-cw-balance = { workspace = true }
-cw-ownable = { workspace = true }
-arena-core-interface = { workspace = true }
 
 dao-interface = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 dao-voting = { workspace = true }
-dao-voting-cw4 = { workspace = true }
-dao-proposal-multiple = { workspace = true }

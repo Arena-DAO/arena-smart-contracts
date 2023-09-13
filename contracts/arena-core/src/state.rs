@@ -1,14 +1,7 @@
+use arena_core_interface::msg::Ruleset;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, SnapshotItem};
-
-#[cw_serde]
-pub struct Ruleset {
-    pub id: Uint128,
-    pub rules: Vec<String>,
-    pub description: String,
-    pub is_enabled: bool,
-}
 
 pub struct RulesetIndexes<'a> {
     pub is_enabled: MultiIndex<'a, String, Ruleset, u128>,

@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 #[allow(unused_imports)]
 use crate::state::{CompetitionResponse, Config};
+use arena_core_interface::msg::ProposalDetails;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw_balance::MemberShare;
@@ -48,12 +49,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     },
 }
 
-#[cw_serde]
-pub struct ProposalDetails {
-    pub title: String,
-    pub description: String,
-}
-
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
@@ -66,11 +61,15 @@ where
     #[returns(Uint128)]
     CompetitionCount {},
     #[returns(CompetitionResponse<CompetitionExt>)]
-    Competition { id: Uint128 },
+    Competition {
+        id: Uint128,
+        include_ruleset: Option<bool>, // Defaults to true
+    },
     #[returns(Vec<CompetitionResponse<CompetitionExt>>)]
     Competitions {
         start_after: Option<Uint128>,
         limit: Option<u32>,
+        include_ruleset: Option<bool>,
     },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },

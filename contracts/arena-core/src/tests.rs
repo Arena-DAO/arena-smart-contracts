@@ -1,16 +1,14 @@
+use arena_core_interface::msg::{
+    CompetitionModuleResponse, InstantiateExt, InstantiateMsg, ProposalDetails, QueryMsg,
+};
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, StdResult, Uint128, WasmMsg};
 use cw_balance::{Balance, MemberBalance};
-use cw_competition::{msg::ProposalDetails, state::CompetitionStatus};
+use cw_competition::state::CompetitionStatus;
 use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
 use cw_utils::Expiration;
 use dao_interface::{
     query::GetItemResponse,
     state::{Admin, ModuleInstantiateInfo, ProposalModule},
-};
-
-use crate::{
-    msg::{InstantiateExt, InstantiateMsg, QueryMsg},
-    query::CompetitionModuleResponse,
 };
 
 const CREATOR: &str = "ismellike";
@@ -261,7 +259,7 @@ fn create_wager_with_proposals() {
     let res: StdResult<Option<CompetitionModuleResponse>> = context.app.wrap().query_wasm_smart(
         arena_core_addr,
         &QueryMsg::QueryExtension {
-            msg: crate::msg::QueryExt::CompetitionModule {
+            msg: arena_core_interface::msg::QueryExt::CompetitionModule {
                 key: WAGER_KEY.to_string(),
             },
         },
@@ -390,7 +388,10 @@ fn create_wager_with_proposals() {
         .wrap()
         .query_wasm_smart(
             wager_module_addr.clone(),
-            &arena_wager_module::msg::QueryMsg::Competition { id: Uint128::one() },
+            &arena_wager_module::msg::QueryMsg::Competition {
+                id: Uint128::one(),
+                include_ruleset: Some(false),
+            },
         )
         .unwrap();
 
@@ -476,7 +477,10 @@ fn create_wager_with_proposals() {
         .wrap()
         .query_wasm_smart(
             wager_module_addr,
-            &arena_wager_module::msg::QueryMsg::Competition { id: Uint128::one() },
+            &arena_wager_module::msg::QueryMsg::Competition {
+                id: Uint128::one(),
+                include_ruleset: Some(false),
+            },
         )
         .unwrap();
 

@@ -9,7 +9,7 @@ resolver = "2"
 edition = "2021"
 license = "BSD-3-Clause"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "0.7.0"
+version = "0.7.5"
 
 [profile.release]
 codegen-units = 1
@@ -50,6 +50,7 @@ cw-competition-base = { path = "./packages/cw-competition-base", features = ["li
 cw-balance = { path = "./packages/cw-balance", features = ["library"] }
 arena-testing = { path = "./packages/arena-testing" }
 cw-competition = { path = "./packages/cw-competition", features = ["library"] }
+arena-core-interface = { path = "./packages/arena-core-interface", features = ["library"] }
 
 arena-core = { path = "./contracts/arena-core" }
 arena-escrow = { path = "./contracts/arena-escrow" }

@@ -1,23 +1,8 @@
-use crate::state::{CompetitionModule, Ruleset, KEYS, TAX};
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Deps, Empty, Env, StdResult, Uint128};
+use crate::state::{CompetitionModule, KEYS, TAX};
+use arena_core_interface::msg::{CompetitionModuleResponse, DumpStateResponse, Ruleset};
+use cosmwasm_std::{Decimal, Deps, Empty, Env, StdResult, Uint128};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
-
-#[cw_serde]
-pub struct DumpStateResponse {
-    pub tax: Decimal,
-    pub competition_modules: Vec<CompetitionModuleResponse>,
-    pub rulesets: Vec<Ruleset>,
-}
-
-#[cw_serde]
-pub struct CompetitionModuleResponse {
-    pub key: String,
-    pub addr: Addr,
-    pub is_enabled: bool,
-    pub competition_count: Uint128,
-}
 
 impl CompetitionModule {
     pub fn to_response(&self, deps: Deps) -> StdResult<CompetitionModuleResponse> {
@@ -117,6 +102,10 @@ pub fn rulesets(
             .take(limit as usize)
             .collect::<StdResult<Vec<_>>>()
     }
+}
+
+pub fn ruleset(deps: Deps, id: Uint128) -> StdResult<Option<Ruleset>> {
+    crate::state::rulesets().may_load(deps.storage, id.u128())
 }
 
 pub fn competition_module(deps: Deps, key: String) -> StdResult<Option<CompetitionModuleResponse>> {

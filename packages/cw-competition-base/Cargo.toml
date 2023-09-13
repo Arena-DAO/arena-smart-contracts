@@ -30,6 +30,7 @@ cw-balance = { workspace = true }
 cw-ownable = { workspace = true }
 cw-competition = { workspace = true }
 cw-paginate = { workspace = true }
+arena-core-interface = { workspace = true }
 
 dao-interface = { workspace = true }
 dao-pre-propose-base = { workspace = true }

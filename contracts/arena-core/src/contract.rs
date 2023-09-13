@@ -1,12 +1,12 @@
 use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
-    msg::{
-        ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
-        QueryMsg,
-    },
     query,
     state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, KEYS},
     ContractError,
+};
+use arena_core_interface::msg::{
+    ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
+    QueryMsg,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -83,9 +83,15 @@ pub fn execute(
             ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, info.sender, tax),
             ExecuteExt::Jail {
                 id,
-                title,
-                description,
-            } => execute::jail_competition(deps, env, info, id, title, description),
+                proposal_details,
+            } => execute::jail_competition(
+                deps,
+                env,
+                info,
+                id,
+                proposal_details.title,
+                proposal_details.description,
+            ),
         },
         // Default pre-propose-base behavior for all other messages
         _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),
@@ -169,6 +175,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 limit,
                 include_disabled,
             )?),
+            QueryExt::Ruleset { id } => to_binary(&query::ruleset(deps, id)?),
             QueryExt::Tax { height } => to_binary(&query::tax(deps, env, height)?),
             QueryExt::CompetitionModule { key } => {
                 to_binary(&query::competition_module(deps, key)?)

@@ -1,9 +1,5 @@
-#[allow(unused_imports)]
-use crate::query::{CompetitionModuleResponse, DumpStateResponse};
-#[allow(unused_imports)]
-use crate::state::Ruleset;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
@@ -26,8 +22,7 @@ pub enum ExecuteExt {
     },
     Jail {
         id: Uint128,
-        title: String,
-        description: String,
+        proposal_details: ProposalDetails,
     },
     UpdateTax {
         tax: Decimal,
@@ -47,6 +42,8 @@ pub enum QueryExt {
         limit: Option<u32>,
         include_disabled: Option<bool>,
     },
+    #[returns(Option<Ruleset>)]
+    Ruleset { id: Uint128 },
     #[returns(Vec<Ruleset>)]
     Rulesets {
         start_after: Option<Uint128>,
@@ -73,6 +70,34 @@ pub struct SudoMsg {
     pub dump_state_response: DumpStateResponse,
 }
 
+pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
+pub type ExecuteMsg = ExecuteBase<ProposeMessage, ExecuteExt>;
+pub type QueryMsg = QueryBase<QueryExt>;
+pub type PrePropose = PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, ProposeMessage>;
+
+#[cw_serde]
+pub struct DumpStateResponse {
+    pub tax: Decimal,
+    pub competition_modules: Vec<CompetitionModuleResponse>,
+    pub rulesets: Vec<Ruleset>,
+}
+
+#[cw_serde]
+pub struct CompetitionModuleResponse {
+    pub key: String,
+    pub addr: Addr,
+    pub is_enabled: bool,
+    pub competition_count: Uint128,
+}
+
+#[cw_serde]
+pub struct Ruleset {
+    pub id: Uint128,
+    pub rules: Vec<String>,
+    pub description: String,
+    pub is_enabled: bool,
+}
+
 #[cw_serde]
 pub enum ProposeMessage {
     Propose {
@@ -83,7 +108,8 @@ pub enum ProposeMessage {
     },
 }
 
-pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
-pub type ExecuteMsg = ExecuteBase<ProposeMessage, ExecuteExt>;
-pub type QueryMsg = QueryBase<QueryExt>;
-pub type PrePropose = PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, ProposeMessage>;
+#[cw_serde]
+pub struct ProposalDetails {
+    pub title: String,
+    pub description: String,
+}
