@@ -10,7 +10,7 @@ use dao_voting::multiple_choice::MultipleChoiceOptions;
 #[cw_serde]
 pub struct InstantiateExt {
     pub competition_modules_instantiate_info: Vec<ModuleInstantiateInfo>,
-    pub rulesets: Vec<Ruleset>,
+    pub rulesets: Vec<NewRuleset>,
     pub tax: Decimal,
 }
 
@@ -28,7 +28,7 @@ pub enum ExecuteExt {
         tax: Decimal,
     },
     UpdateRulesets {
-        to_add: Vec<Ruleset>,
+        to_add: Vec<NewRuleset>,
         to_disable: Vec<Uint128>,
     },
 }
@@ -88,6 +88,12 @@ pub struct CompetitionModuleResponse {
     pub addr: Addr,
     pub is_enabled: bool,
     pub competition_count: Uint128,
+}
+
+#[cw_serde]
+pub struct NewRuleset {
+    pub rules: Vec<String>,
+    pub description: String,
 }
 
 #[cw_serde]

@@ -1,4 +1,4 @@
-use arena_core_interface::msg::{PrePropose, ProposeMessage, Ruleset};
+use arena_core_interface::msg::{NewRuleset, PrePropose, ProposeMessage, Ruleset};
 use cosmwasm_std::{
     to_binary, Addr, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg,
     Uint128, WasmMsg,
@@ -74,7 +74,7 @@ pub fn update_tax(
 pub fn update_rulesets(
     deps: DepsMut,
     sender: Addr,
-    to_add: Vec<Ruleset>,
+    to_add: Vec<NewRuleset>,
     to_disable: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
     if PrePropose::default().dao.load(deps.storage)? != sender {
@@ -83,19 +83,28 @@ pub fn update_rulesets(
 
     for id in to_disable {
         rulesets().update(deps.storage, id.u128(), |x| match x {
-            Some(mut module) => {
-                module.is_enabled = false;
-                Ok(module)
+            Some(mut ruleset) => {
+                ruleset.is_enabled = false;
+                Ok(ruleset)
             }
             None => Err(StdError::GenericErr {
-                msg: format!("Could not find a competition module with the id {}", id),
+                msg: format!("Could not find a ruleset with the id {}", id),
             }),
         })?;
     }
 
     let mut id = RULESET_COUNT.may_load(deps.storage)?.unwrap_or_default();
     for ruleset in to_add {
-        rulesets().save(deps.storage, id.u128(), &ruleset)?;
+        rulesets().save(
+            deps.storage,
+            id.u128(),
+            &Ruleset {
+                id,
+                rules: ruleset.rules,
+                description: ruleset.description,
+                is_enabled: true,
+            },
+        )?;
         id = id.checked_add(Uint128::one())?;
     }
     RULESET_COUNT.save(deps.storage, &id)?;

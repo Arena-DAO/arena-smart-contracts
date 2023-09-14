@@ -1,5 +1,6 @@
 use arena_core_interface::msg::{
-    CompetitionModuleResponse, InstantiateExt, InstantiateMsg, ProposalDetails, QueryMsg,
+    CompetitionModuleResponse, InstantiateExt, InstantiateMsg, NewRuleset, ProposalDetails,
+    QueryMsg,
 };
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, StdResult, Uint128, WasmMsg};
 use cw_balance::{Balance, MemberBalance};
@@ -178,7 +179,15 @@ fn execute_attach_arena_core(context: &mut Context) {
                                                         label: "Arena Wager Module".to_string(),
                                                     },
                                                 ],
-                                                rulesets: vec![],
+                                                rulesets: vec![
+                                                    NewRuleset {
+                                                     rules: vec!["This is a rule".to_string(), "This is another rule".to_string()], 
+                                                     description: "This is a description".to_string(), 
+                                                    },
+                                                     NewRuleset {
+                                                        rules: vec!["This is a rule".to_string(), "This is another rule".to_string()], 
+                                                        description: "This is a description".to_string(), 
+                                                    }],
                                                 tax: Decimal::new(Uint128::from(
                                                     150000000000000000u128,
                                                 )),

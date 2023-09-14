@@ -49,20 +49,20 @@ cw-ownable = "0.5.1"
 cw-competition-base = { path = "./packages/cw-competition-base", features = ["library"] }
 cw-balance = { path = "./packages/cw-balance", features = ["library"] }
 arena-testing = { path = "./packages/arena-testing" }
-cw-competition = { path = "./packages/cw-competition", features = ["library"] }
-arena-core-interface = { path = "./packages/arena-core-interface", features = ["library"] }
+cw-competition = { path = "./packages/cw-competition" }
+arena-core-interface = { path = "./packages/arena-core-interface" }
 
 arena-core = { path = "./contracts/arena-core" }
 arena-escrow = { path = "./contracts/arena-escrow" }
 arena-wager-module = { path = "./contracts/arena-wager-module" }
 
 #dao dependencies
-dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts" }
-dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
-dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
-dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts" }
-dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
-dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"]}
-dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
-dao-pre-propose-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", features = ["library"] }
-dao-testing = { git = "https://github.com/DA0-DA0/dao-contracts" }
+dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
+dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
+dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
+dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
+dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
+dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
+dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }
+dao-pre-propose-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }
+dao-testing = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }

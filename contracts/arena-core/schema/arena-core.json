@@ -169,7 +169,7 @@
           "rulesets": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/Ruleset"
+              "$ref": "#/definitions/NewRuleset"
             }
           },
           "tax": {
@@ -219,23 +219,15 @@
         },
         "additionalProperties": false
       },
-      "Ruleset": {
+      "NewRuleset": {
         "type": "object",
         "required": [
           "description",
-          "id",
-          "is_enabled",
           "rules"
         ],
         "properties": {
           "description": {
             "type": "string"
-          },
-          "id": {
-            "$ref": "#/definitions/Uint128"
-          },
-          "is_enabled": {
-            "type": "boolean"
           },
           "rules": {
             "type": "array",
@@ -875,7 +867,7 @@
                   "to_add": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/Ruleset"
+                      "$ref": "#/definitions/NewRuleset"
                     }
                   },
                   "to_disable": {
@@ -1163,6 +1155,25 @@
         },
         "additionalProperties": false
       },
+      "NewRuleset": {
+        "type": "object",
+        "required": [
+          "description",
+          "rules"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "ProposalDetails": {
         "type": "object",
         "required": [
@@ -1217,33 +1228,6 @@
             "additionalProperties": false
           }
         ]
-      },
-      "Ruleset": {
-        "type": "object",
-        "required": [
-          "description",
-          "id",
-          "is_enabled",
-          "rules"
-        ],
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "id": {
-            "$ref": "#/definitions/Uint128"
-          },
-          "is_enabled": {
-            "type": "boolean"
-          },
-          "rules": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": false
       },
       "Status": {
         "oneOf": [
