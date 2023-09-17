@@ -411,6 +411,7 @@ fn create_wager_with_proposals() {
         wager_module_addr.clone(),
         &arena_wager_module::msg::ExecuteMsg::GenerateProposals {
             id: wager.id,
+            proposal_module_addr: prop_module.to_string(),
             proposal_details: ProposalDetails {
                 title: "Test Title".to_string(),
                 description: "Test description".to_string(),

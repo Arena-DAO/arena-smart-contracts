@@ -64,5 +64,4 @@ dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main"
 dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
 dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
 dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }
-dao-pre-propose-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }
 dao-testing = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }

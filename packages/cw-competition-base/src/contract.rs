@@ -13,10 +13,11 @@ use cw_competition::{
     proposal::get_competition_choices,
     state::{Competition, CompetitionResponse, CompetitionStatus, Config},
 };
-use cw_ownable::get_ownership;
+use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Item, Map};
 use cw_utils::parse_reply_instantiate_data;
 use dao_interface::state::ProposalModule;
+use dao_voting::pre_propose::ProposalCreationPolicy;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::CompetitionError;
@@ -94,13 +95,14 @@ where
                 description: msg.description.clone(),
             },
         )?;
-        cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
+        let ownership = initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
         self.competition_count
             .save(deps.storage, &Uint128::zero())?;
 
         Ok(Response::new()
             .add_attribute("key", msg.key)
-            .add_attribute("description", msg.description))
+            .add_attribute("description", msg.description)
+            .add_attributes(ownership.into_attributes()))
     }
 
     pub fn execute(
@@ -147,10 +149,12 @@ where
             }
             ExecuteBase::GenerateProposals {
                 id,
+                proposal_module_addr,
                 proposal_details,
             } => self.execute_generate_proposals(
                 deps,
                 env,
+                proposal_module_addr,
                 id,
                 proposal_details.title,
                 proposal_details.description,
@@ -202,6 +206,7 @@ where
         &self,
         deps: DepsMut,
         env: Env,
+        proposal_module_addr: String,
         id: Uint128,
         title: String,
         description: String,
@@ -213,11 +218,17 @@ where
         }
 
         let competition = competition.unwrap();
+        let proposal_module_addr = deps.api.addr_validate(&proposal_module_addr)?;
+        let voting_module: Addr = deps.querier.query_wasm_smart(
+            competition.dao.clone(),
+            &dao_interface::msg::QueryMsg::VotingModule {},
+        )?;
+        let cw4_group: Addr = deps.querier.query_wasm_smart(
+            voting_module,
+            &dao_voting_cw4::msg::QueryMsg::GroupContract {},
+        )?;
 
-        if competition.has_generated_proposals {
-            return Err(CompetitionError::ProposalsAlreadyGenerated {});
-        }
-
+        // Ensure that the proposal module is active on the competition's DAO
         let proposal_modules: Vec<ProposalModule> = deps.querier.query_wasm_smart(
             competition.dao.clone(),
             &dao_interface::msg::QueryMsg::ActiveProposalModules {
@@ -226,52 +237,57 @@ where
             },
         )?;
 
-        if proposal_modules.is_empty() {
+        if !proposal_modules
+            .iter()
+            .any(|x| x.address == proposal_module_addr)
+        {
             return Err(CompetitionError::StdError(StdError::GenericErr {
-                msg: "No active proposal module found".to_string(),
+                msg: "The given proposal module was not active on the competition's DAO"
+                    .to_string(),
             }));
         }
 
-        let proposal_module = &proposal_modules.first().unwrap().address;
+        // Ensure that the proposal module is a dao-proposal-multiple
+        let info = cw2::query_contract_info(&deps.querier, &proposal_module_addr)?;
 
-        let _config: dao_proposal_multiple::state::Config = deps.querier.query_wasm_smart(
-            proposal_module,
-            &dao_proposal_multiple::msg::QueryMsg::Config {},
+        if !info.contract.contains("dao-proposal-multiple") {
+            return Err(CompetitionError::StdError(StdError::GenericErr {
+                msg: "The given proposal module is not of type dao-proposal-multiple".to_string(),
+            }));
+        }
+
+        let creation_policy: ProposalCreationPolicy = deps.querier.query_wasm_smart(
+            proposal_module_addr.clone(),
+            &dao_proposal_multiple::msg::QueryMsg::ProposalCreationPolicy {},
         )?;
+        if !creation_policy.is_permitted(&env.contract.address) {
+            return Err(CompetitionError::StdError(StdError::GenericErr {
+                msg: "The competition module cannot propose on the given proposal module"
+                    .to_string(),
+            }));
+        }
 
-        let voting_module: Addr = deps.querier.query_wasm_smart(
-            competition.dao,
-            &dao_interface::msg::QueryMsg::VotingModule {},
-        )?;
-        let cw4_group: Addr = deps.querier.query_wasm_smart(
-            voting_module,
-            &dao_voting_cw4::msg::QueryMsg::GroupContract {},
-        )?;
-
-        self.temp_competition.save(deps.storage, &id.u128())?;
-
+        let choices =
+            get_competition_choices(deps.as_ref(), id, &env.contract.address, &cw4_group)?;
         let sub_msg = SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: proposal_module.to_string(),
+                contract_addr: proposal_module_addr.to_string(),
                 msg: to_binary(&dao_proposal_multiple::msg::ExecuteMsg::Propose {
                     title,
                     description,
-                    choices: get_competition_choices(
-                        deps.as_ref(),
-                        id,
-                        &env.contract.address,
-                        &cw4_group,
-                    )?,
+                    choices,
                     proposer: None,
                 })?,
                 funds: vec![],
             }),
             PROPOSALS_REPLY_ID,
         );
+        self.temp_competition.save(deps.storage, &id.u128())?;
 
         Ok(Response::new()
             .add_attribute("action", "generate_proposals")
             .add_attribute("id", id)
+            .add_attribute("proposal_module", proposal_module_addr.to_string())
             .add_submessage(sub_msg))
     }
 

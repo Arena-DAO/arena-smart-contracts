@@ -140,7 +140,8 @@
             "type": "object",
             "required": [
               "id",
-              "proposal_details"
+              "proposal_details",
+              "proposal_module_addr"
             ],
             "properties": {
               "id": {
@@ -148,6 +149,9 @@
               },
               "proposal_details": {
                 "$ref": "#/definitions/ProposalDetails"
+              },
+              "proposal_module_addr": {
+                "type": "string"
               }
             },
             "additionalProperties": false

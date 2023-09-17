@@ -42,9 +42,6 @@ pub enum CompetitionError {
     #[error("InvalidCompetitionStatus")]
     InvalidCompetitionStatus { current_status: CompetitionStatus },
 
-    #[error("ProposalsAlreadyGenerated")]
-    ProposalsAlreadyGenerated {},
-
     #[error("AttributeNotFound")]
     AttributeNotFound { key: String },
 }

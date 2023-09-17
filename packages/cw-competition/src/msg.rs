@@ -38,6 +38,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     },
     GenerateProposals {
         id: Uint128,
+        proposal_module_addr: String,
         proposal_details: ProposalDetails,
     },
     ProcessCompetition {
