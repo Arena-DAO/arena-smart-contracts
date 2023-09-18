@@ -42,6 +42,7 @@ dependencies = [
  "cw4-group 1.1.0",
  "dao-interface",
  "dao-pre-propose-base",
+ "dao-pre-propose-single",
  "dao-proposal-multiple",
  "dao-proposal-single",
  "dao-proposal-sudo",

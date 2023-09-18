@@ -42,6 +42,7 @@ cw-utils = { workspace = true }
 cw-utils-v16 = { version = "0.16", package ="cw-utils" }
 cw20 = "0.16"
 dao-proposal-sudo = { workspace = true }
+dao-pre-propose-single = { workspace = true }
 dao-proposal-multiple = { workspace = true }
 arena-wager-module = { workspace = true }
 arena-escrow = { workspace = true }

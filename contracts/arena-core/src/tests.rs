@@ -5,7 +5,7 @@ use arena_core_interface::msg::{
 use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, StdResult, Uint128, WasmMsg};
 use cw_balance::{Balance, MemberBalance};
 use cw_competition::state::CompetitionStatus;
-use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
+use cw_multi_test::{next_block, App, AppResponse, Contract, ContractWrapper, Executor};
 use cw_utils::Expiration;
 use dao_interface::{
     query::GetItemResponse,
@@ -252,6 +252,12 @@ fn create_wager_with_proposals() {
     let dpm_id = context
         .app
         .store_code(arena_testing::contracts::dao_proposal_multiple_contract());
+    let dps_id = context
+        .app
+        .store_code(dao_testing::contracts::proposal_single_contract());
+    let dpps_id = context
+        .app
+        .store_code(dao_testing::contracts::pre_propose_single_contract());
 
     let item_response: GetItemResponse = context
         .app
@@ -315,27 +321,61 @@ fn create_wager_with_proposals() {
                     admin: None,
                     label: "Cw4 Voting".to_string(),
                 },
-                proposal_modules_instantiate_info: vec![ModuleInstantiateInfo {
-                    code_id: dpm_id,
-                    msg: to_binary(&dao_proposal_multiple::msg::InstantiateMsg {
-                        voting_strategy:
-                            dao_voting::multiple_choice::VotingStrategy::SingleChoice {
-                                quorum: dao_voting::threshold::PercentageThreshold::Percent(
+                proposal_modules_instantiate_info: vec![
+                    ModuleInstantiateInfo {
+                        code_id: dpm_id,
+                        msg: to_binary(&dao_proposal_multiple::msg::InstantiateMsg {
+                            voting_strategy:
+                                dao_voting::multiple_choice::VotingStrategy::SingleChoice {
+                                    quorum: dao_voting::threshold::PercentageThreshold::Percent(
+                                        Decimal::one(),
+                                    ),
+                                },
+                            min_voting_period: None,
+                            max_voting_period: cw_utils_v16::Duration::Time(100000u64),
+                            only_members_execute: false,
+                            allow_revoting: false,
+                            pre_propose_info:
+                                dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
+                            close_proposal_on_execution_failure: false,
+                        })
+                        .unwrap(),
+                        admin: None,
+                        label: "Proposal Multiple".to_string(),
+                    },
+                    ModuleInstantiateInfo {
+                        code_id: dps_id,
+                        msg: to_binary(&dao_proposal_single::msg::InstantiateMsg {
+                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
+                                percentage: dao_voting::threshold::PercentageThreshold::Percent(
                                     Decimal::one(),
                                 ),
                             },
-                        min_voting_period: None,
-                        max_voting_period: cw_utils_v16::Duration::Time(100000u64),
-                        only_members_execute: false,
-                        allow_revoting: false,
-                        pre_propose_info:
-                            dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
-                        close_proposal_on_execution_failure: false,
-                    })
-                    .unwrap(),
-                    admin: Some(Admin::CoreModule {}),
-                    label: "Proposal Multiple".to_string(),
-                }],
+                            min_voting_period: None,
+                            max_voting_period: cw_utils_v16::Duration::Time(100000u64),
+                            only_members_execute: false,
+                            allow_revoting: false,
+                            pre_propose_info:
+                                dao_voting::pre_propose::PreProposeInfo::ModuleMayPropose {
+                                    info: ModuleInstantiateInfo {
+                                        code_id: dpps_id,
+                                        msg: to_binary(&dao_pre_propose_single::InstantiateMsg {
+                                            deposit_info: None,
+                                            open_proposal_submission: false,
+                                            extension: Empty {},
+                                        })
+                                        .unwrap(),
+                                        admin: None,
+                                        label: "Pre Propose Single".to_string(),
+                                    },
+                                },
+                            close_proposal_on_execution_failure: false,
+                        })
+                        .unwrap(),
+                        admin: None,
+                        label: "Proposal Single".to_string(),
+                    },
+                ],
                 initial_items: None,
                 dao_uri: None,
             })
@@ -390,7 +430,7 @@ fn create_wager_with_proposals() {
 
     let prop_module = Addr::unchecked(prop_module.unwrap());
 
-    context.app.update_block(|x| x.height += 1);
+    context.app.update_block(next_block);
 
     let wager: arena_wager_module::msg::WagerResponse = context
         .app
