@@ -383,8 +383,8 @@ where
         };
         let dao = self.get_dao(deps.as_ref())?;
         let msgs = vec![
-            SubMsg::reply_always(competition_dao.into_wasm_msg(dao.clone()), DAO_REPLY_ID),
-            SubMsg::reply_always(escrow.into_wasm_msg(dao), ESCROW_REPLY_ID),
+            SubMsg::reply_on_success(competition_dao.into_wasm_msg(dao.clone()), DAO_REPLY_ID),
+            SubMsg::reply_on_success(escrow.into_wasm_msg(dao), ESCROW_REPLY_ID),
         ];
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
