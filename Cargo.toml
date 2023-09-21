@@ -9,7 +9,7 @@ resolver = "2"
 edition = "2021"
 license = "BSD-3-Clause"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "0.7.5"
+version = "0.8.0"
 
 [profile.release]
 codegen-units = 1
@@ -44,6 +44,7 @@ getrandom = { version = "0.2.10", features = ["js"] }
 bnum = "0.8.0"
 cw-paginate = "0.2.1"
 cw-ownable = "0.5.1"
+cw-address-like = "1.0.4"
 
 #arena_dao dependencies
 cw-competition-base = { path = "./packages/cw-competition-base", features = ["library"] }

@@ -401,7 +401,7 @@ where
         deps: DepsMut,
         info: MessageInfo,
         id: Uint128,
-        distribution: Option<Vec<cw_balance::MemberShare>>,
+        distribution: Option<Vec<cw_balance::MemberShare<String>>>,
     ) -> Result<Response, CompetitionError> {
         let competition = match self.competitions.may_load(deps.storage, id.u128())? {
             Some(val) => Ok(val),

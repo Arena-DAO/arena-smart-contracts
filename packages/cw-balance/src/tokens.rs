@@ -1,23 +1,47 @@
+use std::fmt;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, StdResult};
 
 #[cw_serde]
 pub struct Cw721CollectionVerified {
-    pub addr: Addr,
+    pub address: Addr,
     pub token_ids: Vec<String>,
 }
 
 #[cw_serde]
 pub struct Cw721Collection {
-    pub addr: String,
+    pub address: String,
     pub token_ids: Vec<String>,
 }
 
 impl Cw721Collection {
     pub fn to_validated(self, deps: Deps) -> StdResult<Cw721CollectionVerified> {
         Ok(Cw721CollectionVerified {
-            addr: deps.api.addr_validate(&self.addr)?,
+            address: deps.api.addr_validate(&self.address)?,
             token_ids: self.token_ids,
         })
+    }
+}
+
+impl fmt::Display for Cw721Collection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "address: {}, token_ids: {}",
+            self.address,
+            self.token_ids.join(",")
+        )
+    }
+}
+
+impl fmt::Display for Cw721CollectionVerified {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "address: {}, token_ids: {}",
+            self.address,
+            self.token_ids.join(",")
+        )
     }
 }

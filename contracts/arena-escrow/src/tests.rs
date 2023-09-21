@@ -140,7 +140,7 @@ fn setup() -> Context {
                                 amount: Uint128::from(150u128),
                             }],
                             cw721: vec![Cw721Collection {
-                                addr: cw721_addr.to_string(),
+                                address: cw721_addr.to_string(),
                                 token_ids: vec![1.to_string(), 2.to_string(), 3.to_string()],
                             }],
                         },
@@ -163,7 +163,7 @@ fn setup() -> Context {
                                 amount: Uint128::from(300u128),
                             }],
                             cw721: vec![Cw721Collection {
-                                addr: cw721_addr.to_string(),
+                                address: cw721_addr.to_string(),
                                 token_ids: vec![7.to_string(), 8.to_string(), 9.to_string()],
                             }],
                         },
@@ -261,7 +261,7 @@ fn test_set_distribution() {
 
     assert!(res.is_ok());
 
-    let contract_distribution: Option<Vec<MemberShare>> = context
+    let contract_distribution: Option<Vec<MemberShare<String>>> = context
         .app
         .wrap()
         .query_wasm_smart(

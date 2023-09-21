@@ -5,13 +5,11 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
 use cw721::Cw721ExecuteMsg;
-use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
+use std::collections::btree_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-use crate::{
-    is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberShareVerified,
-};
+use crate::{is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberShare};
 
 #[cw_serde]
 pub struct MemberBalanceVerified {
@@ -67,7 +65,7 @@ impl Balance {
                 .iter()
                 .map(|x| {
                     Ok(Cw721CollectionVerified {
-                        addr: deps.api.addr_validate(&x.addr)?,
+                        address: deps.api.addr_validate(&x.address)?,
                         token_ids: x.token_ids.clone(),
                     })
                 })
@@ -86,19 +84,19 @@ pub struct BalanceVerified {
 
 impl Display for BalanceVerified {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        writeln!(f, "Native:")?;
+        writeln!(f, "Native: ")?;
         for coin in &self.native {
-            writeln!(f, "  {}: {}", coin.denom, coin.amount)?;
+            writeln!(f, "  {}", coin)?;
         }
 
         writeln!(f, "CW20:")?;
         for cw20_coin in &self.cw20 {
-            writeln!(f, "  {}: {}", cw20_coin.address, cw20_coin.amount)?;
+            writeln!(f, "  {}", cw20_coin)?;
         }
 
         writeln!(f, "CW721:")?;
         for cw721_tokens in &self.cw721 {
-            writeln!(f, "  {}: {:?}", cw721_tokens.addr, cw721_tokens.token_ids)?;
+            writeln!(f, "  {}", cw721_tokens)?;
         }
 
         Ok(())
@@ -117,7 +115,7 @@ impl BalanceVerified {
     pub fn is_ge(&self, other: &BalanceVerified) -> bool {
         // Helper function for comparing native tokens
         fn native_ge(self_native: &[Coin], other_native: &[Coin]) -> bool {
-            let self_map: HashMap<&str, &Coin> = self_native
+            let self_map: BTreeMap<&str, &Coin> = self_native
                 .iter()
                 .map(|coin| (coin.denom.as_str(), coin))
                 .collect();
@@ -136,7 +134,7 @@ impl BalanceVerified {
 
         // Helper function for comparing cw20 tokens
         fn cw20_ge(self_cw20: &[Cw20CoinVerified], other_cw20: &[Cw20CoinVerified]) -> bool {
-            let self_map: HashMap<&Addr, &Cw20CoinVerified> =
+            let self_map: BTreeMap<&Addr, &Cw20CoinVerified> =
                 self_cw20.iter().map(|coin| (&coin.address, coin)).collect();
 
             for other_coin in other_cw20 {
@@ -156,14 +154,14 @@ impl BalanceVerified {
             self_cw721: &[Cw721CollectionVerified],
             other_cw721: &[Cw721CollectionVerified],
         ) -> bool {
-            let self_map: HashMap<&Addr, &Vec<String>> = self_cw721
+            let self_map: BTreeMap<&Addr, &Vec<String>> = self_cw721
                 .iter()
-                .map(|collection| (&collection.addr, &collection.token_ids))
+                .map(|collection| (&collection.address, &collection.token_ids))
                 .collect();
 
             for other_collection in other_cw721 {
-                if let Some(self_token_ids) = self_map.get(&other_collection.addr) {
-                    let self_token_ids: HashSet<&String> = self_token_ids.iter().collect();
+                if let Some(self_token_ids) = self_map.get(&other_collection.address) {
+                    let self_token_ids: BTreeSet<&String> = self_token_ids.iter().collect();
 
                     for token_id in &other_collection.token_ids {
                         if !self_token_ids.contains(token_id) {
@@ -197,11 +195,12 @@ impl BalanceVerified {
                 .find(|cw20_coin| cw20_coin.address == identifier)
                 .map(|cw20_coin| cw20_coin.amount),
             TokenType::Cw721 => {
-                if self
-                    .cw721
-                    .iter()
-                    .any(|cw721_tokens| cw721_tokens.token_ids.contains(&identifier.to_string()))
-                {
+                if self.cw721.iter().any(|cw721_tokens| {
+                    cw721_tokens
+                        .token_ids
+                        .iter()
+                        .any(|token| cw721_tokens.address.to_string() + token == identifier)
+                }) {
                     Some(Uint128::one())
                 } else {
                     None
@@ -212,53 +211,44 @@ impl BalanceVerified {
 
     pub fn checked_add(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
         if self.is_empty() {
-            return Ok(other.to_owned());
+            return Ok(other.clone());
         }
         if other.is_empty() {
-            return Ok(self.to_owned());
+            return Ok(self.clone());
         }
 
-        let mut native_map: HashMap<String, Uint128> = self
+        let mut native_map: BTreeMap<&String, Uint128> = self
             .native
             .iter()
-            .map(|coin| (coin.denom.clone(), coin.amount))
+            .map(|coin| (&coin.denom, coin.amount))
             .collect();
         for coin in &other.native {
-            let entry = native_map
-                .entry(coin.denom.clone())
-                .or_insert(Uint128::zero());
+            let entry = native_map.entry(&coin.denom).or_default();
             *entry = entry.checked_add(coin.amount)?;
         }
 
-        let mut cw20_map: HashMap<Addr, Uint128> = self
+        let mut cw20_map: BTreeMap<&Addr, Uint128> = self
             .cw20
             .iter()
-            .map(|coin| (coin.address.clone(), coin.amount))
+            .map(|coin| (&coin.address, coin.amount))
             .collect();
         for coin in &other.cw20 {
-            let entry = cw20_map
-                .entry(coin.address.clone())
-                .or_insert(Uint128::zero());
+            let entry = cw20_map.entry(&coin.address).or_insert(Uint128::zero());
             *entry = entry.checked_add(coin.amount)?;
         }
 
-        let mut cw721_map: HashMap<Addr, HashSet<String>> = self
+        let mut cw721_map: BTreeMap<&Addr, BTreeSet<&String>> = self
             .cw721
             .iter()
-            .map(|token| {
-                (
-                    token.addr.clone(),
-                    token.token_ids.iter().cloned().collect(),
-                )
-            })
+            .map(|token| (&token.address, token.token_ids.iter().collect()))
             .collect();
 
         for token in &other.cw721 {
-            let entry = cw721_map.entry(token.addr.clone()).or_default();
+            let entry = cw721_map.entry(&token.address).or_default();
 
             for token_id in &token.token_ids {
                 // If the token_id is already present, it's a duplicate and we return an error.
-                if !entry.insert(token_id.clone()) {
+                if !entry.insert(token_id) {
                     return Err(cosmwasm_std::StdError::Overflow {
                         source: OverflowError::new(OverflowOperation::Add, self, other),
                     });
@@ -269,17 +259,26 @@ impl BalanceVerified {
         Ok(BalanceVerified {
             native: native_map
                 .into_iter()
-                .map(|(denom, amount)| Coin { denom, amount })
+                .map(|(denom, amount)| Coin {
+                    denom: denom.to_string(),
+                    amount,
+                })
                 .collect(),
             cw20: cw20_map
                 .into_iter()
-                .map(|(address, amount)| Cw20CoinVerified { address, amount })
+                .map(|(address, amount)| Cw20CoinVerified {
+                    address: address.clone(),
+                    amount,
+                })
                 .collect(),
             cw721: cw721_map
                 .into_iter()
                 .map(|(addr, token_ids)| Cw721CollectionVerified {
-                    addr,
-                    token_ids: token_ids.into_iter().collect(),
+                    address: addr.clone(),
+                    token_ids: token_ids
+                        .into_iter()
+                        .map(|token| token.to_string())
+                        .collect(),
                 })
                 .collect(),
         })
@@ -287,16 +286,16 @@ impl BalanceVerified {
 
     pub fn checked_sub(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
         if other.is_empty() {
-            return Ok(self.to_owned());
+            return Ok(self.clone());
         }
 
-        let mut native_map: HashMap<String, Uint128> = self
+        let mut native_map: BTreeMap<&String, Uint128> = self
             .native
             .iter()
-            .map(|coin| (coin.denom.clone(), coin.amount))
+            .map(|coin| (&coin.denom, coin.amount))
             .collect();
         for coin in &other.native {
-            match native_map.entry(coin.denom.clone()) {
+            match native_map.entry(&coin.denom) {
                 Entry::Occupied(mut entry) => {
                     let total_amount = entry.get_mut().checked_sub(coin.amount)?;
                     if total_amount.is_zero() {
@@ -318,13 +317,13 @@ impl BalanceVerified {
             }
         }
 
-        let mut cw20_map: HashMap<Addr, Uint128> = self
+        let mut cw20_map: BTreeMap<&Addr, Uint128> = self
             .cw20
             .iter()
-            .map(|coin| (coin.address.clone(), coin.amount))
+            .map(|coin| (&coin.address, coin.amount))
             .collect();
         for coin in &other.cw20 {
-            match cw20_map.entry(coin.address.clone()) {
+            match cw20_map.entry(&coin.address) {
                 Entry::Occupied(mut entry) => {
                     let total_amount = entry.get_mut().checked_sub(coin.amount)?;
                     if total_amount.is_zero() {
@@ -346,18 +345,13 @@ impl BalanceVerified {
             }
         }
 
-        let mut cw721_map: HashMap<Addr, HashSet<String>> = self
+        let mut cw721_map: BTreeMap<&Addr, BTreeSet<&String>> = self
             .cw721
             .iter()
-            .map(|token| {
-                (
-                    token.addr.clone(),
-                    token.token_ids.iter().cloned().collect(),
-                )
-            })
+            .map(|token| (&token.address, token.token_ids.iter().collect()))
             .collect();
         for token in &other.cw721 {
-            if let Some(entry_set) = cw721_map.get_mut(&token.addr) {
+            if let Some(entry_set) = cw721_map.get_mut(&token.address) {
                 for token_id in &token.token_ids {
                     // Removes the token_id from the set if it exists; no-op if it doesn't
                     if !entry_set.remove(token_id) {
@@ -366,6 +360,10 @@ impl BalanceVerified {
                             source: OverflowError::new(OverflowOperation::Sub, self, other),
                         });
                     }
+                }
+
+                if entry_set.is_empty() {
+                    cw721_map.remove(&token.address);
                 }
             } else {
                 // Return error if a corresponding addr is missing
@@ -378,17 +376,26 @@ impl BalanceVerified {
         Ok(BalanceVerified {
             native: native_map
                 .into_iter()
-                .map(|(denom, amount)| Coin { denom, amount })
+                .map(|(denom, amount)| Coin {
+                    denom: denom.to_string(),
+                    amount,
+                })
                 .collect(),
             cw20: cw20_map
                 .into_iter()
-                .map(|(address, amount)| Cw20CoinVerified { address, amount })
+                .map(|(address, amount)| Cw20CoinVerified {
+                    address: address.clone(),
+                    amount,
+                })
                 .collect(),
             cw721: cw721_map
                 .into_iter()
                 .map(|(addr, tokens)| Cw721CollectionVerified {
-                    addr,
-                    token_ids: tokens.into_iter().collect(),
+                    address: addr.clone(),
+                    token_ids: tokens
+                        .into_iter()
+                        .map(|token_id| token_id.to_string())
+                        .collect(),
                 })
                 .collect(),
         })
@@ -479,7 +486,7 @@ impl BalanceVerified {
                 let msg = msg.clone();
                 cw721_collection.token_ids.iter().map(move |token_id| {
                     let exec_msg = WasmMsg::Execute {
-                        contract_addr: cw721_collection.addr.to_string(),
+                        contract_addr: cw721_collection.address.to_string(),
                         msg: to_binary(&Cw721ExecuteMsg::SendNft {
                             contract: contract.clone(),
                             token_id: token_id.clone(),
@@ -500,7 +507,7 @@ impl BalanceVerified {
                 let recipient = recipient.clone();
                 cw721_collection.token_ids.iter().map(move |token_id| {
                     let exec_msg = WasmMsg::Execute {
-                        contract_addr: cw721_collection.addr.to_string(),
+                        contract_addr: cw721_collection.address.to_string(),
                         msg: to_binary(&Cw721ExecuteMsg::TransferNft {
                             recipient: recipient.to_string(),
                             token_id: token_id.clone(),
@@ -534,12 +541,12 @@ impl BalanceVerified {
     ///
     /// # Arguments
     ///
-    /// * `weights` - A reference to a `HashMap` containing user addresses and their corresponding weights as `u128` values.
+    /// * `weights` - A reference to a `BTreeMap` containing user addresses and their corresponding weights as `u128` values.
     /// * `remainder_address` - A reference to the address that will receive any remaining tokens after the split, as well as all NFTs.
     ///
     /// # Returns
     ///
-    /// A `StdResult` containing a `HashMap` of user addresses mapped to their respective split `Balance` instances.
+    /// A `StdResult` containing a `BTreeMap` of user addresses mapped to their respective split `Balance` instances.
     ///
     /// # Errors
     ///
@@ -550,7 +557,7 @@ impl BalanceVerified {
     /// * Subtraction underflow when updating the remainders for native and CW20 tokens.
     pub fn split(
         &self,
-        distribution: &Vec<MemberShareVerified>,
+        distribution: &Vec<MemberShare<Addr>>,
         remainder_address: &Addr,
     ) -> Result<Vec<MemberBalanceVerified>, BalanceError> {
         let total_weight = distribution
@@ -560,12 +567,12 @@ impl BalanceVerified {
             })?;
         let mut split_balances: Vec<MemberBalanceVerified> = Vec::new();
 
-        let mut remainders_native: HashMap<String, Uint128> = self
+        let mut remainders_native: BTreeMap<String, Uint128> = self
             .native
             .iter()
             .map(|x| (x.denom.clone(), x.amount))
             .collect();
-        let mut remainders_cw20: HashMap<Addr, Uint128> = self
+        let mut remainders_cw20: BTreeMap<Addr, Uint128> = self
             .cw20
             .iter()
             .map(|x| (x.address.clone(), x.amount))
@@ -574,7 +581,7 @@ impl BalanceVerified {
         for member_share in distribution {
             let weight_fraction = Decimal::from_ratio(member_share.shares, total_weight);
 
-            let mut split_native = HashMap::new();
+            let mut split_native = BTreeMap::new();
             for coin in &self.native {
                 let decimal_amount = Decimal::from_atomics(coin.amount, 0u32)?;
                 let split_amount = weight_fraction.checked_mul(decimal_amount)?.to_uint_floor();
@@ -587,7 +594,7 @@ impl BalanceVerified {
                 split_native.insert(coin.denom.clone(), split_amount);
             }
 
-            let mut split_cw20 = HashMap::new();
+            let mut split_cw20 = BTreeMap::new();
             for cw20_coin in &self.cw20 {
                 let decimal_amount = Decimal::from_atomics(cw20_coin.amount, 0u32)?;
                 let split_amount = weight_fraction.checked_mul(decimal_amount)?.to_uint_floor();
@@ -633,22 +640,14 @@ impl BalanceVerified {
             cw721: self.cw721.clone(),
         };
 
-        let remainder_index = split_balances
-            .iter()
-            .position(|member_balance| member_balance.addr == *remainder_address);
-
-        if let Some(index) = remainder_index {
-            let remainder_member_balance = &mut split_balances[index];
-            remainder_member_balance.balance = remainder_member_balance
-                .balance
-                .checked_add(&remainder_balance)?;
-        } else {
+        if !remainder_balance.is_empty() {
             let remainder_member_balance = MemberBalanceVerified {
                 addr: remainder_address.clone(),
                 balance: remainder_balance,
             };
             split_balances.push(remainder_member_balance);
         }
+
         Ok(split_balances)
     }
 }

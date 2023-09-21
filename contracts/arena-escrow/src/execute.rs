@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare, MemberShareVerified};
+use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare};
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
@@ -110,13 +110,13 @@ pub fn withdraw(
 pub fn set_distribution(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Vec<MemberShare>,
+    distribution: Vec<MemberShare<String>>,
 ) -> Result<Response, ContractError> {
     // Convert String keys to Addr
     let validated_distribution = distribution
         .into_iter()
-        .map(|x| x.to_verified(deps.as_ref()))
-        .collect::<StdResult<Vec<MemberShareVerified>>>()?;
+        .map(|x| x.to_validated(deps.as_ref()))
+        .collect::<StdResult<_>>()?;
 
     // Save distribution in the state
     PRESET_DISTRIBUTION.save(deps.storage, &info.sender, &validated_distribution)?;
@@ -166,7 +166,7 @@ pub fn receive_cw721(
 ) -> Result<Response, ContractError> {
     let sender_addr = deps.api.addr_validate(&cw721_receive_msg.sender)?;
     let cw721_balance = vec![Cw721CollectionVerified {
-        addr: info.sender,
+        address: info.sender,
         token_ids: vec![cw721_receive_msg.token_id],
     }];
 
@@ -237,7 +237,7 @@ fn receive_balance(
 pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Option<Vec<MemberShare>>,
+    distribution: Option<Vec<MemberShare<String>>>,
     remainder_addr: String,
 ) -> Result<Response, ContractError> {
     assert_owner(deps.storage, &info.sender)?;
@@ -256,7 +256,7 @@ pub fn distribute(
         // Validate the provided distribution.
         let validated_distribution = distribution
             .iter()
-            .map(|x| x.to_verified(deps.as_ref()))
+            .map(|x| x.to_validated(deps.as_ref()))
             .collect::<StdResult<_>>()?;
 
         // Calculate the splits based on the distributable total and the validated distribution.

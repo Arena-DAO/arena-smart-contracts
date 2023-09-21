@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-wager-module",
-  "contract_version": "0.7.5",
+  "contract_version": "0.8.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -177,7 +177,7 @@
                   "null"
                 ],
                 "items": {
-                  "$ref": "#/definitions/MemberShare"
+                  "$ref": "#/definitions/MemberShare_for_String"
                 }
               },
               "id": {
@@ -372,7 +372,7 @@
           }
         ]
       },
-      "MemberShare": {
+      "MemberShare_for_String": {
         "type": "object",
         "required": [
           "addr",

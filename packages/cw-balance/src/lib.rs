@@ -6,7 +6,7 @@ mod util;
 
 pub use balance::{Balance, BalanceVerified, MemberBalance, MemberBalanceVerified, TokenType};
 pub use error::BalanceError;
-pub use shares::{MemberShare, MemberShareVerified};
+pub use shares::MemberShare;
 pub use tokens::{Cw721Collection, Cw721CollectionVerified};
 pub use util::is_contract;
 
