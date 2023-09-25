@@ -34,10 +34,23 @@ pub fn instantiate_contract(
     info: MessageInfo,
     due: Vec<MemberBalance>,
 ) -> Result<(), ContractError> {
+    if due.is_empty() {
+        return Err(ContractError::NoneDue {});
+    }
+
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
     for member_balance in due {
         let member_balance = member_balance.to_verified(deps.as_ref())?;
+
+        if DUE.has(deps.storage, &member_balance.addr) {
+            return Err(ContractError::StdError(
+                cosmwasm_std::StdError::GenericErr {
+                    msg: "Cannot have duplicate addresses due".to_string(),
+                },
+            ));
+        }
+
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
         IS_FUNDED.save(deps.storage, &member_balance.addr, &false)?;
     }

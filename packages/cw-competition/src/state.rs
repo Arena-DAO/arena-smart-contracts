@@ -1,6 +1,7 @@
 use arena_core_interface::msg::Ruleset;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Deps, StdResult, Uint128};
+use cw_balance::MemberShare;
 use cw_ownable::get_ownership;
 use cw_utils::Expiration;
 use std::fmt;
@@ -29,8 +30,9 @@ impl fmt::Display for CompetitionStatus {
 #[cw_serde]
 pub struct Competition<CompetitionExt> {
     pub id: Uint128,
+    pub admin_dao: Addr,
     pub dao: Addr,
-    pub escrow: Addr,
+    pub escrow: Option<Addr>,
     pub name: String,
     pub description: String,
     pub start_height: u64,
@@ -40,6 +42,7 @@ pub struct Competition<CompetitionExt> {
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
     pub has_generated_proposals: bool,
+    pub result: Option<Vec<MemberShare<Addr>>>,
 }
 
 /// CompetitionResponse has all of the same fields as Competition
@@ -48,7 +51,7 @@ pub struct Competition<CompetitionExt> {
 pub struct CompetitionResponse<CompetitionExt> {
     pub id: Uint128,
     pub dao: Addr,
-    pub escrow: Addr,
+    pub escrow: Option<Addr>,
     pub name: String,
     pub description: String,
     pub start_height: u64,
@@ -59,6 +62,7 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub extension: CompetitionExt,
     pub has_generated_proposals: bool,
     pub expiration: Expiration,
+    pub result: Option<Vec<MemberShare<Addr>>>,
 }
 
 impl<CompetitionExt> Competition<CompetitionExt> {
@@ -101,6 +105,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             extension: self.extension,
             has_generated_proposals: self.has_generated_proposals,
             expiration: self.expiration,
+            result: self.result,
         })
     }
 }

@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use crate::state::CompetitionStatus;
 #[allow(unused_imports)]
 use crate::state::{CompetitionResponse, Config};
 use arena_core_interface::msg::ProposalDetails;
@@ -12,7 +13,7 @@ use dao_interface::state::ModuleInstantiateInfo;
 
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
-    pub key: String, //this is used to map a key (wager) to a module
+    pub key: String, //this is used to map a key (wager, tournament, league) to a module
     pub description: String,
     pub extension: InstantiateExt,
 }
@@ -28,7 +29,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     Activate {},
     CreateCompetition {
         competition_dao: ModuleInstantiateInfo,
-        escrow: ModuleInstantiateInfo,
+        escrow: Option<ModuleInstantiateInfo>,
         name: String,
         description: String,
         expiration: Expiration,
@@ -71,6 +72,7 @@ where
         start_after: Option<Uint128>,
         limit: Option<u32>,
         include_ruleset: Option<bool>,
+        status: Option<CompetitionStatus>,
     },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },

@@ -13,11 +13,11 @@ pub type CompetitionModule = CompetitionModuleContract<Empty, Empty, Empty, Empt
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     mut deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, CompetitionError> {
-    let resp = CompetitionModule::default().instantiate(deps.branch(), info, msg)?;
+    let resp = CompetitionModule::default().instantiate(deps.branch(), env, info, msg)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(resp)
 }

@@ -537,24 +537,7 @@ impl BalanceVerified {
             .collect()
     }
 
-    /// Splits a given `Balance` among multiple users based on their assigned weights.
-    ///
-    /// # Arguments
-    ///
-    /// * `weights` - A reference to a `BTreeMap` containing user addresses and their corresponding weights as `u128` values.
-    /// * `remainder_address` - A reference to the address that will receive any remaining tokens after the split, as well as all NFTs.
-    ///
-    /// # Returns
-    ///
-    /// A `StdResult` containing a `BTreeMap` of user addresses mapped to their respective split `Balance` instances.
-    ///
-    /// # Errors
-    ///
-    /// This function may return an error if any of the following occurs:
-    ///
-    /// * Division by zero when calculating the weight fraction.
-    /// * Multiplication overflow when calculating the split amounts for native and CW20 tokens.
-    /// * Subtraction underflow when updating the remainders for native and CW20 tokens.
+    /// Splits the balance among multiple users based on their assigned weights.
     pub fn split(
         &self,
         distribution: &Vec<MemberShare<Addr>>,
@@ -641,11 +624,17 @@ impl BalanceVerified {
         };
 
         if !remainder_balance.is_empty() {
-            let remainder_member_balance = MemberBalanceVerified {
-                addr: remainder_address.clone(),
-                balance: remainder_balance,
-            };
-            split_balances.push(remainder_member_balance);
+            if let Some(member_balance) = split_balances
+                .iter_mut()
+                .find(|mb| mb.addr == remainder_address)
+            {
+                member_balance.balance = member_balance.balance.checked_add(&remainder_balance)?;
+            } else {
+                split_balances.push(MemberBalanceVerified {
+                    addr: remainder_address.clone(),
+                    balance: remainder_balance,
+                });
+            }
         }
 
         Ok(split_balances)

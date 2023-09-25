@@ -111,14 +111,11 @@ dependencies = [
 name = "arena-wager-module"
 version = "0.8.0"
 dependencies = [
- "arena-testing",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-competition",
  "cw-competition-base",
- "cw-multi-test",
  "cw2 1.1.0",
- "dao-testing",
  "getrandom",
 ]
 
