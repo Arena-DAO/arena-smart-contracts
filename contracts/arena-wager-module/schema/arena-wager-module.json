@@ -83,7 +83,6 @@
             "required": [
               "competition_dao",
               "description",
-              "escrow",
               "expiration",
               "extension",
               "name",
@@ -97,7 +96,14 @@
                 "type": "string"
               },
               "escrow": {
-                "$ref": "#/definitions/ModuleInstantiateInfo"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/ModuleInstantiateInfo"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "expiration": {
                 "$ref": "#/definitions/Expiration"
@@ -552,6 +558,16 @@
                     "type": "null"
                   }
                 ]
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/CompetitionStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -596,6 +612,15 @@
       }
     ],
     "definitions": {
+      "CompetitionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "active",
+          "inactive",
+          "jailed"
+        ]
+      },
       "Empty": {
         "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
         "type": "object"
@@ -640,7 +665,6 @@
       "required": [
         "dao",
         "description",
-        "escrow",
         "expiration",
         "extension",
         "has_generated_proposals",
@@ -659,7 +683,14 @@
           "type": "string"
         },
         "escrow": {
-          "$ref": "#/definitions/Addr"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Addr"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "expiration": {
           "$ref": "#/definitions/Expiration"
@@ -678,6 +709,15 @@
         },
         "name": {
           "type": "string"
+        },
+        "result": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/MemberShare_for_Addr"
+          }
         },
         "rules": {
           "type": "array",
@@ -770,6 +810,22 @@
             }
           ]
         },
+        "MemberShare_for_Addr": {
+          "type": "object",
+          "required": [
+            "addr",
+            "shares"
+          ],
+          "properties": {
+            "addr": {
+              "$ref": "#/definitions/Addr"
+            },
+            "shares": {
+              "$ref": "#/definitions/Uint128"
+            }
+          },
+          "additionalProperties": false
+        },
         "Ruleset": {
           "type": "object",
           "required": [
@@ -839,7 +895,6 @@
           "required": [
             "dao",
             "description",
-            "escrow",
             "expiration",
             "extension",
             "has_generated_proposals",
@@ -858,7 +913,14 @@
               "type": "string"
             },
             "escrow": {
-              "$ref": "#/definitions/Addr"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "expiration": {
               "$ref": "#/definitions/Expiration"
@@ -877,6 +939,15 @@
             },
             "name": {
               "type": "string"
+            },
+            "result": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/MemberShare_for_Addr"
+              }
             },
             "rules": {
               "type": "array",
@@ -964,6 +1035,22 @@
               "additionalProperties": false
             }
           ]
+        },
+        "MemberShare_for_Addr": {
+          "type": "object",
+          "required": [
+            "addr",
+            "shares"
+          ],
+          "properties": {
+            "addr": {
+              "$ref": "#/definitions/Addr"
+            },
+            "shares": {
+              "$ref": "#/definitions/Uint128"
+            }
+          },
+          "additionalProperties": false
         },
         "Ruleset": {
           "type": "object",
