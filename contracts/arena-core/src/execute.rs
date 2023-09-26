@@ -1,7 +1,7 @@
 use arena_core_interface::msg::{NewRuleset, PrePropose, ProposeMessage, ProposeMessages, Ruleset};
 use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
-    StdError, SubMsg, Uint128, WasmMsg,
+    StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::error::PreProposeError;
@@ -23,21 +23,33 @@ pub fn update_competition_modules(
     to_add: Vec<ModuleInstantiateInfo>,
     to_disable: Vec<String>,
 ) -> Result<Response, ContractError> {
+    // Ensure sender is authorized
     if PrePropose::default().dao.load(deps.storage)? != sender {
         return Err(ContractError::Unauthorized {});
     }
 
-    for addr in to_disable {
-        let addr = deps.api.addr_validate(&addr)?;
-        let module = competition_modules().update(deps.storage, addr.clone(), |x| match x {
-            Some(mut module) => {
+    // Disable specified competition modules
+    for module_addr in &to_disable {
+        let addr = deps.api.addr_validate(module_addr)?;
+        let module = competition_modules().update(
+            deps.storage,
+            addr.clone(),
+            |maybe_module| -> Result<_, ContractError> {
+                let mut module =
+                    maybe_module.ok_or(ContractError::CompetitionModuleDoesNotExist {})?;
                 module.is_enabled = false;
                 Ok(module)
+            },
+        )?;
+
+        if let Some(module_addr) = KEYS.may_load(deps.storage, module.key.clone())? {
+            if module_addr == module.addr {
+                KEYS.remove(deps.storage, module.key);
             }
-            None => Err(ContractError::CompetitionModuleDoesNotExist {}),
-        })?;
-        KEYS.remove(deps.storage, module.key);
+        }
     }
+
+    // Convert new modules into wasm messages and prepare for instantiation
     let competition_module_msgs: Vec<SubMsg> = to_add
         .into_iter()
         .map(|info| info.into_wasm_msg(sender.clone()))
@@ -77,41 +89,39 @@ pub fn update_rulesets(
     to_add: Vec<NewRuleset>,
     to_disable: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
+    // Ensure sender is authorized
     if PrePropose::default().dao.load(deps.storage)? != sender {
         return Err(ContractError::Unauthorized {});
     }
 
+    // Disable specified rulesets
     for id in to_disable {
-        rulesets().update(deps.storage, id.u128(), |x| match x {
-            Some(mut ruleset) => {
-                ruleset.is_enabled = false;
-                Ok(ruleset)
-            }
-            None => Err(StdError::GenericErr {
+        rulesets().update(deps.storage, id.u128(), |maybe_ruleset| -> StdResult<_> {
+            let mut ruleset = maybe_ruleset.ok_or(StdError::GenericErr {
                 msg: format!("Could not find a ruleset with the id {}", id),
-            }),
+            })?;
+            ruleset.is_enabled = false;
+            Ok(ruleset)
         })?;
     }
 
-    let mut id = RULESET_COUNT.may_load(deps.storage)?.unwrap_or_default();
+    // Add new rulesets
+    let mut current_id = RULESET_COUNT.may_load(deps.storage)?.unwrap_or_default();
     for ruleset in to_add {
-        rulesets().save(
-            deps.storage,
-            id.u128(),
-            &Ruleset {
-                id,
-                rules: ruleset.rules,
-                description: ruleset.description,
-                is_enabled: true,
-            },
-        )?;
-        id = id.checked_add(Uint128::one())?;
+        let new_ruleset = Ruleset {
+            id: current_id,
+            rules: ruleset.rules,
+            description: ruleset.description,
+            is_enabled: true,
+        };
+        rulesets().save(deps.storage, current_id.u128(), &new_ruleset)?;
+        current_id = current_id.checked_add(Uint128::one())?;
     }
-    RULESET_COUNT.save(deps.storage, &id)?;
+    RULESET_COUNT.save(deps.storage, &current_id)?;
 
     Ok(Response::new()
         .add_attribute("action", "update_rulesets")
-        .add_attribute("ruleset_count", id))
+        .add_attribute("ruleset_count", current_id))
 }
 
 pub fn check_can_submit(

@@ -197,8 +197,8 @@ where
                 rulesets,
                 extension,
             ),
-            ExecuteBase::DeclareResult { propose_message } => {
-                self.execute_declare_result(deps, env, info, propose_message)
+            ExecuteBase::ProposeResult { propose_message } => {
+                self.execute_propose_result(deps, env, info, propose_message)
             }
             ExecuteBase::ProcessCompetition { id, distribution } => {
                 self.execute_process_competition(deps, info, id, distribution)
@@ -218,28 +218,22 @@ where
         deps: DepsMut,
         info: MessageInfo,
     ) -> Result<Response, CompetitionError> {
+        // Load competition ID associated with the escrow
         let id = self
             .escrow_to_competition_map
-            .may_load(deps.storage, info.sender.clone())?;
-
-        if id.is_none() {
-            return Err(CompetitionError::UnknownEscrow {
+            .may_load(deps.storage, info.sender.clone())?
+            .ok_or(CompetitionError::UnknownEscrow {
                 addr: info.sender.to_string(),
-            });
-        }
+            })?;
 
-        let id = id.unwrap();
+        // Load competition using the ID
+        let mut competition = self
+            .competitions
+            .may_load(deps.storage, id)?
+            .ok_or(CompetitionError::UnknownCompetitionId { id })?;
 
-        let competition = self.competitions.may_load(deps.storage, id)?;
-
-        if competition.is_none() {
-            return Err(CompetitionError::UnknownCompetitionId { id });
-        }
-
-        let mut competition = competition.unwrap();
-
+        // Update competition status
         competition.status = CompetitionStatus::Active;
-
         self.competitions.save(deps.storage, id, &competition)?;
 
         Ok(Response::new()
@@ -248,7 +242,7 @@ where
             .add_attribute("escrow", info.sender))
     }
 
-    pub fn execute_declare_result(
+    pub fn execute_propose_result(
         &self,
         deps: DepsMut,
         env: Env,
@@ -256,13 +250,14 @@ where
         propose_message: ProposeMessage,
     ) -> Result<Response, CompetitionError> {
         let id = propose_message.id;
-        let competition = self.competitions.may_load(deps.storage, id.u128())?;
-        if competition.is_none() {
-            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
-        }
-        let competition = competition.unwrap();
 
-        // Find a valid proposal module
+        // Load competition
+        let competition = self
+            .competitions
+            .may_load(deps.storage, id.u128())?
+            .ok_or(CompetitionError::UnknownCompetitionId { id: id.u128() })?;
+
+        // Query active proposal modules
         let proposal_modules: Vec<ProposalModule> = deps.querier.query_wasm_smart(
             competition.dao.clone(),
             &dao_interface::msg::QueryMsg::ActiveProposalModules {
@@ -271,49 +266,48 @@ where
             },
         )?;
 
+        // Find a valid proposal module
         let mut proposal_module_addr = None;
         let mut proposer = None;
         for proposal_module in proposal_modules {
-            // Ensure that the proposal module is of type dao-proposal-single
-            let contract_info_result =
-                cw2::query_contract_info(&deps.querier, &proposal_module.address);
-
-            if contract_info_result.is_err() {
-                continue;
-            }
-            if !contract_info_result
-                .unwrap()
-                .contract
-                .contains("dao-proposal-single")
+            let contract_info = cw2::query_contract_info(&deps.querier, &proposal_module.address);
+            if contract_info.is_err()
+                || !contract_info
+                    .unwrap()
+                    .contract
+                    .contains("dao-proposal-single")
             {
                 continue;
             }
 
-            let creation_policy_result = deps.querier.query_wasm_smart::<ProposalCreationPolicy>(
+            let creation_policy = deps.querier.query_wasm_smart::<ProposalCreationPolicy>(
                 proposal_module.address.clone(),
                 &dao_proposal_single::msg::QueryMsg::ProposalCreationPolicy {},
             );
-            if creation_policy_result.is_err() {
-                continue;
-            }
-            let creation_policy = creation_policy_result.unwrap();
-            if !creation_policy.is_permitted(&env.contract.address) {
+            if creation_policy.is_err()
+                || !creation_policy
+                    .as_ref()
+                    .unwrap()
+                    .is_permitted(&env.contract.address)
+            {
                 continue;
             }
 
             proposal_module_addr = Some(proposal_module.address);
-            proposer = match creation_policy {
+            proposer = match creation_policy.unwrap() {
                 ProposalCreationPolicy::Anyone {} => None,
                 ProposalCreationPolicy::Module { addr: _ } => Some(info.sender.to_string()),
-            }
-        }
-        if proposal_module_addr.is_none() {
-            return Err(CompetitionError::StdError(StdError::GenericErr {
-                msg: "Could not find an accessible dao-proposal-single module".to_owned(),
-            }));
+            };
+            break; // Found a valid proposal module, break out of the loop
         }
 
-        // Construct message
+        // Ensure a valid proposal module was found
+        let proposal_module_addr =
+            proposal_module_addr.ok_or(CompetitionError::StdError(StdError::GenericErr {
+                msg: "Could not find an accessible dao-proposal-single module".to_owned(),
+            }))?;
+
+        // Construct proposal message
         let propose_message = ProposeMessages::Propose(SingleChoiceProposeMsg {
             title: propose_message.title,
             description: propose_message.description,
@@ -331,7 +325,7 @@ where
         // Prepare reply
         let sub_msg = SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: proposal_module_addr.as_ref().unwrap().to_string(),
+                contract_addr: proposal_module_addr.to_string(),
                 msg: to_binary(&propose_message)?,
                 funds: vec![],
             }),
@@ -342,7 +336,7 @@ where
         Ok(Response::new()
             .add_attribute("action", "generate_proposals")
             .add_attribute("id", id)
-            .add_attribute("proposal_module", proposal_module_addr.unwrap().to_string())
+            .add_attribute("proposal_module", proposal_module_addr.to_string())
             .add_submessage(sub_msg))
     }
 
@@ -353,57 +347,53 @@ where
         info: MessageInfo,
         propose_message: ProposeMessage,
     ) -> Result<Response, CompetitionError> {
+        // Ensure DAO has an owner
         let dao = get_ownership(deps.storage)?;
-
-        if dao.owner.is_none() {
-            return Err(CompetitionError::OwnershipError(
-                cw_ownable::OwnershipError::NoOwner,
-            ));
-        }
+        let dao_owner = dao.owner.ok_or(CompetitionError::OwnershipError(
+            cw_ownable::OwnershipError::NoOwner,
+        ))?;
 
         let id = propose_message.id;
-        self.competitions.update(
-            deps.storage,
-            id.u128(),
-            |x| -> Result<_, CompetitionError> {
-                if x.is_none() {
-                    return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+
+        // Update competition status
+        self.competitions.update(deps.storage, id.u128(), |x| {
+            let mut competition =
+                x.ok_or(CompetitionError::UnknownCompetitionId { id: id.u128() })?;
+
+            // Validate competition status
+            if competition.status != CompetitionStatus::Jailed {
+                if competition.status != CompetitionStatus::Active {
+                    return Err(CompetitionError::InvalidCompetitionStatus {
+                        current_status: competition.status,
+                    });
                 }
-                let mut competition = x.unwrap();
-
-                if competition.status != CompetitionStatus::Jailed {
-                    if competition.status != CompetitionStatus::Active {
-                        return Err(CompetitionError::InvalidCompetitionStatus {
-                            current_status: competition.status,
-                        });
-                    }
-                    if !competition.expiration.is_expired(&env.block) {
-                        return Err(CompetitionError::CompetitionNotExpired {});
-                    }
+                if !competition.expiration.is_expired(&env.block) {
+                    return Err(CompetitionError::CompetitionNotExpired {});
                 }
+            }
 
-                // Check that the user is a member of the competition DAO
-                if info.sender != competition.admin_dao {
-                    let voting_power_response: dao_interface::voting::VotingPowerAtHeightResponse =
-                        deps.querier.query_wasm_smart(
-                            competition.dao.clone(),
-                            &dao_interface::msg::QueryMsg::VotingPowerAtHeight {
-                                address: info.sender.to_string(),
-                                height: None,
-                            },
-                        )?;
-                    if voting_power_response.power.is_zero() {
-                        return Err(CompetitionError::Unauthorized {});
-                    }
+            // Check user membership in the competition DAO
+            if info.sender != competition.admin_dao {
+                let voting_power_response: dao_interface::voting::VotingPowerAtHeightResponse =
+                    deps.querier.query_wasm_smart(
+                        competition.dao.clone(),
+                        &dao_interface::msg::QueryMsg::VotingPowerAtHeight {
+                            address: info.sender.to_string(),
+                            height: None,
+                        },
+                    )?;
+                if voting_power_response.power.is_zero() {
+                    return Err(CompetitionError::Unauthorized {});
                 }
+            }
 
-                competition.status = CompetitionStatus::Jailed;
-                Ok(competition)
-            },
-        )?;
+            competition.status = CompetitionStatus::Jailed;
+            Ok(competition)
+        })?;
 
+        // Construct message for the DAO owner
         let msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: dao.owner.unwrap().to_string(),
+            contract_addr: dao_owner.to_string(),
             msg: to_binary(&arena_core_interface::msg::ExecuteMsg::Propose {
                 msg: propose_message,
             })?,
@@ -485,93 +475,79 @@ where
         id: Uint128,
         mut distribution: Vec<cw_balance::MemberShare<String>>,
     ) -> Result<Response, CompetitionError> {
-        // Load related data
-        let mut competition = match self.competitions.may_load(deps.storage, id.u128())? {
-            Some(val) => Ok(val),
-            None => Err(CompetitionError::UnknownCompetitionId { id: id.u128() }),
-        }?;
+        // Load competition
+        let mut competition = self
+            .competitions
+            .may_load(deps.storage, id.u128())?
+            .ok_or(CompetitionError::UnknownCompetitionId { id: id.u128() })?;
 
-        // Validate status
+        // Validate competition status and sender's authorization
         match competition.status {
-            CompetitionStatus::Active => {
-                if competition.dao != info.sender && competition.admin_dao != info.sender {
-                    return Err(CompetitionError::Unauthorized {});
-                }
-                Ok(())
+            CompetitionStatus::Active
+                if competition.dao == info.sender || competition.admin_dao == info.sender => {}
+            CompetitionStatus::Jailed if competition.admin_dao == info.sender => {}
+            _ => {
+                return Err(CompetitionError::InvalidCompetitionStatus {
+                    current_status: competition.status.clone(),
+                })
             }
-            CompetitionStatus::Jailed => {
-                if competition.admin_dao != info.sender {
-                    return Err(CompetitionError::Unauthorized {});
-                }
-                Ok(())
-            }
-            _ => Err(CompetitionError::InvalidCompetitionStatus {
-                current_status: competition.status.clone(),
-            }),
-        }?;
+        }
 
-        // Update result
+        // Validate and convert distribution members
         let result = distribution
             .iter()
             .map(|x| x.to_validated(deps.as_ref()))
             .collect::<StdResult<Vec<MemberShare<Addr>>>>()?;
 
         competition.result = Some(result);
-
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
 
-        // Perform escrow actions if applicable
-        let response = Response::new().add_attribute("action", "process_competition");
+        let mut response = Response::new().add_attribute("action", "process_competition");
+
+        // If there's an escrow, handle distribution and tax
         if let Some(escrow) = competition.escrow {
-            // Apply tax
-            distribution = match distribution.is_empty() {
-                true => vec![],
-                false => {
-                    let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
-                    let tax: Decimal = deps.querier.query_wasm_smart(
-                        arena_core,
-                        &arena_core_interface::msg::QueryMsg::QueryExtension {
-                            msg: arena_core_interface::msg::QueryExt::Tax {
-                                height: Some(competition.start_height),
-                            },
+            if !distribution.is_empty() {
+                let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.ok_or(
+                    CompetitionError::OwnershipError(cw_ownable::OwnershipError::NoOwner),
+                )?;
+                let tax: Decimal = deps.querier.query_wasm_smart(
+                    arena_core,
+                    &arena_core_interface::msg::QueryMsg::QueryExtension {
+                        msg: arena_core_interface::msg::QueryExt::Tax {
+                            height: Some(competition.start_height),
                         },
-                    )?;
+                    },
+                )?;
 
-                    if !tax.is_zero() {
-                        let precision_multiplier = Uint128::from(PRECISION_MULTIPLIER);
-                        let sum = distribution
-                            .iter()
-                            .try_fold(Uint128::zero(), |accumulator, x| {
-                                accumulator.checked_add(x.shares)
-                            })?;
+                if !tax.is_zero() {
+                    let precision_multiplier = Uint128::from(PRECISION_MULTIPLIER);
+                    let total_shares = distribution
+                        .iter()
+                        .try_fold(Uint128::zero(), |acc, x| acc.checked_add(x.shares))?;
 
-                        let dao_shares = tax
-                            .checked_mul(Decimal::from_atomics(
-                                sum.checked_mul(precision_multiplier)?,
-                                0u32,
-                            )?)?
-                            .checked_div(Decimal::one().checked_sub(tax)?)?;
-                        let dao_shares = dao_shares
-                            .checked_div(Decimal::from_atomics(
-                                Uint128::new(10u128).checked_pow(dao_shares.decimal_places())?,
-                                0u32,
-                            )?)?
-                            .atomics();
+                    let dao_shares = tax
+                        .checked_mul(Decimal::from_atomics(
+                            total_shares.checked_mul(precision_multiplier)?,
+                            0u32,
+                        )?)?
+                        .checked_div(Decimal::one().checked_sub(tax)?)?
+                        .checked_div(Decimal::from_atomics(
+                            Uint128::new(10u128).checked_pow(tax.decimal_places())?,
+                            0u32,
+                        )?)?
+                        .atomics();
 
-                        for member in &mut distribution {
-                            member.shares = member.shares.checked_mul(precision_multiplier)?;
-                        }
-
-                        distribution.push(MemberShare {
-                            addr: competition.admin_dao.to_string(),
-                            shares: dao_shares,
-                        });
+                    for member in &mut distribution {
+                        member.shares = member.shares.checked_mul(precision_multiplier)?;
                     }
 
-                    distribution
+                    distribution.push(MemberShare {
+                        addr: competition.admin_dao.to_string(),
+                        shares: dao_shares,
+                    });
                 }
-            };
+            }
 
             let sub_msg = SubMsg::reply_on_success(
                 CompetitionEscrowDistributeMsg {
@@ -582,10 +558,10 @@ where
                 PROCESS_REPLY_ID,
             );
 
-            Ok(response.add_submessage(sub_msg))
-        } else {
-            Ok(response)
+            response = response.add_submessage(sub_msg);
         }
+
+        Ok(response)
     }
 
     pub fn query(

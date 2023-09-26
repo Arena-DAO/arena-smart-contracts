@@ -268,7 +268,7 @@ fn test_create_competition() {
     let result = context.app.execute_contract(
         user1.clone(),
         context.wager.wager_module_addr.clone(),
-        &arena_wager_module::msg::ExecuteMsg::DeclareResult {
+        &arena_wager_module::msg::ExecuteMsg::ProposeResult {
             propose_message: propose_message.clone(),
         },
         &[],
@@ -279,7 +279,7 @@ fn test_create_competition() {
     let result = context.app.execute_contract(
         user1.clone(),
         context.wager.wager_module_addr.clone(),
-        &arena_wager_module::msg::ExecuteMsg::DeclareResult {
+        &arena_wager_module::msg::ExecuteMsg::ProposeResult {
             propose_message: propose_message.clone(),
         },
         &[],

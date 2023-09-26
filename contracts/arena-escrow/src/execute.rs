@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare};
+use cw_balance::{BalanceError, BalanceVerified, Cw721CollectionVerified, MemberShare};
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
@@ -14,7 +14,6 @@ use crate::{
     ContractError,
 };
 
-// This function refunds the balance of given addresses
 fn inner_withdraw(
     deps: DepsMut,
     addrs: Vec<Addr>,
@@ -22,23 +21,24 @@ fn inner_withdraw(
     cw721_msg: Option<Binary>,
     is_processing: bool,
 ) -> Result<Response, ContractError> {
-    // Load the key and total_balance from storage if not processing
-    let mut total_balance = match is_processing {
-        false => TOTAL_BALANCE.load(deps.storage)?,
-        true => BalanceVerified::new(),
+    // Initialize total_balance based on processing status
+    let mut total_balance = if is_processing {
+        BalanceVerified::new()
+    } else {
+        TOTAL_BALANCE.load(deps.storage)?
     };
+
     let mut msgs = vec![];
     let mut attrs = vec![];
 
     for addr in addrs {
-        // Load the balance of the current address
+        // Load and process balance for each address
         if let Some(balance) = BALANCE.may_load(deps.storage, &addr)? {
-            // If the balance is empty, skip this address
             if balance.is_empty() {
                 continue;
             }
 
-            // Prepare messages for the balance transmit
+            // Prepare messages for balance transmission
             msgs.append(&mut balance.transmit_all(
                 deps.as_ref(),
                 &addr,
@@ -46,36 +46,36 @@ fn inner_withdraw(
                 cw721_msg.clone(),
             )?);
 
-            // Add address as an attribute to the response
+            // Record processed address
             attrs.push(Attribute {
                 key: "addr".to_string(),
                 value: addr.to_string(),
             });
 
-            // Update the total_balance by subtracting the refunded balance
+            // Update total balance and related storage entries
             BALANCE.remove(deps.storage, &addr);
             if !is_processing {
                 total_balance = total_balance.checked_sub(&balance)?;
-
                 IS_FUNDED.save(deps.storage, &addr, &false)?;
-                DUE.update(deps.storage, &addr, |x| -> Result<_, ContractError> {
-                    if x.is_none() {
-                        return Ok(balance);
-                    }
-                    Ok(x.unwrap().checked_add(&balance)?)
-                })?;
+                DUE.update(
+                    deps.storage,
+                    &addr,
+                    |existing_balance| -> Result<_, BalanceError> {
+                        let current_balance = existing_balance.unwrap_or_default();
+                        Ok(current_balance.checked_add(&balance)?)
+                    },
+                )?;
             }
         }
     }
 
-    // Save the updated total_balance to storage
-    if !is_processing {
-        TOTAL_BALANCE.save(deps.storage, &total_balance)?;
-    } else {
+    // Update or remove total balance based on processing status
+    if is_processing {
         TOTAL_BALANCE.remove(deps.storage);
+    } else {
+        TOTAL_BALANCE.save(deps.storage, &total_balance)?;
     }
 
-    // Build and return the response
     Ok(Response::new()
         .add_attribute("action", "withdraw")
         .add_attributes(attrs)
@@ -96,17 +96,6 @@ pub fn withdraw(
     inner_withdraw(deps, vec![info.sender], cw20_msg, cw721_msg, false)
 }
 
-/// Sets the distribution for the sender based on the provided distribution map.
-///
-/// # Arguments
-///
-/// * `deps` - A mutable reference to the contract's dependencies.
-/// * `info` - The information about the sender and funds.
-/// * `distribution` - The distribution map with keys as addresses in string format and values as Uint128.
-///
-/// # Returns
-///
-/// * `Result<Response, ContractError>` - A result containing a response or a contract error.
 pub fn set_distribution(
     deps: DepsMut,
     info: MessageInfo,
@@ -179,37 +168,37 @@ pub fn receive_cw721(
     receive_balance(deps, sender_addr, balance)
 }
 
-// This function updates the balance
 fn receive_balance(
     deps: DepsMut,
     addr: Addr,
     balance: BalanceVerified,
 ) -> Result<Response, ContractError> {
-    // Verify the addr
+    // Ensure the address has a due balance
     if !DUE.has(deps.storage, &addr) {
         return Err(ContractError::NoneDue {});
     }
 
-    // Update the balance in storage for the given address
-    let balance = BALANCE.update(deps.storage, &addr, |x| -> StdResult<_> {
-        balance.checked_add(&x.unwrap_or_default())
+    // Update the stored balance for the given address
+    let updated_balance = BALANCE.update(deps.storage, &addr, |existing_balance| {
+        let current_balance = existing_balance.unwrap_or_default();
+        balance.checked_add(&current_balance)
     })?;
 
-    let due = DUE.load(deps.storage, &addr)?;
-    let new_due = due.checked_sub(&balance)?;
+    let due_balance = DUE.load(deps.storage, &addr)?;
+    let remaining_due = due_balance.checked_sub(&updated_balance)?;
+
     let mut msgs: Vec<CosmosMsg> = vec![];
 
-    if new_due.is_empty() {
+    // Handle the case where the due balance is fully paid
+    if remaining_due.is_empty() {
         DUE.remove(deps.storage, &addr);
-
         IS_FUNDED.save(deps.storage, &addr, &true)?;
 
-        // Lock if funded
+        // Lock if fully funded and send activation message if needed
         if is_fully_funded(deps.as_ref())? {
             IS_LOCKED.save(deps.storage, &true)?;
 
-            let owner = get_ownership(deps.storage)?.owner;
-            if let Some(owner) = owner {
+            if let Some(owner) = get_ownership(deps.storage)?.owner {
                 msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
                     contract_addr: owner.to_string(),
                     msg: to_binary(&cw_competition::msg::ExecuteBase::<Empty, Empty>::Activate {})?,
@@ -218,70 +207,60 @@ fn receive_balance(
             }
         }
     } else {
-        DUE.save(deps.storage, &addr, &new_due)?;
+        DUE.save(deps.storage, &addr, &remaining_due)?;
     }
 
     // Update the total balance in storage
-    TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
-        x.checked_add(&balance)
-    })?;
+    TOTAL_BALANCE.update(deps.storage, |total| total.checked_add(&updated_balance))?;
 
-    // Build and return the response
     Ok(Response::new()
         .add_attribute("action", "receive_balance")
-        .add_attribute("balance", balance.to_string())
+        .add_attribute("balance", updated_balance.to_string())
         .add_messages(msgs))
 }
 
-// This function handles the competition result message.
 pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
     distribution: Vec<MemberShare<String>>,
     remainder_addr: String,
 ) -> Result<Response, ContractError> {
+    // Ensure the sender is the owner
     assert_owner(deps.storage, &info.sender)?;
 
+    // Ensure the contract is fully funded
     if !is_fully_funded(deps.as_ref())? {
         return Err(ContractError::NotFunded {});
     }
 
     if !distribution.is_empty() {
-        // Calculate the distributable balance.
+        // Load the total balance available for distribution
         let total_balance = TOTAL_BALANCE.load(deps.storage)?;
 
-        // Validate the remainder address.
+        // Validate the remainder address and distribution
         let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
-
-        // Validate the provided distribution.
         let validated_distribution = distribution
             .iter()
-            .map(|x| x.to_validated(deps.as_ref()))
+            .map(|member| member.to_validated(deps.as_ref()))
             .collect::<StdResult<_>>()?;
 
-        // Calculate the splits based on the distributable total and the validated distribution.
+        // Calculate the distribution amounts based on the total balance and distribution
         let distributed_amounts = total_balance.split(&validated_distribution, &remainder_addr)?;
 
-        // Clear the existing balance storage.
+        // Clear the existing balance storage and update with new distribution
         BALANCE.clear(deps.storage);
-
-        // Save the new balances based on the calculated splits.
         for distributed_amount in distributed_amounts {
-            // Check if there is a preset distribution for the address
+            // Check for preset distribution and apply if available
             if let Some(preset) =
                 PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
             {
-                // If there is a preset distribution, apply it to the balance
                 let new_balances = distributed_amount
                     .balance
                     .split(&preset, &distributed_amount.addr)?;
-
-                // Save the new balances
                 for new_balance in new_balances {
                     BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
                 }
             } else {
-                // If there is no preset distribution, save the balance as is
                 BALANCE.save(
                     deps.storage,
                     &distributed_amount.addr,
@@ -291,28 +270,20 @@ pub fn distribute(
         }
     }
 
+    // Reset the contract state
     IS_LOCKED.save(deps.storage, &false)?;
-
-    // Free up space
     DUE.clear(deps.storage);
     IS_FUNDED.clear(deps.storage);
     PRESET_DISTRIBUTION.clear(deps.storage);
 
-    // Return the response with the added action attribute.
+    // Construct the response and return
     let keys = BALANCE
         .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .try_fold(Vec::new(), |mut acc, res| match res {
-            Ok(addr) => {
-                acc.push(addr);
-                Ok(acc)
-            }
-            Err(e) => Err(e),
-        })?;
+        .collect::<StdResult<Vec<_>>>()?;
     let response = inner_withdraw(deps, keys, None, None, true)?;
     Ok(response.add_attribute("action", "handle_competition_result"))
 }
 
-// This function handles the competition state change message
 pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, ContractError> {
     assert_owner(deps.storage, &info.sender)?;
 

@@ -26,7 +26,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
         propose_message: ProposeMessage,
     },
     Activate {},
-    DeclareResult {
+    ProposeResult {
         propose_message: ProposeMessage,
     },
     CreateCompetition {
