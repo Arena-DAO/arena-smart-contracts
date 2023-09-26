@@ -81,17 +81,6 @@ pub fn execute(
                 execute::update_rulesets(deps, info.sender, to_add, to_disable)
             }
             ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, info.sender, tax),
-            ExecuteExt::Jail {
-                id,
-                proposal_details,
-            } => execute::jail_competition(
-                deps,
-                env,
-                info,
-                id,
-                proposal_details.title,
-                proposal_details.description,
-            ),
         },
         // Default pre-propose-base behavior for all other messages
         _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),

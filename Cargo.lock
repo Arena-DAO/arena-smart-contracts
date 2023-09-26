@@ -21,7 +21,7 @@ checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
 name = "arena-core"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "arena-core-interface",
  "arena-escrow",
@@ -43,7 +43,6 @@ dependencies = [
  "dao-interface",
  "dao-pre-propose-base",
  "dao-pre-propose-single",
- "dao-proposal-multiple",
  "dao-proposal-single",
  "dao-proposal-sudo",
  "dao-testing",
@@ -56,10 +55,11 @@ dependencies = [
 
 [[package]]
 name = "arena-core-interface"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-balance",
  "dao-interface",
  "dao-pre-propose-base",
  "dao-voting 2.2.0",
@@ -68,7 +68,7 @@ dependencies = [
 
 [[package]]
 name = "arena-escrow"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "arena-testing",
  "cosmwasm-schema",
@@ -92,7 +92,7 @@ dependencies = [
 
 [[package]]
 name = "arena-testing"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "arena-core",
  "arena-escrow",
@@ -109,7 +109,7 @@ dependencies = [
 
 [[package]]
 name = "arena-wager-module"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -340,7 +340,7 @@ dependencies = [
 
 [[package]]
 name = "cw-balance"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -354,7 +354,7 @@ dependencies = [
 
 [[package]]
 name = "cw-competition"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",
@@ -373,7 +373,7 @@ dependencies = [
 
 [[package]]
 name = "cw-competition-base"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",
@@ -388,9 +388,8 @@ dependencies = [
  "cw4 1.1.0",
  "dao-interface",
  "dao-pre-propose-base",
- "dao-proposal-multiple",
+ "dao-proposal-single",
  "dao-voting 2.2.0",
- "dao-voting-cw4",
  "getrandom",
  "serde",
  "thiserror",

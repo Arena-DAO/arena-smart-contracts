@@ -24,3 +24,4 @@ serde = { workspace = true }
 dao-interface = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 dao-voting = { workspace = true }
+cw-balance = { workspace = true }

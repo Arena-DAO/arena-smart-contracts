@@ -30,7 +30,7 @@ pub fn sudo_proposal_contract() -> Box<dyn Contract<Empty>> {
 }
 
 pub struct CoreContext {
-    pub dao_proposal_multiple_id: u64,
+    pub dao_proposal_single_id: u64,
     pub arena_core_id: u64,
     pub dao_core_id: u64,
     pub dao_proposal_sudo_id: u64,
@@ -43,8 +43,7 @@ pub struct CoreContext {
 }
 
 pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
-    let dao_proposal_multiple_id =
-        app.store_code(arena_testing::contracts::dao_proposal_multiple_contract());
+    let dao_proposal_single_id = app.store_code(dao_testing::contracts::proposal_single_contract());
     let arena_core_id = app.store_code(arena_testing::contracts::arena_dao_core_contract());
     let dao_proposal_sudo_id = app.store_code(sudo_proposal_contract());
     let dao_core_id = app.store_code(dao_testing::contracts::dao_dao_contract());
@@ -118,12 +117,11 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
                 funds: vec![],
                 msg: to_binary(&dao_interface::msg::ExecuteMsg::UpdateProposalModules {
                     to_add: vec![ModuleInstantiateInfo {
-                        code_id: dao_proposal_multiple_id,
-                        msg: to_binary(&dao_proposal_multiple::msg::InstantiateMsg {
-                            voting_strategy:
-                                dao_voting::multiple_choice::VotingStrategy::SingleChoice {
-                                    quorum: dao_voting::threshold::PercentageThreshold::Majority {},
-                                },
+                        code_id: dao_proposal_single_id,
+                        msg: to_binary(&dao_proposal_single::msg::InstantiateMsg {
+                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
+                                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
+                            },
                             min_voting_period: None,
                             max_voting_period: cw_utils_v16::Duration::Time(1209600u64),
                             only_members_execute: false,
@@ -205,7 +203,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
     app.update_block(next_block);
 
     CoreContext {
-        dao_proposal_multiple_id,
+        dao_proposal_single_id,
         arena_core_id,
         dao_core_id,
         dao_proposal_sudo_id,

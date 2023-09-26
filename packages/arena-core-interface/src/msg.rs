@@ -1,11 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Uint128};
+use cw_balance::MemberShare;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
     state::PreProposeContract,
 };
-use dao_voting::multiple_choice::MultipleChoiceOptions;
+use dao_voting::proposal::SingleChoiceProposeMsg;
 
 #[cw_serde]
 pub struct InstantiateExt {
@@ -19,10 +20,6 @@ pub enum ExecuteExt {
     UpdateCompetitionModules {
         to_add: Vec<ModuleInstantiateInfo>,
         to_disable: Vec<String>,
-    },
-    Jail {
-        id: Uint128,
-        proposal_details: ProposalDetails,
     },
     UpdateTax {
         tax: Decimal,
@@ -105,17 +102,14 @@ pub struct Ruleset {
 }
 
 #[cw_serde]
-pub enum ProposeMessage {
-    Propose {
-        title: String,
-        description: String,
-        choices: MultipleChoiceOptions,
-        proposer: Option<String>,
-    },
+pub struct ProposeMessage {
+    pub id: Uint128,
+    pub title: String,
+    pub description: String,
+    pub distribution: Option<Vec<MemberShare<String>>>,
 }
 
 #[cw_serde]
-pub struct ProposalDetails {
-    pub title: String,
-    pub description: String,
+pub enum ProposeMessages {
+    Propose(SingleChoiceProposeMsg),
 }

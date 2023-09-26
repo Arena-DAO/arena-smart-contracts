@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
+use arena_core_interface::msg::ProposeMessage;
 use arena_wager_module::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
 use cosmwasm_std::{to_binary, Addr, Coin, Coins, Empty, Uint128, WasmMsg};
 use cw4::Member;
-use cw_balance::MemberBalance;
+use cw_balance::{MemberBalance, MemberShare};
 use cw_competition::state::CompetitionStatus;
 use cw_multi_test::{next_block, App, Executor};
 use cw_utils::Expiration;
@@ -98,12 +99,11 @@ fn create_competition(
                 msg: to_binary(&super::helpers::get_competition_dao_instantiate_msg(
                     context.core.cw4_id,
                     context.core.cw4_voting_module_id,
-                    context.core.dao_proposal_multiple_id,
-                    dao_proposal_multiple::msg::InstantiateMsg {
-                        voting_strategy:
-                            dao_voting::multiple_choice::VotingStrategy::SingleChoice {
-                                quorum: dao_voting::threshold::PercentageThreshold::Majority {},
-                            },
+                    context.core.dao_proposal_single_id,
+                    dao_proposal_single::msg::InstantiateMsg {
+                        threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
+                            percentage: dao_voting::threshold::PercentageThreshold::Majority {},
+                        },
                         min_voting_period: None,
                         max_voting_period: cw_utils_v16::Duration::Height(10u64),
                         only_members_execute: false,
@@ -256,17 +256,32 @@ fn test_create_competition() {
     let competition1_proposal_module = result.as_ref().unwrap().first().unwrap();
 
     // Generate proposals
+    let propose_message = ProposeMessage {
+        id: competition1_id,
+        title: "Title".to_string(),
+        description: "Description".to_string(),
+        distribution: Some(vec![MemberShare {
+            addr: user1.to_string(),
+            shares: Uint128::one(),
+        }]),
+    };
     context.app.update_block(next_block);
     let result = context.app.execute_contract(
         user1.clone(),
         context.wager.wager_module_addr.clone(),
-        &arena_wager_module::msg::ExecuteMsg::GenerateProposals {
-            id: competition1_id,
-            proposal_module_addr: competition1_proposal_module.address.to_string(),
-            proposal_details: arena_core_interface::msg::ProposalDetails {
-                title: "Test Title".to_string(),
-                description: "Test description".to_string(),
-            },
+        &arena_wager_module::msg::ExecuteMsg::DeclareResult {
+            propose_message: propose_message.clone(),
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Assert we can generate proposals again
+    let result = context.app.execute_contract(
+        user1.clone(),
+        context.wager.wager_module_addr.clone(),
+        &arena_wager_module::msg::ExecuteMsg::DeclareResult {
+            propose_message: propose_message.clone(),
         },
         &[],
     );
@@ -310,10 +325,10 @@ fn test_create_competition() {
     let result = context.app.execute_contract(
         user1.clone(),
         competition1_proposal_module.address.clone(),
-        &dao_proposal_multiple::msg::ExecuteMsg::Vote {
+        &dao_proposal_single::msg::ExecuteMsg::Vote {
             proposal_id: 1u64,
-            vote: dao_voting::multiple_choice::MultipleChoiceVote { option_id: 0u32 },
             rationale: None,
+            vote: dao_voting::voting::Vote::Yes,
         },
         &[],
     );
@@ -322,9 +337,9 @@ fn test_create_competition() {
     let result = context.app.execute_contract(
         user2.clone(),
         competition1_proposal_module.address.clone(),
-        &dao_proposal_multiple::msg::ExecuteMsg::Vote {
+        &dao_proposal_single::msg::ExecuteMsg::Vote {
             proposal_id: 1u64,
-            vote: dao_voting::multiple_choice::MultipleChoiceVote { option_id: 0u32 },
+            vote: dao_voting::voting::Vote::Yes,
             rationale: None,
         },
         &[],
@@ -334,7 +349,7 @@ fn test_create_competition() {
     let result = context.app.execute_contract(
         user1.clone(),
         competition1_proposal_module.address.clone(),
-        &dao_proposal_multiple::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
+        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
         &[],
     );
     assert!(result.is_ok());
@@ -458,16 +473,22 @@ fn test_create_competition_jailed() {
         .unwrap();
     assert!(competition1.is_expired);
 
-    // Still cannot jail competition - not active
+    // Cannot jail - not active
+    let propose_message = ProposeMessage {
+        id: competition1_id,
+        title: "Title".to_string(),
+        description: "Description".to_string(),
+        distribution: Some(vec![MemberShare {
+            addr: user1.to_string(),
+            shares: Uint128::one(),
+        }]),
+    };
+
     let result = context.app.execute_contract(
         user1.clone(),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
-            id: competition1_id,
-            proposal_details: arena_core_interface::msg::ProposalDetails {
-                title: "Title".to_string(),
-                description: "Description".to_string(),
-            },
+            propose_message: propose_message.clone(),
         },
         &[],
     );
@@ -512,11 +533,7 @@ fn test_create_competition_jailed() {
         Addr::unchecked("random"),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
-            id: competition1_id,
-            proposal_details: arena_core_interface::msg::ProposalDetails {
-                title: "Title".to_string(),
-                description: "Description".to_string(),
-            },
+            propose_message: propose_message.clone(),
         },
         &[],
     );
@@ -527,11 +544,7 @@ fn test_create_competition_jailed() {
         user1.clone(),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
-            id: competition1_id,
-            proposal_details: arena_core_interface::msg::ProposalDetails {
-                title: "Title".to_string(),
-                description: "Description".to_string(),
-            },
+            propose_message: propose_message.clone(),
         },
         &[],
     );
@@ -551,28 +564,24 @@ fn test_create_competition_jailed() {
         .unwrap();
     assert_eq!(competition1.status, CompetitionStatus::Jailed);
 
-    // Cannot jail again
+    // Can generate jail proposal again
     let result = context.app.execute_contract(
         user1.clone(),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
-            id: competition1_id,
-            proposal_details: arena_core_interface::msg::ProposalDetails {
-                title: "Title".to_string(),
-                description: "Description".to_string(),
-            },
+            propose_message: propose_message.clone(),
         },
         &[],
     );
-    assert!(result.is_err());
+    assert!(result.is_ok());
 
     // Vote and execute jail
     let result = context.app.execute_contract(
         Addr::unchecked(ADMIN),
         context.core.proposal_module_addr.clone(),
-        &dao_proposal_multiple::msg::ExecuteMsg::Vote {
+        &dao_proposal_single::msg::ExecuteMsg::Vote {
             proposal_id: 1u64,
-            vote: dao_voting::multiple_choice::MultipleChoiceVote { option_id: 0u32 },
+            vote: dao_voting::voting::Vote::Yes,
             rationale: None,
         },
         &[],
@@ -582,7 +591,7 @@ fn test_create_competition_jailed() {
     let result = context.app.execute_contract(
         Addr::unchecked(ADMIN),
         context.core.proposal_module_addr.clone(),
-        &dao_proposal_multiple::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
+        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
         &[],
     );
     assert!(result.is_ok());

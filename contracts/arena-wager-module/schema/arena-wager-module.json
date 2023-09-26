@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-wager-module",
-  "contract_version": "0.8.0",
+  "contract_version": "0.9.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -43,15 +43,11 @@
           "jail_competition": {
             "type": "object",
             "required": [
-              "id",
-              "proposal_details"
+              "propose_message"
             ],
             "properties": {
-              "id": {
-                "$ref": "#/definitions/Uint128"
-              },
-              "proposal_details": {
-                "$ref": "#/definitions/ProposalDetails"
+              "propose_message": {
+                "$ref": "#/definitions/ProposeMessage"
               }
             },
             "additionalProperties": false
@@ -67,6 +63,27 @@
         "properties": {
           "activate": {
             "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "declare_result"
+        ],
+        "properties": {
+          "declare_result": {
+            "type": "object",
+            "required": [
+              "propose_message"
+            ],
+            "properties": {
+              "propose_message": {
+                "$ref": "#/definitions/ProposeMessage"
+              }
+            },
             "additionalProperties": false
           }
         },
@@ -129,35 +146,6 @@
                     "type": "null"
                   }
                 ]
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
-          "generate_proposals"
-        ],
-        "properties": {
-          "generate_proposals": {
-            "type": "object",
-            "required": [
-              "id",
-              "proposal_details",
-              "proposal_module_addr"
-            ],
-            "properties": {
-              "id": {
-                "$ref": "#/definitions/Uint128"
-              },
-              "proposal_details": {
-                "$ref": "#/definitions/ProposalDetails"
-              },
-              "proposal_module_addr": {
-                "type": "string"
               }
             },
             "additionalProperties": false
@@ -435,15 +423,28 @@
         },
         "additionalProperties": false
       },
-      "ProposalDetails": {
+      "ProposeMessage": {
         "type": "object",
         "required": [
           "description",
+          "id",
           "title"
         ],
         "properties": {
           "description": {
             "type": "string"
+          },
+          "distribution": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/definitions/MemberShare_for_String"
+            }
+          },
+          "id": {
+            "$ref": "#/definitions/Uint128"
           },
           "title": {
             "type": "string"

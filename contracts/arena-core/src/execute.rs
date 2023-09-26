@@ -1,11 +1,11 @@
-use arena_core_interface::msg::{NewRuleset, PrePropose, ProposeMessage, Ruleset};
+use arena_core_interface::msg::{NewRuleset, PrePropose, ProposeMessage, ProposeMessages, Ruleset};
 use cosmwasm_std::{
-    to_binary, Addr, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg,
-    Uint128, WasmMsg,
+    to_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
+    StdError, SubMsg, Uint128, WasmMsg,
 };
-use cw_competition::{proposal::get_competition_choices, state::CompetitionResponse};
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::error::PreProposeError;
+use dao_voting::proposal::SingleChoiceProposeMsg;
 
 use crate::{
     state::{competition_modules, rulesets, KEYS, RULESET_COUNT, TAX},
@@ -114,49 +114,6 @@ pub fn update_rulesets(
         .add_attribute("ruleset_count", id))
 }
 
-pub fn jail_competition(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    id: Uint128,
-    title: String,
-    description: String,
-) -> Result<Response, ContractError> {
-    let competition: CompetitionResponse<Empty> = deps.querier.query_wasm_smart(
-        info.sender.clone(),
-        &cw_competition::msg::QueryBase::<Empty, Empty>::Competition {
-            id,
-            include_ruleset: Some(false),
-        },
-    )?;
-    let voting_module: Addr = deps.querier.query_wasm_smart(
-        competition.dao,
-        &dao_interface::msg::QueryMsg::VotingModule {},
-    )?;
-    let cw4_group: Addr = deps.querier.query_wasm_smart(
-        voting_module,
-        &dao_voting_cw4::msg::QueryMsg::GroupContract {},
-    )?;
-
-    let choices = get_competition_choices(deps.as_ref(), id, &info.sender, &cw4_group)?;
-    let proposer = info.sender.to_string();
-    let response = propose(
-        deps,
-        env,
-        info,
-        ProposeMessage::Propose {
-            title,
-            description,
-            choices,
-            proposer: Some(proposer),
-        },
-    )?;
-
-    Ok(response
-        .add_attribute("action", "jail_competition")
-        .add_attribute("id", id))
-}
-
 pub fn check_can_submit(
     deps: Deps,
     who: Addr,
@@ -204,6 +161,23 @@ pub fn propose(
         next_id,
         &(config.deposit_info, info.sender.clone()),
     )?;
+
+    // Construct message
+    let msg = ProposeMessages::Propose(SingleChoiceProposeMsg {
+        title: msg.title,
+        description: msg.description,
+        msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: info.sender.to_string(),
+            msg: to_binary(
+                &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+                    id: msg.id,
+                    distribution: msg.distribution,
+                },
+            )?,
+            funds: vec![],
+        })],
+        proposer: Some(info.sender.to_string()),
+    });
 
     let propose_messsage = WasmMsg::Execute {
         contract_addr: proposal_module.into_string(),

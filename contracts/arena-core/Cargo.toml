@@ -27,7 +27,6 @@ thiserror = { workspace = true }
 cw-competition = { workspace = true }
 dao-interface = { workspace = true }
 dao-voting = { workspace = true }
-dao-voting-cw4 = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 cw-paginate = { workspace = true }
 arena-core-interface = { workspace = true }
@@ -43,9 +42,9 @@ cw-utils-v16 = { version = "0.16", package ="cw-utils" }
 cw20 = "0.16"
 dao-proposal-sudo = { workspace = true }
 dao-pre-propose-single = { workspace = true }
-dao-proposal-multiple = { workspace = true }
 arena-wager-module = { workspace = true }
 arena-escrow = { workspace = true }
 cw4-group = { workspace = true }
 cw-balance = { workspace = true }
 cw4 = "0.16"
+dao-voting-cw4 = { workspace = true }

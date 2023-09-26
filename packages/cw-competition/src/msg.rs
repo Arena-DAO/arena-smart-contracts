@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::state::CompetitionStatus;
 #[allow(unused_imports)]
 use crate::state::{CompetitionResponse, Config};
-use arena_core_interface::msg::ProposalDetails;
+use arena_core_interface::msg::ProposeMessage;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw_balance::MemberShare;
@@ -23,10 +23,12 @@ pub struct InstantiateBase<InstantiateExt> {
 #[allow(clippy::large_enum_variant)]
 pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     JailCompetition {
-        id: Uint128,
-        proposal_details: ProposalDetails,
+        propose_message: ProposeMessage,
     },
     Activate {},
+    DeclareResult {
+        propose_message: ProposeMessage,
+    },
     CreateCompetition {
         competition_dao: ModuleInstantiateInfo,
         escrow: Option<ModuleInstantiateInfo>,
@@ -36,11 +38,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
         rules: Vec<String>,
         ruleset: Option<Uint128>,
         extension: CompetitionExt,
-    },
-    GenerateProposals {
-        id: Uint128,
-        proposal_module_addr: String,
-        proposal_details: ProposalDetails,
     },
     ProcessCompetition {
         id: Uint128,
