@@ -36,7 +36,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
         description: String,
         expiration: Expiration,
         rules: Vec<String>,
-        ruleset: Option<Uint128>,
+        rulesets: Vec<Uint128>,
         extension: CompetitionExt,
     },
     ProcessCompetition {
@@ -60,15 +60,11 @@ where
     #[returns(Uint128)]
     CompetitionCount {},
     #[returns(CompetitionResponse<CompetitionExt>)]
-    Competition {
-        id: Uint128,
-        include_ruleset: Option<bool>, // Defaults to true
-    },
+    Competition { id: Uint128 },
     #[returns(Vec<CompetitionResponse<CompetitionExt>>)]
     Competitions {
         start_after: Option<Uint128>,
         limit: Option<u32>,
-        include_ruleset: Option<bool>,
         status: Option<CompetitionStatus>,
     },
     #[returns(cosmwasm_std::Binary)]

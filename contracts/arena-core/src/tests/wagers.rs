@@ -132,7 +132,7 @@ fn create_competition(
                 "Rule 2".to_string(),
                 "Rule 3".to_string(),
             ],
-            ruleset: None,
+            rulesets: vec![],
             extension: Empty {},
         },
         &[],
@@ -238,7 +238,6 @@ fn test_create_competition() {
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
                 id: competition1_id,
-                include_ruleset: Some(false),
             },
         )
         .unwrap();
@@ -315,7 +314,6 @@ fn test_create_competition() {
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
                 id: competition1_id,
-                include_ruleset: Some(false),
             },
         )
         .unwrap();
@@ -376,7 +374,6 @@ fn test_create_competition() {
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
                 id: competition1_id,
-                include_ruleset: Some(false),
             },
         )
         .unwrap();
@@ -451,7 +448,6 @@ fn test_create_competition_jailed() {
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
                 id: competition1_id,
-                include_ruleset: Some(false),
             },
         )
         .unwrap();
@@ -467,7 +463,6 @@ fn test_create_competition_jailed() {
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
                 id: competition1_id,
-                include_ruleset: Some(false),
             },
         )
         .unwrap();
@@ -522,7 +517,6 @@ fn test_create_competition_jailed() {
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
                 id: competition1_id,
-                include_ruleset: Some(false),
             },
         )
         .unwrap();
@@ -558,7 +552,6 @@ fn test_create_competition_jailed() {
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
                 id: competition1_id,
-                include_ruleset: Some(false),
             },
         )
         .unwrap();

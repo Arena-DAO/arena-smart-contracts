@@ -103,7 +103,8 @@
               "expiration",
               "extension",
               "name",
-              "rules"
+              "rules",
+              "rulesets"
             ],
             "properties": {
               "competition_dao": {
@@ -137,15 +138,11 @@
                   "type": "string"
                 }
               },
-              "ruleset": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/Uint128"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+              "rulesets": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Uint128"
+                }
               }
             },
             "additionalProperties": false
@@ -510,12 +507,6 @@
             "properties": {
               "id": {
                 "$ref": "#/definitions/Uint128"
-              },
-              "include_ruleset": {
-                "type": [
-                  "boolean",
-                  "null"
-                ]
               }
             },
             "additionalProperties": false
@@ -532,12 +523,6 @@
           "competitions": {
             "type": "object",
             "properties": {
-              "include_ruleset": {
-                "type": [
-                  "boolean",
-                  "null"
-                ]
-              },
               "limit": {
                 "type": [
                   "integer",
@@ -669,6 +654,7 @@
         "is_expired",
         "name",
         "rules",
+        "rulesets",
         "start_height",
         "status"
       ],
@@ -722,15 +708,11 @@
             "type": "string"
           }
         },
-        "ruleset": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Ruleset"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "rulesets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Uint128"
+          }
         },
         "start_height": {
           "type": "integer",
@@ -823,33 +805,6 @@
           },
           "additionalProperties": false
         },
-        "Ruleset": {
-          "type": "object",
-          "required": [
-            "description",
-            "id",
-            "is_enabled",
-            "rules"
-          ],
-          "properties": {
-            "description": {
-              "type": "string"
-            },
-            "id": {
-              "$ref": "#/definitions/Uint128"
-            },
-            "is_enabled": {
-              "type": "boolean"
-            },
-            "rules": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false
-        },
         "Timestamp": {
           "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
           "allOf": [
@@ -899,6 +854,7 @@
             "is_expired",
             "name",
             "rules",
+            "rulesets",
             "start_height",
             "status"
           ],
@@ -952,15 +908,11 @@
                 "type": "string"
               }
             },
-            "ruleset": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/Ruleset"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+            "rulesets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Uint128"
+              }
             },
             "start_height": {
               "type": "integer",
@@ -1045,33 +997,6 @@
             },
             "shares": {
               "$ref": "#/definitions/Uint128"
-            }
-          },
-          "additionalProperties": false
-        },
-        "Ruleset": {
-          "type": "object",
-          "required": [
-            "description",
-            "id",
-            "is_enabled",
-            "rules"
-          ],
-          "properties": {
-            "description": {
-              "type": "string"
-            },
-            "id": {
-              "$ref": "#/definitions/Uint128"
-            },
-            "is_enabled": {
-              "type": "boolean"
-            },
-            "rules": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
             }
           },
           "additionalProperties": false

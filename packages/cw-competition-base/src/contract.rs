@@ -183,7 +183,7 @@ where
                 description,
                 expiration,
                 rules,
-                ruleset,
+                rulesets,
                 extension,
             } => self.execute_create_competition(
                 deps,
@@ -194,7 +194,7 @@ where
                 description,
                 expiration,
                 rules,
-                ruleset,
+                rulesets,
                 extension,
             ),
             ExecuteBase::DeclareResult { propose_message } => {
@@ -427,7 +427,7 @@ where
         description: String,
         expiration: cw_utils::Expiration,
         rules: Vec<String>,
-        ruleset: Option<Uint128>,
+        rulesets: Vec<Uint128>,
         extension: CompetitionExt,
     ) -> Result<Response, CompetitionError> {
         if expiration.is_expired(&env.block) {
@@ -452,7 +452,7 @@ where
             description,
             expiration,
             rules,
-            ruleset,
+            rulesets,
             status: CompetitionStatus::Pending,
             extension,
             has_generated_proposals: false,
@@ -596,28 +596,17 @@ where
     ) -> StdResult<Binary> {
         match msg {
             QueryBase::Config {} => to_binary(&self.config.load(deps.storage)?),
-            QueryBase::Competition {
-                id,
-                include_ruleset,
-            } => to_binary(
+            QueryBase::Competition { id } => to_binary(
                 &self
                     .competitions
                     .load(deps.storage, id.u128())?
-                    .to_response(deps, &env.block, include_ruleset)?,
+                    .to_response(&env.block),
             ),
             QueryBase::Competitions {
                 start_after,
                 limit,
-                include_ruleset,
                 status,
-            } => to_binary(&self.query_competitions(
-                deps,
-                env,
-                start_after,
-                limit,
-                include_ruleset,
-                status,
-            )?),
+            } => to_binary(&self.query_competitions(deps, env, start_after, limit, status)?),
             QueryBase::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
             QueryBase::CompetitionCount {} => {
                 to_binary(&self.competition_count.load(deps.storage)?)
@@ -644,7 +633,6 @@ where
         env: Env,
         start_after: Option<Uint128>,
         limit: Option<u32>,
-        include_ruleset: Option<bool>,
         status: Option<CompetitionStatus>,
     ) -> StdResult<Vec<CompetitionResponse<CompetitionExt>>> {
         let start_after_bound = start_after.map(Bound::exclusive);
@@ -656,7 +644,7 @@ where
                 deps.storage,
                 start_after_bound,
                 Some(limit),
-                |_x, y| y.to_response(deps, &env.block, include_ruleset),
+                |_x, y| Ok(y.to_response(&env.block)),
             ),
             Some(status) => self
                 .competitions
@@ -669,7 +657,7 @@ where
                     None,
                     cosmwasm_std::Order::Ascending,
                 )
-                .map(|x| x.and_then(|y| y.1.to_response(deps, &env.block, include_ruleset)))
+                .map(|x| x.map(|y| y.1.to_response(&env.block)))
                 .take(limit as usize)
                 .collect::<StdResult<Vec<_>>>(),
         }
