@@ -326,14 +326,12 @@
       "CompetitionEscrowDistributeMsg": {
         "type": "object",
         "required": [
+          "distribution",
           "remainder_addr"
         ],
         "properties": {
           "distribution": {
-            "type": [
-              "array",
-              "null"
-            ],
+            "type": "array",
             "items": {
               "$ref": "#/definitions/MemberShare_for_String"
             }

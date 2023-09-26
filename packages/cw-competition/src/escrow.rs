@@ -4,7 +4,7 @@ use cw_balance::MemberShare;
 
 #[cw_serde]
 pub struct CompetitionEscrowDistributeMsg {
-    pub distribution: Option<Vec<MemberShare<String>>>,
+    pub distribution: Vec<MemberShare<String>>,
     pub remainder_addr: String,
 }
 

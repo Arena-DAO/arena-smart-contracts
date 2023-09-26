@@ -162,14 +162,12 @@
           "process_competition": {
             "type": "object",
             "required": [
+              "distribution",
               "id"
             ],
             "properties": {
               "distribution": {
-                "type": [
-                  "array",
-                  "null"
-                ],
+                "type": "array",
                 "items": {
                   "$ref": "#/definitions/MemberShare_for_String"
                 }
@@ -427,6 +425,7 @@
         "type": "object",
         "required": [
           "description",
+          "distribution",
           "id",
           "title"
         ],
@@ -435,10 +434,7 @@
             "type": "string"
           },
           "distribution": {
-            "type": [
-              "array",
-              "null"
-            ],
+            "type": "array",
             "items": {
               "$ref": "#/definitions/MemberShare_for_String"
             }

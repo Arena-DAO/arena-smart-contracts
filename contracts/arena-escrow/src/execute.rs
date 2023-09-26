@@ -237,7 +237,7 @@ fn receive_balance(
 pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Option<Vec<MemberShare<String>>>,
+    distribution: Vec<MemberShare<String>>,
     remainder_addr: String,
 ) -> Result<Response, ContractError> {
     assert_owner(deps.storage, &info.sender)?;
@@ -246,7 +246,7 @@ pub fn distribute(
         return Err(ContractError::NotFunded {});
     }
 
-    if let Some(distribution) = distribution {
+    if !distribution.is_empty() {
         // Calculate the distributable balance.
         let total_balance = TOTAL_BALANCE.load(deps.storage)?;
 

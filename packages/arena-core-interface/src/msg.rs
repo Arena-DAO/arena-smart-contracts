@@ -106,7 +106,7 @@ pub struct ProposeMessage {
     pub id: Uint128,
     pub title: String,
     pub description: String,
-    pub distribution: Option<Vec<MemberShare<String>>>,
+    pub distribution: Vec<MemberShare<String>>,
 }
 
 #[cw_serde]

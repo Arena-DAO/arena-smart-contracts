@@ -41,7 +41,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
     },
     ProcessCompetition {
         id: Uint128,
-        distribution: Option<Vec<MemberShare<String>>>,
+        distribution: Vec<MemberShare<String>>,
     },
     Extension {
         msg: ExecuteExt,

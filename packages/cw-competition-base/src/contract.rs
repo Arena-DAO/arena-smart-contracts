@@ -483,7 +483,7 @@ where
         deps: DepsMut,
         info: MessageInfo,
         id: Uint128,
-        distribution: Option<Vec<cw_balance::MemberShare<String>>>,
+        mut distribution: Vec<cw_balance::MemberShare<String>>,
     ) -> Result<Response, CompetitionError> {
         // Load related data
         let mut competition = match self.competitions.may_load(deps.storage, id.u128())? {
@@ -511,10 +511,13 @@ where
         }?;
 
         // Update result
-        competition.result = distribution
-            .clone()
-            .map(|x| x.iter().map(|y| y.to_validated(deps.as_ref())).collect())
-            .transpose()?;
+        let result = distribution
+            .iter()
+            .map(|x| x.to_validated(deps.as_ref()))
+            .collect::<StdResult<Vec<MemberShare<Addr>>>>()?;
+
+        competition.result = Some(result);
+
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
 
@@ -522,8 +525,9 @@ where
         let response = Response::new().add_attribute("action", "process_competition");
         if let Some(escrow) = competition.escrow {
             // Apply tax
-            let distribution = match distribution {
-                Some(mut member_shares) => {
+            distribution = match distribution.is_empty() {
+                true => vec![],
+                false => {
                     let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
                     let tax: Decimal = deps.querier.query_wasm_smart(
                         arena_core,
@@ -536,7 +540,7 @@ where
 
                     if !tax.is_zero() {
                         let precision_multiplier = Uint128::from(PRECISION_MULTIPLIER);
-                        let sum = member_shares
+                        let sum = distribution
                             .iter()
                             .try_fold(Uint128::zero(), |accumulator, x| {
                                 accumulator.checked_add(x.shares)
@@ -555,19 +559,18 @@ where
                             )?)?
                             .atomics();
 
-                        for member in &mut member_shares {
+                        for member in &mut distribution {
                             member.shares = member.shares.checked_mul(precision_multiplier)?;
                         }
 
-                        member_shares.push(MemberShare {
+                        distribution.push(MemberShare {
                             addr: competition.admin_dao.to_string(),
                             shares: dao_shares,
                         });
                     }
 
-                    Some(member_shares)
+                    distribution
                 }
-                None => None,
             };
 
             let sub_msg = SubMsg::reply_on_success(

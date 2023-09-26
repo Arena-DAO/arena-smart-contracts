@@ -774,6 +774,7 @@
         "type": "object",
         "required": [
           "description",
+          "distribution",
           "id",
           "title"
         ],
@@ -782,10 +783,7 @@
             "type": "string"
           },
           "distribution": {
-            "type": [
-              "array",
-              "null"
-            ],
+            "type": "array",
             "items": {
               "$ref": "#/definitions/MemberShare_for_String"
             }

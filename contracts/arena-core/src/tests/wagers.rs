@@ -260,10 +260,10 @@ fn test_create_competition() {
         id: competition1_id,
         title: "Title".to_string(),
         description: "Description".to_string(),
-        distribution: Some(vec![MemberShare {
+        distribution: vec![MemberShare {
             addr: user1.to_string(),
             shares: Uint128::one(),
-        }]),
+        }],
     };
     context.app.update_block(next_block);
     let result = context.app.execute_contract(
@@ -478,10 +478,10 @@ fn test_create_competition_jailed() {
         id: competition1_id,
         title: "Title".to_string(),
         description: "Description".to_string(),
-        distribution: Some(vec![MemberShare {
+        distribution: vec![MemberShare {
             addr: user1.to_string(),
             shares: Uint128::one(),
-        }]),
+        }],
     };
 
     let result = context.app.execute_contract(
