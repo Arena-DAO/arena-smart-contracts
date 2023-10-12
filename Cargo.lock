@@ -25,6 +25,7 @@ version = "0.9.0"
 dependencies = [
  "arena-core-interface",
  "arena-escrow",
+ "arena-league-module",
  "arena-testing",
  "arena-wager-module",
  "cosmwasm-schema",
@@ -91,11 +92,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "arena-league-module"
+version = "0.9.0"
+dependencies = [
+ "arena-core-interface",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-competition",
+ "cw-competition-base",
+ "cw-ownable",
+ "cw-storage-plus 1.1.0",
+ "cw-utils 1.0.1",
+ "cw2 1.1.0",
+ "dao-interface",
+ "getrandom",
+ "thiserror",
+]
+
+[[package]]
 name = "arena-testing"
 version = "0.9.0"
 dependencies = [
  "arena-core",
  "arena-escrow",
+ "arena-league-module",
  "arena-wager-module",
  "cosmwasm-schema",
  "cosmwasm-std",

@@ -201,7 +201,9 @@ fn receive_balance(
             if let Some(owner) = get_ownership(deps.storage)?.owner {
                 msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
                     contract_addr: owner.to_string(),
-                    msg: to_binary(&cw_competition::msg::ExecuteBase::<Empty, Empty>::Activate {})?,
+                    msg: to_binary(
+                        &cw_competition::msg::ExecuteBase::<Empty, Empty, Empty>::Activate {},
+                    )?,
                     funds: vec![],
                 }));
             }

@@ -50,7 +50,7 @@ pub enum QueryExt {
     #[returns(Decimal)]
     Tax { height: Option<u64> },
     #[returns(Option<CompetitionModuleResponse>)]
-    CompetitionModule { key: String },
+    CompetitionModule { query: CompetitionModuleQuery },
     #[returns(DumpStateResponse)]
     DumpState {},
 }
@@ -112,4 +112,10 @@ pub struct ProposeMessage {
 #[cw_serde]
 pub enum ProposeMessages {
     Propose(SingleChoiceProposeMsg),
+}
+
+#[cw_serde]
+pub enum CompetitionModuleQuery {
+    Key(String),
+    Addr(String),
 }

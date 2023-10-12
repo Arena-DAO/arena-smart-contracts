@@ -1,0 +1,30 @@
+[package]
+name = "arena-league-module"
+authors = ["ismellike <glopez11193@gmail.com>"]
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+getrandom = { workspace = true }
+cw2 = { workspace = true }
+cw-competition = { workspace = true }
+cw-competition-base = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw-utils = { workspace = true }
+arena-core-interface = { workspace = true }
+thiserror = { workspace = true }
+dao-interface = { workspace = true }
+cw-ownable = { workspace = true }

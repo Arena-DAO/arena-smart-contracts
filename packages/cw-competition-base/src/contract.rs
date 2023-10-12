@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use arena_core_interface::msg::{ProposeMessage, ProposeMessages};
+use arena_core_interface::msg::{CompetitionModuleResponse, ProposeMessage, ProposeMessages};
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
     to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply,
@@ -9,7 +9,7 @@ use cosmwasm_std::{
 use cw_balance::MemberShare;
 use cw_competition::{
     escrow::CompetitionEscrowDistributeMsg,
-    msg::{ExecuteBase, InstantiateBase, QueryBase},
+    msg::{ExecuteBase, HookDirection, InstantiateBase, QueryBase},
     state::{Competition, CompetitionResponse, CompetitionStatus, Config},
 };
 use cw_ownable::{get_ownership, initialize_owner};
@@ -47,6 +47,7 @@ pub struct CompetitionModuleContract<
     ExecuteExt,
     QueryExt,
     CompetitionExt: Serialize + Clone + DeserializeOwned,
+    CompetitionInstantiateExt,
 > {
     pub config: Item<'static, Config>,
     pub competition_count: Item<'static, Uint128>,
@@ -56,12 +57,14 @@ pub struct CompetitionModuleContract<
         Competition<CompetitionExt>,
         CompetitionIndexes<'static, CompetitionExt>,
     >,
-    pub escrow_to_competition_map: Map<'static, Addr, u128>,
+    pub escrows_to_competitions: Map<'static, Addr, u128>,
     pub temp_competition: Item<'static, u128>,
+    pub competition_hooks: Map<'static, (u128, Addr), HookDirection>,
 
     instantiate_type: PhantomData<InstantiateExt>,
     execute_type: PhantomData<ExecuteExt>,
     query_type: PhantomData<QueryExt>,
+    competition_instantiate_type: PhantomData<CompetitionInstantiateExt>,
 }
 
 impl<
@@ -69,25 +72,36 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-    > CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
+        CompetitionInstantiateExt,
+    >
+    CompetitionModuleContract<
+        InstantiateExt,
+        ExecuteExt,
+        QueryExt,
+        CompetitionExt,
+        CompetitionInstantiateExt,
+    >
 {
     const fn new(
         config_key: &'static str,
         competition_count_key: &'static str,
         competitions_key: &'static str,
         competitions_status_key: &'static str,
-        escrows_key: &'static str,
+        escrows_to_competitions_key: &'static str,
         temp_competition_key: &'static str,
+        competition_hooks_key: &'static str,
     ) -> Self {
         Self {
             config: Item::new(config_key),
             competition_count: Item::new(competition_count_key),
             competitions: Self::competitions(competitions_key, competitions_status_key),
-            escrow_to_competition_map: Map::new(escrows_key),
+            escrows_to_competitions: Map::new(escrows_to_competitions_key),
             temp_competition: Item::new(temp_competition_key),
+            competition_hooks: Map::new(competition_hooks_key),
             instantiate_type: PhantomData,
             execute_type: PhantomData,
             query_type: PhantomData,
+            competition_instantiate_type: PhantomData,
         }
     }
 
@@ -116,7 +130,15 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-    > Default for CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
+        CompetitionInstantiateExt,
+    > Default
+    for CompetitionModuleContract<
+        InstantiateExt,
+        ExecuteExt,
+        QueryExt,
+        CompetitionExt,
+        CompetitionInstantiateExt,
+    >
 {
     fn default() -> Self {
         Self::new(
@@ -126,6 +148,7 @@ impl<
             "competitions__status",
             "escrows",
             "temp_competition",
+            "competition_hooks",
         )
     }
 }
@@ -135,7 +158,15 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-    > CompetitionModuleContract<InstantiateExt, ExecuteExt, QueryExt, CompetitionExt>
+        CompetitionInstantiateExt,
+    >
+    CompetitionModuleContract<
+        InstantiateExt,
+        ExecuteExt,
+        QueryExt,
+        CompetitionExt,
+        CompetitionInstantiateExt,
+    >
 where
     CompetitionExt: Serialize + DeserializeOwned,
     QueryExt: JsonSchema,
@@ -167,10 +198,10 @@ where
 
     pub fn execute(
         &self,
-        deps: DepsMut,
+        mut deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteBase<ExecuteExt, CompetitionExt>,
+        msg: ExecuteBase<ExecuteExt, CompetitionExt, CompetitionInstantiateExt>,
     ) -> Result<Response, CompetitionError> {
         match msg {
             ExecuteBase::JailCompetition { propose_message } => {
@@ -185,9 +216,10 @@ where
                 rules,
                 rulesets,
                 extension,
+                instantiate_extension: _,
             } => self.execute_create_competition(
-                deps,
-                env,
+                &mut deps,
+                &env,
                 competition_dao,
                 escrow,
                 name,
@@ -209,8 +241,107 @@ where
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
             ExecuteBase::Activate {} => self.execute_activate(deps, info),
-            ExecuteBase::Extension { .. } => Ok(Response::default()),
+            ExecuteBase::AddCompetitionHook { id } => {
+                self.execute_add_competition_hook(deps, info, id)
+            }
+            ExecuteBase::RemoveCompetitionHook { id } => {
+                self.execute_remove_competition_hook(deps, info, id)
+            }
+            ExecuteBase::ExecuteCompetitionHook {
+                id: _,
+                distribution: _,
+            }
+            | ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
+    }
+
+    pub fn validate_execute_hook(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        id: Uint128,
+    ) -> Result<(), CompetitionError> {
+        // Validate hook
+        if HookDirection::Incoming
+            != self
+                .competition_hooks
+                .load(deps.storage, (id.u128(), info.sender.clone()))?
+        {
+            return Err(CompetitionError::Unauthorized {});
+        }
+
+        Ok(())
+    }
+
+    pub fn execute_add_competition_hook(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        id: Uint128,
+    ) -> Result<Response, CompetitionError> {
+        // Load competition using the ID
+        if !self.competitions.has(deps.storage, id.u128()) {
+            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+        };
+
+        // Assert sender is a registered, active competition module
+        let ownership = get_ownership(deps.storage)?;
+
+        if ownership.owner.is_none() {
+            return Err(CompetitionError::OwnershipError(
+                cw_ownable::OwnershipError::NoOwner,
+            ));
+        }
+
+        let competition_module: CompetitionModuleResponse = deps.querier.query_wasm_smart(
+            ownership.owner.unwrap(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: arena_core_interface::msg::QueryExt::CompetitionModule {
+                    query: arena_core_interface::msg::CompetitionModuleQuery::Addr(
+                        info.sender.to_string(),
+                    ),
+                },
+            },
+        )?;
+
+        if !competition_module.is_enabled {
+            return Err(CompetitionError::StdError(StdError::GenericErr {
+                msg: "Competition module is not enabled".to_string(),
+            }));
+        }
+
+        // Add competition hook
+        self.competition_hooks.save(
+            deps.storage,
+            (id.u128(), info.sender.clone()),
+            &HookDirection::Outgoing,
+        )?;
+
+        Ok(Response::new()
+            .add_attribute("action", "add_competition_hook")
+            .add_attribute("competition_module", info.sender)
+            .add_attribute("id", id.to_string()))
+    }
+
+    pub fn execute_remove_competition_hook(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        id: Uint128,
+    ) -> Result<Response, CompetitionError> {
+        // Load competition using the ID
+        if !self.competitions.has(deps.storage, id.u128()) {
+            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+        };
+
+        // Remove competition hook
+        self.competition_hooks
+            .remove(deps.storage, (id.u128(), info.sender.clone()));
+
+        Ok(Response::new()
+            .add_attribute("action", "add_competition_hook")
+            .add_attribute("competition_module", info.sender)
+            .add_attribute("id", id.to_string()))
     }
 
     pub fn execute_activate(
@@ -220,7 +351,7 @@ where
     ) -> Result<Response, CompetitionError> {
         // Load competition ID associated with the escrow
         let id = self
-            .escrow_to_competition_map
+            .escrows_to_competitions
             .may_load(deps.storage, info.sender.clone())?
             .ok_or(CompetitionError::UnknownEscrow {
                 addr: info.sender.to_string(),
@@ -313,7 +444,7 @@ where
             description: propose_message.description,
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteBase::<Empty, Empty>::ProcessCompetition {
+                msg: to_binary(&ExecuteBase::<Empty, Empty, Empty>::ProcessCompetition {
                     id: propose_message.id,
                     distribution: propose_message.distribution,
                 })?,
@@ -409,8 +540,8 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn execute_create_competition(
         &self,
-        deps: DepsMut,
-        env: Env,
+        deps: &mut DepsMut,
+        env: &Env,
         competition_dao: ModuleInstantiateInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
@@ -432,7 +563,7 @@ where
                 Ok(x.checked_add(Uint128::one())?)
             })?;
         let admin_dao = self.get_dao(deps.as_ref())?;
-        let competition = Competition {
+        let mut competition = Competition {
             admin_dao: admin_dao.clone(),
             start_height: env.block.height,
             id,
@@ -452,12 +583,16 @@ where
             competition_dao.into_wasm_msg(admin_dao.clone()),
             DAO_REPLY_ID,
         )];
+
         if let Some(escrow) = escrow {
             msgs.push(SubMsg::reply_on_success(
                 escrow.into_wasm_msg(admin_dao),
                 ESCROW_REPLY_ID,
             ));
+        } else {
+            competition.status = CompetitionStatus::Active;
         }
+
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
         self.temp_competition.save(deps.storage, &id.u128())?;
@@ -503,7 +638,29 @@ where
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
 
-        let mut response = Response::new().add_attribute("action", "process_competition");
+        // Prepare hooks
+        let hooks: Vec<(Addr, HookDirection)> = self
+            .competition_hooks
+            .prefix(id.u128())
+            .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+            .collect::<StdResult<_>>()?;
+        let msg_binary = to_binary(
+            &ExecuteBase::<Empty, Empty, Empty>::ExecuteCompetitionHook {
+                id,
+                distribution: distribution.clone(),
+            },
+        )?;
+        let mut msgs: Vec<SubMsg> = hooks
+            .iter()
+            .filter(|x| x.1 == HookDirection::Outgoing)
+            .map(|x| {
+                SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: x.0.to_string(),
+                    msg: msg_binary.clone(),
+                    funds: vec![],
+                }))
+            })
+            .collect();
 
         // If there's an escrow, handle distribution and tax
         if let Some(escrow) = competition.escrow {
@@ -558,10 +715,12 @@ where
                 PROCESS_REPLY_ID,
             );
 
-            response = response.add_submessage(sub_msg);
+            msgs.push(sub_msg);
         }
 
-        Ok(response)
+        Ok(Response::new()
+            .add_attribute("action", "process_competition")
+            .add_submessages(msgs))
     }
 
     pub fn query(
@@ -708,7 +867,7 @@ where
                     None => Err(CompetitionError::UnknownCompetitionId { id }),
                 }
             })?;
-        self.escrow_to_competition_map
+        self.escrows_to_competitions
             .save(deps.storage, addr.clone(), &id)?;
 
         Ok(Response::new()

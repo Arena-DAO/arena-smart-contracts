@@ -21,13 +21,23 @@ pub struct InstantiateBase<InstantiateExt> {
 #[cw_ownable_execute]
 #[cw_serde]
 #[allow(clippy::large_enum_variant)]
-pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
+pub enum ExecuteBase<ExecuteExt, CompetitionExt, CompetitionInstantiateExt> {
     JailCompetition {
         propose_message: ProposeMessage,
     },
     Activate {},
     ProposeResult {
         propose_message: ProposeMessage,
+    },
+    AddCompetitionHook {
+        id: Uint128,
+    },
+    RemoveCompetitionHook {
+        id: Uint128,
+    },
+    ExecuteCompetitionHook {
+        id: Uint128,
+        distribution: Vec<MemberShare<String>>,
     },
     CreateCompetition {
         competition_dao: ModuleInstantiateInfo,
@@ -38,6 +48,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt> {
         rules: Vec<String>,
         rulesets: Vec<Uint128>,
         extension: CompetitionExt,
+        instantiate_extension: CompetitionInstantiateExt,
     },
     ProcessCompetition {
         id: Uint128,
@@ -72,4 +83,10 @@ where
     #[serde(skip)]
     #[returns(PhantomData<CompetitionExt>)]
     _Phantom(PhantomData<CompetitionExt>),
+}
+
+#[cw_serde]
+pub enum HookDirection {
+    Incoming,
+    Outgoing,
 }

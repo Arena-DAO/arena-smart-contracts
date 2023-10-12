@@ -31,6 +31,17 @@ pub fn arena_wager_module_contract() -> Box<dyn Contract<Empty>> {
     )
 }
 
+pub fn arena_league_module_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new(
+            arena_league_module::contract::execute,
+            arena_league_module::contract::instantiate,
+            arena_league_module::contract::query,
+        )
+        .with_reply(arena_league_module::contract::reply),
+    )
+}
+
 pub fn dao_proposal_multiple_contract() -> Box<dyn Contract<Empty>> {
     Box::new(
         ContractWrapper::new(

@@ -166,8 +166,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             )?),
             QueryExt::Ruleset { id } => to_binary(&query::ruleset(deps, id)?),
             QueryExt::Tax { height } => to_binary(&query::tax(deps, env, height)?),
-            QueryExt::CompetitionModule { key } => {
-                to_binary(&query::competition_module(deps, key)?)
+            QueryExt::CompetitionModule { query } => {
+                to_binary(&query::competition_module(deps, query)?)
             }
             QueryExt::DumpState {} => to_binary(&query::dump_state(deps, env)?),
         },

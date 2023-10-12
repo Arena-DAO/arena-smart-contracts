@@ -1,7 +1,7 @@
 use arena_core_interface::msg::Ruleset;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, SnapshotItem};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex, SnapshotItem, SnapshotMap};
 
 pub struct RulesetIndexes<'a> {
     pub is_enabled: MultiIndex<'a, String, Ruleset, u128>,
@@ -63,4 +63,9 @@ pub const TAX: SnapshotItem<Decimal> = SnapshotItem::new(
     cw_storage_plus::Strategy::EveryBlock,
 );
 pub const RULESET_COUNT: Item<Uint128> = Item::new("ruleset_count");
-pub const KEYS: Map<String, Addr> = Map::new("keys");
+pub const KEYS: SnapshotMap<String, Addr> = SnapshotMap::new(
+    "keys",
+    "keys__check",
+    "keys__change",
+    cw_storage_plus::Strategy::EveryBlock,
+);

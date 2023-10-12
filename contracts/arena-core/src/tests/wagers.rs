@@ -20,9 +20,10 @@ struct Context {
     wager: WagerContext,
 }
 
-struct WagerContext {
-    wager_module_addr: Addr,
-    escrow_id: u64,
+pub struct WagerContext {
+    pub wager_module_addr: Addr,
+    pub escrow_id: u64,
+    pub wagers_key: String,
 }
 
 fn setup_app(balances: Vec<(Addr, Coins)>) -> App {
@@ -36,9 +37,10 @@ fn setup_app(balances: Vec<(Addr, Coins)>) -> App {
     })
 }
 
-fn setup_wager_context(app: &mut App, core_context: &CoreContext) -> WagerContext {
+pub fn setup_wager_context(app: &mut App, core_context: &CoreContext) -> WagerContext {
     let wager_module_id = app.store_code(arena_testing::contracts::arena_wager_module_contract());
     let escrow_id = app.store_code(arena_testing::contracts::arena_dao_escrow_contract());
+    let wagers_key = "Wagers".to_string();
 
     // Attach the arena-wager-module to the arena-core
     let result = app.execute_contract(
@@ -53,7 +55,7 @@ fn setup_wager_context(app: &mut App, core_context: &CoreContext) -> WagerContex
                         to_add: vec![ModuleInstantiateInfo {
                             code_id: wager_module_id,
                             msg: to_binary(&InstantiateMsg {
-                                key: "Wagers".to_string(),
+                                key: wagers_key.clone(),
                                 description: "This is a description".to_string(),
                                 extension: Empty {},
                             })
@@ -81,6 +83,7 @@ fn setup_wager_context(app: &mut App, core_context: &CoreContext) -> WagerContex
     WagerContext {
         wager_module_addr,
         escrow_id,
+        wagers_key,
     }
 }
 
@@ -134,6 +137,7 @@ fn create_competition(
             ],
             rulesets: vec![],
             extension: Empty {},
+            instantiate_extension: Empty {},
         },
         &[],
     );

@@ -8,7 +8,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-wager-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub type CompetitionModule = CompetitionModuleContract<Empty, Empty, Empty, Empty>;
+pub type CompetitionModule = CompetitionModuleContract<Empty, Empty, Empty, Empty, Empty>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

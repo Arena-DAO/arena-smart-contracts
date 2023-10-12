@@ -179,7 +179,7 @@ pub fn propose(
         msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: info.sender.to_string(),
             msg: to_binary(
-                &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+                &cw_competition::msg::ExecuteBase::<Empty, Empty, Empty>::ProcessCompetition {
                     id: msg.id,
                     distribution: msg.distribution,
                 },

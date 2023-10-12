@@ -1,5 +1,7 @@
 use crate::state::{CompetitionModule, KEYS, TAX};
-use arena_core_interface::msg::{CompetitionModuleResponse, DumpStateResponse, Ruleset};
+use arena_core_interface::msg::{
+    CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse, Ruleset,
+};
 use cosmwasm_std::{Decimal, Deps, Empty, Env, StdResult, Uint128};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
@@ -108,15 +110,30 @@ pub fn ruleset(deps: Deps, id: Uint128) -> StdResult<Option<Ruleset>> {
     crate::state::rulesets().may_load(deps.storage, id.u128())
 }
 
-pub fn competition_module(deps: Deps, key: String) -> StdResult<Option<CompetitionModuleResponse>> {
-    let maybe_addr = KEYS.may_load(deps.storage, key)?;
+pub fn competition_module(
+    deps: Deps,
+    query: CompetitionModuleQuery,
+) -> StdResult<Option<CompetitionModuleResponse>> {
+    match query {
+        CompetitionModuleQuery::Key(key) => {
+            let maybe_addr = KEYS.may_load(deps.storage, key)?;
 
-    match maybe_addr {
-        Some(addr) => crate::state::competition_modules()
-            .may_load(deps.storage, addr)?
-            .map(|x| x.to_response(deps))
-            .transpose(),
-        None => Ok(None),
+            match maybe_addr {
+                Some(addr) => crate::state::competition_modules()
+                    .may_load(deps.storage, addr)?
+                    .map(|x| x.to_response(deps))
+                    .transpose(),
+                None => Ok(None),
+            }
+        }
+        CompetitionModuleQuery::Addr(addr) => {
+            let addr = deps.api.addr_validate(&addr)?;
+
+            crate::state::competition_modules()
+                .may_load(deps.storage, addr)?
+                .map(|x| x.to_response(deps))
+                .transpose()
+        }
     }
 }
 

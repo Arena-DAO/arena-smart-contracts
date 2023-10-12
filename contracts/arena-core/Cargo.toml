@@ -48,3 +48,4 @@ cw4-group = { workspace = true }
 cw-balance = { workspace = true }
 cw4 = "0.16"
 dao-voting-cw4 = { workspace = true }
+arena-league-module = { workspace = true }
