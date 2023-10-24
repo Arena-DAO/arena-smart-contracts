@@ -47,6 +47,7 @@ pub fn instantiate_extension(
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
         dao.clone(),
+        env.block.height,
         extension.competition_modules_instantiate_info,
         vec![],
     )?;
@@ -75,7 +76,13 @@ pub fn execute(
         ExecuteMsg::Propose { msg } => Ok(execute::propose(deps, env, info, msg)?),
         ExecuteMsg::Extension { msg } => match msg {
             ExecuteExt::UpdateCompetitionModules { to_add, to_disable } => {
-                execute::update_competition_modules(deps, info.sender, to_add, to_disable)
+                execute::update_competition_modules(
+                    deps,
+                    info.sender,
+                    env.block.height,
+                    to_add,
+                    to_disable,
+                )
             }
             ExecuteExt::UpdateRulesets { to_add, to_disable } => {
                 execute::update_rulesets(deps, info.sender, to_add, to_disable)
@@ -88,7 +95,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         COMPETITION_MODULE_REPLY_ID => {
             let res = parse_reply_instantiate_data(msg.clone())?;
@@ -118,7 +125,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             };
 
             competition_modules().save(deps.storage, module_addr.clone(), &competition_module)?;
-            KEYS.save(deps.storage, key.clone(), &module_addr)?;
+            KEYS.save(deps.storage, key.clone(), &module_addr, env.block.height)?;
             COMPETITION_MODULES_COUNT.update(deps.storage, |x| -> StdResult<_> {
                 Ok(x.checked_add(Uint128::one())?)
             })?;

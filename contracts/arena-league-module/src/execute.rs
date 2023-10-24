@@ -1,5 +1,6 @@
 use std::ops::Add;
 
+use arena_core_interface::msg::CompetitionModuleResponse;
 use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, DepsMut, Empty, Env, OverflowError, OverflowOperation, Response,
     StdError, StdResult, Uint128, Uint64, WasmMsg,
@@ -11,8 +12,10 @@ use dao_interface::state::ModuleInstantiateInfo;
 use crate::{
     contract::CompetitionModule,
     state::{Match, Round, WAGERS_KEY},
+    ContractError,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn instantiate_rounds(
     deps: DepsMut,
     env: Env,
@@ -24,7 +27,7 @@ pub fn instantiate_rounds(
     wager_dao: ModuleInstantiateInfo,
     wager_name: String,
     wager_description: String,
-) -> Result<Response, CompetitionError> {
+) -> Result<Response, ContractError> {
     // Convert team names to addresses
     let team_addresses: Vec<Addr> = teams
         .iter()
@@ -68,24 +71,32 @@ pub fn instantiate_rounds(
     let wager_key = WAGERS_KEY.load(deps.storage)?;
     let ownership = cw_ownable::get_ownership(deps.storage)?;
     if ownership.owner.is_none() {
-        return Err(CompetitionError::OwnershipError(
-            cw_ownable::OwnershipError::NoOwner,
+        return Err(ContractError::CompetitionError(
+            CompetitionError::OwnershipError(cw_ownable::OwnershipError::NoOwner),
         ));
     }
     let arena_core = ownership.owner.unwrap();
-    let wager_module: String = deps.querier.query_wasm_smart(
+    let wager_module: Option<CompetitionModuleResponse<String>> = deps.querier.query_wasm_smart(
         arena_core,
         &arena_core_interface::msg::QueryMsg::QueryExtension {
             msg: arena_core_interface::msg::QueryExt::CompetitionModule {
-                query: arena_core_interface::msg::CompetitionModuleQuery::Key(wager_key),
+                query: arena_core_interface::msg::CompetitionModuleQuery::Key(
+                    wager_key.clone(),
+                    env.block.height,
+                ),
             },
         },
     )?;
-    let wager_module = deps.api.addr_validate(&wager_module)?;
+
+    if wager_module.is_none() || !wager_module.as_ref().unwrap().is_enabled {
+        return Err(ContractError::CompetitionModuleNotAvailable { key: wager_key });
+    }
+    let wager_module = wager_module.unwrap();
+    deps.api.addr_validate(&wager_module.addr)?;
 
     // Query wager id
     let mut wager_id: Uint128 = deps.querier.query_wasm_smart(
-        &wager_module,
+        &wager_module.addr,
         &cw_competition::msg::QueryBase::CompetitionCount::<Empty, Empty> {},
     )?;
 
@@ -111,14 +122,14 @@ pub fn instantiate_rounds(
 
         // Prepare message
         msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: wager_module.to_string(),
+            contract_addr: wager_module.addr.to_string(),
             msg: to_binary(
                 &cw_competition::msg::ExecuteBase::<Empty, Empty, Empty>::CreateCompetition {
                     competition_dao: wager_dao.clone(),
                     escrow: None,
                     name: wager_name.clone(),
                     description: wager_description.clone(),
-                    expiration: expiration.clone(),
+                    expiration,
                     rules: rules.clone(),
                     rulesets: rulesets.clone(),
                     extension: Empty {},
@@ -159,7 +170,7 @@ pub fn instantiate_rounds(
     // Check competition expiration is greater than the last match's expiration + 1 match expiration duration
     let competition_expiration = duration.after(&env.block);
     if competition.expiration < competition_expiration {
-        return Err(CompetitionError::OverflowError(OverflowError::new(
+        return Err(ContractError::OverflowError(OverflowError::new(
             OverflowOperation::Add,
             competition_expiration,
             competition.expiration,

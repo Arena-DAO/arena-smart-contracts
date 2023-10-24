@@ -1024,6 +1024,46 @@
       }
     ],
     "definitions": {
+      "CompetitionModuleQuery": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "key"
+            ],
+            "properties": {
+              "key": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "addr"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "QueryExt": {
         "oneOf": [
           {
@@ -1153,11 +1193,11 @@
               "competition_module": {
                 "type": "object",
                 "required": [
-                  "key"
+                  "query"
                 ],
                 "properties": {
-                  "key": {
-                    "type": "string"
+                  "query": {
+                    "$ref": "#/definitions/CompetitionModuleQuery"
                   }
                 },
                 "additionalProperties": false
@@ -1220,11 +1260,7 @@
     },
     "additionalProperties": false,
     "definitions": {
-      "Addr": {
-        "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
-        "type": "string"
-      },
-      "CompetitionModuleResponse": {
+      "CompetitionModuleResponse_for_String": {
         "type": "object",
         "required": [
           "addr",
@@ -1234,7 +1270,7 @@
         ],
         "properties": {
           "addr": {
-            "$ref": "#/definitions/Addr"
+            "type": "string"
           },
           "competition_count": {
             "$ref": "#/definitions/Uint128"
@@ -1263,7 +1299,7 @@
           "competition_modules": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/CompetitionModuleResponse"
+              "$ref": "#/definitions/CompetitionModuleResponse_for_String"
             }
           },
           "rulesets": {

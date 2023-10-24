@@ -20,6 +20,7 @@ pub const COMPETITION_REPLY_ID: u64 = 5;
 pub fn update_competition_modules(
     deps: DepsMut,
     sender: Addr,
+    height: u64,
     to_add: Vec<ModuleInstantiateInfo>,
     to_disable: Vec<String>,
 ) -> Result<Response, ContractError> {
@@ -44,7 +45,7 @@ pub fn update_competition_modules(
 
         if let Some(module_addr) = KEYS.may_load(deps.storage, module.key.clone())? {
             if module_addr == module.addr {
-                KEYS.remove(deps.storage, module.key);
+                KEYS.remove(deps.storage, module.key, height)?;
             }
         }
     }

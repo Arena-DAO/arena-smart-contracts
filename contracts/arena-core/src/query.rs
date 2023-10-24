@@ -7,7 +7,7 @@ use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
 impl CompetitionModule {
-    pub fn to_response(&self, deps: Deps) -> StdResult<CompetitionModuleResponse> {
+    pub fn to_response(&self, deps: Deps) -> StdResult<CompetitionModuleResponse<String>> {
         let competition_count: Uint128 = deps.querier.query_wasm_smart(
             self.addr.to_string(),
             &cw_competition::msg::QueryBase::<Empty, Empty>::CompetitionCount {},
@@ -15,7 +15,7 @@ impl CompetitionModule {
 
         Ok(CompetitionModuleResponse {
             key: self.key.clone(),
-            addr: self.addr.clone(),
+            addr: self.addr.to_string(),
             is_enabled: self.is_enabled,
             competition_count,
         })
@@ -27,7 +27,7 @@ pub fn competition_modules(
     start_after: Option<String>,
     limit: Option<u32>,
     include_disabled: Option<bool>,
-) -> StdResult<Vec<CompetitionModuleResponse>> {
+) -> StdResult<Vec<CompetitionModuleResponse<String>>> {
     let start_after_bound = maybe_addr(deps.api, start_after)?.map(Bound::exclusive);
     let limit = limit.unwrap_or(10).max(30);
     let include_disabled = include_disabled.unwrap_or(false);
@@ -113,10 +113,10 @@ pub fn ruleset(deps: Deps, id: Uint128) -> StdResult<Option<Ruleset>> {
 pub fn competition_module(
     deps: Deps,
     query: CompetitionModuleQuery,
-) -> StdResult<Option<CompetitionModuleResponse>> {
+) -> StdResult<Option<CompetitionModuleResponse<String>>> {
     match query {
-        CompetitionModuleQuery::Key(key) => {
-            let maybe_addr = KEYS.may_load(deps.storage, key)?;
+        CompetitionModuleQuery::Key(key, height) => {
+            let maybe_addr = KEYS.may_load_at_height(deps.storage, key, height)?;
 
             match maybe_addr {
                 Some(addr) => crate::state::competition_modules()

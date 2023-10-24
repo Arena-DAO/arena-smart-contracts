@@ -34,18 +34,19 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let module: CompetitionModuleResponse = deps.querier.query_wasm_smart(
+    let module: Option<CompetitionModuleResponse<String>> = deps.querier.query_wasm_smart(
         info.sender.clone(),
         &arena_core_interface::msg::QueryMsg::QueryExtension {
             msg: arena_core_interface::msg::QueryExt::CompetitionModule {
                 query: arena_core_interface::msg::CompetitionModuleQuery::Key(
                     msg.extension.wagers_key.clone(),
+                    env.block.height,
                 ),
             },
         },
     )?;
 
-    if !module.is_enabled {
+    if module.is_none() || !module.as_ref().unwrap().is_enabled {
         return Err(ContractError::CompetitionModuleNotAvailable {
             key: msg.extension.wagers_key,
         });
@@ -62,7 +63,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, CompetitionError> {
+) -> Result<Response, ContractError> {
     match msg {
         ExecuteBase::CreateCompetition {
             competition_dao,
@@ -102,7 +103,7 @@ pub fn execute(
             )
         }
         ExecuteBase::Extension { msg } => match msg {},
-        _ => CompetitionModule::default().execute(deps, env, info, msg),
+        _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }
 }
 

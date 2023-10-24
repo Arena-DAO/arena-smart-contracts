@@ -60,6 +60,7 @@ version = "0.9.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-address-like",
  "cw-balance",
  "dao-interface",
  "dao-pre-propose-base",

@@ -25,3 +25,4 @@ dao-interface = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 dao-voting = { workspace = true }
 cw-balance = { workspace = true }
+cw-address-like = { workspace = true }

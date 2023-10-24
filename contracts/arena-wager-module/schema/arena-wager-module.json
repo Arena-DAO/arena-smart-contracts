@@ -92,6 +92,76 @@
       {
         "type": "object",
         "required": [
+          "add_competition_hook"
+        ],
+        "properties": {
+          "add_competition_hook": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "remove_competition_hook"
+        ],
+        "properties": {
+          "remove_competition_hook": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "execute_competition_hook"
+        ],
+        "properties": {
+          "execute_competition_hook": {
+            "type": "object",
+            "required": [
+              "distribution",
+              "id"
+            ],
+            "properties": {
+              "distribution": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/MemberShare_for_String"
+                }
+              },
+              "id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
           "create_competition"
         ],
         "properties": {
@@ -102,6 +172,7 @@
               "description",
               "expiration",
               "extension",
+              "instantiate_extension",
               "name",
               "rules",
               "rulesets"
@@ -127,6 +198,9 @@
                 "$ref": "#/definitions/Expiration"
               },
               "extension": {
+                "$ref": "#/definitions/Empty"
+              },
+              "instantiate_extension": {
                 "$ref": "#/definitions/Empty"
               },
               "name": {

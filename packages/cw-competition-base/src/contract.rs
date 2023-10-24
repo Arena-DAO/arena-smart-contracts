@@ -293,7 +293,7 @@ where
             ));
         }
 
-        let competition_module: CompetitionModuleResponse = deps.querier.query_wasm_smart(
+        let competition_module: CompetitionModuleResponse<String> = deps.querier.query_wasm_smart(
             ownership.owner.unwrap(),
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::CompetitionModule {

@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Decimal, Uint128};
+use cw_address_like::AddressLike;
 use cw_balance::MemberShare;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
@@ -33,7 +34,7 @@ pub enum ExecuteExt {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryExt {
-    #[returns(Vec<CompetitionModuleResponse>)]
+    #[returns(Vec<CompetitionModuleResponse<String>>)]
     CompetitionModules {
         start_after: Option<String>,
         limit: Option<u32>,
@@ -49,7 +50,7 @@ pub enum QueryExt {
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
-    #[returns(Option<CompetitionModuleResponse>)]
+    #[returns(Option<CompetitionModuleResponse<String>>)]
     CompetitionModule { query: CompetitionModuleQuery },
     #[returns(DumpStateResponse)]
     DumpState {},
@@ -75,14 +76,14 @@ pub type PrePropose = PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, P
 #[cw_serde]
 pub struct DumpStateResponse {
     pub tax: Decimal,
-    pub competition_modules: Vec<CompetitionModuleResponse>,
+    pub competition_modules: Vec<CompetitionModuleResponse<String>>,
     pub rulesets: Vec<Ruleset>,
 }
 
 #[cw_serde]
-pub struct CompetitionModuleResponse {
+pub struct CompetitionModuleResponse<T: AddressLike> {
     pub key: String,
-    pub addr: Addr,
+    pub addr: T,
     pub is_enabled: bool,
     pub competition_count: Uint128,
 }
@@ -116,6 +117,6 @@ pub enum ProposeMessages {
 
 #[cw_serde]
 pub enum CompetitionModuleQuery {
-    Key(String),
+    Key(String, u64),
     Addr(String),
 }
