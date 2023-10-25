@@ -44,11 +44,26 @@ pub struct CompetitionExt {
 
 #[cw_serde]
 pub struct CompetitionInstantiateExt {
+    pub match_win_points: Uint128,
+    pub match_draw_points: Uint128,
+    pub match_lose_points: Uint128,
     pub teams: Vec<String>,
     pub round_duration: Duration,
     pub wager_dao: ModuleInstantiateInfo,
     pub wager_name: String,
     pub wager_description: String,
+}
+
+impl From<CompetitionInstantiateExt> for CompetitionExt {
+    fn from(value: CompetitionInstantiateExt) -> Self {
+        CompetitionExt {
+            match_win_points: value.match_win_points,
+            match_draw_points: value.match_draw_points,
+            match_lose_points: value.match_lose_points,
+            rounds: Uint64::zero(),
+            wager_module: Addr::unchecked("default"),
+        }
+    }
 }
 
 #[cw_serde]
@@ -59,7 +74,7 @@ pub struct MemberPoints {
 }
 
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
-pub type ExecuteMsg = ExecuteBase<ExecuteExt, CompetitionExt, CompetitionInstantiateExt>;
+pub type ExecuteMsg = ExecuteBase<ExecuteExt, CompetitionInstantiateExt>;
 pub type QueryMsg = QueryBase<QueryExt, CompetitionExt>;
 pub type League = Competition<CompetitionExt>;
 pub type LeagueResponse = CompetitionResponse<CompetitionExt>;

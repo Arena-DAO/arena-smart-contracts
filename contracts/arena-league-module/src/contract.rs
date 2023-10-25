@@ -73,7 +73,6 @@ pub fn execute(
             expiration,
             rules,
             rulesets,
-            extension,
             instantiate_extension,
         } => {
             let response = CompetitionModule::default().execute_create_competition(
@@ -86,7 +85,7 @@ pub fn execute(
                 expiration,
                 rules.clone(),
                 rulesets.clone(),
-                extension,
+                instantiate_extension.clone(),
             )?;
 
             execute::instantiate_rounds(

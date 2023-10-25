@@ -11,7 +11,7 @@ pub enum MigrateMsg {
 }
 
 pub type InstantiateMsg = InstantiateBase<Empty>;
-pub type ExecuteMsg = ExecuteBase<Empty, Empty, Empty>;
+pub type ExecuteMsg = ExecuteBase<Empty, Empty>;
 pub type QueryMsg = QueryBase<Empty, Empty>;
 pub type Wager = Competition<Empty>;
 pub type WagerResponse = CompetitionResponse<Empty>;

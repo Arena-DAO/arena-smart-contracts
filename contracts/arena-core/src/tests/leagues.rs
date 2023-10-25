@@ -151,23 +151,15 @@ fn create_competition(
                 match_win_points: Uint128::from(3u128),
                 match_draw_points: Uint128::one(),
                 match_lose_points: Uint128::zero(),
-                rounds: Uint64::zero(),
+                rounds: Uint64::zero(), // Need a way to exclude this in message and store only in state
+                wager_module: todo!(),
             },
             instantiate_extension: CompetitionInstantiateExt {
                 teams,
                 round_duration,
-                create_wager_msg:
-                    cw_competition::msg::ExecuteBase::<Empty, _, _>::CreateCompetition {
-                        competition_dao: todo!(),
-                        escrow: todo!(),
-                        name: todo!(),
-                        description: todo!(),
-                        expiration: todo!(),
-                        rules: vec![],
-                        rulesets: vec![],
-                        extension: Empty {},
-                        instantiate_extension: Empty {},
-                    },
+                wager_dao: todo!(),
+                wager_name: todo!(),
+                wager_description: todo!(),
             },
         },
         &[],

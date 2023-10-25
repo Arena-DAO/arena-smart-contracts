@@ -47,7 +47,7 @@ pub struct CompetitionModuleContract<
     ExecuteExt,
     QueryExt,
     CompetitionExt: Serialize + Clone + DeserializeOwned,
-    CompetitionInstantiateExt,
+    CompetitionInstantiateExt: Into<CompetitionExt>,
 > {
     pub config: Item<'static, Config>,
     pub competition_count: Item<'static, Uint128>,
@@ -72,7 +72,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt,
+        CompetitionInstantiateExt: Into<CompetitionExt>,
     >
     CompetitionModuleContract<
         InstantiateExt,
@@ -130,7 +130,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt,
+        CompetitionInstantiateExt: Into<CompetitionExt>,
     > Default
     for CompetitionModuleContract<
         InstantiateExt,
@@ -158,7 +158,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt,
+        CompetitionInstantiateExt: Into<CompetitionExt>,
     >
     CompetitionModuleContract<
         InstantiateExt,
@@ -201,7 +201,7 @@ where
         mut deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteBase<ExecuteExt, CompetitionExt, CompetitionInstantiateExt>,
+        msg: ExecuteBase<ExecuteExt, CompetitionInstantiateExt>,
     ) -> Result<Response, CompetitionError> {
         match msg {
             ExecuteBase::JailCompetition { propose_message } => {
@@ -215,8 +215,7 @@ where
                 expiration,
                 rules,
                 rulesets,
-                extension,
-                instantiate_extension: _,
+                instantiate_extension,
             } => self.execute_create_competition(
                 &mut deps,
                 &env,
@@ -227,7 +226,7 @@ where
                 expiration,
                 rules,
                 rulesets,
-                extension,
+                instantiate_extension,
             ),
             ExecuteBase::ProposeResult { propose_message } => {
                 self.execute_propose_result(deps, env, info, propose_message)
@@ -444,7 +443,7 @@ where
             description: propose_message.description,
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteBase::<Empty, Empty, Empty>::ProcessCompetition {
+                msg: to_binary(&ExecuteBase::<Empty, Empty>::ProcessCompetition {
                     id: propose_message.id,
                     distribution: propose_message.distribution,
                 })?,
@@ -549,7 +548,7 @@ where
         expiration: cw_utils::Expiration,
         rules: Vec<String>,
         rulesets: Vec<Uint128>,
-        extension: CompetitionExt,
+        extension: CompetitionInstantiateExt,
     ) -> Result<Response, CompetitionError> {
         if expiration.is_expired(&env.block) {
             return Err(CompetitionError::StdError(StdError::GenericErr {
@@ -575,7 +574,7 @@ where
             rules,
             rulesets,
             status: CompetitionStatus::Pending,
-            extension,
+            extension: extension.into(),
             has_generated_proposals: false,
             result: None,
         };
@@ -644,12 +643,10 @@ where
             .prefix(id.u128())
             .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
             .collect::<StdResult<_>>()?;
-        let msg_binary = to_binary(
-            &ExecuteBase::<Empty, Empty, Empty>::ExecuteCompetitionHook {
-                id,
-                distribution: distribution.clone(),
-            },
-        )?;
+        let msg_binary = to_binary(&ExecuteBase::<Empty, Empty>::ExecuteCompetitionHook {
+            id,
+            distribution: distribution.clone(),
+        })?;
         let mut msgs: Vec<SubMsg> = hooks
             .iter()
             .filter(|x| x.1 == HookDirection::Outgoing)

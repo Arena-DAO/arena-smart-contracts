@@ -171,7 +171,6 @@
               "competition_dao",
               "description",
               "expiration",
-              "extension",
               "instantiate_extension",
               "name",
               "rules",
@@ -196,9 +195,6 @@
               },
               "expiration": {
                 "$ref": "#/definitions/Expiration"
-              },
-              "extension": {
-                "$ref": "#/definitions/Empty"
               },
               "instantiate_extension": {
                 "$ref": "#/definitions/Empty"

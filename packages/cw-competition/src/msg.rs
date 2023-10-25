@@ -21,7 +21,7 @@ pub struct InstantiateBase<InstantiateExt> {
 #[cw_ownable_execute]
 #[cw_serde]
 #[allow(clippy::large_enum_variant)]
-pub enum ExecuteBase<ExecuteExt, CompetitionExt, CompetitionInstantiateExt> {
+pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     JailCompetition {
         propose_message: ProposeMessage,
     },
@@ -47,7 +47,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionExt, CompetitionInstantiateExt> {
         expiration: Expiration,
         rules: Vec<String>,
         rulesets: Vec<Uint128>,
-        extension: CompetitionExt,
         instantiate_extension: CompetitionInstantiateExt,
     },
     ProcessCompetition {

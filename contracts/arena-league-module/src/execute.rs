@@ -124,7 +124,7 @@ pub fn instantiate_rounds(
         msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: wager_module.addr.to_string(),
             msg: to_binary(
-                &cw_competition::msg::ExecuteBase::<Empty, Empty, Empty>::CreateCompetition {
+                &cw_competition::msg::ExecuteBase::<Empty, Empty>::CreateCompetition {
                     competition_dao: wager_dao.clone(),
                     escrow: None,
                     name: wager_name.clone(),
@@ -132,7 +132,6 @@ pub fn instantiate_rounds(
                     expiration,
                     rules: rules.clone(),
                     rulesets: rulesets.clone(),
-                    extension: Empty {},
                     instantiate_extension: Empty {},
                 },
             )?,

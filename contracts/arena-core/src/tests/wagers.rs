@@ -136,7 +136,6 @@ fn create_competition(
                 "Rule 3".to_string(),
             ],
             rulesets: vec![],
-            extension: Empty {},
             instantiate_extension: Empty {},
         },
         &[],
