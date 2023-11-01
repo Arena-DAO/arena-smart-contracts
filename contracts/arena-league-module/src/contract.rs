@@ -80,7 +80,7 @@ pub fn execute(
                 &env,
                 competition_dao,
                 escrow,
-                name,
+                name.clone(),
                 description,
                 expiration,
                 rules.clone(),
@@ -97,8 +97,7 @@ pub fn execute(
                 rules,
                 rulesets,
                 instantiate_extension.wager_dao,
-                instantiate_extension.wager_name,
-                instantiate_extension.wager_description,
+                name,
             )
         }
         ExecuteBase::Extension { msg } => match msg {},

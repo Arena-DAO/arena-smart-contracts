@@ -1,10 +1,9 @@
 use std::str::FromStr;
 
 use arena_league_module::msg::{
-    CompetitionExt, CompetitionInstantiateExt, ExecuteMsg, InstantiateExt, InstantiateMsg,
-    LeagueResponse, QueryMsg,
+    CompetitionInstantiateExt, ExecuteMsg, InstantiateExt, InstantiateMsg, LeagueResponse, QueryMsg,
 };
-use cosmwasm_std::{to_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Coin, Coins, Uint128, Uint64, WasmMsg};
 use cw4::Member;
 use cw_balance::MemberBalance;
 use cw_multi_test::{next_block, App, Executor};
@@ -21,7 +20,6 @@ use super::{core::CoreContext, wagers::WagerContext};
 struct Context {
     app: App,
     core: CoreContext,
-    wager: WagerContext,
     league: LeagueContext,
 }
 
@@ -147,19 +145,36 @@ fn create_competition(
                 "Rule 3".to_string(),
             ],
             rulesets: vec![],
-            extension: CompetitionExt {
-                match_win_points: Uint128::from(3u128),
-                match_draw_points: Uint128::one(),
-                match_lose_points: Uint128::zero(),
-                rounds: Uint64::zero(), // Need a way to exclude this in message and store only in state
-                wager_module: todo!(),
-            },
             instantiate_extension: CompetitionInstantiateExt {
                 teams,
                 round_duration,
-                wager_dao: todo!(),
-                wager_name: todo!(),
-                wager_description: todo!(),
+                match_win_points: Uint128::from(3u128),
+                match_draw_points: Uint128::one(),
+                match_lose_points: Uint128::zero(),
+                wager_dao: ModuleInstantiateInfo {
+                    code_id: context.core.dao_core_id,
+                    msg: to_binary(&super::helpers::get_competition_dao_instantiate_msg(
+                        context.core.cw4_id,
+                        context.core.cw4_voting_module_id,
+                        context.core.dao_proposal_single_id,
+                        dao_proposal_single::msg::InstantiateMsg {
+                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
+                                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
+                            },
+                            min_voting_period: None,
+                            max_voting_period: cw_utils_v16::Duration::Height(10u64),
+                            only_members_execute: false,
+                            allow_revoting: false,
+                            pre_propose_info:
+                                dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
+                            close_proposal_on_execution_failure: true,
+                        },
+                        vec![],
+                    ))
+                    .unwrap(),
+                    admin: None,
+                    label: "Wager DAO".to_string(),
+                },
             },
         },
         &[],
@@ -202,7 +217,6 @@ fn test_create_competition() {
     let league_context = setup_league_context(&mut app, &core_context, &wager_context);
     let mut context = Context {
         app,
-        wager: wager_context,
         core: core_context,
         league: league_context,
     };

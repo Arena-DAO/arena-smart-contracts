@@ -105,7 +105,9 @@ dependencies = [
  "cw-storage-plus 1.1.0",
  "cw-utils 1.0.1",
  "cw2 1.1.0",
+ "cw4 0.16.0",
  "dao-interface",
+ "dao-voting-cw4",
  "getrandom",
  "thiserror",
 ]

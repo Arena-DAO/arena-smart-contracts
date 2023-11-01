@@ -28,3 +28,5 @@ arena-core-interface = { workspace = true }
 thiserror = { workspace = true }
 dao-interface = { workspace = true }
 cw-ownable = { workspace = true }
+dao-voting-cw4 = { workspace = true }
+cw4 = "0.16"

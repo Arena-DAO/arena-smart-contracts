@@ -2,8 +2,8 @@ use std::ops::Add;
 
 use arena_core_interface::msg::CompetitionModuleResponse;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, DepsMut, Empty, Env, OverflowError, OverflowOperation, Response,
-    StdError, StdResult, Uint128, Uint64, WasmMsg,
+    from_binary, to_binary, Addr, CosmosMsg, DepsMut, Empty, Env, OverflowError, OverflowOperation,
+    Response, StdError, StdResult, Uint128, Uint64, WasmMsg,
 };
 use cw_competition_base::error::CompetitionError;
 use cw_utils::Duration;
@@ -25,8 +25,7 @@ pub fn instantiate_rounds(
     rules: Vec<String>,
     rulesets: Vec<Uint128>,
     wager_dao: ModuleInstantiateInfo,
-    wager_name: String,
-    wager_description: String,
+    competition_name: String,
 ) -> Result<Response, ContractError> {
     // Convert team names to addresses
     let team_addresses: Vec<Addr> = teams
@@ -107,6 +106,8 @@ pub fn instantiate_rounds(
     for (i, round_pairings) in rounds.iter().enumerate() {
         let round_number = i as u64;
         let mut matches = vec![];
+        let expiration = duration.after(&env.block);
+
         for &(idx1, idx2) in round_pairings {
             matches.push(Match {
                 team_1: team_addresses[idx1].clone(),
@@ -117,26 +118,55 @@ pub fn instantiate_rounds(
             });
             match_number += 1;
             wager_id = wager_id.checked_add(Uint128::one())?;
-        }
-        let expiration = duration.after(&env.block);
 
-        // Prepare message
-        msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: wager_module.addr.to_string(),
-            msg: to_binary(
-                &cw_competition::msg::ExecuteBase::<Empty, Empty>::CreateCompetition {
-                    competition_dao: wager_dao.clone(),
-                    escrow: None,
-                    name: wager_name.clone(),
-                    description: wager_description.clone(),
-                    expiration,
-                    rules: rules.clone(),
-                    rulesets: rulesets.clone(),
-                    instantiate_extension: Empty {},
+            // Alter dao data to set teams as members
+            let mut competition_dao_msg: dao_interface::msg::InstantiateMsg =
+                from_binary(&wager_dao.msg)?;
+            let mut voting_module_instantiate_info_msg: dao_voting_cw4::msg::InstantiateMsg =
+                from_binary(&competition_dao_msg.voting_module_instantiate_info.msg)?;
+
+            voting_module_instantiate_info_msg.initial_members = vec![
+                cw4::Member {
+                    addr: team_addresses[idx1].to_string(),
+                    weight: 1u64,
                 },
-            )?,
-            funds: vec![],
-        }));
+                cw4::Member {
+                    addr: team_addresses[idx2].to_string(),
+                    weight: 1u64,
+                },
+            ];
+
+            competition_dao_msg.voting_module_instantiate_info = ModuleInstantiateInfo {
+                msg: to_binary(&voting_module_instantiate_info_msg)?,
+                ..competition_dao_msg.voting_module_instantiate_info
+            };
+
+            let competition_dao = ModuleInstantiateInfo {
+                msg: to_binary(&competition_dao_msg)?,
+                ..wager_dao.clone()
+            };
+
+            // Prepare message
+            msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: wager_module.addr.to_string(),
+                msg: to_binary(
+                    &cw_competition::msg::ExecuteBase::<Empty, Empty>::CreateCompetition {
+                        competition_dao,
+                        escrow: None,
+                        name: format!("{} Wager Round {}", competition_name, i),
+                        description: format!(
+                            "This is a match of round {} from the league '{}'.",
+                            i, competition_name
+                        ),
+                        expiration,
+                        rules: rules.clone(),
+                        rulesets: rulesets.clone(),
+                        instantiate_extension: Empty {},
+                    },
+                )?,
+                funds: vec![],
+            }));
+        }
 
         crate::state::rounds().save(
             deps.storage,

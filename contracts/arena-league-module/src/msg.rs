@@ -50,8 +50,6 @@ pub struct CompetitionInstantiateExt {
     pub teams: Vec<String>,
     pub round_duration: Duration,
     pub wager_dao: ModuleInstantiateInfo,
-    pub wager_name: String,
-    pub wager_description: String,
 }
 
 impl From<CompetitionInstantiateExt> for CompetitionExt {
