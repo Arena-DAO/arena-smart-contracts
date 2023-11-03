@@ -560,7 +560,8 @@ where
             .competition_count
             .update(deps.storage, |x| -> StdResult<_> {
                 Ok(x.checked_add(Uint128::one())?)
-            })?;
+            })?
+            .checked_add(Uint128::one())?;
         let admin_dao = self.get_dao(deps.as_ref())?;
         let mut competition = Competition {
             admin_dao: admin_dao.clone(),
@@ -617,9 +618,16 @@ where
 
         // Validate competition status and sender's authorization
         match competition.status {
-            CompetitionStatus::Active
-                if competition.dao == info.sender || competition.admin_dao == info.sender => {}
-            CompetitionStatus::Jailed if competition.admin_dao == info.sender => {}
+            CompetitionStatus::Active => {
+                if competition.dao != info.sender && competition.admin_dao != info.sender {
+                    return Err(CompetitionError::Unauthorized {});
+                }
+            }
+            CompetitionStatus::Jailed => {
+                if competition.admin_dao != info.sender {
+                    return Err(CompetitionError::Unauthorized {});
+                }
+            }
             _ => {
                 return Err(CompetitionError::InvalidCompetitionStatus {
                     current_status: competition.status.clone(),

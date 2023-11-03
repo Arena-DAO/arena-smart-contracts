@@ -1,6 +1,6 @@
-use crate::state::Round;
+use crate::state::RoundResponse;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128, Uint64};
+use cosmwasm_std::{Addr, Empty, Uint128, Uint64};
 use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase},
     state::{Competition, CompetitionResponse},
@@ -9,19 +9,21 @@ use cw_utils::Duration;
 use dao_interface::state::ModuleInstantiateInfo;
 
 #[cw_serde]
-pub struct InstantiateExt {
-    pub wagers_key: String,
+pub enum ExecuteExt {
+    ProcessMatch {
+        league_id: Uint128,
+        round_number: Uint64,
+        match_number: Uint128,
+        result: Option<bool>,
+    },
 }
-
-#[cw_serde]
-pub enum ExecuteExt {}
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryExt {
     #[returns(Vec<MemberPoints>)]
     Leaderboard { league_id: Uint128 },
-    #[returns(Round)]
+    #[returns(RoundResponse)]
     Round {
         league_id: Uint128,
         round_number: Uint64,
@@ -71,7 +73,7 @@ pub struct MemberPoints {
     pub matches_played: Uint64,
 }
 
-pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
+pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, CompetitionInstantiateExt>;
 pub type QueryMsg = QueryBase<QueryExt, CompetitionExt>;
 pub type League = Competition<CompetitionExt>;

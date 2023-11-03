@@ -1,8 +1,7 @@
-use arena_core_interface::msg::CompetitionModuleResponse;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 use cw_competition::msg::{ExecuteBase, QueryBase};
@@ -11,8 +10,8 @@ use cw_competition_base::{contract::CompetitionModuleContract, error::Competitio
 use crate::{
     execute,
     msg::{
-        CompetitionExt, CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateExt,
-        InstantiateMsg, MigrateMsg, QueryExt, QueryMsg,
+        CompetitionExt, CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg,
+        MigrateMsg, QueryExt, QueryMsg,
     },
     query, ContractError,
 };
@@ -20,7 +19,7 @@ use crate::{
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-league-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub type CompetitionModule = CompetitionModuleContract<
-    InstantiateExt,
+    Empty,
     ExecuteExt,
     QueryExt,
     CompetitionExt,
@@ -34,24 +33,6 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let module: Option<CompetitionModuleResponse<String>> = deps.querier.query_wasm_smart(
-        info.sender.clone(),
-        &arena_core_interface::msg::QueryMsg::QueryExtension {
-            msg: arena_core_interface::msg::QueryExt::CompetitionModule {
-                query: arena_core_interface::msg::CompetitionModuleQuery::Key(
-                    msg.extension.wagers_key.clone(),
-                    env.block.height,
-                ),
-            },
-        },
-    )?;
-
-    if module.is_none() || !module.as_ref().unwrap().is_enabled {
-        return Err(ContractError::CompetitionModuleNotAvailable {
-            key: msg.extension.wagers_key,
-        });
-    }
-
     let resp = CompetitionModule::default().instantiate(deps.branch(), env, info, msg)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(resp)
@@ -80,11 +61,11 @@ pub fn execute(
                 &env,
                 competition_dao,
                 escrow,
-                name.clone(),
+                name,
                 description,
                 expiration,
-                rules.clone(),
-                rulesets.clone(),
+                rules,
+                rulesets,
                 instantiate_extension.clone(),
             )?;
 
@@ -94,13 +75,24 @@ pub fn execute(
                 response,
                 instantiate_extension.teams,
                 instantiate_extension.round_duration,
-                rules,
-                rulesets,
-                instantiate_extension.wager_dao,
-                name,
             )
         }
-        ExecuteBase::Extension { msg } => match msg {},
+        ExecuteBase::Extension { msg } => match msg {
+            ExecuteExt::ProcessMatch {
+                league_id,
+                round_number,
+                match_number,
+                result,
+            } => execute::process_match(
+                deps,
+                env,
+                info,
+                league_id,
+                round_number,
+                match_number,
+                result,
+            ),
+        },
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }
 }

@@ -107,7 +107,9 @@ pub fn update_rulesets(
     }
 
     // Add new rulesets
-    let mut current_id = RULESET_COUNT.may_load(deps.storage)?.unwrap_or_default();
+    let mut current_id = RULESET_COUNT
+        .may_load(deps.storage)?
+        .unwrap_or(Uint128::one());
     for ruleset in to_add {
         let new_ruleset = Ruleset {
             id: current_id,

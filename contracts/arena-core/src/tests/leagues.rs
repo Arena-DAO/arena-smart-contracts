@@ -1,21 +1,18 @@
 use std::str::FromStr;
 
 use arena_league_module::msg::{
-    CompetitionInstantiateExt, ExecuteMsg, InstantiateExt, InstantiateMsg, LeagueResponse, QueryMsg,
+    CompetitionInstantiateExt, ExecuteMsg, InstantiateMsg, LeagueResponse, QueryMsg,
 };
-use cosmwasm_std::{to_binary, Addr, Coin, Coins, Uint128, Uint64, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
 use cw4::Member;
 use cw_balance::MemberBalance;
 use cw_multi_test::{next_block, App, Executor};
 use cw_utils::{Duration, Expiration};
 use dao_interface::state::ModuleInstantiateInfo;
 
-use crate::tests::{
-    core::{get_attr_value, setup_core_context, ADMIN},
-    wagers::setup_wager_context,
-};
+use crate::tests::core::{get_attr_value, setup_core_context, ADMIN};
 
-use super::{core::CoreContext, wagers::WagerContext};
+use super::core::CoreContext;
 
 struct Context {
     app: App,
@@ -39,11 +36,7 @@ fn setup_app(balances: Vec<(Addr, Coins)>) -> App {
     })
 }
 
-fn setup_league_context(
-    app: &mut App,
-    core_context: &CoreContext,
-    wagers_context: &WagerContext,
-) -> LeagueContext {
+fn setup_league_context(app: &mut App, core_context: &CoreContext) -> LeagueContext {
     let league_module_id = app.store_code(arena_testing::contracts::arena_league_module_contract());
     let escrow_id = app.store_code(arena_testing::contracts::arena_dao_escrow_contract());
 
@@ -62,9 +55,7 @@ fn setup_league_context(
                             msg: to_binary(&InstantiateMsg {
                                 key: "Leagues".to_string(),
                                 description: "This is a description".to_string(),
-                                extension: InstantiateExt {
-                                    wagers_key: wagers_context.wagers_key.clone(),
-                                },
+                                extension: Empty {},
                             })
                             .unwrap(),
                             admin: None,
@@ -213,8 +204,7 @@ fn test_create_competition() {
             weight: 1u64,
         }],
     );
-    let wager_context = setup_wager_context(&mut app, &core_context);
-    let league_context = setup_league_context(&mut app, &core_context, &wager_context);
+    let league_context = setup_league_context(&mut app, &core_context);
     let mut context = Context {
         app,
         core: core_context,

@@ -12,7 +12,4 @@ pub enum ContractError {
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
-
-    #[error("CompetitionModuleNotAvailable")]
-    CompetitionModuleNotAvailable { key: String },
 }
