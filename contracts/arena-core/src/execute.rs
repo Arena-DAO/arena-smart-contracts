@@ -1,6 +1,6 @@
 use arena_core_interface::msg::{NewRuleset, PrePropose, ProposeMessage, ProposeMessages, Ruleset};
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
+    to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
     StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use dao_interface::state::ModuleInstantiateInfo;
@@ -181,7 +181,7 @@ pub fn propose(
         description: msg.description,
         msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: info.sender.to_string(),
-            msg: to_binary(
+            msg: to_json_binary(
                 &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
                     id: msg.id,
                     distribution: msg.distribution,
@@ -194,7 +194,7 @@ pub fn propose(
 
     let propose_messsage = WasmMsg::Execute {
         contract_addr: proposal_module.into_string(),
-        msg: to_binary(&msg)?,
+        msg: to_json_binary(&msg)?,
         funds: vec![],
     };
 
@@ -203,7 +203,7 @@ pub fn propose(
         .prepare_hooks(deps.storage, |a| {
             let execute = WasmMsg::Execute {
                 contract_addr: a.into_string(),
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
                 funds: vec![],
             };
             Ok(SubMsg::new(execute))

@@ -6,7 +6,7 @@ use crate::{
     ContractError,
 };
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
 use cw_balance::{BalanceVerified, MemberBalance};
@@ -98,19 +98,21 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Balance { addr } => to_binary(&query::balance(deps, addr)?),
-        QueryMsg::Due { addr } => to_binary(&query::due(deps, addr)?),
-        QueryMsg::TotalBalance {} => to_binary(&query::total_balance(deps)),
-        QueryMsg::IsLocked {} => to_binary(&query::is_locked(deps)),
-        QueryMsg::Distribution { addr } => to_binary(&query::distribution(deps, addr)?),
-        QueryMsg::IsFunded { addr } => to_binary(&query::is_funded(deps, addr)?),
-        QueryMsg::IsFullyFunded {} => to_binary(&query::is_fully_funded(deps)?),
+        QueryMsg::Balance { addr } => to_json_binary(&query::balance(deps, addr)?),
+        QueryMsg::Due { addr } => to_json_binary(&query::due(deps, addr)?),
+        QueryMsg::TotalBalance {} => to_json_binary(&query::total_balance(deps)),
+        QueryMsg::IsLocked {} => to_json_binary(&query::is_locked(deps)),
+        QueryMsg::Distribution { addr } => to_json_binary(&query::distribution(deps, addr)?),
+        QueryMsg::IsFunded { addr } => to_json_binary(&query::is_funded(deps, addr)?),
+        QueryMsg::IsFullyFunded {} => to_json_binary(&query::is_fully_funded(deps)?),
         QueryMsg::Balances { start_after, limit } => {
-            to_binary(&query::balances(deps, start_after, limit)?)
+            to_json_binary(&query::balances(deps, start_after, limit)?)
         }
-        QueryMsg::Dues { start_after, limit } => to_binary(&query::dues(deps, start_after, limit)?),
-        QueryMsg::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
-        QueryMsg::DumpState { addr } => to_binary(&query::dump_state(deps, addr)?),
+        QueryMsg::Dues { start_after, limit } => {
+            to_json_binary(&query::dues(deps, start_after, limit)?)
+        }
+        QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
+        QueryMsg::DumpState { addr } => to_json_binary(&query::dump_state(deps, addr)?),
     }
 }
 

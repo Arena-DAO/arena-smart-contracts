@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, OverflowError,
+    to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, OverflowError,
     OverflowOperation, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
@@ -466,7 +466,7 @@ impl BalanceVerified {
             .map(|cw20_coin| {
                 let exec_msg = WasmMsg::Execute {
                     contract_addr: cw20_coin.address.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Send {
+                    msg: to_json_binary(&Cw20ExecuteMsg::Send {
                         contract: contract.clone(),
                         amount: cw20_coin.amount,
                         msg: msg.clone(),
@@ -487,7 +487,7 @@ impl BalanceVerified {
                 cw721_collection.token_ids.iter().map(move |token_id| {
                     let exec_msg = WasmMsg::Execute {
                         contract_addr: cw721_collection.address.to_string(),
-                        msg: to_binary(&Cw721ExecuteMsg::SendNft {
+                        msg: to_json_binary(&Cw721ExecuteMsg::SendNft {
                             contract: contract.clone(),
                             token_id: token_id.clone(),
                             msg: msg.clone(),
@@ -508,7 +508,7 @@ impl BalanceVerified {
                 cw721_collection.token_ids.iter().map(move |token_id| {
                     let exec_msg = WasmMsg::Execute {
                         contract_addr: cw721_collection.address.to_string(),
-                        msg: to_binary(&Cw721ExecuteMsg::TransferNft {
+                        msg: to_json_binary(&Cw721ExecuteMsg::TransferNft {
                             recipient: recipient.to_string(),
                             token_id: token_id.clone(),
                         })?,
@@ -526,7 +526,7 @@ impl BalanceVerified {
             .map(|cw20_coin| {
                 let exec_msg = WasmMsg::Execute {
                     contract_addr: cw20_coin.address.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                         recipient: recipient.clone(),
                         amount: cw20_coin.amount,
                     })?,

@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response, StdResult,
+    to_json_binary, Addr, Attribute, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response,
+    StdResult,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
@@ -201,7 +202,9 @@ fn receive_balance(
             if let Some(owner) = get_ownership(deps.storage)?.owner {
                 msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
                     contract_addr: owner.to_string(),
-                    msg: to_binary(&cw_competition::msg::ExecuteBase::<Empty, Empty>::Activate {})?,
+                    msg: to_json_binary(
+                        &cw_competition::msg::ExecuteBase::<Empty, Empty>::Activate {},
+                    )?,
                     funds: vec![],
                 }));
             }

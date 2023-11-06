@@ -1,5 +1,5 @@
 use arena_core_interface::msg::{InstantiateExt, InstantiateMsg, NewRuleset};
-use cosmwasm_std::{to_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_multi_test::{next_block, App, AppResponse, Contract, ContractWrapper, Executor};
 use dao_interface::{
@@ -65,7 +65,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
         automatically_add_cw721s: true,
         voting_module_instantiate_info: ModuleInstantiateInfo {
             code_id: cw4_voting_module_id,
-            msg: to_binary(&dao_voting_cw4::msg::InstantiateMsg {
+            msg: to_json_binary(&dao_voting_cw4::msg::InstantiateMsg {
                 cw4_group_code_id: cw4_id,
                 initial_members: members,
             })
@@ -75,7 +75,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
         },
         proposal_modules_instantiate_info: vec![ModuleInstantiateInfo {
             code_id: dao_proposal_sudo_id,
-            msg: to_binary(&sudo_instantiate).unwrap(),
+            msg: to_json_binary(&sudo_instantiate).unwrap(),
             admin: None,
             label: "voting module".to_string(),
         }],
@@ -115,10 +115,10 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
             msgs: vec![WasmMsg::Execute {
                 contract_addr: dao_addr.to_string(),
                 funds: vec![],
-                msg: to_binary(&dao_interface::msg::ExecuteMsg::UpdateProposalModules {
+                msg: to_json_binary(&dao_interface::msg::ExecuteMsg::UpdateProposalModules {
                     to_add: vec![ModuleInstantiateInfo {
                         code_id: dao_proposal_single_id,
-                        msg: to_binary(&dao_proposal_single::msg::InstantiateMsg {
+                        msg: to_json_binary(&dao_proposal_single::msg::InstantiateMsg {
                             threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
                                 percentage: dao_voting::threshold::PercentageThreshold::Majority {},
                             },
@@ -130,7 +130,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
                                 dao_voting::pre_propose::PreProposeInfo::ModuleMayPropose {
                                     info: ModuleInstantiateInfo {
                                         code_id: arena_core_id,
-                                        msg: to_binary(&InstantiateMsg {
+                                        msg: to_json_binary(&InstantiateMsg {
                                             deposit_info: None,
                                             open_proposal_submission: false,
                                             extension: InstantiateExt {

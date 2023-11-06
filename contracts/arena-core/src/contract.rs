@@ -11,7 +11,7 @@ use arena_core_interface::msg::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    from_json, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
@@ -53,10 +53,10 @@ pub fn instantiate_extension(
     )?;
     Ok(prepropose_response
         .add_submessages(competition_response.messages)
-        .set_data(to_binary(&ModuleInstantiateCallback {
+        .set_data(to_json_binary(&ModuleInstantiateCallback {
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: dao.to_string(),
-                msg: to_binary(&DAOCoreExecuteMsg::SetItem {
+                msg: to_json_binary(&DAOCoreExecuteMsg::SetItem {
                     key: ITEM_KEY.to_string(),
                     value: env.contract.address.to_string(),
                 })?,
@@ -132,7 +132,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
             // Check for module instantiation callbacks
             let callback_msgs = match res.data {
-                Some(data) => from_binary::<ModuleInstantiateCallback>(&data)
+                Some(data) => from_json::<ModuleInstantiateCallback>(&data)
                     .map(|m| m.msgs)
                     .unwrap_or_else(|_| vec![]),
                 None => vec![],
@@ -155,7 +155,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 start_after,
                 limit,
                 include_disabled,
-            } => to_binary(&query::competition_modules(
+            } => to_json_binary(&query::competition_modules(
                 deps,
                 start_after,
                 limit,
@@ -165,18 +165,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 start_after,
                 limit,
                 include_disabled,
-            } => to_binary(&query::rulesets(
+            } => to_json_binary(&query::rulesets(
                 deps,
                 start_after,
                 limit,
                 include_disabled,
             )?),
-            QueryExt::Ruleset { id } => to_binary(&query::ruleset(deps, id)?),
-            QueryExt::Tax { height } => to_binary(&query::tax(deps, env, height)?),
+            QueryExt::Ruleset { id } => to_json_binary(&query::ruleset(deps, id)?),
+            QueryExt::Tax { height } => to_json_binary(&query::tax(deps, env, height)?),
             QueryExt::CompetitionModule { query } => {
-                to_binary(&query::competition_module(deps, query)?)
+                to_json_binary(&query::competition_module(deps, query)?)
             }
-            QueryExt::DumpState {} => to_binary(&query::dump_state(deps, env)?),
+            QueryExt::DumpState {} => to_json_binary(&query::dump_state(deps, env)?),
         },
         _ => PrePropose::default().query(deps, env, msg),
     }

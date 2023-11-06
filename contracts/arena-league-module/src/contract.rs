@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 use cw_competition::msg::{ExecuteBase, QueryBase};
@@ -106,11 +106,13 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Competitio
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryBase::QueryExtension { msg } => match msg {
-            QueryExt::Leaderboard { league_id } => to_binary(&query::leaderboard(deps, league_id)?),
+            QueryExt::Leaderboard { league_id } => {
+                to_json_binary(&query::leaderboard(deps, league_id)?)
+            }
             QueryExt::Round {
                 league_id,
                 round_number,
-            } => to_binary(&query::round(deps, league_id, round_number)?),
+            } => to_json_binary(&query::round(deps, league_id, round_number)?),
         },
         _ => CompetitionModule::default().query(deps, env, msg),
     }

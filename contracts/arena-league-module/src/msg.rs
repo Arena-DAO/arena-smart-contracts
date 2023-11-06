@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use crate::state::RoundResponse;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Empty, Uint128, Uint64};

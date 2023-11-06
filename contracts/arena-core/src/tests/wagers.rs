@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use arena_core_interface::msg::ProposeMessage;
 use arena_wager_module::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
-use cosmwasm_std::{to_binary, Addr, Coin, Coins, Empty, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_balance::{MemberBalance, MemberShare};
 use cw_competition::state::CompetitionStatus;
@@ -50,11 +50,11 @@ pub fn setup_wager_context(app: &mut App, core_context: &CoreContext) -> WagerCo
             msgs: vec![WasmMsg::Execute {
                 contract_addr: core_context.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
                     msg: arena_core_interface::msg::ExecuteExt::UpdateCompetitionModules {
                         to_add: vec![ModuleInstantiateInfo {
                             code_id: wager_module_id,
-                            msg: to_binary(&InstantiateMsg {
+                            msg: to_json_binary(&InstantiateMsg {
                                 key: wagers_key.clone(),
                                 description: "This is a description".to_string(),
                                 extension: Empty {},
@@ -99,7 +99,7 @@ fn create_competition(
         &ExecuteMsg::CreateCompetition {
             competition_dao: ModuleInstantiateInfo {
                 code_id: context.core.dao_core_id,
-                msg: to_binary(&super::helpers::get_competition_dao_instantiate_msg(
+                msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
                     context.core.cw4_id,
                     context.core.cw4_voting_module_id,
                     context.core.dao_proposal_single_id,
@@ -123,7 +123,7 @@ fn create_competition(
             },
             escrow: dues.map(|x| ModuleInstantiateInfo {
                 code_id: context.wager.escrow_id,
-                msg: to_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
+                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
                 admin: None,
                 label: "Escrow".to_owned(),
             }),

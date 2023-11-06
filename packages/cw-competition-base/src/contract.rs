@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use arena_core_interface::msg::{CompetitionModuleResponse, ProposeMessage, ProposeMessages};
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo,
+    Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::MemberShare;
 use cw_competition::{
@@ -443,7 +443,7 @@ where
             description: propose_message.description,
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteBase::<Empty, Empty>::ProcessCompetition {
+                msg: to_json_binary(&ExecuteBase::<Empty, Empty>::ProcessCompetition {
                     id: propose_message.id,
                     distribution: propose_message.distribution,
                 })?,
@@ -456,7 +456,7 @@ where
         let sub_msg = SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: proposal_module_addr.to_string(),
-                msg: to_binary(&propose_message)?,
+                msg: to_json_binary(&propose_message)?,
                 funds: vec![],
             }),
             PROPOSALS_REPLY_ID,
@@ -524,7 +524,7 @@ where
         // Construct message for the DAO owner
         let msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: dao_owner.to_string(),
-            msg: to_binary(&arena_core_interface::msg::ExecuteMsg::Propose {
+            msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Propose {
                 msg: propose_message,
             })?,
             funds: vec![],
@@ -651,7 +651,7 @@ where
             .prefix(id.u128())
             .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
             .collect::<StdResult<_>>()?;
-        let msg_binary = to_binary(&ExecuteBase::<Empty, Empty>::ExecuteCompetitionHook {
+        let msg_binary = to_json_binary(&ExecuteBase::<Empty, Empty>::ExecuteCompetitionHook {
             id,
             distribution: distribution.clone(),
         })?;
@@ -735,8 +735,8 @@ where
         msg: QueryBase<QueryExt, CompetitionExt>,
     ) -> StdResult<Binary> {
         match msg {
-            QueryBase::Config {} => to_binary(&self.config.load(deps.storage)?),
-            QueryBase::Competition { id } => to_binary(
+            QueryBase::Config {} => to_json_binary(&self.config.load(deps.storage)?),
+            QueryBase::Competition { id } => to_json_binary(
                 &self
                     .competitions
                     .load(deps.storage, id.u128())?
@@ -746,10 +746,10 @@ where
                 start_after,
                 limit,
                 status,
-            } => to_binary(&self.query_competitions(deps, env, start_after, limit, status)?),
-            QueryBase::Ownership {} => to_binary(&cw_ownable::get_ownership(deps.storage)?),
+            } => to_json_binary(&self.query_competitions(deps, env, start_after, limit, status)?),
+            QueryBase::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
             QueryBase::CompetitionCount {} => {
-                to_binary(&self.competition_count.load(deps.storage)?)
+                to_json_binary(&self.competition_count.load(deps.storage)?)
             }
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
             QueryBase::_Phantom(_) => Ok(Binary::default()),

@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, WasmMsg};
+use cosmwasm_std::{to_json_binary, Binary, CosmosMsg, StdResult, WasmMsg};
 use cw_balance::MemberShare;
 
 #[cw_serde]
@@ -10,14 +10,14 @@ pub struct CompetitionEscrowDistributeMsg {
 
 impl CompetitionEscrowDistributeMsg {
     /// serializes the message
-    pub fn into_binary(self) -> StdResult<Binary> {
+    pub fn into_json_binary(self) -> StdResult<Binary> {
         let msg = CompetitionEscrowMsg::Distribute(self);
-        to_binary(&msg)
+        to_json_binary(&msg)
     }
 
     /// creates a cosmos_msg sending this struct to the named contract
     pub fn into_cosmos_msg<T: Into<String>>(self, contract_addr: T) -> StdResult<CosmosMsg> {
-        let msg = self.into_binary()?;
+        let msg = self.into_json_binary()?;
         let execute = WasmMsg::Execute {
             contract_addr: contract_addr.into(),
             msg,
