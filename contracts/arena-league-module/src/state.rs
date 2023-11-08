@@ -1,21 +1,21 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, BlockInfo, Deps, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Deps, StdResult, Uint128, Uint64};
 use cw_storage_plus::{Item, Map};
 use cw_utils::Expiration;
-
-#[cw_serde]
-pub struct MatchResult {
-    // Some(BOOL) is a winner where true is team1 and false is team2, and None is a draw
-    pub result: Option<bool>,
-    pub block: BlockInfo,
-}
 
 #[cw_serde]
 pub struct Match {
     pub match_number: Uint128,
     pub team_1: Addr,
     pub team_2: Addr,
-    pub result: Option<MatchResult>,
+    pub result: Option<Result>,
+}
+
+#[cw_serde]
+pub enum Result {
+    Team1,
+    Team2,
+    Draw,
 }
 
 #[cw_serde]

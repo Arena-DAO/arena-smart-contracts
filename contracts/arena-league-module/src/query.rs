@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::{
     contract::CompetitionModule,
     msg::MemberPoints,
-    state::{Match, Round, RoundResponse, MATCHES, ROUNDS},
+    state::{Match, Result, Round, RoundResponse, MATCHES, ROUNDS},
 };
 use cosmwasm_std::{Addr, Deps, StdResult, Uint128, Uint64};
 
@@ -28,11 +28,14 @@ pub fn leaderboard(deps: Deps, league_id: Uint128) -> StdResult<Vec<MemberPoints
 
         for m in matches {
             if let Some(match_result) = m.result {
-                match match_result.result {
-                    Some(winner) => {
-                        let (team_1, team_2) = match winner {
-                            true => (m.team_1, m.team_2),
-                            false => (m.team_2, m.team_1),
+                match match_result {
+                    Result::Team1 | Result::Team2 => {
+                        let (team_1, team_2) = match match_result {
+                            Result::Team1 => (m.team_1, m.team_2),
+                            Result::Team2 => (m.team_2, m.team_1),
+                            Result::Draw => {
+                                panic!("Could not decide the team order for point assignment")
+                            }
                         };
 
                         let record_1 = leaderboard.entry(team_1).or_default();
@@ -47,7 +50,7 @@ pub fn leaderboard(deps: Deps, league_id: Uint128) -> StdResult<Vec<MemberPoints
                             record_2.1.checked_add(Uint64::one())?,
                         );
                     }
-                    None => {
+                    Result::Draw => {
                         let record_1 = leaderboard.entry(m.team_1).or_default();
                         *record_1 = (
                             record_1.0.checked_add(league.extension.match_draw_points)?,

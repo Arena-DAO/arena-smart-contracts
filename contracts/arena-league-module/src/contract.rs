@@ -81,17 +81,8 @@ pub fn execute(
             ExecuteExt::ProcessMatch {
                 league_id,
                 round_number,
-                match_number,
-                result,
-            } => execute::process_match(
-                deps,
-                env,
-                info,
-                league_id,
-                round_number,
-                match_number,
-                result,
-            ),
+                match_results,
+            } => execute::process_match(deps, info, league_id, round_number, match_results),
         },
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }

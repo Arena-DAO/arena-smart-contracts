@@ -1,3 +1,4 @@
+use crate::state::Result;
 #[allow(unused_imports)]
 use crate::state::RoundResponse;
 use cosmwasm_schema::{cw_serde, QueryResponses};
@@ -14,9 +15,14 @@ pub enum ExecuteExt {
     ProcessMatch {
         league_id: Uint128,
         round_number: Uint64,
-        match_number: Uint128,
-        result: Option<bool>,
+        match_results: Vec<MatchResult>,
     },
+}
+
+#[cw_serde]
+pub struct MatchResult {
+    pub match_number: Uint128,
+    pub result: Option<Result>,
 }
 
 #[cw_serde]

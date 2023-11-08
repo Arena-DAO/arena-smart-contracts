@@ -1,7 +1,11 @@
 use std::str::FromStr;
 
-use arena_league_module::msg::{
-    CompetitionInstantiateExt, ExecuteMsg, InstantiateMsg, LeagueResponse, QueryMsg,
+use arena_league_module::{
+    msg::{
+        CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueResponse,
+        MatchResult, MemberPoints, QueryExt, QueryMsg,
+    },
+    state::Result,
 };
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
 use cw4::Member;
@@ -256,4 +260,75 @@ fn test_create_competition() {
         )
         .unwrap();
     assert_eq!(competition1.extension.rounds, Uint64::from(5u64));
+
+    // Process 1st round of matches
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.league.league_module_addr.to_string(),
+                msg: to_json_binary(&ExecuteMsg::Extension {
+                    msg: ExecuteExt::ProcessMatch {
+                        league_id: competition1_id.clone(),
+                        round_number: Uint64::one(),
+                        match_results: vec![
+                            MatchResult {
+                                match_number: Uint128::one(),
+                                result: Some(Result::Team1),
+                            },
+                            MatchResult {
+                                match_number: Uint128::from(2u128),
+                                result: Some(Result::Draw),
+                            },
+                        ],
+                    },
+                })
+                .unwrap(),
+                funds: vec![],
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let leaderboard: Vec<MemberPoints> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Leaderboard {
+                    league_id: competition1_id,
+                },
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        leaderboard,
+        vec![
+            MemberPoints {
+                member: users[1].clone(),
+                points: Uint128::from(3u128),
+                matches_played: Uint64::one()
+            },
+            MemberPoints {
+                member: users[2].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::one()
+            },
+            MemberPoints {
+                member: users[3].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::one()
+            },
+            MemberPoints {
+                member: users[4].clone(),
+                points: Uint128::zero(),
+                matches_played: Uint64::one()
+            }
+        ]
+    );
 }

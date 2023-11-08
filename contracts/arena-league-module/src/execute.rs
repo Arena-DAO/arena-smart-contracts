@@ -7,7 +7,8 @@ use std::ops::Add;
 
 use crate::{
     contract::CompetitionModule,
-    state::{Match, MatchResult, Round, MATCHES, ROUNDS},
+    msg::MatchResult,
+    state::{Match, Round, MATCHES, ROUNDS},
     ContractError,
 };
 
@@ -26,31 +27,32 @@ pub fn instantiate_rounds(
         .collect::<StdResult<_>>()?;
     let team_count = team_addresses.len();
 
-    // Calculate the number of rounds
-    let rounds_count = if team_count % 2 == 0 {
-        team_count - 1
-    } else {
+    // Determine the number of rounds and matches per round
+    let rounds = if team_count % 2 == 1 {
         team_count
+    } else {
+        team_count - 1
     };
-    let matches_per_round = (rounds_count + 1) / 2;
+    let matches_per_round = (rounds + 1) / 2;
 
-    // Generate match pairings for rounds
-    let mut team_indexes: Vec<usize> = (1..=rounds_count + 1).collect();
-    let mut rounds: Vec<Vec<(usize, usize)>> = Vec::new();
-    for _ in 0..rounds_count {
-        let round_pairings: Vec<(usize, usize)> = (0..matches_per_round)
-            .filter_map(|m| {
-                let idx1 = team_indexes[m];
-                let idx2 = team_indexes[team_indexes.len() - 1 - m];
-                if idx1 < team_count && idx2 < team_count {
-                    Some((idx1, idx2))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        rounds.push(round_pairings);
-        team_indexes.rotate_right(1);
+    // Table of teams, starting from 1 to n
+    let mut table: Vec<usize> = (1..=(rounds + 1)).collect();
+
+    // Stores the rounds with the corresponding matches
+    let mut matches: Vec<Vec<(usize, usize)>> = Vec::new();
+    for r in 0..rounds {
+        matches.push(vec![]);
+        for m in 0..matches_per_round {
+            // Ignore the dummy team
+            if table[table.len() - 1 - m] != rounds + 1 && table[m] != rounds + 1 {
+                // Pair the teams based on the circle method
+                matches[r].push((table[m], table[table.len() - 1 - m]));
+            }
+        }
+
+        if let Some(last) = table.pop() {
+            table.insert(1, last);
+        }
     }
 
     // Retrieve the current league ID
@@ -62,8 +64,9 @@ pub fn instantiate_rounds(
     // Save rounds and matches to storage
     let mut duration = round_duration;
     let mut match_number = 1u128;
-    for (i, round_pairings) in rounds.iter().enumerate() {
-        let round_number = i as u64;
+    let mut rounds_count = 0u64;
+    for (i, round_pairings) in matches.iter().enumerate() {
+        let round_number = i as u64 + 1;
         let mut matches = vec![];
         let expiration = duration.after(&env.block);
 
@@ -72,8 +75,8 @@ pub fn instantiate_rounds(
                 deps.storage,
                 (league_id.u128(), round_number, match_number),
                 &Match {
-                    team_1: team_addresses[idx1].clone(),
-                    team_2: team_addresses[idx2].clone(),
+                    team_1: team_addresses[idx1 - 1].clone(),
+                    team_2: team_addresses[idx2 - 1].clone(),
                     result: None,
                     match_number: Uint128::from(match_number),
                 },
@@ -92,6 +95,7 @@ pub fn instantiate_rounds(
             },
         )?;
         duration = duration.add(round_duration)?;
+        rounds_count += 1;
     }
 
     // Update competition rounds count
@@ -100,7 +104,7 @@ pub fn instantiate_rounds(
         league_id.u128(),
         |maybe_competition| {
             if let Some(mut competition) = maybe_competition {
-                competition.extension.rounds = Uint64::from(rounds_count as u64);
+                competition.extension.rounds = Uint64::from(rounds_count);
                 Ok(competition)
             } else {
                 Err(StdError::NotFound {
@@ -127,12 +131,10 @@ pub fn instantiate_rounds(
 
 pub fn process_match(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     league_id: Uint128,
     round_number: Uint64,
-    match_number: Uint128,
-    result: Option<bool>,
+    match_results: Vec<MatchResult>,
 ) -> Result<Response, ContractError> {
     let league = CompetitionModule::default()
         .competitions
@@ -146,22 +148,25 @@ pub fn process_match(
         ));
     }
 
-    let key = (league_id.u128(), round_number.u64(), match_number.u128());
-    MATCHES.update(deps.storage, key, |x| -> StdResult<_> {
-        match x {
-            Some(mut m) => {
-                m.result = Some(MatchResult {
-                    result,
-                    block: env.block,
-                });
+    for match_result in match_results {
+        let key = (
+            league_id.u128(),
+            round_number.u64(),
+            match_result.match_number.u128(),
+        );
+        MATCHES.update(deps.storage, key, |x| -> StdResult<_> {
+            match x {
+                Some(mut m) => {
+                    m.result = match_result.result;
 
-                Ok(m)
+                    Ok(m)
+                }
+                None => Err(StdError::NotFound {
+                    kind: "Match".to_string(),
+                }),
             }
-            None => Err(StdError::NotFound {
-                kind: "Match".to_string(),
-            }),
-        }
-    })?;
+        })?;
+    }
 
     Ok(Response::new())
 }
