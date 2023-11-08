@@ -48,7 +48,6 @@ pub struct CompetitionExt {
     pub match_draw_points: Uint128,
     pub match_lose_points: Uint128,
     pub rounds: Uint64,
-    pub wager_module: Addr,
 }
 
 #[cw_serde]
@@ -68,7 +67,6 @@ impl From<CompetitionInstantiateExt> for CompetitionExt {
             match_draw_points: value.match_draw_points,
             match_lose_points: value.match_lose_points,
             rounds: Uint64::zero(),
-            wager_module: Addr::unchecked("default"),
         }
     }
 }

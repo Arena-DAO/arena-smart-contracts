@@ -461,21 +461,18 @@
                 "type": "object",
                 "required": [
                   "league_id",
-                  "match_number",
+                  "match_results",
                   "round_number"
                 ],
                 "properties": {
                   "league_id": {
                     "$ref": "#/definitions/Uint128"
                   },
-                  "match_number": {
-                    "$ref": "#/definitions/Uint128"
-                  },
-                  "result": {
-                    "type": [
-                      "boolean",
-                      "null"
-                    ]
+                  "match_results": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/MatchResult"
+                    }
                   },
                   "round_number": {
                     "$ref": "#/definitions/Uint64"
@@ -534,6 +531,28 @@
             "additionalProperties": false
           }
         ]
+      },
+      "MatchResult": {
+        "type": "object",
+        "required": [
+          "match_number"
+        ],
+        "properties": {
+          "match_number": {
+            "$ref": "#/definitions/Uint128"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Result"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "MemberShare_for_String": {
         "type": "object",
@@ -618,6 +637,14 @@
           }
         },
         "additionalProperties": false
+      },
+      "Result": {
+        "type": "string",
+        "enum": [
+          "team1",
+          "team2",
+          "draw"
+        ]
       },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -959,8 +986,7 @@
             "match_draw_points",
             "match_lose_points",
             "match_win_points",
-            "rounds",
-            "wager_module"
+            "rounds"
           ],
           "properties": {
             "match_draw_points": {
@@ -974,9 +1000,6 @@
             },
             "rounds": {
               "$ref": "#/definitions/Uint64"
-            },
-            "wager_module": {
-              "$ref": "#/definitions/Addr"
             }
           },
           "additionalProperties": false
@@ -1095,8 +1118,7 @@
             "match_draw_points",
             "match_lose_points",
             "match_win_points",
-            "rounds",
-            "wager_module"
+            "rounds"
           ],
           "properties": {
             "match_draw_points": {
@@ -1110,9 +1132,6 @@
             },
             "rounds": {
               "$ref": "#/definitions/Uint64"
-            },
-            "wager_module": {
-              "$ref": "#/definitions/Addr"
             }
           },
           "additionalProperties": false

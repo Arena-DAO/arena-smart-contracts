@@ -5,7 +5,7 @@ use arena_league_module::{
         CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueResponse,
         MatchResult, MemberPoints, QueryExt, QueryMsg,
     },
-    state::Result,
+    state::{Match, Result, RoundResponse},
 };
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
 use cw4::Member;
@@ -261,6 +261,78 @@ fn test_create_competition() {
         .unwrap();
     assert_eq!(competition1.extension.rounds, Uint64::from(5u64));
 
+    // Get round 1
+    let round1: RoundResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Round {
+                    league_id: competition1_id,
+                    round_number: Uint64::one(),
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        round1,
+        RoundResponse {
+            round_number: Uint64::one(),
+            matches: vec![
+                Match {
+                    match_number: Uint128::from(2u128),
+                    team_1: users[2].clone(),
+                    team_2: users[3].clone(),
+                    result: None
+                },
+                Match {
+                    match_number: Uint128::one(),
+                    team_1: users[1].clone(),
+                    team_2: users[4].clone(),
+                    result: None
+                }
+            ],
+            expiration: Expiration::AtHeight(starting_height + 10u64),
+        },
+    );
+
+    // Get round 2
+    let round1: RoundResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Round {
+                    league_id: competition1_id,
+                    round_number: Uint64::from(2u64),
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        round1,
+        RoundResponse {
+            round_number: Uint64::from(2u64),
+            matches: vec![
+                Match {
+                    match_number: Uint128::from(4u128),
+                    team_1: users[1].clone(),
+                    team_2: users[2].clone(),
+                    result: None
+                },
+                Match {
+                    match_number: Uint128::from(3u128),
+                    team_1: users[0].clone(),
+                    team_2: users[4].clone(),
+                    result: None
+                }
+            ],
+            expiration: Expiration::AtHeight(starting_height + 20u64),
+        },
+    );
+
     // Process 1st round of matches
     let result = context.app.execute_contract(
         Addr::unchecked(ADMIN),
@@ -270,7 +342,7 @@ fn test_create_competition() {
                 contract_addr: context.league.league_module_addr.to_string(),
                 msg: to_json_binary(&ExecuteMsg::Extension {
                     msg: ExecuteExt::ProcessMatch {
-                        league_id: competition1_id.clone(),
+                        league_id: competition1_id,
                         round_number: Uint64::one(),
                         match_results: vec![
                             MatchResult {
@@ -328,6 +400,306 @@ fn test_create_competition() {
                 member: users[4].clone(),
                 points: Uint128::zero(),
                 matches_played: Uint64::one()
+            }
+        ]
+    );
+
+    // Process 2nd round of matches
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.league.league_module_addr.to_string(),
+                msg: to_json_binary(&ExecuteMsg::Extension {
+                    msg: ExecuteExt::ProcessMatch {
+                        league_id: competition1_id,
+                        round_number: Uint64::from(2u64),
+                        match_results: vec![
+                            MatchResult {
+                                match_number: Uint128::from(3u128),
+                                result: Some(Result::Team1),
+                            },
+                            MatchResult {
+                                match_number: Uint128::from(4u128),
+                                result: Some(Result::Team1),
+                            },
+                        ],
+                    },
+                })
+                .unwrap(),
+                funds: vec![],
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let leaderboard: Vec<MemberPoints> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Leaderboard {
+                    league_id: competition1_id,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        leaderboard,
+        vec![
+            MemberPoints {
+                member: users[0].clone(),
+                points: Uint128::from(3u128),
+                matches_played: Uint64::one()
+            },
+            MemberPoints {
+                member: users[1].clone(),
+                points: Uint128::from(6u128),
+                matches_played: Uint64::from(2u64)
+            },
+            MemberPoints {
+                member: users[2].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::from(2u64)
+            },
+            MemberPoints {
+                member: users[3].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::one()
+            },
+            MemberPoints {
+                member: users[4].clone(),
+                points: Uint128::zero(),
+                matches_played: Uint64::from(2u64)
+            }
+        ]
+    );
+
+    // Process 3rd round of matches
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.league.league_module_addr.to_string(),
+                msg: to_json_binary(&ExecuteMsg::Extension {
+                    msg: ExecuteExt::ProcessMatch {
+                        league_id: competition1_id,
+                        round_number: Uint64::from(3u64),
+                        match_results: vec![
+                            MatchResult {
+                                match_number: Uint128::from(5u128),
+                                result: Some(Result::Team1),
+                            },
+                            MatchResult {
+                                match_number: Uint128::from(6u128),
+                                result: Some(Result::Team1),
+                            },
+                        ],
+                    },
+                })
+                .unwrap(),
+                funds: vec![],
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let leaderboard: Vec<MemberPoints> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Leaderboard {
+                    league_id: competition1_id,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        leaderboard,
+        vec![
+            MemberPoints {
+                member: users[0].clone(),
+                points: Uint128::from(6u128),
+                matches_played: Uint64::from(2u64)
+            },
+            MemberPoints {
+                member: users[1].clone(),
+                points: Uint128::from(6u128),
+                matches_played: Uint64::from(2u64)
+            },
+            MemberPoints {
+                member: users[2].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::from(3u64)
+            },
+            MemberPoints {
+                member: users[3].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::from(2u64)
+            },
+            MemberPoints {
+                member: users[4].clone(),
+                points: Uint128::from(3u128),
+                matches_played: Uint64::from(3u64)
+            }
+        ]
+    );
+
+    // Process 4th round of matches
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.league.league_module_addr.to_string(),
+                msg: to_json_binary(&ExecuteMsg::Extension {
+                    msg: ExecuteExt::ProcessMatch {
+                        league_id: competition1_id,
+                        round_number: Uint64::from(4u64),
+                        match_results: vec![
+                            MatchResult {
+                                match_number: Uint128::from(7u128),
+                                result: Some(Result::Team1),
+                            },
+                            MatchResult {
+                                match_number: Uint128::from(8u128),
+                                result: Some(Result::Team1),
+                            },
+                        ],
+                    },
+                })
+                .unwrap(),
+                funds: vec![],
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let leaderboard: Vec<MemberPoints> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Leaderboard {
+                    league_id: competition1_id,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        leaderboard,
+        vec![
+            MemberPoints {
+                member: users[0].clone(),
+                points: Uint128::from(9u128),
+                matches_played: Uint64::from(3u64)
+            },
+            MemberPoints {
+                member: users[1].clone(),
+                points: Uint128::from(6u128),
+                matches_played: Uint64::from(3u64)
+            },
+            MemberPoints {
+                member: users[2].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::from(4u64)
+            },
+            MemberPoints {
+                member: users[3].clone(),
+                points: Uint128::from(4u128),
+                matches_played: Uint64::from(3u64)
+            },
+            MemberPoints {
+                member: users[4].clone(),
+                points: Uint128::from(3u128),
+                matches_played: Uint64::from(3u64)
+            }
+        ]
+    );
+
+    // Process 5th round of matches
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.league.league_module_addr.to_string(),
+                msg: to_json_binary(&ExecuteMsg::Extension {
+                    msg: ExecuteExt::ProcessMatch {
+                        league_id: competition1_id,
+                        round_number: Uint64::from(5u64),
+                        match_results: vec![
+                            MatchResult {
+                                match_number: Uint128::from(9u128),
+                                result: Some(Result::Team1),
+                            },
+                            MatchResult {
+                                match_number: Uint128::from(10u128),
+                                result: Some(Result::Team1),
+                            },
+                        ],
+                    },
+                })
+                .unwrap(),
+                funds: vec![],
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let leaderboard: Vec<MemberPoints> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Leaderboard {
+                    league_id: competition1_id,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        leaderboard,
+        vec![
+            MemberPoints {
+                member: users[0].clone(),
+                points: Uint128::from(12u128),
+                matches_played: Uint64::from(4u64)
+            },
+            MemberPoints {
+                member: users[1].clone(),
+                points: Uint128::from(6u128),
+                matches_played: Uint64::from(4u64)
+            },
+            MemberPoints {
+                member: users[2].clone(),
+                points: Uint128::one(),
+                matches_played: Uint64::from(4u64)
+            },
+            MemberPoints {
+                member: users[3].clone(),
+                points: Uint128::from(7u128),
+                matches_played: Uint64::from(4u64)
+            },
+            MemberPoints {
+                member: users[4].clone(),
+                points: Uint128::from(3u128),
+                matches_played: Uint64::from(4u64)
             }
         ]
     );
