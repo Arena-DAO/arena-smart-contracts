@@ -117,6 +117,6 @@ pub enum ProposeMessages {
 
 #[cw_serde]
 pub enum CompetitionModuleQuery {
-    Key(String, u64),
+    Key(String, Option<u64>),
     Addr(String),
 }

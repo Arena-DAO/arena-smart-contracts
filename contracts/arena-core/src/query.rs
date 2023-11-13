@@ -112,10 +112,13 @@ pub fn ruleset(deps: Deps, id: Uint128) -> StdResult<Option<Ruleset>> {
 
 pub fn competition_module(
     deps: Deps,
+    env: Env,
     query: CompetitionModuleQuery,
 ) -> StdResult<Option<CompetitionModuleResponse<String>>> {
     match query {
         CompetitionModuleQuery::Key(key, height) => {
+            let height = height.unwrap_or(env.block.height);
+
             let maybe_addr = KEYS.may_load_at_height(deps.storage, key, height)?;
 
             match maybe_addr {
