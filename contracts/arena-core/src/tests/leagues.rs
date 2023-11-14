@@ -146,30 +146,6 @@ fn create_competition(
                 match_win_points: Uint128::from(3u128),
                 match_draw_points: Uint128::one(),
                 match_lose_points: Uint128::zero(),
-                wager_dao: ModuleInstantiateInfo {
-                    code_id: context.core.dao_core_id,
-                    msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
-                        context.core.cw4_id,
-                        context.core.cw4_voting_module_id,
-                        context.core.dao_proposal_single_id,
-                        dao_proposal_single::msg::InstantiateMsg {
-                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
-                                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
-                            },
-                            min_voting_period: None,
-                            max_voting_period: cw_utils_v16::Duration::Height(10u64),
-                            only_members_execute: false,
-                            allow_revoting: false,
-                            pre_propose_info:
-                                dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
-                            close_proposal_on_execution_failure: true,
-                        },
-                        vec![],
-                    ))
-                    .unwrap(),
-                    admin: None,
-                    label: "Wager DAO".to_string(),
-                },
             },
         },
         &[],
