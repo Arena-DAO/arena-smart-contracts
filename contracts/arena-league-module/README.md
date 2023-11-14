@@ -1,11 +1,11 @@
-# Arena-Escrow
+# Arena-League-Module
 
-This smart contract handles the distribution of funds based on competition results. It allows users to send native tokens, CW20 tokens, and CW721 NFTs as assets to be distributed. The contract maintains balances and states for each user and manages the distribution process according to the competition results.
+This smart contract is a module for managing leagues in the Arena Protocol. It provides functionality for creating, managing, and participating in leagues.
 
 ## Features
 
-- Users can send native tokens, CW20 tokens, and CW721 NFTs to the contract.
-- The contract stores individual user balances.
-- The contract distributes funds based on competition results.
-- The contract can be locked or unlocked based on the competition state.
-- The contract supports queries for balances, stakes, dues, and the current state.
+- Creation of new leagues.
+- Management of league participants.
+- Handling of league competition results.
+- Leagues use a round-robin format for tournaments.
+- Querying for league information and participant standings.
