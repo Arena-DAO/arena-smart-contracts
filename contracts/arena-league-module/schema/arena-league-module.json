@@ -387,8 +387,7 @@
           "match_lose_points",
           "match_win_points",
           "round_duration",
-          "teams",
-          "wager_dao"
+          "teams"
         ],
         "properties": {
           "match_draw_points": {
@@ -408,9 +407,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "wager_dao": {
-            "$ref": "#/definitions/ModuleInstantiateInfo"
           }
         },
         "additionalProperties": false
