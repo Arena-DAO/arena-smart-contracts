@@ -8,7 +8,6 @@ use cw_competition::{
     state::{Competition, CompetitionResponse},
 };
 use cw_utils::Duration;
-use dao_interface::state::ModuleInstantiateInfo;
 
 #[cw_serde]
 pub enum ExecuteExt {
@@ -57,7 +56,6 @@ pub struct CompetitionInstantiateExt {
     pub match_lose_points: Uint128,
     pub teams: Vec<String>,
     pub round_duration: Duration,
-    pub wager_dao: ModuleInstantiateInfo,
 }
 
 impl From<CompetitionInstantiateExt> for CompetitionExt {
