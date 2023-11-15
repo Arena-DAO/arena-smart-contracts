@@ -1,4 +1,7 @@
-use arena_core_interface::msg::{InstantiateExt, InstantiateMsg, NewRuleset};
+use arena_core_interface::msg::{
+    CompetitionCategory, InstantiateExt, InstantiateMsg, NewCompetitionCategory, NewRuleset,
+    Ruleset,
+};
 use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_multi_test::{next_block, App, AppResponse, Contract, ContractWrapper, Executor};
@@ -40,6 +43,7 @@ pub struct CoreContext {
     pub dao_addr: Addr,
     pub arena_core_addr: Addr,
     pub proposal_module_addr: Addr,
+    pub category_id: Uint128,
 }
 
 pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
@@ -135,22 +139,25 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
                                             open_proposal_submission: false,
                                             extension: InstantiateExt {
                                                 competition_modules_instantiate_info: vec![],
+                                                categories: vec![NewCompetitionCategory {
+                                                    name: "Test Category".to_string(),
+                                                }],
                                                 rulesets: vec![
                                                     NewRuleset {
+                                                        category_id: Uint128::one(),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
                                                         ],
-                                                        description: "This is a description"
-                                                            .to_string(),
+                                                        description: "Test Ruleset 1".to_string(),
                                                     },
                                                     NewRuleset {
+                                                        category_id: Uint128::one(),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
                                                         ],
-                                                        description: "This is a description"
-                                                            .to_string(),
+                                                        description: "Test Ruleset 2".to_string(),
                                                     },
                                                 ],
                                                 tax: Decimal::new(Uint128::from(
@@ -213,5 +220,214 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
         arena_core_addr,
         sudo_proposal_addr: proposal_module.address.clone(),
         proposal_module_addr,
+        category_id: Uint128::one(),
     }
+}
+
+#[test]
+pub fn test_categories() {
+    let mut app = App::default();
+    let context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: ADMIN.to_string(),
+            weight: 1u64,
+        }],
+    );
+
+    // Test adding a new category and disabling the original category
+    let result = app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.arena_core_addr.to_string(),
+                funds: vec![],
+                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                    msg: arena_core_interface::msg::ExecuteExt::UpdateCategories {
+                        to_add: vec![NewCompetitionCategory {
+                            name: "New Category".to_string(),
+                        }],
+                        to_disable: vec![Uint128::one()],
+                    },
+                })
+                .unwrap(),
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Test querying categories
+    let categories: Vec<CompetitionCategory> = app
+        .wrap()
+        .query_wasm_smart(
+            context.arena_core_addr.clone(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: arena_core_interface::msg::QueryExt::Categories {
+                    start_after: None,
+                    limit: None,
+                    include_disabled: None,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(categories.len(), 1);
+    assert_eq!(categories[0].name, "New Category");
+    assert!(categories[0].is_enabled);
+
+    // Test querying disabled categories
+    let categories: Vec<CompetitionCategory> = app
+        .wrap()
+        .query_wasm_smart(
+            context.arena_core_addr.clone(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: arena_core_interface::msg::QueryExt::Categories {
+                    start_after: None,
+                    limit: None,
+                    include_disabled: Some(true),
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(categories.len(), 2);
+    assert_eq!(categories[0].name, "Test Category");
+    assert!(!categories[0].is_enabled);
+}
+
+#[test]
+pub fn test_rulesets() {
+    let mut app = App::default();
+    let context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: ADMIN.to_string(),
+            weight: 1u64,
+        }],
+    );
+
+    // Instantiate a new ruleset
+    let result = app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.arena_core_addr.to_string(),
+                funds: vec![],
+                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                    msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
+                        to_add: vec![arena_core_interface::msg::NewRuleset {
+                            category_id: Uint128::one(),
+                            rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
+                            description: "Test Ruleset 3".to_string(),
+                        }],
+                        to_disable: vec![],
+                    },
+                })
+                .unwrap(),
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Query the ruleset
+    let rulesets: Vec<Ruleset> = app
+        .wrap()
+        .query_wasm_smart(
+            context.arena_core_addr.clone(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: arena_core_interface::msg::QueryExt::Rulesets {
+                    category_id: Uint128::one(),
+                    start_after: None,
+                    limit: None,
+                    include_disabled: None,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(rulesets.len(), 3);
+
+    // Disable the ruleset
+    let result = app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.arena_core_addr.to_string(),
+                funds: vec![],
+                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                    msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
+                        to_add: vec![],
+                        to_disable: vec![Uint128::one()],
+                    },
+                })
+                .unwrap(),
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Query the ruleset again
+    let rulesets: Vec<Ruleset> = app
+        .wrap()
+        .query_wasm_smart(
+            context.arena_core_addr.clone(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: arena_core_interface::msg::QueryExt::Rulesets {
+                    category_id: Uint128::from(1u128),
+                    start_after: None,
+                    limit: None,
+                    include_disabled: None,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(rulesets.len(), 2);
+
+    let rulesets: Vec<Ruleset> = app
+        .wrap()
+        .query_wasm_smart(
+            context.arena_core_addr.clone(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: arena_core_interface::msg::QueryExt::Rulesets {
+                    category_id: Uint128::from(1u128),
+                    start_after: None,
+                    limit: None,
+                    include_disabled: Some(true),
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(rulesets.len(), 3);
+
+    // Try to add a ruleset for a category that does not exist
+    let result = app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.arena_core_addr.to_string(),
+                funds: vec![],
+                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                    msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
+                        to_add: vec![arena_core_interface::msg::NewRuleset {
+                            category_id: Uint128::from(9999u128), // Non-existent category
+                            rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
+                            description: "Test Ruleset 4".to_string(),
+                        }],
+                        to_disable: vec![],
+                    },
+                })
+                .unwrap(),
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_err());
 }

@@ -1,6 +1,8 @@
 use std::num::ParseIntError;
 
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cosmwasm_std::{
+    Addr, CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError, Uint128,
+};
 use cw_utils::ParseReplyError;
 use dao_pre_propose_base::error::PreProposeError;
 use thiserror::Error;
@@ -32,7 +34,10 @@ pub enum ContractError {
     PrePropose(#[from] PreProposeError),
 
     #[error("CompetitionModuleDoesNotExist")]
-    CompetitionModuleDoesNotExist {},
+    CompetitionModuleDoesNotExist { addr: Addr },
+
+    #[error("CompetitionCategoryDoesNotExist")]
+    CompetitionCategoryDoesNotExist { id: Uint128 },
 
     #[error("Unauthorized")]
     Unauthorized {},

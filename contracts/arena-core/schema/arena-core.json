@@ -155,11 +155,18 @@
       "InstantiateExt": {
         "type": "object",
         "required": [
+          "categories",
           "competition_modules_instantiate_info",
           "rulesets",
           "tax"
         ],
         "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/NewCompetitionCategory"
+            }
+          },
           "competition_modules_instantiate_info": {
             "type": "array",
             "items": {
@@ -219,13 +226,29 @@
         },
         "additionalProperties": false
       },
+      "NewCompetitionCategory": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "NewRuleset": {
         "type": "object",
         "required": [
+          "category_id",
           "description",
           "rules"
         ],
         "properties": {
+          "category_id": {
+            "$ref": "#/definitions/Uint128"
+          },
           "description": {
             "type": "string"
           },
@@ -691,6 +714,37 @@
               }
             },
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "update_categories"
+            ],
+            "properties": {
+              "update_categories": {
+                "type": "object",
+                "required": [
+                  "to_add",
+                  "to_disable"
+                ],
+                "properties": {
+                  "to_add": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/NewCompetitionCategory"
+                    }
+                  },
+                  "to_disable": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/Uint128"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           }
         ]
       },
@@ -751,13 +805,29 @@
         },
         "additionalProperties": false
       },
+      "NewCompetitionCategory": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "NewRuleset": {
         "type": "object",
         "required": [
+          "category_id",
           "description",
           "rules"
         ],
         "properties": {
+          "category_id": {
+            "$ref": "#/definitions/Uint128"
+          },
           "description": {
             "type": "string"
           },
@@ -1133,7 +1203,13 @@
             "properties": {
               "rulesets": {
                 "type": "object",
+                "required": [
+                  "category_id"
+                ],
                 "properties": {
+                  "category_id": {
+                    "$ref": "#/definitions/Uint128"
+                  },
                   "include_disabled": {
                     "type": [
                       "boolean",
@@ -1211,6 +1287,66 @@
           {
             "type": "object",
             "required": [
+              "category"
+            ],
+            "properties": {
+              "category": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "categories"
+            ],
+            "properties": {
+              "categories": {
+                "type": "object",
+                "properties": {
+                  "include_disabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint32",
+                    "minimum": 0.0
+                  },
+                  "start_after": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Uint128"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
               "dump_state"
             ],
             "properties": {
@@ -1254,15 +1390,43 @@
     "description": "This is used to completely generate schema types QueryExt response types are hidden by the QueryBase mapping to Binary output",
     "type": "object",
     "required": [
-      "dump_state_response"
+      "competition_category",
+      "dump_state_response",
+      "ruleset"
     ],
     "properties": {
+      "competition_category": {
+        "$ref": "#/definitions/CompetitionCategory"
+      },
       "dump_state_response": {
         "$ref": "#/definitions/DumpStateResponse"
+      },
+      "ruleset": {
+        "$ref": "#/definitions/Ruleset"
       }
     },
     "additionalProperties": false,
     "definitions": {
+      "CompetitionCategory": {
+        "type": "object",
+        "required": [
+          "id",
+          "is_enabled",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/Uint128"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "CompetitionModuleResponse_for_String": {
         "type": "object",
         "required": [
@@ -1295,7 +1459,6 @@
         "type": "object",
         "required": [
           "competition_modules",
-          "rulesets",
           "tax"
         ],
         "properties": {
@@ -1303,12 +1466,6 @@
             "type": "array",
             "items": {
               "$ref": "#/definitions/CompetitionModuleResponse_for_String"
-            }
-          },
-          "rulesets": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/Ruleset"
             }
           },
           "tax": {
@@ -1320,12 +1477,16 @@
       "Ruleset": {
         "type": "object",
         "required": [
+          "category_id",
           "description",
           "id",
           "is_enabled",
           "rules"
         ],
         "properties": {
+          "category_id": {
+            "$ref": "#/definitions/Uint128"
+          },
           "description": {
             "type": "string"
           },

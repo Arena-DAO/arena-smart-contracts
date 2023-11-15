@@ -1,4 +1,7 @@
-use arena_core_interface::msg::{NewRuleset, PrePropose, ProposeMessage, ProposeMessages, Ruleset};
+use arena_core_interface::msg::{
+    CompetitionCategory, NewCompetitionCategory, NewRuleset, PrePropose, ProposeMessage,
+    ProposeMessages, Ruleset,
+};
 use cosmwasm_std::{
     to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
     StdError, StdResult, SubMsg, Uint128, WasmMsg,
@@ -8,7 +11,10 @@ use dao_pre_propose_base::error::PreProposeError;
 use dao_voting::proposal::SingleChoiceProposeMsg;
 
 use crate::{
-    state::{competition_modules, rulesets, KEYS, RULESET_COUNT, TAX},
+    state::{
+        competition_categories, competition_modules, rulesets, COMPETITION_CATEGORIES_COUNT,
+        RULESETS_COUNT, TAX,
+    },
     ContractError,
 };
 
@@ -20,7 +26,6 @@ pub const COMPETITION_REPLY_ID: u64 = 5;
 pub fn update_competition_modules(
     deps: DepsMut,
     sender: Addr,
-    height: u64,
     to_add: Vec<ModuleInstantiateInfo>,
     to_disable: Vec<String>,
 ) -> Result<Response, ContractError> {
@@ -32,22 +37,16 @@ pub fn update_competition_modules(
     // Disable specified competition modules
     for module_addr in &to_disable {
         let addr = deps.api.addr_validate(module_addr)?;
-        let module = competition_modules().update(
+        competition_modules().update(
             deps.storage,
             addr.clone(),
             |maybe_module| -> Result<_, ContractError> {
                 let mut module =
-                    maybe_module.ok_or(ContractError::CompetitionModuleDoesNotExist {})?;
+                    maybe_module.ok_or(ContractError::CompetitionModuleDoesNotExist { addr })?;
                 module.is_enabled = false;
                 Ok(module)
             },
         )?;
-
-        if let Some(module_addr) = KEYS.may_load(deps.storage, module.key.clone())? {
-            if module_addr == module.addr {
-                KEYS.remove(deps.storage, module.key, height)?;
-            }
-        }
     }
 
     // Convert new modules into wasm messages and prepare for instantiation
@@ -107,11 +106,18 @@ pub fn update_rulesets(
     }
 
     // Add new rulesets
-    let mut current_id = RULESET_COUNT
+    let mut current_id = RULESETS_COUNT
         .may_load(deps.storage)?
         .unwrap_or(Uint128::one());
     for ruleset in to_add {
+        if !competition_categories().has(deps.storage, ruleset.category_id.u128()) {
+            return Err(ContractError::CompetitionCategoryDoesNotExist {
+                id: ruleset.category_id,
+            });
+        }
+
         let new_ruleset = Ruleset {
+            category_id: ruleset.category_id,
             id: current_id,
             rules: ruleset.rules,
             description: ruleset.description,
@@ -120,7 +126,7 @@ pub fn update_rulesets(
         rulesets().save(deps.storage, current_id.u128(), &new_ruleset)?;
         current_id = current_id.checked_add(Uint128::one())?;
     }
-    RULESET_COUNT.save(deps.storage, &current_id)?;
+    RULESETS_COUNT.save(deps.storage, &current_id)?;
 
     Ok(Response::new()
         .add_attribute("action", "update_rulesets")
@@ -219,4 +225,49 @@ pub fn propose(
         .add_message(propose_messsage)
         .add_submessages(hooks_msgs)
         .add_messages(deposit_messages))
+}
+
+pub fn update_categories(
+    deps: DepsMut,
+    sender: Addr,
+    to_add: Vec<NewCompetitionCategory>,
+    to_disable: Vec<Uint128>,
+) -> Result<Response, ContractError> {
+    // Ensure sender is authorized
+    if PrePropose::default().dao.load(deps.storage)? != sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Disable specified categories
+    for id in to_disable {
+        competition_categories().update(
+            deps.storage,
+            id.u128(),
+            |maybe_category| -> Result<_, ContractError> {
+                let mut category =
+                    maybe_category.ok_or(ContractError::CompetitionCategoryDoesNotExist { id })?;
+                category.is_enabled = false;
+                Ok(category)
+            },
+        )?;
+    }
+
+    // Add new categories
+    let mut current_id = COMPETITION_CATEGORIES_COUNT
+        .may_load(deps.storage)?
+        .unwrap_or(Uint128::one());
+    for category in to_add {
+        let new_category = CompetitionCategory {
+            id: current_id,
+            name: category.name,
+            is_enabled: true,
+        };
+        competition_categories().save(deps.storage, current_id.u128(), &new_category)?;
+        current_id = current_id.checked_add(Uint128::one())?;
+    }
+    COMPETITION_CATEGORIES_COUNT.save(deps.storage, &current_id)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_categories")
+        .add_attribute("category_count", current_id))
 }

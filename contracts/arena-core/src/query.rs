@@ -1,8 +1,10 @@
-use crate::state::{CompetitionModule, KEYS, TAX};
+use crate::state::{get_rulesets_category_and_is_enabled_idx, CompetitionModule, KEYS, TAX};
 use arena_core_interface::msg::{
-    CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse, Ruleset,
+    CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
+    Ruleset,
 };
 use cosmwasm_std::{Decimal, Deps, Empty, Env, StdResult, Uint128};
+use cw_paginate::paginate_indexed_map;
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
@@ -71,6 +73,7 @@ pub fn tax(deps: Deps, env: Env, height: Option<u64>) -> StdResult<Decimal> {
 
 pub fn rulesets(
     deps: Deps,
+    category_id: Uint128,
     start_after: Option<Uint128>,
     limit: Option<u32>,
     include_disabled: Option<bool>,
@@ -81,16 +84,68 @@ pub fn rulesets(
 
     let rulesets_map = crate::state::rulesets();
 
+    let enabled_rulesets = rulesets_map
+        .idx
+        .category_and_is_enabled
+        .prefix(get_rulesets_category_and_is_enabled_idx(category_id, true))
+        .range(
+            deps.storage,
+            start_after_bound.clone(),
+            None,
+            cosmwasm_std::Order::Ascending,
+        )
+        .map(|x| x.map(|y| y.1));
+
     if include_disabled {
-        cw_paginate::paginate_indexed_map(
-            &rulesets_map,
+        let disabled_rulesets = rulesets_map
+            .idx
+            .category_and_is_enabled
+            .prefix(get_rulesets_category_and_is_enabled_idx(category_id, false))
+            .range(
+                deps.storage,
+                start_after_bound,
+                None,
+                cosmwasm_std::Order::Ascending,
+            )
+            .map(|x| x.map(|y| y.1));
+
+        Ok(enabled_rulesets
+            .chain(disabled_rulesets)
+            .take(limit as usize)
+            .collect::<StdResult<Vec<_>>>()?)
+    } else {
+        Ok(enabled_rulesets
+            .take(limit as usize)
+            .collect::<StdResult<Vec<_>>>()?)
+    }
+}
+
+pub fn ruleset(deps: Deps, id: Uint128) -> StdResult<Option<Ruleset>> {
+    crate::state::rulesets().may_load(deps.storage, id.u128())
+}
+
+pub fn categories(
+    deps: Deps,
+    start_after: Option<Uint128>,
+    limit: Option<u32>,
+    include_disabled: Option<bool>,
+) -> StdResult<Vec<CompetitionCategory>> {
+    let start_after_bound = start_after.map(Bound::exclusive);
+    let limit = limit.unwrap_or(10).max(30);
+    let include_disabled = include_disabled.unwrap_or(false);
+
+    let category_map = crate::state::competition_categories();
+
+    if include_disabled {
+        paginate_indexed_map(
+            &category_map,
             deps.storage,
             start_after_bound,
             Some(limit),
             |_x, y| Ok(y),
         )
     } else {
-        rulesets_map
+        category_map
             .idx
             .is_enabled
             .prefix(true.to_string())
@@ -106,8 +161,8 @@ pub fn rulesets(
     }
 }
 
-pub fn ruleset(deps: Deps, id: Uint128) -> StdResult<Option<Ruleset>> {
-    crate::state::rulesets().may_load(deps.storage, id.u128())
+pub fn category(deps: Deps, id: Uint128) -> StdResult<Option<CompetitionCategory>> {
+    crate::state::competition_categories().may_load(deps.storage, id.u128())
 }
 
 pub fn competition_module(
@@ -144,6 +199,5 @@ pub fn dump_state(deps: Deps, env: Env) -> StdResult<DumpStateResponse> {
     Ok(DumpStateResponse {
         tax: tax(deps, env, None)?,
         competition_modules: competition_modules(deps, None, None, None)?,
-        rulesets: rulesets(deps, None, None, None)?,
     })
 }

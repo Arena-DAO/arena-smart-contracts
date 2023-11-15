@@ -13,6 +13,7 @@ use dao_voting::proposal::SingleChoiceProposeMsg;
 pub struct InstantiateExt {
     pub competition_modules_instantiate_info: Vec<ModuleInstantiateInfo>,
     pub rulesets: Vec<NewRuleset>,
+    pub categories: Vec<NewCompetitionCategory>,
     pub tax: Decimal,
 }
 
@@ -27,6 +28,10 @@ pub enum ExecuteExt {
     },
     UpdateRulesets {
         to_add: Vec<NewRuleset>,
+        to_disable: Vec<Uint128>,
+    },
+    UpdateCategories {
+        to_add: Vec<NewCompetitionCategory>,
         to_disable: Vec<Uint128>,
     },
 }
@@ -44,6 +49,7 @@ pub enum QueryExt {
     Ruleset { id: Uint128 },
     #[returns(Vec<Ruleset>)]
     Rulesets {
+        category_id: Uint128,
         start_after: Option<Uint128>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
@@ -52,6 +58,14 @@ pub enum QueryExt {
     Tax { height: Option<u64> },
     #[returns(Option<CompetitionModuleResponse<String>>)]
     CompetitionModule { query: CompetitionModuleQuery },
+    #[returns(Option<CompetitionCategory>)]
+    Category { id: Uint128 },
+    #[returns(Vec<CompetitionCategory>)]
+    Categories {
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+        include_disabled: Option<bool>,
+    },
     #[returns(DumpStateResponse)]
     DumpState {},
 }
@@ -66,6 +80,8 @@ pub enum MigrateMsg {
 #[cw_serde]
 pub struct SudoMsg {
     pub dump_state_response: DumpStateResponse,
+    pub ruleset: Ruleset,
+    pub competition_category: CompetitionCategory,
 }
 
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
@@ -77,7 +93,6 @@ pub type PrePropose = PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, P
 pub struct DumpStateResponse {
     pub tax: Decimal,
     pub competition_modules: Vec<CompetitionModuleResponse<String>>,
-    pub rulesets: Vec<Ruleset>,
 }
 
 #[cw_serde]
@@ -90,15 +105,29 @@ pub struct CompetitionModuleResponse<T: AddressLike> {
 
 #[cw_serde]
 pub struct NewRuleset {
+    pub category_id: Uint128,
     pub rules: Vec<String>,
     pub description: String,
 }
 
 #[cw_serde]
+pub struct NewCompetitionCategory {
+    pub name: String,
+}
+
+#[cw_serde]
 pub struct Ruleset {
     pub id: Uint128,
+    pub category_id: Uint128,
     pub rules: Vec<String>,
     pub description: String,
+    pub is_enabled: bool,
+}
+
+#[cw_serde]
+pub struct CompetitionCategory {
+    pub id: Uint128,
+    pub name: String,
     pub is_enabled: bool,
 }
 

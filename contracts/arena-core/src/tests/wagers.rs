@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
-use arena_core_interface::msg::ProposeMessage;
+use arena_core_interface::msg::{
+    CompetitionModuleQuery, CompetitionModuleResponse, ProposeMessage, QueryExt,
+};
 use arena_wager_module::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, WasmMsg};
 use cw4::Member;
@@ -605,4 +607,77 @@ fn test_create_competition_jailed() {
         .query_balance(context.core.dao_addr.to_string(), "juno")
         .unwrap();
     assert_eq!(balance.amount, Uint128::from(3_000u128));
+}
+
+#[test]
+pub fn test_disabling_module() {
+    let mut app = setup_app(vec![]);
+    let core_context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: ADMIN.to_string(),
+            weight: 1u64,
+        }],
+    );
+    let wager_context = setup_wager_context(&mut app, &core_context);
+    let mut context = Context {
+        app,
+        core: core_context,
+        wager: wager_context,
+    };
+
+    // Disable the wager module
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.core.arena_core_addr.to_string(),
+                funds: vec![],
+                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                    msg: arena_core_interface::msg::ExecuteExt::UpdateCompetitionModules {
+                        to_add: vec![],
+                        to_disable: vec![context.wager.wager_module_addr.to_string()],
+                    },
+                })
+                .unwrap(),
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Check that the module is disabled
+    let competition_module: Option<CompetitionModuleResponse<String>> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.core.arena_core_addr.clone(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: QueryExt::CompetitionModule {
+                    query: CompetitionModuleQuery::Addr(
+                        context.wager.wager_module_addr.to_string(),
+                    ),
+                },
+            },
+        )
+        .unwrap();
+    assert!(competition_module.is_some());
+    assert!(!competition_module.unwrap().is_enabled);
+
+    let competition_module: Option<CompetitionModuleResponse<String>> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.core.arena_core_addr.clone(),
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: QueryExt::CompetitionModule {
+                    query: CompetitionModuleQuery::Key(context.wager.wagers_key, None),
+                },
+            },
+        )
+        .unwrap();
+    assert!(competition_module.is_some());
+    assert!(!competition_module.unwrap().is_enabled);
 }

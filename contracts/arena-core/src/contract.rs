@@ -42,12 +42,12 @@ pub fn instantiate_extension(
 ) -> Result<Response, ContractError> {
     let dao = PrePropose::default().dao.load(deps.storage)?;
     crate::execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
+    crate::execute::update_categories(deps.branch(), dao.clone(), extension.categories, vec![])?;
     crate::execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
     COMPETITION_MODULES_COUNT.save(deps.storage, &Uint128::zero())?;
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
         dao.clone(),
-        env.block.height,
         extension.competition_modules_instantiate_info,
         vec![],
     )?;
@@ -76,18 +76,15 @@ pub fn execute(
         ExecuteMsg::Propose { msg } => Ok(execute::propose(deps, env, info, msg)?),
         ExecuteMsg::Extension { msg } => match msg {
             ExecuteExt::UpdateCompetitionModules { to_add, to_disable } => {
-                execute::update_competition_modules(
-                    deps,
-                    info.sender,
-                    env.block.height,
-                    to_add,
-                    to_disable,
-                )
+                execute::update_competition_modules(deps, info.sender, to_add, to_disable)
             }
             ExecuteExt::UpdateRulesets { to_add, to_disable } => {
                 execute::update_rulesets(deps, info.sender, to_add, to_disable)
             }
             ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, info.sender, tax),
+            ExecuteExt::UpdateCategories { to_add, to_disable } => {
+                execute::update_categories(deps, info.sender, to_add, to_disable)
+            }
         },
         // Default pre-propose-base behavior for all other messages
         _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),
@@ -162,16 +159,29 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 include_disabled,
             )?),
             QueryExt::Rulesets {
+                category_id,
                 start_after,
                 limit,
                 include_disabled,
             } => to_json_binary(&query::rulesets(
                 deps,
+                category_id,
                 start_after,
                 limit,
                 include_disabled,
             )?),
             QueryExt::Ruleset { id } => to_json_binary(&query::ruleset(deps, id)?),
+            QueryExt::Categories {
+                start_after,
+                limit,
+                include_disabled,
+            } => to_json_binary(&query::categories(
+                deps,
+                start_after,
+                limit,
+                include_disabled,
+            )?),
+            QueryExt::Category { id } => to_json_binary(&query::category(deps, id)?),
             QueryExt::Tax { height } => to_json_binary(&query::tax(deps, env, height)?),
             QueryExt::CompetitionModule { query } => {
                 to_json_binary(&query::competition_module(deps, env, query)?)
