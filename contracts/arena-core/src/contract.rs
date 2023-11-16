@@ -145,8 +145,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    let binary_result = match msg {
         QueryMsg::QueryExtension { msg } => match msg {
             QueryExt::CompetitionModules {
                 start_after,
@@ -187,9 +187,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 to_json_binary(&query::competition_module(deps, env, query)?)
             }
             QueryExt::DumpState {} => to_json_binary(&query::dump_state(deps, env)?),
+            QueryExt::IsValidCategoryAndRulesets {
+                category_id,
+                rulesets,
+            } => to_json_binary(&query::is_valid_category_and_rulesets(
+                deps,
+                category_id,
+                rulesets,
+            )?),
         },
         _ => PrePropose::default().query(deps, env, msg),
-    }
+    };
+
+    Ok(binary_result?)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

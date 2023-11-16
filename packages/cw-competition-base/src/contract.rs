@@ -29,6 +29,7 @@ pub const PRECISION_MULTIPLIER: u128 = 100_000;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
+    pub category: MultiIndex<'a, Uint128, Competition<CompetitionExt>, u128>,
 }
 
 impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
@@ -82,11 +83,13 @@ impl<
         CompetitionInstantiateExt,
     >
 {
+    #[allow(clippy::too_many_arguments)]
     const fn new(
         config_key: &'static str,
         competition_count_key: &'static str,
         competitions_key: &'static str,
         competitions_status_key: &'static str,
+        competitions_category_key: &'static str,
         escrows_to_competitions_key: &'static str,
         temp_competition_key: &'static str,
         competition_hooks_key: &'static str,
@@ -94,7 +97,11 @@ impl<
         Self {
             config: Item::new(config_key),
             competition_count: Item::new(competition_count_key),
-            competitions: Self::competitions(competitions_key, competitions_status_key),
+            competitions: Self::competitions(
+                competitions_key,
+                competitions_status_key,
+                competitions_category_key,
+            ),
             escrows_to_competitions: Map::new(escrows_to_competitions_key),
             temp_competition: Item::new(temp_competition_key),
             competition_hooks: Map::new(competition_hooks_key),
@@ -108,6 +115,7 @@ impl<
     const fn competitions(
         competitions_key: &'static str,
         competitions_status_key: &'static str,
+        competitions_category_key: &'static str,
     ) -> IndexedMap<
         'static,
         u128,
@@ -119,6 +127,11 @@ impl<
                 |_x, d: &Competition<CompetitionExt>| d.status.to_string(),
                 competitions_key,
                 competitions_status_key,
+            ),
+            category: MultiIndex::new(
+                |_x, d: &Competition<CompetitionExt>| d.category_id,
+                competitions_key,
+                competitions_category_key,
             ),
         };
         IndexedMap::new(competitions_key, indexes)
@@ -146,6 +159,7 @@ impl<
             "competition_count",
             "competitions",
             "competitions__status",
+            "competitions__category",
             "escrows",
             "temp_competition",
             "competition_hooks",
@@ -208,6 +222,7 @@ where
                 self.execute_jail_competition(deps, env, info, propose_message)
             }
             ExecuteBase::CreateCompetition {
+                category_id,
                 competition_dao,
                 escrow,
                 name,
@@ -219,6 +234,7 @@ where
             } => self.execute_create_competition(
                 &mut deps,
                 &env,
+                category_id,
                 competition_dao,
                 escrow,
                 name,
@@ -477,9 +493,9 @@ where
         info: MessageInfo,
         propose_message: ProposeMessage,
     ) -> Result<Response, CompetitionError> {
-        // Ensure DAO has an owner
-        let dao = get_ownership(deps.storage)?;
-        let dao_owner = dao.owner.ok_or(CompetitionError::OwnershipError(
+        // Ensure Module has an owner
+        let ownership = get_ownership(deps.storage)?;
+        let arena_core = ownership.owner.ok_or(CompetitionError::OwnershipError(
             cw_ownable::OwnershipError::NoOwner,
         ))?;
 
@@ -523,7 +539,7 @@ where
 
         // Construct message for the DAO owner
         let msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: dao_owner.to_string(),
+            contract_addr: arena_core.to_string(),
             msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Propose {
                 msg: propose_message,
             })?,
@@ -541,6 +557,7 @@ where
         &self,
         deps: &mut DepsMut,
         env: &Env,
+        category_id: Uint128,
         competition_dao: ModuleInstantiateInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
@@ -556,6 +573,24 @@ where
             }));
         }
 
+        // Ensure Module has an owner
+        let ownership = get_ownership(deps.storage)?;
+        let arena_core = ownership.owner.ok_or(CompetitionError::OwnershipError(
+            cw_ownable::OwnershipError::NoOwner,
+        ))?;
+
+        // Validate that category and rulesets are valid
+        let _result: Empty = deps.querier.query_wasm_smart(
+            arena_core,
+            &arena_core_interface::msg::QueryMsg::QueryExtension {
+                msg: arena_core_interface::msg::QueryExt::IsValidCategoryAndRulesets {
+                    category_id,
+                    rulesets: rulesets.clone(),
+                },
+            },
+        )?;
+
+        // Create competition
         let id = self
             .competition_count
             .update(deps.storage, |x| -> StdResult<_> {
@@ -564,6 +599,7 @@ where
             .checked_add(Uint128::one())?;
         let admin_dao = self.get_dao(deps.as_ref())?;
         let mut competition = Competition {
+            category_id,
             admin_dao: admin_dao.clone(),
             start_height: env.block.height,
             id,

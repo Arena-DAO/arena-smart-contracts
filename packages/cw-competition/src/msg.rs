@@ -40,6 +40,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         distribution: Vec<MemberShare<String>>,
     },
     CreateCompetition {
+        category_id: Uint128,
         competition_dao: ModuleInstantiateInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,

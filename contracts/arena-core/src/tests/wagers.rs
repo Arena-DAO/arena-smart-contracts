@@ -99,6 +99,7 @@ fn create_competition(
         Addr::unchecked(ADMIN),
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
+            category_id: Uint128::one(),
             competition_dao: ModuleInstantiateInfo {
                 code_id: context.core.dao_core_id,
                 msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
@@ -189,8 +190,64 @@ fn test_create_competition() {
         .unwrap();
     assert_eq!(competition_count, Uint128::zero());
 
-    // Create competiton
     let starting_height = context.app.block_info().height;
+
+    // Create competition fails from rulesets not existing on core
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        context.wager.wager_module_addr.clone(), // errors out bc dao not set
+        &ExecuteMsg::CreateCompetition {
+            category_id: Uint128::one(),
+            competition_dao: ModuleInstantiateInfo {
+                code_id: context.core.dao_core_id,
+                msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
+                    context.core.cw4_id,
+                    context.core.cw4_voting_module_id,
+                    context.core.dao_proposal_single_id,
+                    dao_proposal_single::msg::InstantiateMsg {
+                        threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
+                            percentage: dao_voting::threshold::PercentageThreshold::Majority {},
+                        },
+                        min_voting_period: None,
+                        max_voting_period: cw_utils_v16::Duration::Height(10u64),
+                        only_members_execute: false,
+                        allow_revoting: false,
+                        pre_propose_info:
+                            dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
+                        close_proposal_on_execution_failure: true,
+                    },
+                    vec![
+                        cw4::Member {
+                            addr: user1.to_string(),
+                            weight: 1u64,
+                        },
+                        cw4::Member {
+                            addr: user2.to_string(),
+                            weight: 1u64,
+                        },
+                    ],
+                ))
+                .unwrap(),
+                admin: None,
+                label: "DAO".to_owned(),
+            },
+            escrow: None,
+            name: "This is a competition name".to_string(),
+            description: "This is a description".to_string(),
+            expiration: Expiration::AtHeight(starting_height + 10),
+            rules: vec![
+                "Rule 1".to_string(),
+                "Rule 2".to_string(),
+                "Rule 3".to_string(),
+            ],
+            rulesets: vec![Uint128::from(9999u128)],
+            instantiate_extension: Empty {},
+        },
+        &[],
+    );
+    assert!(result.is_err());
+
+    // Create competiton
     let competition1_id = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 10),

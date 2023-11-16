@@ -47,6 +47,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteBase::CreateCompetition {
+            category_id,
             competition_dao,
             escrow,
             name,
@@ -59,6 +60,7 @@ pub fn execute(
             let response = CompetitionModule::default().execute_create_competition(
                 &mut deps,
                 &env,
+                category_id,
                 competition_dao,
                 escrow,
                 name,

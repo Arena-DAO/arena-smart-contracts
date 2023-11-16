@@ -1,4 +1,10 @@
-use crate::state::{get_rulesets_category_and_is_enabled_idx, CompetitionModule, KEYS, TAX};
+use crate::{
+    state::{
+        competition_categories, get_rulesets_category_and_is_enabled_idx, CompetitionModule, KEYS,
+        TAX,
+    },
+    ContractError,
+};
 use arena_core_interface::msg::{
     CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
     Ruleset,
@@ -200,4 +206,44 @@ pub fn dump_state(deps: Deps, env: Env) -> StdResult<DumpStateResponse> {
         tax: tax(deps, env, None)?,
         competition_modules: competition_modules(deps, None, None, None)?,
     })
+}
+
+pub fn is_valid_category_and_rulesets(
+    deps: Deps,
+    category_id: Uint128,
+    rulesets: Vec<Uint128>,
+) -> Result<Empty, ContractError> {
+    if !competition_categories().has(deps.storage, category_id.u128()) {
+        return Err(ContractError::CompetitionCategoryDoesNotExist { id: category_id });
+    }
+
+    for ruleset_id in rulesets {
+        if !crate::state::rulesets().has(deps.storage, ruleset_id.u128()) {
+            return Err(ContractError::StdError(cosmwasm_std::StdError::NotFound {
+                kind: format!("Ruleset {}", ruleset_id),
+            }));
+        }
+
+        let ruleset = crate::state::rulesets().load(deps.storage, ruleset_id.u128())?;
+
+        if !ruleset.is_enabled {
+            return Err(ContractError::StdError(
+                cosmwasm_std::StdError::GenericErr {
+                    msg: "Ruleset is not enabled".to_string(),
+                },
+            ));
+        }
+        if ruleset.category_id != category_id {
+            return Err(ContractError::StdError(
+                cosmwasm_std::StdError::GenericErr {
+                    msg: format!(
+                        "Mismatched categories {} and {}",
+                        category_id, ruleset.category_id
+                    ),
+                },
+            ));
+        }
+    }
+
+    Ok(Empty {})
 }

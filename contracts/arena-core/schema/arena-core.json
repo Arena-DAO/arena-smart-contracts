@@ -1347,6 +1347,34 @@
           {
             "type": "object",
             "required": [
+              "is_valid_category_and_rulesets"
+            ],
+            "properties": {
+              "is_valid_category_and_rulesets": {
+                "type": "object",
+                "required": [
+                  "category_id",
+                  "rulesets"
+                ],
+                "properties": {
+                  "category_id": {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  "rulesets": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/Uint128"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
               "dump_state"
             ],
             "properties": {

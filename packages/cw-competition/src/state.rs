@@ -28,6 +28,7 @@ impl fmt::Display for CompetitionStatus {
 #[cw_serde]
 pub struct Competition<CompetitionExt> {
     pub id: Uint128,
+    pub category_id: Uint128,
     pub admin_dao: Addr,
     pub dao: Addr,
     pub escrow: Option<Addr>,

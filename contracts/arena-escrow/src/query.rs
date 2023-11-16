@@ -32,9 +32,9 @@ pub fn is_locked(deps: Deps) -> bool {
     IS_LOCKED.load(deps.storage).unwrap_or_default()
 }
 
-pub fn distribution(deps: Deps, addr: String) -> StdResult<Option<Vec<MemberShare<Addr>>>> {
+pub fn distribution(deps: Deps, addr: String) -> StdResult<Vec<MemberShare<Addr>>> {
     let addr = deps.api.addr_validate(&addr)?;
-    PRESET_DISTRIBUTION.may_load(deps.storage, &addr)
+    PRESET_DISTRIBUTION.load(deps.storage, &addr)
 }
 
 pub fn is_funded(deps: Deps, addr: String) -> StdResult<bool> {

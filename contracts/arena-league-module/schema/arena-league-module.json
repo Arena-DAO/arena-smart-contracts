@@ -168,6 +168,7 @@
           "create_competition": {
             "type": "object",
             "required": [
+              "category_id",
               "competition_dao",
               "description",
               "expiration",
@@ -177,6 +178,9 @@
               "rulesets"
             ],
             "properties": {
+              "category_id": {
+                "$ref": "#/definitions/Uint128"
+              },
               "competition_dao": {
                 "$ref": "#/definitions/ModuleInstantiateInfo"
               },

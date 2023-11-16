@@ -914,11 +914,8 @@
     },
     "distribution": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Nullable_Array_of_MemberShare_for_String",
-      "type": [
-        "array",
-        "null"
-      ],
+      "title": "Array_of_MemberShare_for_String",
+      "type": "array",
       "items": {
         "$ref": "#/definitions/MemberShare_for_String"
       },

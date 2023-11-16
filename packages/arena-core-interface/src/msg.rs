@@ -45,7 +45,7 @@ pub enum QueryExt {
         limit: Option<u32>,
         include_disabled: Option<bool>,
     },
-    #[returns(Option<Ruleset>)]
+    #[returns(Ruleset)]
     Ruleset { id: Uint128 },
     #[returns(Vec<Ruleset>)]
     Rulesets {
@@ -56,15 +56,20 @@ pub enum QueryExt {
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
-    #[returns(Option<CompetitionModuleResponse<String>>)]
+    #[returns(CompetitionModuleResponse<String>)]
     CompetitionModule { query: CompetitionModuleQuery },
-    #[returns(Option<CompetitionCategory>)]
+    #[returns(CompetitionCategory)]
     Category { id: Uint128 },
     #[returns(Vec<CompetitionCategory>)]
     Categories {
         start_after: Option<Uint128>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
+    },
+    #[returns(bool)]
+    IsValidCategoryAndRulesets {
+        category_id: Uint128,
+        rulesets: Vec<Uint128>,
     },
     #[returns(DumpStateResponse)]
     DumpState {},

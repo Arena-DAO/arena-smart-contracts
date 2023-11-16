@@ -101,6 +101,7 @@ fn create_competition(
         Addr::unchecked(ADMIN),
         context.league.league_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
+            category_id: Uint128::one(),
             competition_dao: ModuleInstantiateInfo {
                 code_id: context.core.dao_core_id,
                 msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
