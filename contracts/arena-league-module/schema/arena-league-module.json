@@ -227,6 +227,31 @@
       {
         "type": "object",
         "required": [
+          "submit_evidence"
+        ],
+        "properties": {
+          "submit_evidence": {
+            "type": "object",
+            "required": [
+              "content",
+              "id"
+            ],
+            "properties": {
+              "content": {
+                "type": "string"
+              },
+              "id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
           "process_competition"
         ],
         "properties": {
@@ -724,6 +749,16 @@
           "competitions": {
             "type": "object",
             "properties": {
+              "filter": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/CompetitionsFilter"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "limit": {
                 "type": [
                   "integer",
@@ -736,16 +771,6 @@
                 "anyOf": [
                   {
                     "$ref": "#/definitions/Uint128"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "status": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/CompetitionStatus"
                   },
                   {
                     "type": "null"
@@ -802,6 +827,52 @@
           "active",
           "inactive",
           "jailed"
+        ]
+      },
+      "CompetitionsFilter": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "competition_status"
+            ],
+            "properties": {
+              "competition_status": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "$ref": "#/definitions/CompetitionStatus"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "category"
+            ],
+            "properties": {
+              "category": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
         ]
       },
       "QueryExt": {
@@ -898,6 +969,7 @@
       "required": [
         "dao",
         "description",
+        "evidence",
         "expiration",
         "extension",
         "has_generated_proposals",
@@ -925,6 +997,12 @@
               "type": "null"
             }
           ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Evidence"
+          }
         },
         "expiration": {
           "$ref": "#/definitions/Expiration"
@@ -1012,6 +1090,26 @@
             "inactive",
             "jailed"
           ]
+        },
+        "Evidence": {
+          "type": "object",
+          "required": [
+            "content",
+            "submit_time",
+            "submit_user"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "submit_time": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "submit_user": {
+              "$ref": "#/definitions/Addr"
+            }
+          },
+          "additionalProperties": false
         },
         "Expiration": {
           "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
@@ -1142,6 +1240,7 @@
           "required": [
             "dao",
             "description",
+            "evidence",
             "expiration",
             "extension",
             "has_generated_proposals",
@@ -1169,6 +1268,12 @@
                   "type": "null"
                 }
               ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Evidence"
+              }
             },
             "expiration": {
               "$ref": "#/definitions/Expiration"
@@ -1228,6 +1333,26 @@
             "inactive",
             "jailed"
           ]
+        },
+        "Evidence": {
+          "type": "object",
+          "required": [
+            "content",
+            "submit_time",
+            "submit_user"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "submit_time": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "submit_user": {
+              "$ref": "#/definitions/Addr"
+            }
+          },
+          "additionalProperties": false
         },
         "Expiration": {
           "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",

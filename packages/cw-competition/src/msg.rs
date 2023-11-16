@@ -50,6 +50,10 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         rulesets: Vec<Uint128>,
         instantiate_extension: CompetitionInstantiateExt,
     },
+    SubmitEvidence {
+        id: Uint128,
+        content: String,
+    },
     ProcessCompetition {
         id: Uint128,
         distribution: Vec<MemberShare<String>>,
@@ -76,13 +80,19 @@ where
     Competitions {
         start_after: Option<Uint128>,
         limit: Option<u32>,
-        status: Option<CompetitionStatus>,
+        filter: Option<CompetitionsFilter>,
     },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },
     #[serde(skip)]
     #[returns(PhantomData<CompetitionExt>)]
     _Phantom(PhantomData<CompetitionExt>),
+}
+
+#[cw_serde]
+pub enum CompetitionsFilter {
+    CompetitionStatus { status: CompetitionStatus },
+    Category { id: Uint128 },
 }
 
 #[cw_serde]

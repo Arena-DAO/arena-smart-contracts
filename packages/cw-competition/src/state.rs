@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, BlockInfo, Uint128};
+use cosmwasm_std::{Addr, BlockInfo, Timestamp, Uint128};
 use cw_balance::MemberShare;
 use cw_utils::Expiration;
 use std::fmt;
@@ -42,6 +42,7 @@ pub struct Competition<CompetitionExt> {
     pub extension: CompetitionExt,
     pub has_generated_proposals: bool,
     pub result: Option<Vec<MemberShare<Addr>>>,
+    pub evidence: Vec<Evidence>,
 }
 
 /// CompetitionResponse has all of the same fields as Competition
@@ -62,6 +63,7 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub has_generated_proposals: bool,
     pub expiration: Expiration,
     pub result: Option<Vec<MemberShare<Addr>>>,
+    pub evidence: Vec<Evidence>,
 }
 
 impl<CompetitionExt> Competition<CompetitionExt> {
@@ -83,6 +85,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             has_generated_proposals: self.has_generated_proposals,
             expiration: self.expiration,
             result: self.result,
+            evidence: self.evidence,
         }
     }
 }
@@ -91,4 +94,11 @@ impl<CompetitionExt> Competition<CompetitionExt> {
 pub struct Config {
     pub key: String,
     pub description: String,
+}
+
+#[cw_serde]
+pub struct Evidence {
+    pub submit_user: Addr,
+    pub content: String,
+    pub submit_time: Timestamp,
 }

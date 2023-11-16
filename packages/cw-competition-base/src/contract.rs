@@ -9,8 +9,8 @@ use cosmwasm_std::{
 use cw_balance::MemberShare;
 use cw_competition::{
     escrow::CompetitionEscrowDistributeMsg,
-    msg::{ExecuteBase, HookDirection, InstantiateBase, QueryBase},
-    state::{Competition, CompetitionResponse, CompetitionStatus, Config},
+    msg::{CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, QueryBase},
+    state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
 };
 use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
@@ -29,7 +29,7 @@ pub const PRECISION_MULTIPLIER: u128 = 100_000;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
-    pub category: MultiIndex<'a, Uint128, Competition<CompetitionExt>, u128>,
+    pub category: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
 }
 
 impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
@@ -129,7 +129,7 @@ impl<
                 competitions_status_key,
             ),
             category: MultiIndex::new(
-                |_x, d: &Competition<CompetitionExt>| d.category_id,
+                |_x, d: &Competition<CompetitionExt>| d.category_id.to_string(),
                 competitions_key,
                 competitions_category_key,
             ),
@@ -256,6 +256,9 @@ where
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
             ExecuteBase::Activate {} => self.execute_activate(deps, info),
+            ExecuteBase::SubmitEvidence { id, content } => {
+                self.execute_submit_evidence(deps, env, info, id, content)
+            }
             ExecuteBase::AddCompetitionHook { id } => {
                 self.execute_add_competition_hook(deps, info, id)
             }
@@ -268,6 +271,43 @@ where
             }
             | ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
+    }
+
+    pub fn execute_submit_evidence(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        id: Uint128,
+        content: String,
+    ) -> Result<Response, CompetitionError> {
+        self.competitions.update(
+            deps.storage,
+            id.u128(),
+            |x| -> Result<_, CompetitionError> {
+                match x {
+                    Some(mut competition) => {
+                        if competition.status != CompetitionStatus::Jailed {
+                            return Err(CompetitionError::InvalidCompetitionStatus {
+                                current_status: competition.status,
+                            });
+                        }
+
+                        competition.evidence.push(Evidence {
+                            submit_user: info.sender.clone(),
+                            content,
+                            submit_time: env.block.time,
+                        });
+                        Ok(competition)
+                    }
+                    None => Err(CompetitionError::UnknownCompetitionId { id: id.u128() }),
+                }
+            },
+        )?;
+
+        Ok(Response::new()
+            .add_attribute("action", "submit_evidence")
+            .add_attribute("sender", info.sender.to_string()))
     }
 
     pub fn validate_execute_hook(
@@ -614,6 +654,7 @@ where
             extension: extension.into(),
             has_generated_proposals: false,
             result: None,
+            evidence: vec![],
         };
         let mut msgs = vec![SubMsg::reply_on_success(
             competition_dao.into_wasm_msg(admin_dao.clone()),
@@ -781,8 +822,8 @@ where
             QueryBase::Competitions {
                 start_after,
                 limit,
-                status,
-            } => to_json_binary(&self.query_competitions(deps, env, start_after, limit, status)?),
+                filter,
+            } => to_json_binary(&self.query_competitions(deps, env, start_after, limit, filter)?),
             QueryBase::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
             QueryBase::CompetitionCount {} => {
                 to_json_binary(&self.competition_count.load(deps.storage)?)
@@ -809,12 +850,12 @@ where
         env: Env,
         start_after: Option<Uint128>,
         limit: Option<u32>,
-        status: Option<CompetitionStatus>,
+        filter: Option<CompetitionsFilter>,
     ) -> StdResult<Vec<CompetitionResponse<CompetitionExt>>> {
         let start_after_bound = start_after.map(Bound::exclusive);
         let limit = limit.unwrap_or(10).max(30);
 
-        match status {
+        match filter {
             None => cw_paginate::paginate_indexed_map(
                 &self.competitions,
                 deps.storage,
@@ -822,20 +863,36 @@ where
                 Some(limit),
                 |_x, y| Ok(y.to_response(&env.block)),
             ),
-            Some(status) => self
-                .competitions
-                .idx
-                .status
-                .prefix(status.to_string())
-                .range(
-                    deps.storage,
-                    start_after_bound,
-                    None,
-                    cosmwasm_std::Order::Ascending,
-                )
-                .map(|x| x.map(|y| y.1.to_response(&env.block)))
-                .take(limit as usize)
-                .collect::<StdResult<Vec<_>>>(),
+            Some(filter) => match filter {
+                CompetitionsFilter::CompetitionStatus { status } => self
+                    .competitions
+                    .idx
+                    .status
+                    .prefix(status.to_string())
+                    .range(
+                        deps.storage,
+                        start_after_bound,
+                        None,
+                        cosmwasm_std::Order::Ascending,
+                    )
+                    .map(|x| x.map(|y| y.1.to_response(&env.block)))
+                    .take(limit as usize)
+                    .collect::<StdResult<Vec<_>>>(),
+                CompetitionsFilter::Category { id } => self
+                    .competitions
+                    .idx
+                    .category
+                    .prefix(id.to_string())
+                    .range(
+                        deps.storage,
+                        start_after_bound,
+                        None,
+                        cosmwasm_std::Order::Ascending,
+                    )
+                    .map(|x| x.map(|y| y.1.to_response(&env.block)))
+                    .take(limit as usize)
+                    .collect::<StdResult<Vec<_>>>(),
+            },
         }
     }
 
