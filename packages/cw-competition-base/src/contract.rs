@@ -256,8 +256,8 @@ where
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
             ExecuteBase::Activate {} => self.execute_activate(deps, info),
-            ExecuteBase::SubmitEvidence { id, content } => {
-                self.execute_submit_evidence(deps, env, info, id, content)
+            ExecuteBase::SubmitEvidence { id, evidence } => {
+                self.execute_submit_evidence(deps, env, info, id, evidence)
             }
             ExecuteBase::AddCompetitionHook { id } => {
                 self.execute_add_competition_hook(deps, info, id)
@@ -279,7 +279,7 @@ where
         env: Env,
         info: MessageInfo,
         id: Uint128,
-        content: String,
+        evidence: Vec<String>,
     ) -> Result<Response, CompetitionError> {
         self.competitions.update(
             deps.storage,
@@ -293,11 +293,13 @@ where
                             });
                         }
 
-                        competition.evidence.push(Evidence {
-                            submit_user: info.sender.clone(),
-                            content,
-                            submit_time: env.block.time,
-                        });
+                        competition
+                            .evidence
+                            .extend(evidence.iter().map(|x| Evidence {
+                                submit_user: info.sender.clone(),
+                                content: x.to_string(),
+                                submit_time: env.block.time,
+                            }));
                         Ok(competition)
                     }
                     None => Err(CompetitionError::UnknownCompetitionId { id: id.u128() }),

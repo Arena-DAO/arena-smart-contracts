@@ -233,12 +233,15 @@
           "submit_evidence": {
             "type": "object",
             "required": [
-              "content",
+              "evidence",
               "id"
             ],
             "properties": {
-              "content": {
-                "type": "string"
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               },
               "id": {
                 "$ref": "#/definitions/Uint128"

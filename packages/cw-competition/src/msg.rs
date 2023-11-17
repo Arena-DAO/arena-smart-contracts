@@ -52,7 +52,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     SubmitEvidence {
         id: Uint128,
-        content: String,
+        evidence: Vec<String>,
     },
     ProcessCompetition {
         id: Uint128,
