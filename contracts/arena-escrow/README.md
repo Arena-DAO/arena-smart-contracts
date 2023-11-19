@@ -1,11 +1,25 @@
 # Arena-Escrow
 
-This smart contract handles the distribution of funds based on competition results. It allows users to send native tokens, CW20 tokens, and CW721 NFTs as assets to be distributed. The contract maintains balances and states for each user and manages the distribution process according to the competition results.
+Arena-Escrow is a contract that manages the distribution of funds for Arena Protocol's decentralized competitions. It allows users to send native tokens, CW20 tokens, and CW721 NFTs as assets to be distributed based on competition results.
 
-## Features
+## Key Features
 
-- Users can send native tokens, CW20 tokens, and CW721 NFTs to the contract.
-- The contract stores individual user balances.
-- The contract distributes funds based on competition results.
-- The contract can be locked or unlocked based on the competition state.
-- The contract supports queries for balances, stakes, dues, and the current state.
+### Asset Types:
+
+- Arena-Escrow supports native tokens, CW20 tokens, and CW721 NFTs as assets for distribution.
+
+### Balances and Dues:
+
+- The contract maintains individual user balances and dues, ensuring accurate distribution of funds based on competition results.
+
+### Contract State:
+
+- The contract can be locked or unlocked based on the competition state, providing control over the competition lifecycle.
+
+### Queries:
+
+- Arena-Escrow supports queries for balances, stakes, dues, and the current state, providing transparency and accessibility for users.
+
+### Execution:
+
+- The contract handles the execution of various actions such as withdrawals, setting distribution, receiving assets, and distributing assets based on competition results.

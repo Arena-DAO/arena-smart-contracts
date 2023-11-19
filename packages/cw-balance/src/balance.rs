@@ -11,18 +11,21 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use crate::{is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberShare};
 
+// Struct to hold the verified member balance
 #[cw_serde]
 pub struct MemberBalanceVerified {
     pub addr: Addr,
     pub balance: BalanceVerified,
 }
 
+// Struct to hold the member balance
 #[cw_serde]
 pub struct MemberBalance {
     pub addr: String,
     pub balance: Balance,
 }
 
+// Method to convert MemberBalance to MemberBalanceVerified
 impl MemberBalance {
     pub fn to_verified(self, deps: Deps) -> StdResult<MemberBalanceVerified> {
         Ok(MemberBalanceVerified {
@@ -32,6 +35,7 @@ impl MemberBalance {
     }
 }
 
+// Struct to hold the balance
 #[cw_serde]
 pub struct Balance {
     pub native: Vec<Coin>,
@@ -39,6 +43,7 @@ pub struct Balance {
     pub cw721: Vec<Cw721Collection>,
 }
 
+// Enum to represent the type of token
 #[cw_serde]
 pub enum TokenType {
     Native,
@@ -46,6 +51,7 @@ pub enum TokenType {
     Cw721,
 }
 
+// Method to convert Balance to BalanceVerified
 impl Balance {
     pub fn to_verified(self, deps: Deps) -> StdResult<BalanceVerified> {
         Ok(BalanceVerified {
@@ -74,6 +80,7 @@ impl Balance {
     }
 }
 
+// Struct to hold the verified balance
 #[cw_serde]
 #[derive(Default)]
 pub struct BalanceVerified {
@@ -82,6 +89,7 @@ pub struct BalanceVerified {
     pub cw721: Vec<Cw721CollectionVerified>,
 }
 
+// Display implementation for BalanceVerified
 impl Display for BalanceVerified {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         writeln!(f, "Native: ")?;
@@ -103,15 +111,19 @@ impl Display for BalanceVerified {
     }
 }
 
+// Methods for BalanceVerified
 impl BalanceVerified {
+    // Method to create a new BalanceVerified
     pub fn new() -> Self {
         Self::default()
     }
 
+    // Method to check if BalanceVerified is empty
     pub fn is_empty(&self) -> bool {
         self.native.is_empty() && self.cw20.is_empty() && self.cw721.is_empty()
     }
 
+    // Method to check if BalanceVerified is greater than or equal to another BalanceVerified
     pub fn is_ge(&self, other: &BalanceVerified) -> bool {
         // Helper function for comparing native tokens
         fn native_ge(self_native: &[Coin], other_native: &[Coin]) -> bool {
@@ -182,6 +194,7 @@ impl BalanceVerified {
         native_ge_result && cw20_ge_result && cw721_ge_result
     }
 
+    // Method to get the amount of a specific token
     pub fn get_amount(&self, token_type: TokenType, identifier: &str) -> Option<Uint128> {
         match token_type {
             TokenType::Native => self
@@ -209,6 +222,7 @@ impl BalanceVerified {
         }
     }
 
+    // Method to add two BalanceVerified together
     pub fn checked_add(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
         if self.is_empty() {
             return Ok(other.clone());
@@ -284,6 +298,7 @@ impl BalanceVerified {
         })
     }
 
+    // Method to subtract one BalanceVerified from another
     pub fn checked_sub(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
         if other.is_empty() {
             return Ok(self.clone());
@@ -401,6 +416,7 @@ impl BalanceVerified {
         })
     }
 
+    // Method to transmit all types of tokens (native, CW20, CW721) to a recipient
     pub fn transmit_all(
         &self,
         deps: Deps,
@@ -414,21 +430,23 @@ impl BalanceVerified {
         }
     }
 
+    // Method to transfer all types of tokens (native, CW20, CW721) to a recipient
     pub fn transfer_all(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
         let mut messages: Vec<CosmosMsg> = Vec::new();
 
-        // Send native tokens
+        // Transfer native tokens
         messages.extend(self.send_native(recipient.to_string()));
 
-        // Send CW20 tokens
+        // Transfer CW20 tokens
         messages.extend(self.transfer_cw20(recipient.to_string())?);
 
-        // Send CW721 tokens
+        // Transfer CW721 tokens
         messages.extend(self.transfer_cw721(recipient.to_string())?);
 
         Ok(messages)
     }
 
+    // Method to send all types of tokens (native, CW20, CW721) to a contract
     pub fn send_all(
         &self,
         contract_addr: &Addr,
@@ -437,18 +455,19 @@ impl BalanceVerified {
     ) -> StdResult<Vec<CosmosMsg>> {
         let mut messages: Vec<CosmosMsg> = Vec::new();
 
-        // Send native tokens
+        // Send native tokens to contract
         messages.extend(self.send_native(contract_addr.to_string()));
 
-        // Send CW20 tokens
+        // Send CW20 tokens to contract
         messages.extend(self.send_cw20(contract_addr.to_string(), cw20_msg.unwrap_or_default())?);
 
-        // Send CW721 tokens
+        // Send CW721 tokens to contract
         messages.extend(self.send_cw721(contract_addr.to_string(), cw721_msg.unwrap_or_default())?);
 
         Ok(messages)
     }
 
+    // Method to send native tokens to an address
     pub fn send_native(&self, to_address: String) -> Vec<CosmosMsg> {
         if self.native.is_empty() {
             vec![]
@@ -460,6 +479,7 @@ impl BalanceVerified {
         }
     }
 
+    // Method to send CW20 tokens to a contract
     pub fn send_cw20(&self, contract: String, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
         self.cw20
             .iter()
@@ -478,6 +498,7 @@ impl BalanceVerified {
             .collect()
     }
 
+    // Method to send CW721 tokens to a contract
     pub fn send_cw721(&self, contract: String, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
         self.cw721
             .iter()
@@ -500,6 +521,7 @@ impl BalanceVerified {
             .collect()
     }
 
+    // Method to transfer CW721 tokens to a recipient
     pub fn transfer_cw721(&self, recipient: String) -> StdResult<Vec<CosmosMsg>> {
         self.cw721
             .iter()
@@ -520,6 +542,7 @@ impl BalanceVerified {
             .collect()
     }
 
+    // Method to transfer CW20 tokens to a recipient
     pub fn transfer_cw20(&self, recipient: String) -> StdResult<Vec<CosmosMsg>> {
         self.cw20
             .iter()
@@ -537,7 +560,7 @@ impl BalanceVerified {
             .collect()
     }
 
-    /// Splits the balance among multiple users based on their assigned weights.
+    // Method to split the balance among multiple users based on their assigned weights
     pub fn split(
         &self,
         distribution: &Vec<MemberShare<Addr>>,
