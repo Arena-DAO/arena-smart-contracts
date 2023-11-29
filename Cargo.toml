@@ -41,7 +41,7 @@ rand = "0.8.5"
 cw4 = "1.1.1"
 serde = { version = "1.0.190", default-features = false, features = ["derive"]}
 getrandom = { version = "0.2.10", features = ["js"] }
-bnum = "0.9.1"
+bnum = "0.10.0"
 cw-paginate = "0.2.1"
 cw-ownable = "0.5.1"
 cw-address-like = "1.0.4"
