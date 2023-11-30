@@ -1,6 +1,6 @@
 use arena_core_interface::msg::{
-    CompetitionCategory, InstantiateExt, InstantiateMsg, NewCompetitionCategory, NewRuleset,
-    Ruleset,
+    CompetitionCategory, EditCompetitionCategory, InstantiateExt, InstantiateMsg,
+    NewCompetitionCategory, NewRuleset, Ruleset,
 };
 use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
@@ -248,7 +248,9 @@ pub fn test_categories() {
                         to_add: vec![NewCompetitionCategory {
                             name: "New Category".to_string(),
                         }],
-                        to_disable: vec![Uint128::one()],
+                        to_edit: vec![EditCompetitionCategory::Disable {
+                            category_id: Uint128::one(),
+                        }],
                     },
                 })
                 .unwrap(),

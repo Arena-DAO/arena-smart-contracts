@@ -32,7 +32,7 @@ pub enum ExecuteExt {
     },
     UpdateCategories {
         to_add: Vec<NewCompetitionCategory>,
-        to_disable: Vec<Uint128>,
+        to_edit: Vec<EditCompetitionCategory>,
     },
 }
 
@@ -118,6 +118,12 @@ pub struct NewRuleset {
 #[cw_serde]
 pub struct NewCompetitionCategory {
     pub name: String,
+}
+
+#[cw_serde]
+pub enum EditCompetitionCategory {
+    Disable { category_id: Uint128 },
+    Edit { category_id: Uint128, name: String },
 }
 
 #[cw_serde]

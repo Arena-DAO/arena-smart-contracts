@@ -82,8 +82,8 @@ pub fn execute(
                 execute::update_rulesets(deps, info.sender, to_add, to_disable)
             }
             ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, info.sender, tax),
-            ExecuteExt::UpdateCategories { to_add, to_disable } => {
-                execute::update_categories(deps, info.sender, to_add, to_disable)
+            ExecuteExt::UpdateCategories { to_add, to_edit } => {
+                execute::update_categories(deps, info.sender, to_add, to_edit)
             }
         },
         // Default pre-propose-base behavior for all other messages

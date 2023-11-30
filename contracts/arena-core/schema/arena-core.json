@@ -630,6 +630,56 @@
           }
         ]
       },
+      "EditCompetitionCategory": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "disable"
+            ],
+            "properties": {
+              "disable": {
+                "type": "object",
+                "required": [
+                  "category_id"
+                ],
+                "properties": {
+                  "category_id": {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "edit"
+            ],
+            "properties": {
+              "edit": {
+                "type": "object",
+                "required": [
+                  "category_id",
+                  "name"
+                ],
+                "properties": {
+                  "category_id": {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "ExecuteExt": {
         "oneOf": [
           {
@@ -725,7 +775,7 @@
                 "type": "object",
                 "required": [
                   "to_add",
-                  "to_disable"
+                  "to_edit"
                 ],
                 "properties": {
                   "to_add": {
@@ -734,10 +784,10 @@
                       "$ref": "#/definitions/NewCompetitionCategory"
                     }
                   },
-                  "to_disable": {
+                  "to_edit": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/Uint128"
+                      "$ref": "#/definitions/EditCompetitionCategory"
                     }
                   }
                 },

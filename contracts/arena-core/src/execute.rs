@@ -1,6 +1,6 @@
 use arena_core_interface::msg::{
-    CompetitionCategory, NewCompetitionCategory, NewRuleset, PrePropose, ProposeMessage,
-    ProposeMessages, Ruleset,
+    CompetitionCategory, EditCompetitionCategory, NewCompetitionCategory, NewRuleset, PrePropose,
+    ProposeMessage, ProposeMessages, Ruleset,
 };
 use cosmwasm_std::{
     to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
@@ -231,7 +231,7 @@ pub fn update_categories(
     deps: DepsMut,
     sender: Addr,
     to_add: Vec<NewCompetitionCategory>,
-    to_disable: Vec<Uint128>,
+    to_edit: Vec<EditCompetitionCategory>,
 ) -> Result<Response, ContractError> {
     // Ensure sender is authorized
     if PrePropose::default().dao.load(deps.storage)? != sender {
@@ -239,14 +239,33 @@ pub fn update_categories(
     }
 
     // Disable specified categories
-    for id in to_disable {
+    for action in to_edit {
+        let id = match action {
+            EditCompetitionCategory::Disable { category_id } => category_id,
+            EditCompetitionCategory::Edit {
+                category_id,
+                name: _,
+            } => category_id,
+        };
         competition_categories().update(
             deps.storage,
             id.u128(),
             |maybe_category| -> Result<_, ContractError> {
                 let mut category =
                     maybe_category.ok_or(ContractError::CompetitionCategoryDoesNotExist { id })?;
-                category.is_enabled = false;
+
+                match action {
+                    EditCompetitionCategory::Disable { category_id: _ } => {
+                        category.is_enabled = false
+                    }
+                    EditCompetitionCategory::Edit {
+                        category_id: _,
+                        name,
+                    } => {
+                        category.name = name;
+                    }
+                };
+
                 Ok(category)
             },
         )?;
