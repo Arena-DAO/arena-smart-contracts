@@ -50,6 +50,7 @@ pub struct Competition<CompetitionExt> {
 #[cw_serde]
 pub struct CompetitionResponse<CompetitionExt> {
     pub id: Uint128,
+    pub category_id: Uint128,
     pub dao: Addr,
     pub escrow: Option<Addr>,
     pub name: String,
@@ -72,6 +73,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
 
         CompetitionResponse {
             id: self.id,
+            category_id: self.category_id,
             dao: self.dao,
             escrow: self.escrow,
             name: self.name,
