@@ -7,7 +7,7 @@ use arena_wager_module::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WagerRespons
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_balance::{MemberBalance, MemberShare};
-use cw_competition::state::CompetitionStatus;
+use cw_competition::state::{CompetitionResponse, CompetitionStatus};
 use cw_multi_test::{next_block, App, Executor};
 use cw_utils::Expiration;
 use dao_interface::state::{ModuleInstantiateInfo, ProposalModule};
@@ -280,6 +280,41 @@ fn test_create_competition() {
             },
         ]),
     );
+
+    // Ensure query by competition status works
+    let competitions: Vec<CompetitionResponse<Empty>> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.wager.wager_module_addr.clone(),
+            &QueryMsg::Competitions {
+                start_after: None,
+                limit: None,
+                filter: Some(cw_competition::msg::CompetitionsFilter::CompetitionStatus {
+                    status: CompetitionStatus::Pending,
+                }),
+            },
+        )
+        .unwrap();
+    assert_eq!(competitions.len(), 1);
+
+    // Ensure query by competition category works
+    let competitions: Vec<CompetitionResponse<Empty>> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.wager.wager_module_addr.clone(),
+            &QueryMsg::Competitions {
+                start_after: None,
+                limit: None,
+                filter: Some(cw_competition::msg::CompetitionsFilter::Category {
+                    id: Uint128::one(),
+                }),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(competitions.len(), 1);
 
     // Ensure competition count is updated
     let competition_count: Uint128 = context

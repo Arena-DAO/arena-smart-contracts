@@ -1,4 +1,4 @@
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError, Uint128};
 use cw_competition::state::CompetitionStatus;
 use cw_ownable::OwnershipError;
 use cw_utils::ParseReplyError;
@@ -41,6 +41,12 @@ pub enum CompetitionError {
 
     #[error("InvalidCompetitionStatus")]
     InvalidCompetitionStatus { current_status: CompetitionStatus },
+
+    #[error("InvalidCategoryAndRulesets")]
+    InvalidCategoryAndRulesets {
+        category_id: Uint128,
+        rulesets: Vec<Uint128>,
+    },
 
     #[error("AttributeNotFound")]
     AttributeNotFound { key: String },

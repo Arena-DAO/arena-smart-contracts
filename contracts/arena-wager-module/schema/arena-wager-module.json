@@ -793,6 +793,7 @@
       "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
       "type": "object",
       "required": [
+        "category_id",
         "dao",
         "description",
         "evidence",
@@ -808,6 +809,9 @@
         "status"
       ],
       "properties": {
+        "category_id": {
+          "$ref": "#/definitions/Uint128"
+        },
         "dao": {
           "$ref": "#/definitions/Addr"
         },
@@ -1020,6 +1024,7 @@
           "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
           "type": "object",
           "required": [
+            "category_id",
             "dao",
             "description",
             "evidence",
@@ -1035,6 +1040,9 @@
             "status"
           ],
           "properties": {
+            "category_id": {
+              "$ref": "#/definitions/Uint128"
+            },
             "dao": {
               "$ref": "#/definitions/Addr"
             },

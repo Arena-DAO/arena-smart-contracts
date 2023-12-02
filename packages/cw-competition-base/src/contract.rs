@@ -29,7 +29,7 @@ pub const PRECISION_MULTIPLIER: u128 = 100_000;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
-    pub category: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
+    pub category: MultiIndex<'a, u128, Competition<CompetitionExt>, u128>,
 }
 
 impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
@@ -38,7 +38,7 @@ impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
     fn get_indexes(
         &'_ self,
     ) -> Box<dyn Iterator<Item = &'_ dyn Index<Competition<CompetitionExt>>> + '_> {
-        let v: Vec<&dyn Index<Competition<CompetitionExt>>> = vec![&self.status];
+        let v: Vec<&dyn Index<Competition<CompetitionExt>>> = vec![&self.status, &self.category];
         Box::new(v.into_iter())
     }
 }
@@ -129,7 +129,7 @@ impl<
                 competitions_status_key,
             ),
             category: MultiIndex::new(
-                |_x, d: &Competition<CompetitionExt>| d.category_id.to_string(),
+                |_x, d: &Competition<CompetitionExt>| d.category_id.u128(),
                 competitions_key,
                 competitions_category_key,
             ),
@@ -622,7 +622,7 @@ where
         ))?;
 
         // Validate that category and rulesets are valid
-        let _result: Empty = deps.querier.query_wasm_smart(
+        let result: bool = deps.querier.query_wasm_smart(
             arena_core,
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::IsValidCategoryAndRulesets {
@@ -631,6 +631,12 @@ where
                 },
             },
         )?;
+        if !result {
+            return Err(CompetitionError::InvalidCategoryAndRulesets {
+                category_id,
+                rulesets,
+            });
+        }
 
         // Create competition
         let id = self
@@ -883,7 +889,7 @@ where
                     .competitions
                     .idx
                     .category
-                    .prefix(id.to_string())
+                    .prefix(id.u128())
                     .range(
                         deps.storage,
                         start_after_bound,

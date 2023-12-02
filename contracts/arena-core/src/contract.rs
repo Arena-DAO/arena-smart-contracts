@@ -194,7 +194,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
                 deps,
                 category_id,
                 rulesets,
-            )?),
+            )),
         },
         _ => PrePropose::default().query(deps, env, msg),
     };

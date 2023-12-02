@@ -1,9 +1,5 @@
-use crate::{
-    state::{
-        competition_categories, get_rulesets_category_and_is_enabled_idx, CompetitionModule, KEYS,
-        TAX,
-    },
-    ContractError,
+use crate::state::{
+    competition_categories, get_rulesets_category_and_is_enabled_idx, CompetitionModule, KEYS, TAX,
 };
 use arena_core_interface::msg::{
     CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
@@ -212,38 +208,28 @@ pub fn is_valid_category_and_rulesets(
     deps: Deps,
     category_id: Uint128,
     rulesets: Vec<Uint128>,
-) -> Result<Empty, ContractError> {
+) -> bool {
     if !competition_categories().has(deps.storage, category_id.u128()) {
-        return Err(ContractError::CompetitionCategoryDoesNotExist { id: category_id });
+        return false;
     }
 
     for ruleset_id in rulesets {
         if !crate::state::rulesets().has(deps.storage, ruleset_id.u128()) {
-            return Err(ContractError::StdError(cosmwasm_std::StdError::NotFound {
-                kind: format!("Ruleset {}", ruleset_id),
-            }));
+            return false;
         }
 
-        let ruleset = crate::state::rulesets().load(deps.storage, ruleset_id.u128())?;
-
-        if !ruleset.is_enabled {
-            return Err(ContractError::StdError(
-                cosmwasm_std::StdError::GenericErr {
-                    msg: "Ruleset is not enabled".to_string(),
-                },
-            ));
-        }
-        if ruleset.category_id != category_id {
-            return Err(ContractError::StdError(
-                cosmwasm_std::StdError::GenericErr {
-                    msg: format!(
-                        "Mismatched categories {} and {}",
-                        category_id, ruleset.category_id
-                    ),
-                },
-            ));
-        }
+        match crate::state::rulesets().load(deps.storage, ruleset_id.u128()) {
+            Ok(ruleset) => {
+                if !ruleset.is_enabled {
+                    return false;
+                }
+                if ruleset.category_id != category_id {
+                    return false;
+                }
+            }
+            Err(_) => return false,
+        };
     }
 
-    Ok(Empty {})
+    true
 }
