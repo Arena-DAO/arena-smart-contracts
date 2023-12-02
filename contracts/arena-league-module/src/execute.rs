@@ -58,8 +58,7 @@ pub fn instantiate_rounds(
     // Retrieve the current league ID
     let league_id = CompetitionModule::default()
         .competition_count
-        .load(deps.storage)?
-        .checked_add(Uint128::one())?;
+        .load(deps.storage)?;
 
     // Save rounds and matches to storage
     let mut duration = round_duration;

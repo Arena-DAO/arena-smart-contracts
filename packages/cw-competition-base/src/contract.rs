@@ -637,8 +637,7 @@ where
             .competition_count
             .update(deps.storage, |x| -> StdResult<_> {
                 Ok(x.checked_add(Uint128::one())?)
-            })?
-            .checked_add(Uint128::one())?;
+            })?;
         let admin_dao = self.get_dao(deps.as_ref())?;
         let mut competition = Competition {
             category_id,
