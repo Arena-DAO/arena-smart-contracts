@@ -106,9 +106,7 @@ pub fn update_rulesets(
     }
 
     // Add new rulesets
-    let mut current_id = RULESETS_COUNT
-        .may_load(deps.storage)?
-        .unwrap_or(Uint128::one());
+    let mut current_id = RULESETS_COUNT.may_load(deps.storage)?.unwrap_or_default();
     for ruleset in to_add {
         if !competition_categories().has(deps.storage, ruleset.category_id.u128()) {
             return Err(ContractError::CompetitionCategoryDoesNotExist {
@@ -274,7 +272,7 @@ pub fn update_categories(
     // Add new categories
     let mut current_id = COMPETITION_CATEGORIES_COUNT
         .may_load(deps.storage)?
-        .unwrap_or(Uint128::one());
+        .unwrap_or_default();
     for category in to_add {
         let new_category = CompetitionCategory {
             id: current_id,
