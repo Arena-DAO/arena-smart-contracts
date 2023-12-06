@@ -1,7 +1,10 @@
 use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
     query,
-    state::{competition_modules, CompetitionModule, COMPETITION_MODULES_COUNT, KEYS},
+    state::{
+        competition_modules, CompetitionModule, COMPETITION_CATEGORIES_COUNT,
+        COMPETITION_MODULES_COUNT, KEYS, RULESETS_COUNT,
+    },
     ContractError,
 };
 use arena_core_interface::msg::{
@@ -41,10 +44,12 @@ pub fn instantiate_extension(
     extension: InstantiateExt,
 ) -> Result<Response, ContractError> {
     let dao = PrePropose::default().dao.load(deps.storage)?;
+    COMPETITION_MODULES_COUNT.save(deps.storage, &Uint128::zero())?;
+    RULESETS_COUNT.save(deps.storage, &Uint128::zero())?;
+    COMPETITION_CATEGORIES_COUNT.save(deps.storage, &Uint128::zero())?;
     crate::execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
     crate::execute::update_categories(deps.branch(), dao.clone(), extension.categories, vec![])?;
     crate::execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
-    COMPETITION_MODULES_COUNT.save(deps.storage, &Uint128::zero())?;
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
         dao.clone(),

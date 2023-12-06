@@ -144,7 +144,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
                                                 }],
                                                 rulesets: vec![
                                                     NewRuleset {
-                                                        category_id: Uint128::zero(),
+                                                        category_id: Uint128::one(),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
@@ -152,7 +152,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
                                                         description: "Test Ruleset 1".to_string(),
                                                     },
                                                     NewRuleset {
-                                                        category_id: Uint128::zero(),
+                                                        category_id: Uint128::one(),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
@@ -249,7 +249,7 @@ pub fn test_categories() {
                             name: "New Category".to_string(),
                         }],
                         to_edit: vec![EditCompetitionCategory::Disable {
-                            category_id: Uint128::zero(),
+                            category_id: Uint128::one(),
                         }],
                     },
                 })
@@ -320,7 +320,7 @@ pub fn test_rulesets() {
                 msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
                     msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
                         to_add: vec![arena_core_interface::msg::NewRuleset {
-                            category_id: Uint128::zero(),
+                            category_id: Uint128::one(),
                             rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
                             description: "Test Ruleset 3".to_string(),
                         }],
@@ -342,7 +342,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::Rulesets {
-                    category_id: Uint128::zero(),
+                    category_id: Uint128::one(),
                     start_after: None,
                     limit: None,
                     include_disabled: None,
@@ -363,7 +363,7 @@ pub fn test_rulesets() {
                 msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
                     msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
                         to_add: vec![],
-                        to_disable: vec![Uint128::zero()],
+                        to_disable: vec![Uint128::one()],
                     },
                 })
                 .unwrap(),
@@ -381,7 +381,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::Rulesets {
-                    category_id: Uint128::zero(),
+                    category_id: Uint128::one(),
                     start_after: None,
                     limit: None,
                     include_disabled: None,
@@ -397,7 +397,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::Rulesets {
-                    category_id: Uint128::zero(),
+                    category_id: Uint128::one(),
                     start_after: None,
                     limit: None,
                     include_disabled: Some(true),

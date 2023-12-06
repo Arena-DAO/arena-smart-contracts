@@ -99,7 +99,7 @@ fn create_competition(
         Addr::unchecked(ADMIN),
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
-            category_id: Uint128::zero(),
+            category_id: Uint128::one(),
             competition_dao: ModuleInstantiateInfo {
                 code_id: context.core.dao_core_id,
                 msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
@@ -308,7 +308,7 @@ fn test_create_competition() {
                 start_after: None,
                 limit: None,
                 filter: Some(cw_competition::msg::CompetitionsFilter::Category {
-                    id: Uint128::zero(),
+                    id: Uint128::one(),
                 }),
             },
         )

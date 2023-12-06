@@ -106,13 +106,14 @@ pub fn update_rulesets(
     }
 
     // Add new rulesets
-    let mut current_id = RULESETS_COUNT.may_load(deps.storage)?.unwrap_or_default();
+    let mut current_id = RULESETS_COUNT.load(deps.storage)?;
     for ruleset in to_add {
         if !competition_categories().has(deps.storage, ruleset.category_id.u128()) {
             return Err(ContractError::CompetitionCategoryDoesNotExist {
                 id: ruleset.category_id,
             });
         }
+        current_id = current_id.checked_add(Uint128::one())?;
 
         let new_ruleset = Ruleset {
             category_id: ruleset.category_id,
@@ -122,7 +123,6 @@ pub fn update_rulesets(
             is_enabled: true,
         };
         rulesets().save(deps.storage, current_id.u128(), &new_ruleset)?;
-        current_id = current_id.checked_add(Uint128::one())?;
     }
     RULESETS_COUNT.save(deps.storage, &current_id)?;
 
@@ -270,17 +270,16 @@ pub fn update_categories(
     }
 
     // Add new categories
-    let mut current_id = COMPETITION_CATEGORIES_COUNT
-        .may_load(deps.storage)?
-        .unwrap_or_default();
+    let mut current_id = COMPETITION_CATEGORIES_COUNT.load(deps.storage)?;
     for category in to_add {
+        current_id = current_id.checked_add(Uint128::one())?;
+
         let new_category = CompetitionCategory {
             id: current_id,
             name: category.name,
             is_enabled: true,
         };
         competition_categories().save(deps.storage, current_id.u128(), &new_category)?;
-        current_id = current_id.checked_add(Uint128::one())?;
     }
     COMPETITION_CATEGORIES_COUNT.save(deps.storage, &current_id)?;
 
