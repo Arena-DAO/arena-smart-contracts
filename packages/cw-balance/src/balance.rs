@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
 use cw721::Cw721ExecuteMsg;
 use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use crate::{is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberShare};
@@ -41,14 +41,6 @@ pub struct Balance {
     pub native: Vec<Coin>,
     pub cw20: Vec<Cw20Coin>,
     pub cw721: Vec<Cw721Collection>,
-}
-
-// Enum to represent the type of token
-#[cw_serde]
-pub enum TokenType {
-    Native,
-    Cw20,
-    Cw721,
 }
 
 // Method to convert Balance to BalanceVerified
@@ -118,37 +110,80 @@ impl BalanceVerified {
         Self::default()
     }
 
+    // Method to calculate the amounts needed to reach other balance
+
+    pub fn difference(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
+        let mut diff = BalanceVerified::new();
+
+        let native_map: HashMap<&String, Uint128> = self
+            .native
+            .iter()
+            .map(|coin| (&coin.denom, coin.amount))
+            .collect();
+
+        for coin in &other.native {
+            match native_map.get(&coin.denom) {
+                Some(&amount) if amount < coin.amount => {
+                    diff.native.push(Coin {
+                        denom: coin.denom.clone(),
+                        amount: coin.amount.checked_sub(amount)?,
+                    });
+                }
+                None => diff.native.push(coin.clone()),
+                _ => (),
+            }
+        }
+
+        let cw20_map: HashMap<&Addr, Uint128> = self
+            .cw20
+            .iter()
+            .map(|coin| (&coin.address, coin.amount))
+            .collect();
+
+        for coin in &other.cw20 {
+            match cw20_map.get(&coin.address) {
+                Some(&amount) if amount < coin.amount => {
+                    diff.cw20.push(Cw20CoinVerified {
+                        address: coin.address.clone(),
+                        amount: coin.amount.checked_sub(amount)?,
+                    });
+                }
+                None => diff.cw20.push(coin.clone()),
+                _ => (),
+            }
+        }
+
+        let cw721_map: HashMap<&Addr, BTreeSet<&String>> = self
+            .cw721
+            .iter()
+            .map(|token| (&token.address, token.token_ids.iter().collect()))
+            .collect();
+
+        for token in &other.cw721 {
+            let token_ids_set: BTreeSet<&String> = token.token_ids.iter().collect();
+            match cw721_map.get(&token.address) {
+                Some(token_ids) if !token_ids.is_superset(&token_ids_set) => {
+                    let diff_token_ids: Vec<String> = token_ids_set
+                        .difference(token_ids)
+                        .cloned()
+                        .map(|s| s.to_owned())
+                        .collect();
+                    diff.cw721.push(Cw721CollectionVerified {
+                        address: token.address.clone(),
+                        token_ids: diff_token_ids,
+                    });
+                }
+                None => diff.cw721.push(token.clone()),
+                _ => (),
+            }
+        }
+
+        Ok(diff)
+    }
+
     // Method to check if BalanceVerified is empty
     pub fn is_empty(&self) -> bool {
         self.native.is_empty() && self.cw20.is_empty() && self.cw721.is_empty()
-    }
-
-    // Method to get the amount of a specific token
-    pub fn get_amount(&self, token_type: TokenType, identifier: &str) -> Option<Uint128> {
-        match token_type {
-            TokenType::Native => self
-                .native
-                .iter()
-                .find(|coin| coin.denom == identifier)
-                .map(|coin| coin.amount),
-            TokenType::Cw20 => self
-                .cw20
-                .iter()
-                .find(|cw20_coin| cw20_coin.address == identifier)
-                .map(|cw20_coin| cw20_coin.amount),
-            TokenType::Cw721 => {
-                if self.cw721.iter().any(|cw721_tokens| {
-                    cw721_tokens
-                        .token_ids
-                        .iter()
-                        .any(|token| cw721_tokens.address.to_string() + token == identifier)
-                }) {
-                    Some(Uint128::one())
-                } else {
-                    None
-                }
-            }
-        }
     }
 
     // Method to add two BalanceVerified together

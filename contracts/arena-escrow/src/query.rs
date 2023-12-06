@@ -4,24 +4,24 @@ use cw_balance::{BalanceVerified, MemberBalanceVerified, MemberShare};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
-use crate::state::{BALANCE, DUE, IS_FUNDED, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE};
+use crate::state::{BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE};
 
 #[cw_serde]
 pub struct DumpStateResponse {
-    pub dues: Vec<MemberBalanceVerified>,
     pub is_locked: bool,
     pub total_balance: BalanceVerified,
-    pub balance: BalanceVerified,
+    pub balance: Option<BalanceVerified>,
+    pub due: Option<BalanceVerified>,
 }
 
-pub fn balance(deps: Deps, addr: String) -> StdResult<BalanceVerified> {
+pub fn balance(deps: Deps, addr: String) -> StdResult<Option<BalanceVerified>> {
     let addr = deps.api.addr_validate(&addr)?;
-    Ok(BALANCE.may_load(deps.storage, &addr)?.unwrap_or_default())
+    BALANCE.may_load(deps.storage, &addr)
 }
 
-pub fn due(deps: Deps, addr: String) -> StdResult<BalanceVerified> {
+pub fn due(deps: Deps, addr: String) -> StdResult<Option<BalanceVerified>> {
     let addr = deps.api.addr_validate(&addr)?;
-    Ok(DUE.may_load(deps.storage, &addr)?.unwrap_or_default())
+    DUE.may_load(deps.storage, &addr)
 }
 
 pub fn total_balance(deps: Deps) -> BalanceVerified {
@@ -39,11 +39,7 @@ pub fn distribution(deps: Deps, addr: String) -> StdResult<Vec<MemberShare<Addr>
 
 pub fn is_funded(deps: Deps, addr: String) -> StdResult<bool> {
     let addr = deps.api.addr_validate(&addr)?;
-    Ok(IS_FUNDED.load(deps.storage, &addr).unwrap_or_default())
-}
-
-pub fn is_fully_funded(deps: Deps) -> StdResult<bool> {
-    crate::state::is_fully_funded(deps)
+    Ok(crate::state::is_funded(deps, &addr))
 }
 
 pub fn balances(
@@ -76,15 +72,35 @@ pub fn dues(
     })
 }
 
+pub fn initial_dues(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<MemberBalanceVerified>> {
+    let binding = maybe_addr(deps.api, start_after)?;
+    let start = binding.as_ref().map(Bound::exclusive);
+    cw_paginate::paginate_map(&INITIAL_DUE, deps.storage, start, limit, |k, v| {
+        Ok(MemberBalanceVerified {
+            addr: k,
+            balance: v,
+        })
+    })
+}
+
 pub fn dump_state(deps: Deps, addr: Option<String>) -> StdResult<DumpStateResponse> {
     let maybe_addr = maybe_addr(deps.api, addr)?;
     let balance = maybe_addr
+        .as_ref()
         .map(|x| balance(deps, x.to_string()))
         .transpose()?
-        .unwrap_or_default();
+        .flatten();
+    let due = maybe_addr
+        .map(|x| due(deps, x.to_string()))
+        .transpose()?
+        .flatten();
 
     Ok(DumpStateResponse {
-        dues: dues(deps, None, None)?,
+        due,
         is_locked: is_locked(deps),
         total_balance: total_balance(deps),
         balance,

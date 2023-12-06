@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Binary, Coin, Empty, Uint128};
-use cw20::Cw20Coin;
+use cw20::{Cw20Coin, Cw20CoinVerified};
 use cw_balance::{Balance, BalanceVerified, Cw721Collection, MemberBalance, MemberShare};
 use cw_multi_test::{App, Executor};
 
@@ -309,10 +309,17 @@ fn test_deposit_withdraw_and_check_balances() {
         )
         .unwrap();
 
-    assert_eq!(
-        balance_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
-        Some(Uint128::from(150u128))
-    );
+    assert!(balance_addr1
+        .difference(&BalanceVerified {
+            native: vec![],
+            cw20: vec![Cw20CoinVerified {
+                address: context.cw20_addr.clone(),
+                amount: Uint128::from(150u128),
+            }],
+            cw721: vec![],
+        })
+        .unwrap()
+        .is_empty());
     let due_addr1: BalanceVerified = context
         .app
         .wrap()
@@ -323,20 +330,24 @@ fn test_deposit_withdraw_and_check_balances() {
             },
         )
         .unwrap();
-    assert_eq!(
-        due_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
-        None
-    );
+    assert!(due_addr1.cw20.is_empty());
+
     let balance_total: BalanceVerified = context
         .app
         .wrap()
         .query_wasm_smart(context.escrow_addr.clone(), &QueryMsg::TotalBalance {})
         .unwrap();
-
-    assert_eq!(
-        balance_total.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
-        Some(Uint128::from(150u128))
-    );
+    assert!(balance_total
+        .difference(&BalanceVerified {
+            native: vec![],
+            cw20: vec![Cw20CoinVerified {
+                address: context.cw20_addr.clone(),
+                amount: Uint128::from(150u128),
+            }],
+            cw721: vec![],
+        })
+        .unwrap()
+        .is_empty());
 
     // Withdraw
     context
@@ -378,16 +389,17 @@ fn test_deposit_withdraw_and_check_balances() {
             },
         )
         .unwrap();
-    assert_eq!(
-        due_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
-        Some(Uint128::from(150u128))
-    );
-    assert_eq!(
-        balance_addr1.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
-        None
-    );
-    assert_eq!(
-        balance_total.get_amount(cw_balance::TokenType::Cw20, context.cw20_addr.as_ref()),
-        None
-    );
+    assert!(due_addr1
+        .difference(&BalanceVerified {
+            native: vec![],
+            cw20: vec![Cw20CoinVerified {
+                address: context.cw20_addr.clone(),
+                amount: Uint128::from(150u128),
+            }],
+            cw721: vec![],
+        })
+        .unwrap()
+        .is_empty());
+    assert!(balance_addr1.is_empty());
+    assert!(balance_total.is_empty());
 }

@@ -42,12 +42,17 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    #[returns(BalanceVerified)]
+    #[returns(Option<BalanceVerified>)]
     Balance { addr: String },
-    #[returns(BalanceVerified)]
+    #[returns(Option<BalanceVerified>)]
     Due { addr: String },
     #[returns(Vec<MemberBalanceVerified>)]
     Dues {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    #[returns(Vec<MemberBalanceVerified>)]
+    InitialDues {
         start_after: Option<String>,
         limit: Option<u32>,
     },

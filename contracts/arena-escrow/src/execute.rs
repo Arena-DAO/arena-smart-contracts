@@ -4,13 +4,13 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{BalanceError, BalanceVerified, Cw721CollectionVerified, MemberShare};
+use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare};
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
     query::is_locked,
     state::{
-        is_fully_funded, BALANCE, DUE, IS_FUNDED, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE,
+        is_fully_funded, BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE,
     },
     ContractError,
 };
@@ -57,15 +57,9 @@ fn inner_withdraw(
             BALANCE.remove(deps.storage, &addr);
             if !is_processing {
                 total_balance = total_balance.checked_sub(&balance)?;
-                IS_FUNDED.save(deps.storage, &addr, &false)?;
-                DUE.update(
-                    deps.storage,
-                    &addr,
-                    |existing_balance| -> Result<_, BalanceError> {
-                        let current_balance = existing_balance.unwrap_or_default();
-                        Ok(current_balance.checked_add(&balance)?)
-                    },
-                )?;
+
+                let initial_due = &INITIAL_DUE.load(deps.storage, &addr)?;
+                DUE.save(deps.storage, &addr, initial_due)?;
             }
         }
     }
@@ -174,29 +168,26 @@ fn receive_balance(
     addr: Addr,
     balance: BalanceVerified,
 ) -> Result<Response, ContractError> {
-    // Ensure the address has a due balance
-    if !DUE.has(deps.storage, &addr) {
+    if !INITIAL_DUE.has(deps.storage, &addr) {
         return Err(ContractError::NoneDue {});
     }
 
     // Update the stored balance for the given address
     let updated_balance = BALANCE.update(deps.storage, &addr, |existing_balance| {
-        let current_balance = existing_balance.unwrap_or_default();
-        balance.checked_add(&current_balance)
+        existing_balance.unwrap_or_default().checked_add(&balance)
     })?;
 
     let due_balance = DUE.load(deps.storage, &addr)?;
-    let remaining_due = due_balance.checked_sub(&updated_balance)?;
+    let remaining_due = due_balance.difference(&updated_balance)?;
 
     let mut msgs: Vec<CosmosMsg> = vec![];
 
     // Handle the case where the due balance is fully paid
     if remaining_due.is_empty() {
         DUE.remove(deps.storage, &addr);
-        IS_FUNDED.save(deps.storage, &addr, &true)?;
 
         // Lock if fully funded and send activation message if needed
-        if is_fully_funded(deps.as_ref())? {
+        if is_fully_funded(deps.as_ref()) {
             IS_LOCKED.save(deps.storage, &true)?;
 
             if let Some(owner) = get_ownership(deps.storage)?.owner {
@@ -232,8 +223,8 @@ pub fn distribute(
     assert_owner(deps.storage, &info.sender)?;
 
     // Ensure the contract is fully funded
-    if !is_fully_funded(deps.as_ref())? {
-        return Err(ContractError::NotFunded {});
+    if !is_fully_funded(deps.as_ref()) {
+        return Err(ContractError::NotFullyFunded {});
     }
 
     if !distribution.is_empty() {
@@ -273,10 +264,10 @@ pub fn distribute(
         }
     }
 
-    // Reset the contract state
     IS_LOCKED.save(deps.storage, &false)?;
+
+    // Clear the contract state
     DUE.clear(deps.storage);
-    IS_FUNDED.clear(deps.storage);
     PRESET_DISTRIBUTION.clear(deps.storage);
 
     // Construct the response and return

@@ -23,8 +23,8 @@ pub enum ContractError {
     #[error("Locked")]
     Locked {},
 
-    #[error("NotFunded")]
-    NotFunded {},
+    #[error("NotFullyFunded")]
+    NotFullyFunded {},
 
     #[error("NoneDue")]
     NoneDue {},

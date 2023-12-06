@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{DUE, IS_FUNDED, IS_LOCKED, TOTAL_BALANCE},
+    state::{self, DUE, INITIAL_DUE, IS_LOCKED, TOTAL_BALANCE},
     ContractError,
 };
 use cosmwasm_std::{
@@ -43,7 +43,7 @@ pub fn instantiate_contract(
     for member_balance in due {
         let member_balance = member_balance.to_verified(deps.as_ref())?;
 
-        if DUE.has(deps.storage, &member_balance.addr) {
+        if INITIAL_DUE.has(deps.storage, &member_balance.addr) {
             return Err(ContractError::StdError(
                 cosmwasm_std::StdError::GenericErr {
                     msg: "Cannot have duplicate addresses due".to_string(),
@@ -51,8 +51,8 @@ pub fn instantiate_contract(
             ));
         }
 
+        INITIAL_DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
-        IS_FUNDED.save(deps.storage, &member_balance.addr, &false)?;
     }
     TOTAL_BALANCE.save(deps.storage, &BalanceVerified::new())?;
 
@@ -104,12 +104,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsLocked {} => to_json_binary(&query::is_locked(deps)),
         QueryMsg::Distribution { addr } => to_json_binary(&query::distribution(deps, addr)?),
         QueryMsg::IsFunded { addr } => to_json_binary(&query::is_funded(deps, addr)?),
-        QueryMsg::IsFullyFunded {} => to_json_binary(&query::is_fully_funded(deps)?),
+        QueryMsg::IsFullyFunded {} => to_json_binary(&state::is_fully_funded(deps)),
         QueryMsg::Balances { start_after, limit } => {
             to_json_binary(&query::balances(deps, start_after, limit)?)
         }
         QueryMsg::Dues { start_after, limit } => {
             to_json_binary(&query::dues(deps, start_after, limit)?)
+        }
+        QueryMsg::InitialDues { start_after, limit } => {
+            to_json_binary(&query::initial_dues(deps, start_after, limit)?)
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::DumpState { addr } => to_json_binary(&query::dump_state(deps, addr)?),
