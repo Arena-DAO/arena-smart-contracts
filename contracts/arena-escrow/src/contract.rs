@@ -2,14 +2,14 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{self, DUE, INITIAL_DUE, IS_LOCKED, TOTAL_BALANCE},
+    state::{self, DUE, INITIAL_DUE, IS_LOCKED},
     ContractError,
 };
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
-use cw_balance::{BalanceVerified, MemberBalance};
+use cw_balance::MemberBalance;
 
 // version info for migration info
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-escrow";
@@ -54,7 +54,6 @@ pub fn instantiate_contract(
         INITIAL_DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
     }
-    TOTAL_BALANCE.save(deps.storage, &BalanceVerified::new())?;
 
     Ok(())
 }
@@ -100,7 +99,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Balance { addr } => to_json_binary(&query::balance(deps, addr)?),
         QueryMsg::Due { addr } => to_json_binary(&query::due(deps, addr)?),
-        QueryMsg::TotalBalance {} => to_json_binary(&query::total_balance(deps)),
+        QueryMsg::TotalBalance {} => to_json_binary(&query::total_balance(deps)?),
         QueryMsg::IsLocked {} => to_json_binary(&query::is_locked(deps)),
         QueryMsg::Distribution { addr } => to_json_binary(&query::distribution(deps, addr)?),
         QueryMsg::IsFunded { addr } => to_json_binary(&query::is_funded(deps, addr)?),

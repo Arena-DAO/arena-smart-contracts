@@ -9,7 +9,7 @@ use crate::state::{BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TO
 #[cw_serde]
 pub struct DumpStateResponse {
     pub is_locked: bool,
-    pub total_balance: BalanceVerified,
+    pub total_balance: Option<BalanceVerified>,
     pub balance: Option<BalanceVerified>,
     pub due: Option<BalanceVerified>,
 }
@@ -24,8 +24,8 @@ pub fn due(deps: Deps, addr: String) -> StdResult<Option<BalanceVerified>> {
     DUE.may_load(deps.storage, &addr)
 }
 
-pub fn total_balance(deps: Deps) -> BalanceVerified {
-    TOTAL_BALANCE.load(deps.storage).unwrap_or_default()
+pub fn total_balance(deps: Deps) -> StdResult<Option<BalanceVerified>> {
+    TOTAL_BALANCE.may_load(deps.storage)
 }
 
 pub fn is_locked(deps: Deps) -> bool {
@@ -102,7 +102,7 @@ pub fn dump_state(deps: Deps, addr: Option<String>) -> StdResult<DumpStateRespon
     Ok(DumpStateResponse {
         due,
         is_locked: is_locked(deps),
-        total_balance: total_balance(deps),
+        total_balance: total_balance(deps)?,
         balance,
     })
 }

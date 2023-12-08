@@ -60,7 +60,7 @@ pub enum QueryMsg {
     IsFunded { addr: String },
     #[returns(bool)]
     IsFullyFunded {},
-    #[returns(BalanceVerified)]
+    #[returns(Option<BalanceVerified>)]
     TotalBalance {},
     #[returns(bool)]
     IsLocked {},

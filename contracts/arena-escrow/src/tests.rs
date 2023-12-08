@@ -320,7 +320,7 @@ fn test_deposit_withdraw_and_check_balances() {
         })
         .unwrap()
         .is_empty());
-    let due_addr1: BalanceVerified = context
+    let due_addr1: Option<BalanceVerified> = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -330,7 +330,7 @@ fn test_deposit_withdraw_and_check_balances() {
             },
         )
         .unwrap();
-    assert!(due_addr1.cw20.is_empty());
+    assert!(due_addr1.is_none());
 
     let balance_total: BalanceVerified = context
         .app
@@ -364,7 +364,7 @@ fn test_deposit_withdraw_and_check_balances() {
         .unwrap();
 
     // Check the updated balances
-    let balance_addr1: BalanceVerified = context
+    let balance_addr1: Option<BalanceVerified> = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -374,7 +374,7 @@ fn test_deposit_withdraw_and_check_balances() {
             },
         )
         .unwrap();
-    let balance_total: BalanceVerified = context
+    let balance_total: Option<BalanceVerified> = context
         .app
         .wrap()
         .query_wasm_smart(context.escrow_addr.clone(), &QueryMsg::TotalBalance {})
@@ -400,6 +400,6 @@ fn test_deposit_withdraw_and_check_balances() {
         })
         .unwrap()
         .is_empty());
-    assert!(balance_addr1.is_empty());
-    assert!(balance_total.is_empty());
+    assert!(balance_addr1.is_none());
+    assert!(balance_total.is_none());
 }

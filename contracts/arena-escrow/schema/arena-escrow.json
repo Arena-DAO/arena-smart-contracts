@@ -1200,8 +1200,7 @@
       "title": "DumpStateResponse",
       "type": "object",
       "required": [
-        "is_locked",
-        "total_balance"
+        "is_locked"
       ],
       "properties": {
         "balance": {
@@ -1228,7 +1227,14 @@
           "type": "boolean"
         },
         "total_balance": {
-          "$ref": "#/definitions/BalanceVerified"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BalanceVerified"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1547,38 +1553,48 @@
     },
     "total_balance": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "BalanceVerified",
-      "type": "object",
-      "required": [
-        "cw20",
-        "cw721",
-        "native"
-      ],
-      "properties": {
-        "cw20": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Cw20CoinVerified"
-          }
+      "title": "Nullable_BalanceVerified",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/BalanceVerified"
         },
-        "cw721": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Cw721CollectionVerified"
-          }
-        },
-        "native": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Coin"
-          }
+        {
+          "type": "null"
         }
-      },
-      "additionalProperties": false,
+      ],
       "definitions": {
         "Addr": {
           "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
           "type": "string"
+        },
+        "BalanceVerified": {
+          "type": "object",
+          "required": [
+            "cw20",
+            "cw721",
+            "native"
+          ],
+          "properties": {
+            "cw20": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Cw20CoinVerified"
+              }
+            },
+            "cw721": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Cw721CollectionVerified"
+              }
+            },
+            "native": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            }
+          },
+          "additionalProperties": false
         },
         "Coin": {
           "type": "object",

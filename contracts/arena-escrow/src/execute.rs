@@ -23,11 +23,7 @@ fn inner_withdraw(
     is_processing: bool,
 ) -> Result<Response, ContractError> {
     // Initialize total_balance based on processing status
-    let mut total_balance = if is_processing {
-        BalanceVerified::new()
-    } else {
-        TOTAL_BALANCE.load(deps.storage)?
-    };
+    let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
 
     let mut msgs = vec![];
     let mut attrs = vec![];
@@ -55,17 +51,18 @@ fn inner_withdraw(
 
             // Update total balance and related storage entries
             BALANCE.remove(deps.storage, &addr);
-            if !is_processing {
-                total_balance = total_balance.checked_sub(&balance)?;
+            total_balance = total_balance.checked_sub(&balance)?;
 
+            // Set due to the initial due
+            if !is_processing {
                 let initial_due = &INITIAL_DUE.load(deps.storage, &addr)?;
                 DUE.save(deps.storage, &addr, initial_due)?;
             }
         }
     }
 
-    // Update or remove total balance based on processing status
-    if is_processing {
+    // Update or remove total balance
+    if is_processing || total_balance.is_empty() {
         TOTAL_BALANCE.remove(deps.storage);
     } else {
         TOTAL_BALANCE.save(deps.storage, &total_balance)?;
@@ -205,7 +202,11 @@ fn receive_balance(
     }
 
     // Update the total balance in storage
-    TOTAL_BALANCE.update(deps.storage, |total| total.checked_add(&updated_balance))?;
+    if TOTAL_BALANCE.exists(deps.storage) {
+        TOTAL_BALANCE.update(deps.storage, |total| total.checked_add(&updated_balance))?;
+    } else {
+        TOTAL_BALANCE.save(deps.storage, &updated_balance)?;
+    }
 
     Ok(Response::new()
         .add_attribute("action", "receive_balance")
