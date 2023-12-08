@@ -64,7 +64,7 @@ pub enum QueryMsg {
     TotalBalance {},
     #[returns(bool)]
     IsLocked {},
-    #[returns(Vec<MemberShare<String>>)]
+    #[returns(Option<Vec<MemberShare<String>>>)]
     Distribution { addr: String },
     #[returns(DumpStateResponse)]
     DumpState { addr: Option<String> },
