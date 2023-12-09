@@ -40,7 +40,6 @@ pub struct Competition<CompetitionExt> {
     pub rulesets: Vec<Uint128>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
-    pub has_generated_proposals: bool,
     pub result: Option<Vec<MemberShare<Addr>>>,
     pub evidence: Vec<Evidence>,
 }
@@ -61,7 +60,6 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub rulesets: Vec<Uint128>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
-    pub has_generated_proposals: bool,
     pub expiration: Expiration,
     pub result: Option<Vec<MemberShare<Addr>>>,
     pub evidence: Vec<Evidence>,
@@ -84,7 +82,6 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             rulesets: self.rulesets,
             status: self.status,
             extension: self.extension,
-            has_generated_proposals: self.has_generated_proposals,
             expiration: self.expiration,
             result: self.result,
             evidence: self.evidence,

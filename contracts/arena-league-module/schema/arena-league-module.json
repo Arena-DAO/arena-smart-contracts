@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-league-module",
-  "contract_version": "0.9.5",
+  "contract_version": "0.9.6",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -976,7 +976,6 @@
         "evidence",
         "expiration",
         "extension",
-        "has_generated_proposals",
         "id",
         "is_expired",
         "name",
@@ -1016,9 +1015,6 @@
         },
         "extension": {
           "$ref": "#/definitions/CompetitionExt"
-        },
-        "has_generated_proposals": {
-          "type": "boolean"
         },
         "id": {
           "$ref": "#/definitions/Uint128"
@@ -1251,7 +1247,6 @@
             "evidence",
             "expiration",
             "extension",
-            "has_generated_proposals",
             "id",
             "is_expired",
             "name",
@@ -1291,9 +1286,6 @@
             },
             "extension": {
               "$ref": "#/definitions/CompetitionExt"
-            },
-            "has_generated_proposals": {
-              "type": "boolean"
             },
             "id": {
               "$ref": "#/definitions/Uint128"

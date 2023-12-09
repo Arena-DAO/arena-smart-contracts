@@ -69,10 +69,16 @@ fn setup() -> Context {
                 name: "TestToken".to_string(),
                 symbol: "TEST".to_string(),
                 decimals: 6,
-                initial_balances: vec![Cw20Coin {
-                    address: ADDR1.to_string(),
-                    amount: Uint128::from(1000u128),
-                }],
+                initial_balances: vec![
+                    Cw20Coin {
+                        address: ADDR1.to_string(),
+                        amount: Uint128::from(1000u128),
+                    },
+                    Cw20Coin {
+                        address: ADDR2.to_string(),
+                        amount: Uint128::from(1000u128),
+                    },
+                ],
                 mint: None,
                 marketing: None,
             },
@@ -141,7 +147,7 @@ fn setup() -> Context {
                             }],
                             cw721: vec![Cw721Collection {
                                 address: cw721_addr.to_string(),
-                                token_ids: vec![1.to_string(), 2.to_string(), 3.to_string()],
+                                token_ids: vec![1.to_string()],
                             }],
                         },
                     },
@@ -164,7 +170,7 @@ fn setup() -> Context {
                             }],
                             cw721: vec![Cw721Collection {
                                 address: cw721_addr.to_string(),
-                                token_ids: vec![7.to_string(), 8.to_string(), 9.to_string()],
+                                token_ids: vec![7.to_string()],
                             }],
                         },
                     },
@@ -330,7 +336,7 @@ fn test_deposit_withdraw_and_check_balances() {
             },
         )
         .unwrap();
-    assert!(due_addr1.is_none());
+    assert!(due_addr1.is_some());
 
     let balance_total: BalanceVerified = context
         .app

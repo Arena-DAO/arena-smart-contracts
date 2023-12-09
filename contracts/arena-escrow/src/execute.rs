@@ -175,7 +175,7 @@ fn receive_balance(
     })?;
 
     let due_balance = DUE.load(deps.storage, &addr)?;
-    let remaining_due = due_balance.difference(&updated_balance)?;
+    let remaining_due = updated_balance.difference(&due_balance)?;
 
     let mut msgs: Vec<CosmosMsg> = vec![];
 

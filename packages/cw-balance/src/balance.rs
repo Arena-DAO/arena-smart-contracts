@@ -111,7 +111,6 @@ impl BalanceVerified {
     }
 
     // Method to calculate the amounts needed to reach other balance
-
     pub fn difference(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
         let mut diff = BalanceVerified::new();
 
@@ -162,7 +161,10 @@ impl BalanceVerified {
         for token in &other.cw721 {
             let token_ids_set: BTreeSet<&String> = token.token_ids.iter().collect();
             match cw721_map.get(&token.address) {
-                Some(token_ids) if !token_ids.is_superset(&token_ids_set) => {
+                Some(token_ids)
+                    if token_ids_set.is_superset(token_ids)
+                        && token_ids_set.len() != token_ids.len() =>
+                {
                     let diff_token_ids: Vec<String> = token_ids_set
                         .difference(token_ids)
                         .cloned()

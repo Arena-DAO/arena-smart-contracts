@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-escrow",
-  "contract_version": "0.9.5",
+  "contract_version": "0.9.6",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",

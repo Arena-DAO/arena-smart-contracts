@@ -24,7 +24,6 @@ use crate::error::CompetitionError;
 pub const DAO_REPLY_ID: u64 = 1;
 pub const ESCROW_REPLY_ID: u64 = 2;
 pub const PROCESS_REPLY_ID: u64 = 3;
-pub const PROPOSALS_REPLY_ID: u64 = 4;
 pub const PRECISION_MULTIPLIER: u128 = 100_000;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
@@ -511,21 +510,18 @@ where
         });
 
         // Prepare reply
-        let sub_msg = SubMsg::reply_on_success(
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: proposal_module_addr.to_string(),
-                msg: to_json_binary(&propose_message)?,
-                funds: vec![],
-            }),
-            PROPOSALS_REPLY_ID,
-        );
+        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: proposal_module_addr.to_string(),
+            msg: to_json_binary(&propose_message)?,
+            funds: vec![],
+        });
         self.temp_competition.save(deps.storage, &id.u128())?;
 
         Ok(Response::new()
             .add_attribute("action", "generate_proposals")
             .add_attribute("id", id)
             .add_attribute("proposal_module", proposal_module_addr.to_string())
-            .add_submessage(sub_msg))
+            .add_message(msg))
     }
 
     pub fn execute_jail_competition(
@@ -646,11 +642,11 @@ where
             })?;
         let admin_dao = self.get_dao(deps.as_ref())?;
         let mut competition = Competition {
+            id,
             category_id,
             admin_dao: admin_dao.clone(),
-            start_height: env.block.height,
-            id,
             dao: env.contract.address.clone(),
+            start_height: env.block.height,
             escrow: None,
             name,
             description,
@@ -659,7 +655,6 @@ where
             rulesets,
             status: CompetitionStatus::Pending,
             extension: extension.into(),
-            has_generated_proposals: false,
             result: None,
             evidence: vec![],
         };
@@ -913,7 +908,6 @@ where
             DAO_REPLY_ID => self.reply_dao(deps, msg),
             ESCROW_REPLY_ID => self.reply_escrow(deps, msg),
             PROCESS_REPLY_ID => self.reply_process(deps, msg),
-            PROPOSALS_REPLY_ID => self.reply_proposals(deps),
             _ => Err(CompetitionError::UnknownReplyId { id: msg.id }),
         }
     }
@@ -937,24 +931,6 @@ where
         Ok(Response::new()
             .add_attribute("action", "reply_dao")
             .add_attribute("dao_addr", addr))
-    }
-
-    pub fn reply_proposals(&self, deps: DepsMut) -> Result<Response, CompetitionError> {
-        let id = self.temp_competition.load(deps.storage)?;
-
-        self.competitions
-            .update(deps.storage, id, |x| -> Result<_, CompetitionError> {
-                match x {
-                    Some(mut competition) => {
-                        competition.has_generated_proposals = true;
-
-                        Ok(competition)
-                    }
-                    None => Err(CompetitionError::UnknownCompetitionId { id }),
-                }
-            })?;
-
-        Ok(Response::new().add_attribute("action", "reply_proposals"))
     }
 
     pub fn reply_escrow(&self, deps: DepsMut, msg: Reply) -> Result<Response, CompetitionError> {

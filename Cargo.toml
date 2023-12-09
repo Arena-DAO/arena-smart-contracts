@@ -9,7 +9,7 @@ resolver = "2"
 edition = "2021"
 license = "BSD-3-Clause"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "0.9.5"
+version = "0.9.6"
 
 [profile.release]
 codegen-units = 1

@@ -156,3 +156,42 @@ fn test_split_balances() {
     assert_eq!(remainder_cw20token2.amount, Uint128::from(1u128));
     assert_eq!(remainder_cw721token1.token_ids, vec!["1", "2"]);
 }
+
+#[test]
+fn test_split_balances_with_remainder_as_member_share() {
+    let addr_a = Addr::unchecked("addr_a");
+    let addr_b = Addr::unchecked("addr_b");
+    let addr_c = Addr::unchecked("addr_c");
+
+    let balance = BalanceVerified {
+        native: vec![Coin {
+            denom: "native1".to_string(),
+            amount: Uint128::from(100u128),
+        }],
+        cw20: vec![],
+        cw721: vec![],
+    };
+
+    let distribution = vec![
+        MemberShare {
+            addr: addr_a.clone(),
+            shares: Uint128::one(),
+        },
+        MemberShare {
+            addr: addr_b.clone(),
+            shares: Uint128::one(),
+        },
+        MemberShare {
+            addr: addr_c.clone(),
+            shares: Uint128::one(),
+        },
+    ];
+
+    let remainder_address = &addr_c;
+
+    let split_result = balance.split(&distribution, remainder_address).unwrap();
+
+    assert_eq!(split_result[0].balance.native[0].amount.u128(), 33u128);
+    assert_eq!(split_result[1].balance.native[0].amount.u128(), 33u128);
+    assert_eq!(split_result[2].balance.native[0].amount.u128(), 34u128);
+}
