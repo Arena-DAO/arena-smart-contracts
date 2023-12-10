@@ -99,8 +99,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Competitio
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryBase::QueryExtension { msg } => match msg {
-            QueryExt::Leaderboard { league_id } => {
-                to_json_binary(&query::leaderboard(deps, league_id)?)
+            QueryExt::Leaderboard { league_id, round } => {
+                to_json_binary(&query::leaderboard(deps, league_id, round)?)
             }
             QueryExt::Round {
                 league_id,

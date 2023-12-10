@@ -6,15 +6,25 @@ use crate::{
     state::{Match, Result, Round, RoundResponse, MATCHES, ROUNDS},
 };
 use cosmwasm_std::{Addr, Deps, StdResult, Uint128, Uint64};
+use cw_storage_plus::Bound;
 
-pub fn leaderboard(deps: Deps, league_id: Uint128) -> StdResult<Vec<MemberPoints>> {
+pub fn leaderboard(
+    deps: Deps,
+    league_id: Uint128,
+    round: Option<Uint64>,
+) -> StdResult<Vec<MemberPoints>> {
     let league = CompetitionModule::default()
         .competitions
         .load(deps.storage, league_id.u128())?;
 
     let rounds: Vec<Round> = ROUNDS
         .prefix(league_id.u128())
-        .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
+        .range(
+            deps.storage,
+            None,
+            round.map(|x| Bound::inclusive(x.u64())),
+            cosmwasm_std::Order::Ascending,
+        )
         .map(|x| x.map(|y| y.1))
         .collect::<StdResult<Vec<Round>>>()?;
 
@@ -22,7 +32,7 @@ pub fn leaderboard(deps: Deps, league_id: Uint128) -> StdResult<Vec<MemberPoints
     for round in rounds {
         let matches: Vec<Match> = MATCHES
             .prefix((league_id.u128(), round.round_number.u64()))
-            .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
+            .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
             .map(|x| x.map(|y| y.1))
             .collect::<StdResult<_>>()?;
 
@@ -30,12 +40,10 @@ pub fn leaderboard(deps: Deps, league_id: Uint128) -> StdResult<Vec<MemberPoints
             if let Some(match_result) = m.result {
                 match match_result {
                     Result::Team1 | Result::Team2 => {
-                        let (team_1, team_2) = match match_result {
-                            Result::Team1 => (m.team_1, m.team_2),
-                            Result::Team2 => (m.team_2, m.team_1),
-                            Result::Draw => {
-                                panic!("Could not decide the team order for point assignment")
-                            }
+                        let (team_1, team_2) = if match_result == Result::Team1 {
+                            (m.team_1, m.team_2)
+                        } else {
+                            (m.team_2, m.team_1)
                         };
 
                         let record_1 = leaderboard.entry(team_1).or_default();

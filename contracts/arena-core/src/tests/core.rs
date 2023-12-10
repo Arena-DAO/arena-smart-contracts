@@ -4,11 +4,16 @@ use arena_core_interface::msg::{
 };
 use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
-use cw_multi_test::{next_block, App, AppResponse, Contract, ContractWrapper, Executor};
+use cw_multi_test::{
+    addons::MockApiBech32, next_block, App, AppResponse, BankKeeper, Contract, ContractWrapper,
+    Executor,
+};
 use dao_interface::{
     query::GetItemResponse,
     state::{Admin, ModuleInstantiateInfo, ProposalModule},
 };
+
+use crate::tests::app::get_app;
 
 pub const ADMIN: &str = "ismellike";
 
@@ -46,17 +51,22 @@ pub struct CoreContext {
     pub category_id: Uint128,
 }
 
-pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
-    let dao_proposal_single_id = app.store_code(dao_testing::contracts::proposal_single_contract());
+pub fn setup_core_context(
+    app: &mut App<BankKeeper, MockApiBech32>,
+    members: Vec<Member>,
+) -> CoreContext {
+    let dao_proposal_single_id =
+        app.store_code(arena_testing::contracts::proposal_single_contract());
     let arena_core_id = app.store_code(arena_testing::contracts::arena_dao_core_contract());
     let dao_proposal_sudo_id = app.store_code(sudo_proposal_contract());
-    let dao_core_id = app.store_code(dao_testing::contracts::dao_dao_contract());
-    let cw4_id = app.store_code(dao_testing::contracts::cw4_group_contract());
-    let cw4_voting_module_id = app.store_code(dao_testing::contracts::dao_voting_cw4_contract());
+    let dao_core_id = app.store_code(arena_testing::contracts::dao_dao_contract());
+    let cw4_id = app.store_code(arena_testing::contracts::cw4_group_contract());
+    let cw4_voting_module_id = app.store_code(arena_testing::contracts::dao_voting_cw4_contract());
+    let admin = app.api().addr_make(ADMIN);
 
     // Create the DAO
     let sudo_instantiate = dao_proposal_sudo::msg::InstantiateMsg {
-        root: ADMIN.to_owned(),
+        root: admin.to_string(),
     };
 
     let gov_instantiate = dao_interface::msg::InstantiateMsg {
@@ -88,7 +98,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
 
     let result = app.instantiate_contract(
         dao_core_id,
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         &gov_instantiate,
         &[],
         "cw-governance",
@@ -113,7 +123,7 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
 
     // Attach the arena-core extension
     let result = app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         proposal_module.address.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -226,18 +236,20 @@ pub fn setup_core_context(app: &mut App, members: Vec<Member>) -> CoreContext {
 
 #[test]
 pub fn test_categories() {
-    let mut app = App::default();
+    let mut app = get_app();
+
+    let admin = app.api().addr_make(ADMIN);
     let context = setup_core_context(
         &mut app,
         vec![Member {
-            addr: ADMIN.to_string(),
+            addr: admin.to_string(),
             weight: 1u64,
         }],
     );
 
     // Test adding a new category and disabling the original category
     let result = app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -300,18 +312,20 @@ pub fn test_categories() {
 
 #[test]
 pub fn test_rulesets() {
-    let mut app = App::default();
+    let mut app = get_app();
+
+    let admin = app.api().addr_make(ADMIN);
     let context = setup_core_context(
         &mut app,
         vec![Member {
-            addr: ADMIN.to_string(),
+            addr: admin.to_string(),
             weight: 1u64,
         }],
     );
 
     // Instantiate a new ruleset
     let result = app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -354,7 +368,7 @@ pub fn test_rulesets() {
 
     // Disable the ruleset
     let result = app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -409,7 +423,7 @@ pub fn test_rulesets() {
 
     // Try to add a ruleset for a category that does not exist
     let result = app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {

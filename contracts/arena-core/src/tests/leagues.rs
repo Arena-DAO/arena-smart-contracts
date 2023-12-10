@@ -10,16 +10,19 @@ use arena_league_module::{
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
 use cw4::Member;
 use cw_balance::MemberBalance;
-use cw_multi_test::{next_block, App, Executor};
+use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
 use cw_utils::{Duration, Expiration};
 use dao_interface::state::ModuleInstantiateInfo;
 
-use crate::tests::core::{get_attr_value, setup_core_context, ADMIN};
+use crate::tests::{
+    app::{get_app, set_balances},
+    core::{get_attr_value, setup_core_context, ADMIN},
+};
 
 use super::core::CoreContext;
 
 struct Context {
-    app: App,
+    app: App<BankKeeper, MockApiBech32>,
     core: CoreContext,
     league: LeagueContext,
 }
@@ -29,24 +32,16 @@ pub struct LeagueContext {
     pub escrow_id: u64,
 }
 
-fn setup_app(balances: Vec<(Addr, Coins)>) -> App {
-    App::new(|router, _, storage| {
-        for balance in balances {
-            router
-                .bank
-                .init_balance(storage, &balance.0, balance.1.into_vec())
-                .unwrap();
-        }
-    })
-}
-
-fn setup_league_context(app: &mut App, core_context: &CoreContext) -> LeagueContext {
+fn setup_league_context(
+    app: &mut App<BankKeeper, MockApiBech32>,
+    core_context: &CoreContext,
+) -> LeagueContext {
     let league_module_id = app.store_code(arena_testing::contracts::arena_league_module_contract());
     let escrow_id = app.store_code(arena_testing::contracts::arena_dao_escrow_contract());
 
     // Attach the arena-wager-module to the arena-core
     let result = app.execute_contract(
-        Addr::unchecked(ADMIN),
+        app.api().addr_make(ADMIN),
         core_context.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -98,7 +93,7 @@ fn create_competition(
     let teams: Vec<String> = members.iter().map(|x| x.addr.to_string()).collect();
 
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        context.app.api().addr_make(ADMIN),
         context.league.league_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Uint128::one(),
@@ -164,24 +159,30 @@ fn create_competition(
 
 #[test]
 fn test_create_competition() {
+    let mut app = get_app();
     let users = vec![
-        Addr::unchecked("user1"),
-        Addr::unchecked("user2"),
-        Addr::unchecked("user3"),
-        Addr::unchecked("user4"),
-        Addr::unchecked("user5"),
+        app.api().addr_make("user1"),
+        app.api().addr_make("user2"),
+        app.api().addr_make("user3"),
+        app.api().addr_make("user4"),
+        app.api().addr_make("user5"),
     ];
+    let admin = app.api().addr_make(ADMIN);
     let wager_amount_uint128 = Uint128::from(10_000u128);
     let wager_amount = format!("{}{}", wager_amount_uint128, "juno");
 
-    let mut app = setup_app(vec![
-        (users[0].clone(), Coins::from_str(&wager_amount).unwrap()),
-        (users[1].clone(), Coins::from_str(&wager_amount).unwrap()),
-    ]);
+    set_balances(
+        &mut app,
+        vec![
+            (users[0].clone(), Coins::from_str(&wager_amount).unwrap()),
+            (users[1].clone(), Coins::from_str(&wager_amount).unwrap()),
+        ],
+    );
+
     let core_context = setup_core_context(
         &mut app,
         vec![Member {
-            addr: ADMIN.to_string(),
+            addr: admin.to_string(),
             weight: 1u64,
         }],
     );
@@ -312,7 +313,7 @@ fn test_create_competition() {
 
     // Process 1st round of matches
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -350,40 +351,48 @@ fn test_create_competition() {
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
                     league_id: competition1_id,
+                    round: None,
                 },
             },
         )
         .unwrap();
 
     assert_eq!(
-        leaderboard,
-        vec![
-            MemberPoints {
-                member: users[1].clone(),
-                points: Uint128::from(3u128),
-                matches_played: Uint64::one()
-            },
-            MemberPoints {
-                member: users[2].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::one()
-            },
-            MemberPoints {
-                member: users[3].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::one()
-            },
-            MemberPoints {
-                member: users[4].clone(),
-                points: Uint128::zero(),
-                matches_played: Uint64::one()
-            }
-        ]
+        *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
+        MemberPoints {
+            member: users[1].clone(),
+            points: Uint128::from(3u128),
+            matches_played: Uint64::one()
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
+        MemberPoints {
+            member: users[2].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::one()
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
+        MemberPoints {
+            member: users[3].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::one()
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
+        MemberPoints {
+            member: users[4].clone(),
+            points: Uint128::zero(),
+            matches_played: Uint64::one()
+        }
     );
 
     // Process 2nd round of matches
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -421,44 +430,56 @@ fn test_create_competition() {
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
                     league_id: competition1_id,
+                    round: None,
                 },
             },
         )
         .unwrap();
+
     assert_eq!(
-        leaderboard,
-        vec![
-            MemberPoints {
-                member: users[0].clone(),
-                points: Uint128::from(3u128),
-                matches_played: Uint64::one()
-            },
-            MemberPoints {
-                member: users[1].clone(),
-                points: Uint128::from(6u128),
-                matches_played: Uint64::from(2u64)
-            },
-            MemberPoints {
-                member: users[2].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::from(2u64)
-            },
-            MemberPoints {
-                member: users[3].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::one()
-            },
-            MemberPoints {
-                member: users[4].clone(),
-                points: Uint128::zero(),
-                matches_played: Uint64::from(2u64)
-            }
-        ]
+        *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
+        MemberPoints {
+            member: users[0].clone(),
+            points: Uint128::from(3u128),
+            matches_played: Uint64::one()
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
+        MemberPoints {
+            member: users[1].clone(),
+            points: Uint128::from(6u128),
+            matches_played: Uint64::from(2u64)
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
+        MemberPoints {
+            member: users[2].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::from(2u64)
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
+        MemberPoints {
+            member: users[3].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::one()
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
+        MemberPoints {
+            member: users[4].clone(),
+            points: Uint128::zero(),
+            matches_played: Uint64::from(2u64)
+        }
     );
 
     // Process 3rd round of matches
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -496,44 +517,56 @@ fn test_create_competition() {
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
                     league_id: competition1_id,
+                    round: None,
                 },
             },
         )
         .unwrap();
+
     assert_eq!(
-        leaderboard,
-        vec![
-            MemberPoints {
-                member: users[0].clone(),
-                points: Uint128::from(6u128),
-                matches_played: Uint64::from(2u64)
-            },
-            MemberPoints {
-                member: users[1].clone(),
-                points: Uint128::from(6u128),
-                matches_played: Uint64::from(2u64)
-            },
-            MemberPoints {
-                member: users[2].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::from(3u64)
-            },
-            MemberPoints {
-                member: users[3].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::from(2u64)
-            },
-            MemberPoints {
-                member: users[4].clone(),
-                points: Uint128::from(3u128),
-                matches_played: Uint64::from(3u64)
-            }
-        ]
+        *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
+        MemberPoints {
+            member: users[0].clone(),
+            points: Uint128::from(6u128),
+            matches_played: Uint64::from(2u64)
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
+        MemberPoints {
+            member: users[1].clone(),
+            points: Uint128::from(6u128),
+            matches_played: Uint64::from(2u64)
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
+        MemberPoints {
+            member: users[2].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::from(3u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
+        MemberPoints {
+            member: users[3].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::from(2u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
+        MemberPoints {
+            member: users[4].clone(),
+            points: Uint128::from(3u128),
+            matches_played: Uint64::from(3u64)
+        }
     );
 
     // Process 4th round of matches
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -571,44 +604,56 @@ fn test_create_competition() {
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
                     league_id: competition1_id,
+                    round: None,
                 },
             },
         )
         .unwrap();
+
     assert_eq!(
-        leaderboard,
-        vec![
-            MemberPoints {
-                member: users[0].clone(),
-                points: Uint128::from(9u128),
-                matches_played: Uint64::from(3u64)
-            },
-            MemberPoints {
-                member: users[1].clone(),
-                points: Uint128::from(6u128),
-                matches_played: Uint64::from(3u64)
-            },
-            MemberPoints {
-                member: users[2].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::from(4u64)
-            },
-            MemberPoints {
-                member: users[3].clone(),
-                points: Uint128::from(4u128),
-                matches_played: Uint64::from(3u64)
-            },
-            MemberPoints {
-                member: users[4].clone(),
-                points: Uint128::from(3u128),
-                matches_played: Uint64::from(3u64)
-            }
-        ]
+        *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
+        MemberPoints {
+            member: users[0].clone(),
+            points: Uint128::from(9u128),
+            matches_played: Uint64::from(3u64)
+        }
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
+        MemberPoints {
+            member: users[1].clone(),
+            points: Uint128::from(6u128),
+            matches_played: Uint64::from(3u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
+        MemberPoints {
+            member: users[2].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::from(4u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
+        MemberPoints {
+            member: users[3].clone(),
+            points: Uint128::from(4u128),
+            matches_played: Uint64::from(3u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
+        MemberPoints {
+            member: users[4].clone(),
+            points: Uint128::from(3u128),
+            matches_played: Uint64::from(3u64)
+        }
     );
 
     // Process 5th round of matches
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -646,38 +691,50 @@ fn test_create_competition() {
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
                     league_id: competition1_id,
+                    round: None,
                 },
             },
         )
         .unwrap();
+
     assert_eq!(
-        leaderboard,
-        vec![
-            MemberPoints {
-                member: users[0].clone(),
-                points: Uint128::from(12u128),
-                matches_played: Uint64::from(4u64)
-            },
-            MemberPoints {
-                member: users[1].clone(),
-                points: Uint128::from(6u128),
-                matches_played: Uint64::from(4u64)
-            },
-            MemberPoints {
-                member: users[2].clone(),
-                points: Uint128::one(),
-                matches_played: Uint64::from(4u64)
-            },
-            MemberPoints {
-                member: users[3].clone(),
-                points: Uint128::from(7u128),
-                matches_played: Uint64::from(4u64)
-            },
-            MemberPoints {
-                member: users[4].clone(),
-                points: Uint128::from(3u128),
-                matches_played: Uint64::from(4u64)
-            }
-        ]
+        *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
+        MemberPoints {
+            member: users[0].clone(),
+            points: Uint128::from(12u128),
+            matches_played: Uint64::from(4u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
+        MemberPoints {
+            member: users[1].clone(),
+            points: Uint128::from(6u128),
+            matches_played: Uint64::from(4u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
+        MemberPoints {
+            member: users[2].clone(),
+            points: Uint128::one(),
+            matches_played: Uint64::from(4u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
+        MemberPoints {
+            member: users[3].clone(),
+            points: Uint128::from(7u128),
+            matches_played: Uint64::from(4u64)
+        },
+    );
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
+        MemberPoints {
+            member: users[4].clone(),
+            points: Uint128::from(3u128),
+            matches_played: Uint64::from(4u64)
+        }
     );
 }

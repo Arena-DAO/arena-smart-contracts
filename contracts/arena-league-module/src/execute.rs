@@ -3,6 +3,7 @@ use cosmwasm_std::{
     StdResult, Uint128, Uint64,
 };
 use cw_utils::Duration;
+use itertools::Itertools;
 use std::ops::Add;
 
 use crate::{
@@ -20,6 +21,12 @@ pub fn instantiate_rounds(
     teams: Vec<String>,
     round_duration: Duration,
 ) -> Result<Response, ContractError> {
+    if teams.iter().unique().count() != teams.len() {
+        return Err(ContractError::StdError(StdError::GenericErr {
+            msg: "Teams cannot have duplicates".to_string(),
+        }));
+    }
+
     // Convert team names to addresses
     let team_addresses: Vec<Addr> = teams
         .iter()

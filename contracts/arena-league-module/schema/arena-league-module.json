@@ -894,6 +894,16 @@
                 "properties": {
                   "league_id": {
                     "$ref": "#/definitions/Uint128"
+                  },
+                  "round": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Uint64"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false

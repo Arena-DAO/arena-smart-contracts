@@ -28,7 +28,10 @@ pub struct MatchResult {
 #[derive(QueryResponses)]
 pub enum QueryExt {
     #[returns(Vec<MemberPoints>)]
-    Leaderboard { league_id: Uint128 },
+    Leaderboard {
+        league_id: Uint128,
+        round: Option<Uint64>,
+    },
     #[returns(RoundResponse)]
     Round {
         league_id: Uint128,

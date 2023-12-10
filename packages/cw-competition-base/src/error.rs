@@ -1,4 +1,7 @@
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError, Uint128};
+use cosmwasm_std::{
+    CheckedFromRatioError, DecimalRangeExceeded, Instantiate2AddressError, OverflowError, StdError,
+    Uint128,
+};
 use cw_competition::state::CompetitionStatus;
 use cw_ownable::OwnershipError;
 use cw_utils::ParseReplyError;
@@ -23,6 +26,9 @@ pub enum CompetitionError {
 
     #[error("{0}")]
     CheckedFromRatioError(#[from] CheckedFromRatioError),
+
+    #[error("{0}")]
+    Instantiate2AddressError(#[from] Instantiate2AddressError),
 
     #[error("Unauthorized")]
     Unauthorized {},

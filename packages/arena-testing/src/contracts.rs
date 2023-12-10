@@ -68,3 +68,44 @@ pub fn cw721_base_contract() -> Box<dyn Contract<Empty>> {
         cw721_base::entry::query,
     ))
 }
+
+pub fn proposal_single_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        dao_proposal_single::contract::execute,
+        dao_proposal_single::contract::instantiate,
+        dao_proposal_single::contract::query,
+    )
+    .with_reply(dao_proposal_single::contract::reply)
+    .with_migrate(dao_proposal_single::contract::migrate);
+    Box::new(contract)
+}
+
+pub fn dao_dao_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        dao_dao_core::contract::execute,
+        dao_dao_core::contract::instantiate,
+        dao_dao_core::contract::query,
+    )
+    .with_reply(dao_dao_core::contract::reply)
+    .with_migrate(dao_dao_core::contract::migrate);
+    Box::new(contract)
+}
+
+pub fn cw4_group_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        cw4_group::contract::execute,
+        cw4_group::contract::instantiate,
+        cw4_group::contract::query,
+    );
+    Box::new(contract)
+}
+
+pub fn dao_voting_cw4_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        dao_voting_cw4::contract::execute,
+        dao_voting_cw4::contract::instantiate,
+        dao_voting_cw4::contract::query,
+    )
+    .with_reply(dao_voting_cw4::contract::reply);
+    Box::new(contract)
+}

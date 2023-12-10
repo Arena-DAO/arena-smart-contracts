@@ -8,16 +8,19 @@ use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_balance::{MemberBalance, MemberShare};
 use cw_competition::state::{CompetitionResponse, CompetitionStatus};
-use cw_multi_test::{next_block, App, Executor};
+use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
 use cw_utils::Expiration;
 use dao_interface::state::{ModuleInstantiateInfo, ProposalModule};
 
-use crate::tests::core::{get_attr_value, setup_core_context, ADMIN};
+use crate::tests::{
+    app::{get_app, set_balances},
+    core::{get_attr_value, setup_core_context, ADMIN},
+};
 
 use super::core::CoreContext;
 
 struct Context {
-    app: App,
+    app: App<BankKeeper, MockApiBech32>,
     core: CoreContext,
     wager: WagerContext,
 }
@@ -28,25 +31,17 @@ pub struct WagerContext {
     pub wagers_key: String,
 }
 
-fn setup_app(balances: Vec<(Addr, Coins)>) -> App {
-    App::new(|router, _, storage| {
-        for balance in balances {
-            router
-                .bank
-                .init_balance(storage, &balance.0, balance.1.into_vec())
-                .unwrap();
-        }
-    })
-}
-
-pub fn setup_wager_context(app: &mut App, core_context: &CoreContext) -> WagerContext {
+pub fn setup_wager_context(
+    app: &mut App<BankKeeper, MockApiBech32>,
+    core_context: &CoreContext,
+) -> WagerContext {
     let wager_module_id = app.store_code(arena_testing::contracts::arena_wager_module_contract());
     let escrow_id = app.store_code(arena_testing::contracts::arena_dao_escrow_contract());
     let wagers_key = "Wagers".to_string();
 
     // Attach the arena-wager-module to the arena-core
     let result = app.execute_contract(
-        Addr::unchecked(ADMIN),
+        app.api().addr_make(ADMIN),
         core_context.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {
@@ -96,7 +91,7 @@ fn create_competition(
     dues: Option<Vec<MemberBalance>>,
 ) -> Uint128 {
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        context.app.api().addr_make(ADMIN),
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Uint128::one(),
@@ -156,19 +151,24 @@ fn create_competition(
 
 #[test]
 fn test_create_competition() {
-    let user1 = Addr::unchecked("user1");
-    let user2 = Addr::unchecked("user2");
+    let mut app = get_app();
+    let user1 = app.api().addr_make("user1");
+    let user2 = app.api().addr_make("user2");
     let wager_amount_uint128 = Uint128::from(10_000u128);
     let wager_amount = format!("{}{}", wager_amount_uint128, "juno");
+    let admin = app.api().addr_make(ADMIN);
 
-    let mut app = setup_app(vec![
-        (user1.clone(), Coins::from_str(&wager_amount).unwrap()),
-        (user2.clone(), Coins::from_str(&wager_amount).unwrap()),
-    ]);
+    set_balances(
+        &mut app,
+        vec![
+            (user1.clone(), Coins::from_str(&wager_amount).unwrap()),
+            (user2.clone(), Coins::from_str(&wager_amount).unwrap()),
+        ],
+    );
     let core_context = setup_core_context(
         &mut app,
         vec![Member {
-            addr: ADMIN.to_string(),
+            addr: admin.to_string(),
             weight: 1u64,
         }],
     );
@@ -194,7 +194,7 @@ fn test_create_competition() {
 
     // Create competition fails from rulesets not existing on core
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Uint128::one(),
@@ -479,19 +479,25 @@ fn test_create_competition() {
 
 #[test]
 fn test_create_competition_jailed() {
-    let user1 = Addr::unchecked("user1");
-    let user2 = Addr::unchecked("user2");
+    let mut app = get_app();
+
+    let user1 = app.api().addr_make("user1");
+    let user2 = app.api().addr_make("user2");
+    let admin = app.api().addr_make(ADMIN);
     let wager_amount_uint128 = Uint128::from(10_000u128);
     let wager_amount = format!("{}{}", wager_amount_uint128, "juno");
 
-    let mut app = setup_app(vec![
-        (user1.clone(), Coins::from_str(&wager_amount).unwrap()),
-        (user2.clone(), Coins::from_str(&wager_amount).unwrap()),
-    ]);
+    set_balances(
+        &mut app,
+        vec![
+            (user1.clone(), Coins::from_str(&wager_amount).unwrap()),
+            (user2.clone(), Coins::from_str(&wager_amount).unwrap()),
+        ],
+    );
     let core_context = setup_core_context(
         &mut app,
         vec![Member {
-            addr: ADMIN.to_string(),
+            addr: admin.to_string(),
             weight: 1u64,
         }],
     );
@@ -621,7 +627,7 @@ fn test_create_competition_jailed() {
 
     // Cannot jail wager - unauthorized
     let result = context.app.execute_contract(
-        Addr::unchecked("random"),
+        context.app.api().addr_make("random"),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
             propose_message: propose_message.clone(),
@@ -667,7 +673,7 @@ fn test_create_competition_jailed() {
 
     // Vote and execute jail
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.proposal_module_addr.clone(),
         &dao_proposal_single::msg::ExecuteMsg::Vote {
             proposal_id: 1u64,
@@ -679,7 +685,7 @@ fn test_create_competition_jailed() {
     assert!(result.is_ok());
 
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.proposal_module_addr.clone(),
         &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
         &[],
@@ -690,24 +696,26 @@ fn test_create_competition_jailed() {
     let balance = context
         .app
         .wrap()
-        .query_balance(user1.to_string(), "juno")
-        .unwrap();
-    assert_eq!(balance.amount, Uint128::from(17_000u128));
-    let balance = context
-        .app
-        .wrap()
         .query_balance(context.core.dao_addr.to_string(), "juno")
         .unwrap();
     assert_eq!(balance.amount, Uint128::from(3_000u128));
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(user1.to_string(), "juno")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::from(17_000u128));
 }
 
 #[test]
 pub fn test_disabling_module() {
-    let mut app = setup_app(vec![]);
+    let mut app = get_app();
+
+    let admin = app.api().addr_make(ADMIN);
     let core_context = setup_core_context(
         &mut app,
         vec![Member {
-            addr: ADMIN.to_string(),
+            addr: admin.to_string(),
             weight: 1u64,
         }],
     );
@@ -720,7 +728,7 @@ pub fn test_disabling_module() {
 
     // Disable the wager module
     let result = context.app.execute_contract(
-        Addr::unchecked(ADMIN),
+        admin.clone(),
         context.core.sudo_proposal_addr.clone(),
         &dao_proposal_sudo::msg::ExecuteMsg::Execute {
             msgs: vec![WasmMsg::Execute {

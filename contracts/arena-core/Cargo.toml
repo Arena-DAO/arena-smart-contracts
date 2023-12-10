@@ -34,7 +34,6 @@ arena-core-interface = { workspace = true }
 [dev-dependencies]
 dao-proposal-single = { workspace = true }
 cw-multi-test = { workspace = true }
-dao-testing = { workspace = true }
 arena-testing = { workspace = true }
 dao-voting = { workspace = true }
 cw-utils = { workspace = true }

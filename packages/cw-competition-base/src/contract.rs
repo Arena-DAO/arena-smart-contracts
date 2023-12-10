@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use arena_core_interface::msg::{CompetitionModuleResponse, ProposeMessage, ProposeMessages};
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo,
-    Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty,
+    Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::MemberShare;
 use cw_competition::{
@@ -14,17 +14,14 @@ use cw_competition::{
 };
 use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
-use cw_utils::parse_reply_instantiate_data;
 use dao_interface::state::{ModuleInstantiateInfo, ProposalModule};
 use dao_voting::{pre_propose::ProposalCreationPolicy, proposal::SingleChoiceProposeMsg};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::CompetitionError;
 
-pub const DAO_REPLY_ID: u64 = 1;
-pub const ESCROW_REPLY_ID: u64 = 2;
-pub const PROCESS_REPLY_ID: u64 = 3;
-pub const PRECISION_MULTIPLIER: u128 = 100_000;
+pub const PROCESS_REPLY_ID: u64 = 1;
+pub const PRECISION_MULTIPLIER: u128 = 1_000_000;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
@@ -515,7 +512,6 @@ where
             msg: to_json_binary(&propose_message)?,
             funds: vec![],
         });
-        self.temp_competition.save(deps.storage, &id.u128())?;
 
         Ok(Response::new()
             .add_attribute("action", "generate_proposals")
@@ -617,6 +613,27 @@ where
             cw_ownable::OwnershipError::NoOwner,
         ))?;
 
+        // Declare instantiate2 vars
+        let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+        let dao_code_info = deps.querier.query_wasm_code_info(competition_dao.code_id)?;
+        let escrow_code_info = escrow
+            .as_ref()
+            .map(|x| deps.querier.query_wasm_code_info(x.code_id))
+            .transpose()?;
+        let salt = env.block.height.to_ne_bytes();
+
+        // Perform instantiate2 calculation
+        let canonical_dao =
+            instantiate2_address(&dao_code_info.checksum, &canonical_creator, &salt)?;
+        let canonical_escrow = match escrow_code_info {
+            Some(escrow_code_info) => Some(instantiate2_address(
+                &escrow_code_info.checksum,
+                &canonical_creator,
+                &salt,
+            )?),
+            None => None,
+        };
+
         // Validate that category and rulesets are valid
         let result: bool = deps.querier.query_wasm_smart(
             arena_core,
@@ -645,9 +662,11 @@ where
             id,
             category_id,
             admin_dao: admin_dao.clone(),
-            dao: env.contract.address.clone(),
+            dao: deps.api.addr_humanize(&canonical_dao)?,
             start_height: env.block.height,
-            escrow: None,
+            escrow: canonical_escrow
+                .map(|x| deps.api.addr_humanize(&x))
+                .transpose()?,
             name,
             description,
             expiration,
@@ -658,28 +677,51 @@ where
             result: None,
             evidence: vec![],
         };
-        let mut msgs = vec![SubMsg::reply_on_success(
-            competition_dao.into_wasm_msg(admin_dao.clone()),
-            DAO_REPLY_ID,
-        )];
+        let mut msgs = vec![WasmMsg::Instantiate2 {
+            admin: competition_dao.admin.map(|admin| match admin {
+                dao_interface::state::Admin::Address { addr } => addr,
+                dao_interface::state::Admin::CoreModule {} => admin_dao.to_string(),
+            }),
+            code_id: competition_dao.code_id,
+            label: competition_dao.label,
+            msg: competition_dao.msg,
+            funds: vec![],
+            salt: salt.into(),
+        }];
 
         if let Some(escrow) = escrow {
-            msgs.push(SubMsg::reply_on_success(
-                escrow.into_wasm_msg(admin_dao),
-                ESCROW_REPLY_ID,
-            ));
+            msgs.push(WasmMsg::Instantiate2 {
+                admin: Some(competition.dao.to_string()),
+                code_id: escrow.code_id,
+                label: escrow.label,
+                msg: escrow.msg,
+                funds: vec![],
+                salt: salt.into(),
+            });
+
+            if let Some(escrow) = competition.escrow.as_ref() {
+                self.escrows_to_competitions
+                    .save(deps.storage, escrow.clone(), &id.u128())?;
+            }
         } else {
             competition.status = CompetitionStatus::Active;
         }
 
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
-        self.temp_competition.save(deps.storage, &id.u128())?;
 
         Ok(Response::new()
             .add_attribute("action", "create_competition")
             .add_attribute("id", id)
-            .add_submessages(msgs))
+            .add_attribute(
+                "escrow_addr",
+                competition
+                    .escrow
+                    .map(|x| x.to_string())
+                    .unwrap_or_default(),
+            )
+            .add_attribute("competition_dao", competition.dao)
+            .add_messages(msgs))
     }
 
     pub fn execute_process_competition(
@@ -798,6 +840,7 @@ where
                 .into_cosmos_msg(escrow)?,
                 PROCESS_REPLY_ID,
             );
+            self.temp_competition.save(deps.storage, &id.u128())?;
 
             msgs.push(sub_msg);
         }
@@ -905,55 +948,9 @@ where
         msg: Reply,
     ) -> Result<Response, CompetitionError> {
         match msg.id {
-            DAO_REPLY_ID => self.reply_dao(deps, msg),
-            ESCROW_REPLY_ID => self.reply_escrow(deps, msg),
             PROCESS_REPLY_ID => self.reply_process(deps, msg),
             _ => Err(CompetitionError::UnknownReplyId { id: msg.id }),
         }
-    }
-
-    pub fn reply_dao(&self, deps: DepsMut, msg: Reply) -> Result<Response, CompetitionError> {
-        let result = parse_reply_instantiate_data(msg)?;
-        let addr = deps.api.addr_validate(&result.contract_address)?;
-        let id = self.temp_competition.load(deps.storage)?;
-
-        self.competitions
-            .update(deps.storage, id, |x| -> Result<_, CompetitionError> {
-                match x {
-                    Some(mut competition) => {
-                        competition.dao = addr.clone();
-                        Ok(competition)
-                    }
-                    None => Err(CompetitionError::UnknownCompetitionId { id }),
-                }
-            })?;
-
-        Ok(Response::new()
-            .add_attribute("action", "reply_dao")
-            .add_attribute("dao_addr", addr))
-    }
-
-    pub fn reply_escrow(&self, deps: DepsMut, msg: Reply) -> Result<Response, CompetitionError> {
-        let result = parse_reply_instantiate_data(msg)?;
-        let addr = deps.api.addr_validate(&result.contract_address)?;
-        let id = self.temp_competition.load(deps.storage)?;
-
-        self.competitions
-            .update(deps.storage, id, |x| -> Result<_, CompetitionError> {
-                match x {
-                    Some(mut competition) => {
-                        competition.escrow = Some(addr.clone());
-                        Ok(competition)
-                    }
-                    None => Err(CompetitionError::UnknownCompetitionId { id }),
-                }
-            })?;
-        self.escrows_to_competitions
-            .save(deps.storage, addr.clone(), &id)?;
-
-        Ok(Response::new()
-            .add_attribute("action", "reply_escrow")
-            .add_attribute("escrow_addr", addr))
     }
 
     pub fn reply_process(&self, deps: DepsMut, _msg: Reply) -> Result<Response, CompetitionError> {

@@ -23,28 +23,29 @@ incremental = false
 overflow-checks = true
 
 [workspace.dependencies]
-cosmwasm-std = "1.5.0"
+cosmwasm-std = { version = "1.5.0", features = ["cosmwasm_1_4"] }
 cosmwasm-storage = "1.5.0"
 cosmwasm-schema = "1.5.0"
-cw-utils = "1.0.2"
+cw-utils = "1.0.3"
 thiserror = "1.0.50"
-cw-storage-plus = "1.1.0"
-cw-multi-test = "0.16.0" 
-cw2 = "1.1.1"
-cw20 = "1.1.1"
+cw-storage-plus = "1.2.0"
+cw-multi-test = { version = "0.19.0", features = ["cosmwasm_1_4", "cosmwasm_1_2"] } 
+cw2 = "1.1.2"
+cw20 = "1.1.2"
 cw721 = "0.18.0"
-cw20-base = "1.1.1"
+cw20-base = "1.1.2"
 cw721-base = "0.18"
 anyhow = "1.0.75"
-cw4-group = "1.1.1"
+cw4-group = "1.1.2"
 rand = "0.8.5"
-cw4 = "1.1.1"
-serde = { version = "1.0.190", default-features = false, features = ["derive"]}
-getrandom = { version = "0.2.10", features = ["js"] }
+cw4 = "1.1.2"
+serde = { version = "1.0.193", default-features = false, features = ["derive"]}
+getrandom = { version = "0.2.11", features = ["js"] }
 bnum = "0.10.0"
 cw-paginate = "0.2.1"
 cw-ownable = "0.5.1"
 cw-address-like = "1.0.4"
+itertools = "0.12.0"
 
 #arena_dao dependencies
 cw-competition-base = { path = "./packages/cw-competition-base", features = ["library"] }
@@ -67,4 +68,4 @@ dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main"
 dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
 dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
 dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }
-dao-testing = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
+dao-dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }

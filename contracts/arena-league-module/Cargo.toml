@@ -28,3 +28,4 @@ arena-core-interface = { workspace = true }
 thiserror = { workspace = true }
 dao-interface = { workspace = true }
 cw-ownable = { workspace = true }
+itertools = { workspace = true }
