@@ -837,10 +837,14 @@ where
                     distribution,
                     remainder_addr: competition.admin_dao.to_string(),
                 }
-                .into_cosmos_msg(escrow)?,
+                .into_cosmos_msg(escrow.clone())?,
                 PROCESS_REPLY_ID,
             );
+
             self.temp_competition.save(deps.storage, &id.u128())?;
+
+            // We don't expect another activation message from the escrow
+            self.escrows_to_competitions.remove(deps.storage, escrow);
 
             msgs.push(sub_msg);
         }
