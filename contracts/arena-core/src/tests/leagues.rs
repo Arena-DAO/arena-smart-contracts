@@ -10,6 +10,7 @@ use arena_league_module::{
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
 use cw4::Member;
 use cw_balance::MemberBalance;
+use cw_competition::msg::ModuleInfo;
 use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
 use cw_utils::{Duration, Expiration};
 use dao_interface::state::ModuleInstantiateInfo;
@@ -97,29 +98,31 @@ fn create_competition(
         context.league.league_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Uint128::one(),
-            competition_dao: ModuleInstantiateInfo {
-                code_id: context.core.dao_core_id,
-                msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
-                    context.core.cw4_id,
-                    context.core.cw4_voting_module_id,
-                    context.core.dao_proposal_single_id,
-                    dao_proposal_single::msg::InstantiateMsg {
-                        threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
-                            percentage: dao_voting::threshold::PercentageThreshold::Majority {},
+            competition_dao: ModuleInfo::New {
+                info: ModuleInstantiateInfo {
+                    code_id: context.core.dao_core_id,
+                    msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
+                        context.core.cw4_id,
+                        context.core.cw4_voting_module_id,
+                        context.core.dao_proposal_single_id,
+                        dao_proposal_single::msg::InstantiateMsg {
+                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
+                                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
+                            },
+                            min_voting_period: None,
+                            max_voting_period: cw_utils_v16::Duration::Height(10u64),
+                            only_members_execute: false,
+                            allow_revoting: false,
+                            pre_propose_info:
+                                dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
+                            close_proposal_on_execution_failure: true,
                         },
-                        min_voting_period: None,
-                        max_voting_period: cw_utils_v16::Duration::Height(10u64),
-                        only_members_execute: false,
-                        allow_revoting: false,
-                        pre_propose_info:
-                            dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
-                        close_proposal_on_execution_failure: true,
-                    },
-                    members,
-                ))
-                .unwrap(),
-                admin: None,
-                label: "DAO".to_owned(),
+                        members,
+                    ))
+                    .unwrap(),
+                    admin: None,
+                    label: "DAO".to_owned(),
+                },
             },
             escrow: dues.map(|x| ModuleInstantiateInfo {
                 code_id: context.league.escrow_id,

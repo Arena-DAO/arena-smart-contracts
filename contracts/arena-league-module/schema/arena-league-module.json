@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-league-module",
-  "contract_version": "0.9.6",
+  "contract_version": "0.9.7",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -182,7 +182,7 @@
                 "$ref": "#/definitions/Uint128"
               },
               "competition_dao": {
-                "$ref": "#/definitions/ModuleInstantiateInfo"
+                "$ref": "#/definitions/ModuleInfo"
               },
               "description": {
                 "type": "string"
@@ -597,6 +597,52 @@
           }
         },
         "additionalProperties": false
+      },
+      "ModuleInfo": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "new"
+            ],
+            "properties": {
+              "new": {
+                "type": "object",
+                "required": [
+                  "info"
+                ],
+                "properties": {
+                  "info": {
+                    "$ref": "#/definitions/ModuleInstantiateInfo"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "existing"
+            ],
+            "properties": {
+              "existing": {
+                "type": "object",
+                "required": [
+                  "addr"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "ModuleInstantiateInfo": {
         "description": "Information needed to instantiate a module.",

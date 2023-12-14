@@ -41,7 +41,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     CreateCompetition {
         category_id: Uint128,
-        competition_dao: ModuleInstantiateInfo,
+        competition_dao: ModuleInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
         description: String,
@@ -99,4 +99,10 @@ pub enum CompetitionsFilter {
 pub enum HookDirection {
     Incoming,
     Outgoing,
+}
+
+#[cw_serde]
+pub enum ModuleInfo {
+    New { info: ModuleInstantiateInfo },
+    Existing { addr: String },
 }

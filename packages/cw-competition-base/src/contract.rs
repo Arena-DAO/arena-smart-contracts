@@ -9,7 +9,7 @@ use cosmwasm_std::{
 use cw_balance::MemberShare;
 use cw_competition::{
     escrow::CompetitionEscrowDistributeMsg,
-    msg::{CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, QueryBase},
+    msg::{CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, ModuleInfo, QueryBase},
     state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
 };
 use cw_ownable::{get_ownership, initialize_owner};
@@ -592,7 +592,7 @@ where
         deps: &mut DepsMut,
         env: &Env,
         category_id: Uint128,
-        competition_dao: ModuleInstantiateInfo,
+        competition_dao: ModuleInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
         description: String,
@@ -613,25 +613,67 @@ where
             cw_ownable::OwnershipError::NoOwner,
         ))?;
 
-        // Declare instantiate2 vars
-        let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-        let dao_code_info = deps.querier.query_wasm_code_info(competition_dao.code_id)?;
-        let escrow_code_info = escrow
-            .as_ref()
-            .map(|x| deps.querier.query_wasm_code_info(x.code_id))
-            .transpose()?;
-        let salt = env.block.height.to_ne_bytes();
+        // Setup
+        let id = self
+            .competition_count
+            .update(deps.storage, |x| -> StdResult<_> {
+                Ok(x.checked_add(Uint128::one())?)
+            })?;
+        let admin_dao = self.get_dao(deps.as_ref())?;
+        let mut msgs = vec![];
+        let mut initial_status = CompetitionStatus::Pending;
 
-        // Perform instantiate2 calculation
-        let canonical_dao =
-            instantiate2_address(&dao_code_info.checksum, &canonical_creator, &salt)?;
-        let canonical_escrow = match escrow_code_info {
-            Some(escrow_code_info) => Some(instantiate2_address(
-                &escrow_code_info.checksum,
-                &canonical_creator,
-                &salt,
-            )?),
-            None => None,
+        // Declare instantiate2 vars
+        let salt = env.block.height.to_ne_bytes();
+        let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+        let dao_address = match competition_dao {
+            ModuleInfo::New { info } => {
+                let code_info = deps.querier.query_wasm_code_info(info.code_id)?;
+                let canonical_addr =
+                    instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
+
+                msgs.push(WasmMsg::Instantiate2 {
+                    admin: info.admin.map(|admin| match admin {
+                        dao_interface::state::Admin::Address { addr } => addr,
+                        dao_interface::state::Admin::CoreModule {} => admin_dao.to_string(),
+                    }),
+                    code_id: info.code_id,
+                    label: info.label,
+                    msg: info.msg,
+                    funds: vec![],
+                    salt: salt.into(),
+                });
+
+                deps.api.addr_humanize(&canonical_addr)
+            }
+            ModuleInfo::Existing { addr } => deps.api.addr_validate(&addr),
+        }?;
+        let escrow_addr = match escrow {
+            Some(info) => {
+                let code_info = deps.querier.query_wasm_code_info(info.code_id)?;
+                let canonical_addr =
+                    instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
+
+                msgs.push(WasmMsg::Instantiate2 {
+                    admin: Some(dao_address.to_string()),
+                    code_id: info.code_id,
+                    label: info.label,
+                    msg: info.msg,
+                    funds: vec![],
+                    salt: salt.into(),
+                });
+
+                let addr = deps.api.addr_humanize(&canonical_addr)?;
+
+                self.escrows_to_competitions
+                    .save(deps.storage, addr.clone(), &id.u128())?;
+
+                Some(addr)
+            }
+            None => {
+                initial_status = CompetitionStatus::Active;
+                None
+            }
         };
 
         // Validate that category and rulesets are valid
@@ -652,60 +694,23 @@ where
         }
 
         // Create competition
-        let id = self
-            .competition_count
-            .update(deps.storage, |x| -> StdResult<_> {
-                Ok(x.checked_add(Uint128::one())?)
-            })?;
-        let admin_dao = self.get_dao(deps.as_ref())?;
-        let mut competition = Competition {
+        let competition = Competition {
             id,
             category_id,
             admin_dao: admin_dao.clone(),
-            dao: deps.api.addr_humanize(&canonical_dao)?,
+            dao: dao_address,
             start_height: env.block.height,
-            escrow: canonical_escrow
-                .map(|x| deps.api.addr_humanize(&x))
-                .transpose()?,
+            escrow: escrow_addr,
             name,
             description,
             expiration,
             rules,
             rulesets,
-            status: CompetitionStatus::Pending,
+            status: initial_status,
             extension: extension.into(),
             result: None,
             evidence: vec![],
         };
-        let mut msgs = vec![WasmMsg::Instantiate2 {
-            admin: competition_dao.admin.map(|admin| match admin {
-                dao_interface::state::Admin::Address { addr } => addr,
-                dao_interface::state::Admin::CoreModule {} => admin_dao.to_string(),
-            }),
-            code_id: competition_dao.code_id,
-            label: competition_dao.label,
-            msg: competition_dao.msg,
-            funds: vec![],
-            salt: salt.into(),
-        }];
-
-        if let Some(escrow) = escrow {
-            msgs.push(WasmMsg::Instantiate2 {
-                admin: Some(competition.dao.to_string()),
-                code_id: escrow.code_id,
-                label: escrow.label,
-                msg: escrow.msg,
-                funds: vec![],
-                salt: salt.into(),
-            });
-
-            if let Some(escrow) = competition.escrow.as_ref() {
-                self.escrows_to_competitions
-                    .save(deps.storage, escrow.clone(), &id.u128())?;
-            }
-        } else {
-            competition.status = CompetitionStatus::Active;
-        }
 
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
