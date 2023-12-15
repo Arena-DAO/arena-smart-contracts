@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use arena_core_interface::msg::{CompetitionModuleResponse, ProposeMessage, ProposeMessages};
+use arena_core_interface::msg::{CompetitionModuleResponse, ProposeMessage};
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
     instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty,
@@ -14,8 +14,7 @@ use cw_competition::{
 };
 use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
-use dao_interface::state::{ModuleInstantiateInfo, ProposalModule};
-use dao_voting::{pre_propose::ProposalCreationPolicy, proposal::SingleChoiceProposeMsg};
+use dao_interface::state::ModuleInstantiateInfo;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::CompetitionError;
@@ -240,9 +239,6 @@ where
                 rulesets,
                 instantiate_extension,
             ),
-            ExecuteBase::ProposeResult { propose_message } => {
-                self.execute_propose_result(deps, env, info, propose_message)
-            }
             ExecuteBase::ProcessCompetition { id, distribution } => {
                 self.execute_process_competition(deps, info, id, distribution)
             }
@@ -424,100 +420,6 @@ where
             .add_attribute("id", id.to_string())
             .add_attribute("action", "activate")
             .add_attribute("escrow", info.sender))
-    }
-
-    pub fn execute_propose_result(
-        &self,
-        deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        propose_message: ProposeMessage,
-    ) -> Result<Response, CompetitionError> {
-        let id = propose_message.id;
-
-        // Load competition
-        let competition = self
-            .competitions
-            .may_load(deps.storage, id.u128())?
-            .ok_or(CompetitionError::UnknownCompetitionId { id: id.u128() })?;
-
-        // Query active proposal modules
-        let proposal_modules: Vec<ProposalModule> = deps.querier.query_wasm_smart(
-            competition.dao.clone(),
-            &dao_interface::msg::QueryMsg::ActiveProposalModules {
-                start_after: None,
-                limit: None,
-            },
-        )?;
-
-        // Find a valid proposal module
-        let mut proposal_module_addr = None;
-        let mut proposer = None;
-        for proposal_module in proposal_modules {
-            let contract_info = cw2::query_contract_info(&deps.querier, &proposal_module.address);
-            if contract_info.is_err()
-                || !contract_info
-                    .unwrap()
-                    .contract
-                    .contains("dao-proposal-single")
-            {
-                continue;
-            }
-
-            let creation_policy = deps.querier.query_wasm_smart::<ProposalCreationPolicy>(
-                proposal_module.address.clone(),
-                &dao_proposal_single::msg::QueryMsg::ProposalCreationPolicy {},
-            );
-            if creation_policy.is_err()
-                || !creation_policy
-                    .as_ref()
-                    .unwrap()
-                    .is_permitted(&env.contract.address)
-            {
-                continue;
-            }
-
-            proposal_module_addr = Some(proposal_module.address);
-            proposer = match creation_policy.unwrap() {
-                ProposalCreationPolicy::Anyone {} => None,
-                ProposalCreationPolicy::Module { addr: _ } => Some(info.sender.to_string()),
-            };
-            break; // Found a valid proposal module, break out of the loop
-        }
-
-        // Ensure a valid proposal module was found
-        let proposal_module_addr =
-            proposal_module_addr.ok_or(CompetitionError::StdError(StdError::GenericErr {
-                msg: "Could not find an accessible dao-proposal-single module".to_owned(),
-            }))?;
-
-        // Construct proposal message
-        let propose_message = ProposeMessages::Propose(SingleChoiceProposeMsg {
-            title: propose_message.title,
-            description: propose_message.description,
-            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: env.contract.address.to_string(),
-                msg: to_json_binary(&ExecuteBase::<Empty, Empty>::ProcessCompetition {
-                    id: propose_message.id,
-                    distribution: propose_message.distribution,
-                })?,
-                funds: vec![],
-            })],
-            proposer,
-        });
-
-        // Prepare reply
-        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: proposal_module_addr.to_string(),
-            msg: to_json_binary(&propose_message)?,
-            funds: vec![],
-        });
-
-        Ok(Response::new()
-            .add_attribute("action", "generate_proposals")
-            .add_attribute("id", id)
-            .add_attribute("proposal_module", proposal_module_addr.to_string())
-            .add_message(msg))
     }
 
     pub fn execute_jail_competition(

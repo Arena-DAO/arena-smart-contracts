@@ -4,7 +4,7 @@ use arena_core_interface::msg::{
     CompetitionModuleQuery, CompetitionModuleResponse, ProposeMessage, QueryExt,
 };
 use arena_wager_module::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
-use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, CosmosMsg, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_balance::{MemberBalance, MemberShare};
 use cw_competition::{
@@ -14,6 +14,7 @@ use cw_competition::{
 use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
 use cw_utils::Expiration;
 use dao_interface::state::{ModuleInstantiateInfo, ProposalModule};
+use dao_voting::proposal::SingleChoiceProposeMsg;
 
 use crate::tests::{
     app::{get_app, set_balances},
@@ -126,7 +127,11 @@ fn create_competition(
             },
             escrow: dues.map(|x| ModuleInstantiateInfo {
                 code_id: context.wager.escrow_id,
-                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
+                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg {
+                    dues: x,
+                    whitelist: vec![context.core.dao_addr.to_string()],
+                })
+                .unwrap(),
                 admin: None,
                 label: "Escrow".to_owned(),
             }),
@@ -359,33 +364,29 @@ fn test_create_competition() {
     let competition1_proposal_module = result.as_ref().unwrap().first().unwrap();
 
     // Generate proposals
-    let propose_message = ProposeMessage {
-        id: competition1_id,
-        title: "Title".to_string(),
-        description: "Description".to_string(),
-        distribution: vec![MemberShare {
-            addr: user1.to_string(),
-            shares: Uint128::one(),
-        }],
-    };
     context.app.update_block(next_block);
     let result = context.app.execute_contract(
         user1.clone(),
-        context.wager.wager_module_addr.clone(),
-        &arena_wager_module::msg::ExecuteMsg::ProposeResult {
-            propose_message: propose_message.clone(),
-        },
-        &[],
-    );
-    assert!(result.is_ok());
-
-    // Assert we can generate proposals again
-    let result = context.app.execute_contract(
-        user1.clone(),
-        context.wager.wager_module_addr.clone(),
-        &arena_wager_module::msg::ExecuteMsg::ProposeResult {
-            propose_message: propose_message.clone(),
-        },
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Propose(SingleChoiceProposeMsg {
+            title: "Title".to_string(),
+            description: "Description".to_string(),
+            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: context.wager.wager_module_addr.to_string(),
+                msg: to_json_binary(
+                    &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+                        id: competition1_id,
+                        distribution: vec![MemberShare {
+                            addr: user1.to_string(),
+                            shares: Uint128::one(),
+                        }],
+                    },
+                )
+                .unwrap(),
+                funds: vec![],
+            })],
+            proposer: None,
+        }),
         &[],
     );
     assert!(result.is_ok());

@@ -26,6 +26,9 @@ pub enum ContractError {
     #[error("NotFullyFunded")]
     NotFullyFunded {},
 
-    #[error("NoneDue")]
-    NoneDue {},
+    #[error("InvalidDistribution")]
+    InvalidDistribution { msg: String },
+
+    #[error("InvalidDue")]
+    InvalidDue { msg: String },
 }

@@ -36,4 +36,3 @@ arena-core-interface = { workspace = true }
 dao-interface = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 dao-voting = { workspace = true }
-dao-proposal-single = { workspace = true }

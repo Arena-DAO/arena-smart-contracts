@@ -26,9 +26,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         propose_message: ProposeMessage,
     },
     Activate {},
-    ProposeResult {
-        propose_message: ProposeMessage,
-    },
     AddCompetitionHook {
         id: Uint128,
     },

@@ -71,27 +71,6 @@
       {
         "type": "object",
         "required": [
-          "propose_result"
-        ],
-        "properties": {
-          "propose_result": {
-            "type": "object",
-            "required": [
-              "propose_message"
-            ],
-            "properties": {
-              "propose_message": {
-                "$ref": "#/definitions/ProposeMessage"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
           "add_competition_hook"
         ],
         "properties": {

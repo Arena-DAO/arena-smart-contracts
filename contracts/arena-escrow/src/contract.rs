@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{self, DUE, INITIAL_DUE, IS_LOCKED},
+    state::{self, DUE, INITIAL_DUE, IS_LOCKED, WHITELIST},
     ContractError,
 };
 use cosmwasm_std::{
@@ -23,7 +23,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.dues)?;
+    instantiate_contract(deps, info, msg.dues, msg.whitelist)?;
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("addr", env.contract.address))
@@ -33,9 +33,17 @@ pub fn instantiate_contract(
     deps: DepsMut,
     info: MessageInfo,
     due: Vec<MemberBalance>,
+    whitelist: Vec<String>,
 ) -> Result<(), ContractError> {
     if due.is_empty() {
-        return Err(ContractError::NoneDue {});
+        return Err(ContractError::InvalidDue {
+            msg: "None due".to_string(),
+        });
+    }
+    if due.len() == 1 {
+        return Err(ContractError::InvalidDue {
+            msg: "Only one due".to_string(),
+        });
     }
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
@@ -46,13 +54,19 @@ pub fn instantiate_contract(
         if INITIAL_DUE.has(deps.storage, &member_balance.addr) {
             return Err(ContractError::StdError(
                 cosmwasm_std::StdError::GenericErr {
-                    msg: "Cannot have duplicate addresses due".to_string(),
+                    msg: "Cannot have duplicate addresses in dues".to_string(),
                 },
             ));
         }
 
         INITIAL_DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
+    }
+
+    for addr in whitelist {
+        let addr = deps.api.addr_validate(&addr)?;
+
+        WHITELIST.save(deps.storage, &addr, &true)?;
     }
 
     Ok(())

@@ -126,7 +126,11 @@ fn create_competition(
             },
             escrow: dues.map(|x| ModuleInstantiateInfo {
                 code_id: context.league.escrow_id,
-                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
+                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg {
+                    dues: x,
+                    whitelist: vec![context.core.dao_addr.to_string()],
+                })
+                .unwrap(),
                 admin: None,
                 label: "Escrow".to_owned(),
             }),

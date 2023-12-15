@@ -404,7 +404,6 @@ dependencies = [
  "cw4 1.1.2",
  "dao-interface",
  "dao-pre-propose-base",
- "dao-proposal-single",
  "dao-voting 2.2.0",
  "getrandom",
  "serde",

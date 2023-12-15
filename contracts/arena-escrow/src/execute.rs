@@ -11,6 +11,7 @@ use crate::{
     query::is_locked,
     state::{
         is_fully_funded, BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE,
+        WHITELIST,
     },
     ContractError,
 };
@@ -166,7 +167,9 @@ fn receive_balance(
     balance: BalanceVerified,
 ) -> Result<Response, ContractError> {
     if !INITIAL_DUE.has(deps.storage, &addr) {
-        return Err(ContractError::NoneDue {});
+        return Err(ContractError::InvalidDue {
+            msg: "User is not a participant".to_string(),
+        });
     }
 
     // Update the stored balance for the given address
@@ -234,10 +237,21 @@ pub fn distribute(
 
         // Validate the remainder address and distribution
         let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
-        let validated_distribution = distribution
+        let validated_distribution: Vec<MemberShare<Addr>> = distribution
             .iter()
             .map(|member| member.to_validated(deps.as_ref()))
             .collect::<StdResult<_>>()?;
+
+        // Ensure the winners were initial members
+        if !validated_distribution
+            .iter()
+            .all(|x| INITIAL_DUE.has(deps.storage, &x.addr) || WHITELIST.has(deps.storage, &x.addr))
+        {
+            return Err(ContractError::InvalidDistribution {
+                msg: "The distribution must consist of initial members or whitelist members"
+                    .to_string(),
+            });
+        }
 
         // Calculate the distribution amounts based on the total balance and distribution
         let distributed_amounts = total_balance.split(&validated_distribution, &remainder_addr)?;
@@ -270,6 +284,7 @@ pub fn distribute(
     // Clear the contract state
     DUE.clear(deps.storage);
     PRESET_DISTRIBUTION.clear(deps.storage);
+    WHITELIST.clear(deps.storage);
 
     // Construct the response and return
     let keys = BALANCE
