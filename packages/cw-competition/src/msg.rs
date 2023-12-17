@@ -38,7 +38,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     CreateCompetition {
         category_id: Uint128,
-        competition_dao: ModuleInfo,
+        host: ModuleInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
         description: String,

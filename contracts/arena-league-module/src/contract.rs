@@ -48,7 +48,7 @@ pub fn execute(
     match msg {
         ExecuteBase::CreateCompetition {
             category_id,
-            competition_dao,
+            host,
             escrow,
             name,
             description,
@@ -61,7 +61,7 @@ pub fn execute(
                 &mut deps,
                 &env,
                 category_id,
-                competition_dao,
+                host,
                 escrow,
                 name,
                 description,

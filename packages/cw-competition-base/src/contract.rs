@@ -218,7 +218,7 @@ where
             }
             ExecuteBase::CreateCompetition {
                 category_id,
-                competition_dao,
+                host: competition_dao,
                 escrow,
                 name,
                 description,
@@ -458,7 +458,7 @@ where
             if info.sender != competition.admin_dao {
                 let voting_power_response: dao_interface::voting::VotingPowerAtHeightResponse =
                     deps.querier.query_wasm_smart(
-                        competition.dao.clone(),
+                        competition.host.clone(),
                         &dao_interface::msg::QueryMsg::VotingPowerAtHeight {
                             address: info.sender.to_string(),
                             height: None,
@@ -494,7 +494,7 @@ where
         deps: &mut DepsMut,
         env: &Env,
         category_id: Uint128,
-        competition_dao: ModuleInfo,
+        host: ModuleInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
         description: String,
@@ -528,7 +528,7 @@ where
         // Declare instantiate2 vars
         let salt = env.block.height.to_ne_bytes();
         let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-        let dao_address = match competition_dao {
+        let host_addr = match host {
             ModuleInfo::New { info } => {
                 let code_info = deps.querier.query_wasm_code_info(info.code_id)?;
                 let canonical_addr =
@@ -557,7 +557,7 @@ where
                     instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
 
                 msgs.push(WasmMsg::Instantiate2 {
-                    admin: Some(dao_address.to_string()),
+                    admin: Some(host_addr.to_string()),
                     code_id: info.code_id,
                     label: info.label,
                     msg: info.msg,
@@ -600,7 +600,7 @@ where
             id,
             category_id,
             admin_dao: admin_dao.clone(),
-            dao: dao_address,
+            host: host_addr,
             start_height: env.block.height,
             escrow: escrow_addr,
             name,
@@ -627,7 +627,7 @@ where
                     .map(|x| x.to_string())
                     .unwrap_or_default(),
             )
-            .add_attribute("competition_dao", competition.dao)
+            .add_attribute("host", competition.host)
             .add_messages(msgs))
     }
 
@@ -647,7 +647,7 @@ where
         // Validate competition status and sender's authorization
         match competition.status {
             CompetitionStatus::Active => {
-                if competition.dao != info.sender && competition.admin_dao != info.sender {
+                if competition.host != info.sender && competition.admin_dao != info.sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
             }

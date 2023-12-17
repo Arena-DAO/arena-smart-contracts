@@ -30,7 +30,7 @@ pub struct Competition<CompetitionExt> {
     pub id: Uint128,
     pub category_id: Uint128,
     pub admin_dao: Addr,
-    pub dao: Addr,
+    pub host: Addr,
     pub escrow: Option<Addr>,
     pub name: String,
     pub description: String,
@@ -50,7 +50,7 @@ pub struct Competition<CompetitionExt> {
 pub struct CompetitionResponse<CompetitionExt> {
     pub id: Uint128,
     pub category_id: Uint128,
-    pub dao: Addr,
+    pub host: Addr,
     pub escrow: Option<Addr>,
     pub name: String,
     pub description: String,
@@ -72,7 +72,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
         CompetitionResponse {
             id: self.id,
             category_id: self.category_id,
-            dao: self.dao,
+            host: self.host,
             escrow: self.escrow,
             name: self.name,
             description: self.description,

@@ -148,9 +148,9 @@
             "type": "object",
             "required": [
               "category_id",
-              "competition_dao",
               "description",
               "expiration",
+              "host",
               "instantiate_extension",
               "name",
               "rules",
@@ -159,9 +159,6 @@
             "properties": {
               "category_id": {
                 "$ref": "#/definitions/Uint128"
-              },
-              "competition_dao": {
-                "$ref": "#/definitions/ModuleInfo"
               },
               "description": {
                 "type": "string"
@@ -178,6 +175,9 @@
               },
               "expiration": {
                 "$ref": "#/definitions/Expiration"
+              },
+              "host": {
+                "$ref": "#/definitions/ModuleInfo"
               },
               "instantiate_extension": {
                 "$ref": "#/definitions/Empty"
@@ -819,11 +819,11 @@
       "type": "object",
       "required": [
         "category_id",
-        "dao",
         "description",
         "evidence",
         "expiration",
         "extension",
+        "host",
         "id",
         "is_expired",
         "name",
@@ -835,9 +835,6 @@
       "properties": {
         "category_id": {
           "$ref": "#/definitions/Uint128"
-        },
-        "dao": {
-          "$ref": "#/definitions/Addr"
         },
         "description": {
           "type": "string"
@@ -863,6 +860,9 @@
         },
         "extension": {
           "$ref": "#/definitions/Empty"
+        },
+        "host": {
+          "$ref": "#/definitions/Addr"
         },
         "id": {
           "$ref": "#/definitions/Uint128"
@@ -1046,11 +1046,11 @@
           "type": "object",
           "required": [
             "category_id",
-            "dao",
             "description",
             "evidence",
             "expiration",
             "extension",
+            "host",
             "id",
             "is_expired",
             "name",
@@ -1062,9 +1062,6 @@
           "properties": {
             "category_id": {
               "$ref": "#/definitions/Uint128"
-            },
-            "dao": {
-              "$ref": "#/definitions/Addr"
             },
             "description": {
               "type": "string"
@@ -1090,6 +1087,9 @@
             },
             "extension": {
               "$ref": "#/definitions/Empty"
+            },
+            "host": {
+              "$ref": "#/definitions/Addr"
             },
             "id": {
               "$ref": "#/definitions/Uint128"

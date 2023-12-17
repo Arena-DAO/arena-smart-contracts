@@ -99,7 +99,7 @@ fn create_competition(
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Uint128::one(),
-            competition_dao: ModuleInfo::New {
+            host: ModuleInfo::New {
                 info: ModuleInstantiateInfo {
                     code_id: context.core.dao_core_id,
                     msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
@@ -208,7 +208,7 @@ fn test_create_competition() {
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Uint128::one(),
-            competition_dao: ModuleInfo::New {
+            host: ModuleInfo::New {
                 info: ModuleInstantiateInfo {
                     code_id: context.core.dao_core_id,
                     msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
@@ -353,7 +353,7 @@ fn test_create_competition() {
 
     // Get competition1 proposal module
     let result = context.app.wrap().query_wasm_smart::<Vec<ProposalModule>>(
-        competition1.dao,
+        competition1.host,
         &dao_interface::msg::QueryMsg::ProposalModules {
             start_after: None,
             limit: None,

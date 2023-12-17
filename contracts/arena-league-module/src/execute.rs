@@ -146,7 +146,7 @@ pub fn process_match(
         .competitions
         .load(deps.storage, league_id.u128())?;
 
-    if league.dao != info.sender && league.admin_dao != info.sender {
+    if league.host != info.sender && league.admin_dao != info.sender {
         return Err(ContractError::CompetitionError(
             cw_competition_base::error::CompetitionError::OwnershipError(
                 cw_ownable::OwnershipError::NotOwner,
