@@ -1,4 +1,4 @@
-use arena_league_module::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use arena_league_module::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg};
 use cosmwasm_schema::write_api;
 
 fn main() {
@@ -6,6 +6,7 @@ fn main() {
         instantiate: InstantiateMsg,
         execute: ExecuteMsg,
         query: QueryMsg,
-        migrate: MigrateMsg
+        migrate: MigrateMsg,
+        sudo: SudoMsg
     }
 }

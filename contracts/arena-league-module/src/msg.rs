@@ -44,6 +44,14 @@ pub enum MigrateMsg {
     FromCompatible {},
 }
 
+/// This is used to completely generate schema types
+/// QueryExt response types are hidden by the QueryBase mapping to Binary output
+#[cw_serde]
+pub struct SudoMsg {
+    pub member_points: MemberPoints,
+    pub round_response: RoundResponse,
+}
+
 #[cw_serde]
 pub struct CompetitionExt {
     pub match_win_points: Uint128,
