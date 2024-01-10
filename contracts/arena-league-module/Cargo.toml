@@ -29,3 +29,4 @@ thiserror = { workspace = true }
 dao-interface = { workspace = true }
 cw-ownable = { workspace = true }
 itertools = { workspace = true }
+cw-balance = { workspace = true }

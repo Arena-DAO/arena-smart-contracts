@@ -3,7 +3,7 @@ use std::str::FromStr;
 use arena_core_interface::msg::{
     CompetitionModuleQuery, CompetitionModuleResponse, ProposeMessage, QueryExt,
 };
-use arena_wager_module::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
+use arena_wager_module::msg::{EmptyWrapper, ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, CosmosMsg, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_balance::{MemberBalance, MemberShare};
@@ -144,7 +144,7 @@ fn create_competition(
                 "Rule 3".to_string(),
             ],
             rulesets: vec![],
-            instantiate_extension: Empty {},
+            instantiate_extension: EmptyWrapper::new(),
         },
         &[],
     );
@@ -253,7 +253,7 @@ fn test_create_competition() {
                 "Rule 3".to_string(),
             ],
             rulesets: vec![Uint128::from(9999u128)],
-            instantiate_extension: Empty {},
+            instantiate_extension: EmptyWrapper::new(),
         },
         &[],
     );

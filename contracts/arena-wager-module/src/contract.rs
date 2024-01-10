@@ -4,11 +4,11 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Respon
 use cw2::set_contract_version;
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{EmptyWrapper, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-wager-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub type CompetitionModule = CompetitionModuleContract<Empty, Empty, Empty, Empty, Empty>;
+pub type CompetitionModule = CompetitionModuleContract<Empty, Empty, Empty, Empty, EmptyWrapper>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

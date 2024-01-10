@@ -5,7 +5,7 @@ use crate::state::CompetitionStatus;
 use crate::state::{CompetitionResponse, Config};
 use arena_core_interface::msg::ProposeMessage;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Deps, StdResult, Uint128};
 use cw_balance::MemberShare;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
@@ -69,6 +69,8 @@ where
 {
     #[returns(Config)]
     Config {},
+    #[returns(String)]
+    DAO {},
     #[returns(Uint128)]
     CompetitionCount {},
     #[returns(CompetitionResponse<CompetitionExt>)]
@@ -102,4 +104,8 @@ pub enum HookDirection {
 pub enum ModuleInfo {
     New { info: ModuleInstantiateInfo },
     Existing { addr: String },
+}
+
+pub trait IntoCompetitionExt<T> {
+    fn into_competition_ext(self, deps: Deps) -> StdResult<T>;
 }

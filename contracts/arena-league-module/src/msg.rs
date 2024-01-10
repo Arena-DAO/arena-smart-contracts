@@ -1,10 +1,11 @@
-use crate::state::Result;
 #[allow(unused_imports)]
 use crate::state::RoundResponse;
+use crate::{execute::validate_distribution, state::Result};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Empty, Uint128, Uint64};
+use cosmwasm_std::{Addr, Empty, StdResult, Uint128, Uint64};
+use cw_balance::MemberShare;
 use cw_competition::{
-    msg::{ExecuteBase, InstantiateBase, QueryBase},
+    msg::{ExecuteBase, InstantiateBase, IntoCompetitionExt, QueryBase},
     state::{Competition, CompetitionResponse},
 };
 use cw_utils::Duration;
@@ -15,6 +16,9 @@ pub enum ExecuteExt {
         league_id: Uint128,
         round_number: Uint64,
         match_results: Vec<MatchResult>,
+    },
+    UpdateDistribution {
+        distribution: Vec<MemberShare<String>>,
     },
 }
 
@@ -58,6 +62,7 @@ pub struct CompetitionExt {
     pub match_draw_points: Uint128,
     pub match_lose_points: Uint128,
     pub rounds: Uint64,
+    pub distribution: Vec<MemberShare<Addr>>,
 }
 
 #[cw_serde]
@@ -67,16 +72,18 @@ pub struct CompetitionInstantiateExt {
     pub match_lose_points: Uint128,
     pub teams: Vec<String>,
     pub round_duration: Duration,
+    pub distribution: Vec<MemberShare<String>>,
 }
 
-impl From<CompetitionInstantiateExt> for CompetitionExt {
-    fn from(value: CompetitionInstantiateExt) -> Self {
-        CompetitionExt {
-            match_win_points: value.match_win_points,
-            match_draw_points: value.match_draw_points,
-            match_lose_points: value.match_lose_points,
+impl IntoCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
+    fn into_competition_ext(self, deps: cosmwasm_std::Deps) -> StdResult<CompetitionExt> {
+        Ok(CompetitionExt {
+            match_win_points: self.match_win_points,
+            match_draw_points: self.match_draw_points,
+            match_lose_points: self.match_lose_points,
             rounds: Uint64::zero(),
-        }
+            distribution: validate_distribution(deps, self.distribution)?,
+        })
     }
 }
 

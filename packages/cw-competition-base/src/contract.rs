@@ -9,7 +9,10 @@ use cosmwasm_std::{
 use cw_balance::MemberShare;
 use cw_competition::{
     escrow::CompetitionEscrowDistributeMsg,
-    msg::{CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, ModuleInfo, QueryBase},
+    msg::{
+        CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, IntoCompetitionExt,
+        ModuleInfo, QueryBase,
+    },
     state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
 };
 use cw_ownable::{get_ownership, initialize_owner};
@@ -43,7 +46,7 @@ pub struct CompetitionModuleContract<
     ExecuteExt,
     QueryExt,
     CompetitionExt: Serialize + Clone + DeserializeOwned,
-    CompetitionInstantiateExt: Into<CompetitionExt>,
+    CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
 > {
     pub config: Item<'static, Config>,
     pub competition_count: Item<'static, Uint128>,
@@ -68,7 +71,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: Into<CompetitionExt>,
+        CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
         InstantiateExt,
@@ -138,7 +141,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: Into<CompetitionExt>,
+        CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
     > Default
     for CompetitionModuleContract<
         InstantiateExt,
@@ -167,7 +170,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: Into<CompetitionExt>,
+        CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
         InstantiateExt,
@@ -609,7 +612,7 @@ where
             rules,
             rulesets,
             status: initial_status,
-            extension: extension.into(),
+            extension: extension.into_competition_ext(deps.as_ref())?,
             result: None,
             evidence: vec![],
         };
@@ -775,6 +778,11 @@ where
                     .load(deps.storage, id.u128())?
                     .to_response(&env.block),
             ),
+            QueryBase::DAO {} => to_json_binary(
+                &self
+                    .get_dao(deps)
+                    .map_err(|x| StdError::GenericErr { msg: x.to_string() })?,
+            ),
             QueryBase::Competitions {
                 start_after,
                 limit,
@@ -789,7 +797,7 @@ where
         }
     }
 
-    fn get_dao(&self, deps: Deps) -> Result<Addr, cw_ownable::OwnershipError> {
+    pub fn get_dao(&self, deps: Deps) -> Result<Addr, cw_ownable::OwnershipError> {
         let core = cw_ownable::get_ownership(deps.storage)?;
         if core.owner.is_none() {
             return Err(cw_ownable::OwnershipError::NoOwner);

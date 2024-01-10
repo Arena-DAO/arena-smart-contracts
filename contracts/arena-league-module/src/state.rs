@@ -1,5 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, StdResult, Uint128, Uint64};
+use cw_balance::MemberShare;
 use cw_storage_plus::{Item, Map};
 use cw_utils::Expiration;
 
@@ -52,4 +53,4 @@ pub struct RoundResponse {
 pub const ROUNDS: Map<(u128, u64), Round> = Map::new("rounds");
 /// (League Id, Round Number, Match Number)
 pub const MATCHES: Map<(u128, u64, u128), Match> = Map::new("matches");
-pub const WAGERS_KEY: Item<String> = Item::new("wagers_key");
+pub const DISTRIBUTION: Item<Vec<MemberShare<Addr>>> = Item::new("distribution");

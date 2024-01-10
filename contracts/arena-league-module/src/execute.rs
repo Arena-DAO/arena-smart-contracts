@@ -1,7 +1,8 @@
 use cosmwasm_std::{
-    Addr, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
+    Addr, Deps, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
     StdResult, Uint128, Uint64,
 };
+use cw_balance::MemberShare;
 use cw_utils::Duration;
 use itertools::Itertools;
 use std::ops::Add;
@@ -9,7 +10,7 @@ use std::ops::Add;
 use crate::{
     contract::CompetitionModule,
     msg::MatchResult,
-    state::{Match, Round, MATCHES, ROUNDS},
+    state::{Match, Round, DISTRIBUTION, MATCHES, ROUNDS},
     ContractError,
 };
 
@@ -175,4 +176,33 @@ pub fn process_match(
     }
 
     Ok(Response::new())
+}
+
+pub fn update_distribution(
+    deps: DepsMut,
+    info: MessageInfo,
+    distribution: Vec<MemberShare<String>>,
+) -> Result<Response, ContractError> {
+    let dao = CompetitionModule::default().get_dao(deps.as_ref())?;
+    if info.sender != dao {
+        return Err(ContractError::CompetitionError(
+            cw_competition_base::error::CompetitionError::Unauthorized {},
+        ));
+    }
+
+    let validated_distribution = validate_distribution(deps.as_ref(), distribution)?;
+
+    DISTRIBUTION.save(deps.storage, &validated_distribution)?;
+
+    Ok(Response::new())
+}
+
+pub(crate) fn validate_distribution(
+    deps: Deps,
+    distribution: Vec<MemberShare<String>>,
+) -> StdResult<Vec<MemberShare<Addr>>> {
+    distribution
+        .iter()
+        .map(|x| x.to_validated(deps))
+        .collect::<StdResult<Vec<MemberShare<Addr>>>>()
 }

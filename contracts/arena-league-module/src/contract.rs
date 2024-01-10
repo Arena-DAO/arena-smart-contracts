@@ -85,7 +85,14 @@ pub fn execute(
                 round_number,
                 match_results,
             } => execute::process_match(deps, info, league_id, round_number, match_results),
+            ExecuteExt::UpdateDistribution { distribution } => {
+                execute::update_distribution(deps, info, distribution)
+            }
         },
+        ExecuteBase::ProcessCompetition {
+            id: _,
+            distribution: _,
+        } => Err(ContractError::InvalidExecute),
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }
 }

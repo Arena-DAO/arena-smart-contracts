@@ -98,6 +98,7 @@ dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-balance",
  "cw-competition",
  "cw-competition-base",
  "cw-ownable",
