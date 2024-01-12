@@ -1,6 +1,7 @@
 use cosmwasm_std::{OverflowError, StdError};
 use cw_competition_base::error::CompetitionError;
 use cw_ownable::OwnershipError;
+use cw_utils::Expiration;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -19,4 +20,7 @@ pub enum ContractError {
 
     #[error("InvalidExecute")]
     InvalidExecute,
+
+    #[error("NotExpired")]
+    NotExpired { expiration: Expiration },
 }

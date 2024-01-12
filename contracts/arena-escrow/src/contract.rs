@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{self, DUE, INITIAL_DUE, IS_LOCKED, WHITELIST},
+    state::{self, DUE, INITIAL_DUE, IS_LOCKED},
     ContractError,
 };
 use cosmwasm_std::{
@@ -23,7 +23,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.dues, msg.whitelist)?;
+    instantiate_contract(deps, info, msg.dues)?;
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("addr", env.contract.address))
@@ -33,7 +33,6 @@ pub fn instantiate_contract(
     deps: DepsMut,
     info: MessageInfo,
     due: Vec<MemberBalance>,
-    whitelist: Vec<String>,
 ) -> Result<(), ContractError> {
     if due.is_empty() {
         return Err(ContractError::InvalidDue {
@@ -61,12 +60,6 @@ pub fn instantiate_contract(
 
         INITIAL_DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
-    }
-
-    for addr in whitelist {
-        let addr = deps.api.addr_validate(&addr)?;
-
-        WHITELIST.save(deps.storage, &addr, &true)?;
     }
 
     Ok(())

@@ -1,16 +1,17 @@
 use cosmwasm_std::{
-    Addr, Deps, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
+    Addr, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
     StdResult, Uint128, Uint64,
 };
 use cw_balance::MemberShare;
 use cw_utils::Duration;
 use itertools::Itertools;
-use std::ops::Add;
+use std::{ops::Add, vec};
 
 use crate::{
     contract::CompetitionModule,
     msg::MatchResult,
-    state::{Match, Round, DISTRIBUTION, MATCHES, ROUNDS},
+    query,
+    state::{Match, Round, MATCHES, ROUNDS},
     ContractError,
 };
 
@@ -20,20 +21,31 @@ pub fn instantiate_rounds(
     env: Env,
     response: Response,
     teams: Vec<String>,
+    distribution: Vec<Uint128>,
     round_duration: Duration,
 ) -> Result<Response, ContractError> {
-    if teams.iter().unique().count() != teams.len() {
+    let team_count = teams.len();
+    if team_count < 2 {
         return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "Teams cannot have duplicates".to_string(),
+            msg: "At least 2 teams should be provided".to_string(),
+        }));
+    }
+    if teams.iter().unique().count() != team_count {
+        return Err(ContractError::StdError(StdError::GenericErr {
+            msg: "Teams should not contain duplicates".to_string(),
+        }));
+    }
+    if distribution.len() > team_count {
+        return Err(ContractError::StdError(StdError::GenericErr {
+            msg: "Cannot have a distribution size bigger than the teams size".to_string(),
         }));
     }
 
-    // Convert team names to addresses
+    // Convert teams to addresses
     let team_addresses: Vec<Addr> = teams
         .iter()
-        .map(|name| deps.api.addr_validate(name))
+        .map(|x| deps.api.addr_validate(x))
         .collect::<StdResult<_>>()?;
-    let team_count = team_addresses.len();
 
     // Determine the number of rounds and matches per round
     let rounds = if team_count % 2 == 1 {
@@ -105,13 +117,15 @@ pub fn instantiate_rounds(
         rounds_count += 1;
     }
 
-    // Update competition rounds count
+    // Update competition matches and rounds count
     let competition = CompetitionModule::default().competitions.update(
         deps.storage,
         league_id.u128(),
         |maybe_competition| {
             if let Some(mut competition) = maybe_competition {
                 competition.extension.rounds = Uint64::from(rounds_count);
+                competition.extension.matches = Uint128::from(match_number - 1);
+                competition.extension.teams = Uint64::from(team_count as u64);
                 Ok(competition)
             } else {
                 Err(StdError::NotFound {
@@ -136,14 +150,15 @@ pub fn instantiate_rounds(
         .add_attribute("rounds", rounds_count.to_string()))
 }
 
-pub fn process_match(
+pub fn process_matches(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     league_id: Uint128,
     round_number: Uint64,
     match_results: Vec<MatchResult>,
 ) -> Result<Response, ContractError> {
-    let league = CompetitionModule::default()
+    let mut league = CompetitionModule::default()
         .competitions
         .load(deps.storage, league_id.u128())?;
 
@@ -155,54 +170,105 @@ pub fn process_match(
         ));
     }
 
+    let round = ROUNDS.load(deps.storage, (league_id.u128(), round_number.u64()))?;
+    // Limit when results can be set to prevent malicious vote spam
+    if !round.expiration.is_expired(&env.block) {
+        return Err(ContractError::NotExpired {
+            expiration: round.expiration,
+        });
+    }
+
     for match_result in match_results {
         let key = (
             league_id.u128(),
             round_number.u64(),
             match_result.match_number.u128(),
         );
-        MATCHES.update(deps.storage, key, |x| -> StdResult<_> {
+        MATCHES.update(deps.storage, key, |x| -> Result<_, ContractError> {
             match x {
                 Some(mut m) => {
+                    // Only the admin dao can override an existing result
+                    if m.result.is_some() && league.admin_dao != info.sender {
+                        return Err(ContractError::CompetitionError(
+                            cw_competition_base::error::CompetitionError::OwnershipError(
+                                cw_ownable::OwnershipError::NotOwner,
+                            ),
+                        ));
+                    } else if m.result.is_none() {
+                        league.extension.processed_matches = league
+                            .extension
+                            .processed_matches
+                            .checked_add(Uint128::one())?;
+                    }
                     m.result = match_result.result;
 
                     Ok(m)
                 }
-                None => Err(StdError::NotFound {
+                None => Err(ContractError::StdError(StdError::NotFound {
                     kind: "Match".to_string(),
-                }),
+                })),
             }
         })?;
     }
 
-    Ok(Response::new())
+    let mut response = Response::new();
+
+    if let Some(_escrow) = league.escrow {
+        if league.extension.processed_matches >= league.extension.matches {
+            // Distribute funds if we have processed all of the matches
+            let mut leaderboard = query::leaderboard(deps.as_ref(), league_id, None)?;
+
+            leaderboard.sort_by(|x, y| y.points.cmp(&x.points));
+
+            let mut member_shares = vec![];
+
+            for (i, x) in league.extension.distribution.iter().enumerate() {
+                member_shares.push(MemberShare::<String> {
+                    addr: leaderboard[i].member.to_string(),
+                    shares: *x,
+                })
+            }
+
+            response = CompetitionModule::default().execute_process_competition(
+                deps,
+                info,
+                league_id,
+                member_shares,
+            )?;
+        }
+    }
+
+    Ok(response.add_attribute("action", "process_matches"))
 }
 
 pub fn update_distribution(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Vec<MemberShare<String>>,
+    league_id: Uint128,
+    distribution: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
-    let dao = CompetitionModule::default().get_dao(deps.as_ref())?;
-    if info.sender != dao {
+    let mut league = CompetitionModule::default()
+        .competitions
+        .load(deps.storage, league_id.u128())?;
+
+    if info.sender != league.admin_dao {
         return Err(ContractError::CompetitionError(
             cw_competition_base::error::CompetitionError::Unauthorized {},
         ));
     }
+    if distribution.len() as u64 > league.extension.teams.u64() {
+        return Err(ContractError::StdError(StdError::GenericErr {
+            msg: "Cannot have a distribution size bigger than the teams size".to_string(),
+        }));
+    }
 
-    let validated_distribution = validate_distribution(deps.as_ref(), distribution)?;
+    league.extension.distribution = distribution.clone();
 
-    DISTRIBUTION.save(deps.storage, &validated_distribution)?;
+    CompetitionModule::default()
+        .competitions
+        .save(deps.storage, league_id.u128(), &league)?;
 
-    Ok(Response::new())
-}
-
-pub(crate) fn validate_distribution(
-    deps: Deps,
-    distribution: Vec<MemberShare<String>>,
-) -> StdResult<Vec<MemberShare<Addr>>> {
-    distribution
-        .iter()
-        .map(|x| x.to_validated(deps))
-        .collect::<StdResult<Vec<MemberShare<Addr>>>>()
+    Ok(Response::new()
+        .add_attribute("action", "update_distribution")
+        .add_attribute("distribution", format!("{:#?}", distribution)))
 }

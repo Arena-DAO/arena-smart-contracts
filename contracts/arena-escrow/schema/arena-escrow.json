@@ -7,20 +7,13 @@
     "title": "InstantiateMsg",
     "type": "object",
     "required": [
-      "dues",
-      "whitelist"
+      "dues"
     ],
     "properties": {
       "dues": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/MemberBalance"
-        }
-      },
-      "whitelist": {
-        "type": "array",
-        "items": {
-          "type": "string"
         }
       }
     },

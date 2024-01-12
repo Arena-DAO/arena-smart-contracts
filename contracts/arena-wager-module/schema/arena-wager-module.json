@@ -180,7 +180,7 @@
                 "$ref": "#/definitions/ModuleInfo"
               },
               "instantiate_extension": {
-                "$ref": "#/definitions/Empty"
+                "$ref": "#/definitions/EmptyWrapper"
               },
               "name": {
                 "type": "string"
@@ -395,6 +395,9 @@
         "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
         "type": "object"
       },
+      "EmptyWrapper": {
+        "$ref": "#/definitions/Empty"
+      },
       "Expiration": {
         "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
         "oneOf": [
@@ -601,6 +604,19 @@
         ],
         "properties": {
           "config": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "d_a_o"
+        ],
+        "properties": {
+          "d_a_o": {
             "type": "object",
             "additionalProperties": false
           }
@@ -1263,6 +1279,11 @@
         }
       },
       "additionalProperties": false
+    },
+    "d_a_o": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string"
     },
     "ownership": {
       "$schema": "http://json-schema.org/draft-07/schema#",

@@ -76,6 +76,7 @@ pub fn execute(
                 env,
                 response,
                 instantiate_extension.teams,
+                instantiate_extension.distribution,
                 instantiate_extension.round_duration,
             )
         }
@@ -84,10 +85,11 @@ pub fn execute(
                 league_id,
                 round_number,
                 match_results,
-            } => execute::process_match(deps, info, league_id, round_number, match_results),
-            ExecuteExt::UpdateDistribution { distribution } => {
-                execute::update_distribution(deps, info, distribution)
-            }
+            } => execute::process_matches(deps, env, info, league_id, round_number, match_results),
+            ExecuteExt::UpdateDistribution {
+                league_id,
+                distribution,
+            } => execute::update_distribution(deps, info, league_id, distribution),
         },
         ExecuteBase::ProcessCompetition {
             id: _,

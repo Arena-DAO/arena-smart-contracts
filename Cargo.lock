@@ -96,6 +96,7 @@ name = "arena-league-module"
 version = "0.9.7"
 dependencies = [
  "arena-core-interface",
+ "arena-escrow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-balance",

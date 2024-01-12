@@ -126,11 +126,7 @@ fn create_competition(
             },
             escrow: dues.map(|x| ModuleInstantiateInfo {
                 code_id: context.league.escrow_id,
-                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg {
-                    dues: x,
-                    whitelist: vec![context.core.dao_addr.to_string()],
-                })
-                .unwrap(),
+                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
                 admin: None,
                 label: "Escrow".to_owned(),
             }),
@@ -149,6 +145,11 @@ fn create_competition(
                 match_win_points: Uint128::from(3u128),
                 match_draw_points: Uint128::one(),
                 match_lose_points: Uint128::zero(),
+                distribution: vec![
+                    Uint128::from(70u128),
+                    Uint128::from(20u128),
+                    Uint128::from(10u128),
+                ],
             },
         },
         &[],
@@ -318,6 +319,7 @@ fn test_create_competition() {
         },
     );
 
+    context.app.update_block(|x| x.height += 10);
     // Process 1st round of matches
     let result = context.app.execute_contract(
         admin.clone(),
@@ -397,6 +399,7 @@ fn test_create_competition() {
         }
     );
 
+    context.app.update_block(|x| x.height += 10);
     // Process 2nd round of matches
     let result = context.app.execute_contract(
         admin.clone(),
@@ -484,6 +487,7 @@ fn test_create_competition() {
         }
     );
 
+    context.app.update_block(|x| x.height += 10);
     // Process 3rd round of matches
     let result = context.app.execute_contract(
         admin.clone(),
@@ -571,6 +575,7 @@ fn test_create_competition() {
         }
     );
 
+    context.app.update_block(|x| x.height += 10);
     // Process 4th round of matches
     let result = context.app.execute_contract(
         admin.clone(),
@@ -658,6 +663,7 @@ fn test_create_competition() {
         }
     );
 
+    context.app.update_block(|x| x.height += 10);
     // Process 5th round of matches
     let result = context.app.execute_contract(
         admin.clone(),

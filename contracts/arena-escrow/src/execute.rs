@@ -11,7 +11,6 @@ use crate::{
     query::is_locked,
     state::{
         is_fully_funded, BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE,
-        WHITELIST,
     },
     ContractError,
 };
@@ -242,17 +241,6 @@ pub fn distribute(
             .map(|member| member.to_validated(deps.as_ref()))
             .collect::<StdResult<_>>()?;
 
-        // Ensure the winners were initial members
-        if !validated_distribution
-            .iter()
-            .all(|x| INITIAL_DUE.has(deps.storage, &x.addr) || WHITELIST.has(deps.storage, &x.addr))
-        {
-            return Err(ContractError::InvalidDistribution {
-                msg: "The distribution must consist of initial members or whitelist members"
-                    .to_string(),
-            });
-        }
-
         // Calculate the distribution amounts based on the total balance and distribution
         let distributed_amounts = total_balance.split(&validated_distribution, &remainder_addr)?;
 
@@ -284,7 +272,6 @@ pub fn distribute(
     // Clear the contract state
     DUE.clear(deps.storage);
     PRESET_DISTRIBUTION.clear(deps.storage);
-    WHITELIST.clear(deps.storage);
 
     // Construct the response and return
     let keys = BALANCE

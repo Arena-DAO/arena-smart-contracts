@@ -394,6 +394,7 @@
       "CompetitionInstantiateExt": {
         "type": "object",
         "required": [
+          "distribution",
           "match_draw_points",
           "match_lose_points",
           "match_win_points",
@@ -401,6 +402,12 @@
           "teams"
         ],
         "properties": {
+          "distribution": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Uint128"
+            }
+          },
           "match_draw_points": {
             "$ref": "#/definitions/Uint128"
           },
@@ -483,6 +490,34 @@
                   },
                   "round_number": {
                     "$ref": "#/definitions/Uint64"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "update_distribution"
+            ],
+            "properties": {
+              "update_distribution": {
+                "type": "object",
+                "required": [
+                  "distribution",
+                  "league_id"
+                ],
+                "properties": {
+                  "distribution": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/Uint128"
+                    }
+                  },
+                  "league_id": {
+                    "$ref": "#/definitions/Uint128"
                   }
                 },
                 "additionalProperties": false
@@ -728,6 +763,19 @@
         ],
         "properties": {
           "config": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "d_a_o"
+        ],
+        "properties": {
+          "d_a_o": {
             "type": "object",
             "additionalProperties": false
           }
@@ -1267,12 +1315,22 @@
         "CompetitionExt": {
           "type": "object",
           "required": [
+            "distribution",
             "match_draw_points",
             "match_lose_points",
             "match_win_points",
-            "rounds"
+            "matches",
+            "processed_matches",
+            "rounds",
+            "teams"
           ],
           "properties": {
+            "distribution": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
             "match_draw_points": {
               "$ref": "#/definitions/Uint128"
             },
@@ -1282,7 +1340,16 @@
             "match_win_points": {
               "$ref": "#/definitions/Uint128"
             },
+            "matches": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "processed_matches": {
+              "$ref": "#/definitions/Uint128"
+            },
             "rounds": {
+              "$ref": "#/definitions/Uint64"
+            },
+            "teams": {
               "$ref": "#/definitions/Uint64"
             }
           },
@@ -1419,12 +1486,22 @@
         "CompetitionExt": {
           "type": "object",
           "required": [
+            "distribution",
             "match_draw_points",
             "match_lose_points",
             "match_win_points",
-            "rounds"
+            "matches",
+            "processed_matches",
+            "rounds",
+            "teams"
           ],
           "properties": {
+            "distribution": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
             "match_draw_points": {
               "$ref": "#/definitions/Uint128"
             },
@@ -1434,7 +1511,16 @@
             "match_win_points": {
               "$ref": "#/definitions/Uint128"
             },
+            "matches": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "processed_matches": {
+              "$ref": "#/definitions/Uint128"
+            },
             "rounds": {
+              "$ref": "#/definitions/Uint64"
+            },
+            "teams": {
               "$ref": "#/definitions/Uint64"
             }
           },
@@ -1658,6 +1744,11 @@
         }
       },
       "additionalProperties": false
+    },
+    "d_a_o": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string"
     },
     "ownership": {
       "$schema": "http://json-schema.org/draft-07/schema#",

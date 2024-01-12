@@ -1,9 +1,8 @@
+use crate::state::Result;
 #[allow(unused_imports)]
 use crate::state::RoundResponse;
-use crate::{execute::validate_distribution, state::Result};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Empty, StdResult, Uint128, Uint64};
-use cw_balance::MemberShare;
 use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, IntoCompetitionExt, QueryBase},
     state::{Competition, CompetitionResponse},
@@ -18,7 +17,8 @@ pub enum ExecuteExt {
         match_results: Vec<MatchResult>,
     },
     UpdateDistribution {
-        distribution: Vec<MemberShare<String>>,
+        league_id: Uint128,
+        distribution: Vec<Uint128>,
     },
 }
 
@@ -62,7 +62,10 @@ pub struct CompetitionExt {
     pub match_draw_points: Uint128,
     pub match_lose_points: Uint128,
     pub rounds: Uint64,
-    pub distribution: Vec<MemberShare<Addr>>,
+    pub matches: Uint128,
+    pub teams: Uint64,
+    pub processed_matches: Uint128,
+    pub distribution: Vec<Uint128>,
 }
 
 #[cw_serde]
@@ -72,17 +75,20 @@ pub struct CompetitionInstantiateExt {
     pub match_lose_points: Uint128,
     pub teams: Vec<String>,
     pub round_duration: Duration,
-    pub distribution: Vec<MemberShare<String>>,
+    pub distribution: Vec<Uint128>,
 }
 
 impl IntoCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
-    fn into_competition_ext(self, deps: cosmwasm_std::Deps) -> StdResult<CompetitionExt> {
+    fn into_competition_ext(self, _deps: cosmwasm_std::Deps) -> StdResult<CompetitionExt> {
         Ok(CompetitionExt {
             match_win_points: self.match_win_points,
             match_draw_points: self.match_draw_points,
             match_lose_points: self.match_lose_points,
+            teams: Uint64::zero(),
             rounds: Uint64::zero(),
-            distribution: validate_distribution(deps, self.distribution)?,
+            matches: Uint128::zero(),
+            processed_matches: Uint128::zero(),
+            distribution: self.distribution,
         })
     }
 }

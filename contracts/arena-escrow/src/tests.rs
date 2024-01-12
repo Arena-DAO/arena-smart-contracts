@@ -175,7 +175,6 @@ fn setup() -> Context {
                         },
                     },
                 ],
-                whitelist: vec![],
             },
             &[],
             "Arena Escrow",
