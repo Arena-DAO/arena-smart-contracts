@@ -6,7 +6,7 @@ use arena_core_interface::msg::{
 use arena_wager_module::msg::{EmptyWrapper, ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, CosmosMsg, Empty, Uint128, WasmMsg};
 use cw4::Member;
-use cw_balance::{MemberBalance, MemberShare};
+use cw_balance::{MemberBalanceUnchecked, MemberShare};
 use cw_competition::{
     msg::ModuleInfo,
     state::{CompetitionResponse, CompetitionStatus},
@@ -92,7 +92,7 @@ fn create_competition(
     context: &mut Context,
     expiration: Expiration,
     members: Vec<cw4::Member>,
-    dues: Option<Vec<MemberBalance>>,
+    dues: Option<Vec<MemberBalanceUnchecked>>,
 ) -> Uint128 {
     let result = context.app.execute_contract(
         context.app.api().addr_make(ADMIN),
@@ -270,17 +270,17 @@ fn test_create_competition() {
             },
         ],
         Some(vec![
-            MemberBalance {
+            MemberBalanceUnchecked {
                 addr: user1.to_string(),
-                balance: cw_balance::Balance {
+                balance: cw_balance::BalanceUnchecked {
                     native: vec![Coin::from_str(&wager_amount).unwrap()],
                     cw20: vec![],
                     cw721: vec![],
                 },
             },
-            MemberBalance {
+            MemberBalanceUnchecked {
                 addr: user2.to_string(),
-                balance: cw_balance::Balance {
+                balance: cw_balance::BalanceUnchecked {
                     native: vec![Coin::from_str(&wager_amount).unwrap()],
                     cw20: vec![],
                     cw721: vec![],
@@ -528,17 +528,17 @@ fn test_create_competition_jailed() {
             },
         ],
         Some(vec![
-            MemberBalance {
+            MemberBalanceUnchecked {
                 addr: user1.to_string(),
-                balance: cw_balance::Balance {
+                balance: cw_balance::BalanceUnchecked {
                     native: vec![Coin::from_str(&wager_amount).unwrap()],
                     cw20: vec![],
                     cw721: vec![],
                 },
             },
-            MemberBalance {
+            MemberBalanceUnchecked {
                 addr: user2.to_string(),
-                balance: cw_balance::Balance {
+                balance: cw_balance::BalanceUnchecked {
                     native: vec![Coin::from_str(&wager_amount).unwrap()],
                     cw20: vec![],
                     cw721: vec![],

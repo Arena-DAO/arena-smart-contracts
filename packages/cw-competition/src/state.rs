@@ -66,7 +66,7 @@ pub struct CompetitionResponse<CompetitionExt> {
 }
 
 impl<CompetitionExt> Competition<CompetitionExt> {
-    pub fn to_response(self, block: &BlockInfo) -> CompetitionResponse<CompetitionExt> {
+    pub fn into_response(self, block: &BlockInfo) -> CompetitionResponse<CompetitionExt> {
         let is_expired = self.expiration.is_expired(block);
 
         CompetitionResponse {

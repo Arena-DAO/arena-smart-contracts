@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, StdResult};
-use cw_balance::{BalanceVerified, MemberBalanceVerified, MemberShare};
+use cw_balance::{BalanceVerified, MemberBalanceChecked, MemberShare};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
@@ -46,11 +46,11 @@ pub fn balances(
     deps: Deps,
     start_after: Option<String>,
     limit: Option<u32>,
-) -> StdResult<Vec<MemberBalanceVerified>> {
+) -> StdResult<Vec<MemberBalanceChecked>> {
     let binding = maybe_addr(deps.api, start_after)?;
     let start = binding.as_ref().map(Bound::exclusive);
     cw_paginate::paginate_map(&BALANCE, deps.storage, start, limit, |k, v| {
-        Ok(MemberBalanceVerified {
+        Ok(MemberBalanceChecked {
             addr: k,
             balance: v,
         })
@@ -61,11 +61,11 @@ pub fn dues(
     deps: Deps,
     start_after: Option<String>,
     limit: Option<u32>,
-) -> StdResult<Vec<MemberBalanceVerified>> {
+) -> StdResult<Vec<MemberBalanceChecked>> {
     let binding = maybe_addr(deps.api, start_after)?;
     let start = binding.as_ref().map(Bound::exclusive);
     cw_paginate::paginate_map(&DUE, deps.storage, start, limit, |k, v| {
-        Ok(MemberBalanceVerified {
+        Ok(MemberBalanceChecked {
             addr: k,
             balance: v,
         })
@@ -76,11 +76,11 @@ pub fn initial_dues(
     deps: Deps,
     start_after: Option<String>,
     limit: Option<u32>,
-) -> StdResult<Vec<MemberBalanceVerified>> {
+) -> StdResult<Vec<MemberBalanceChecked>> {
     let binding = maybe_addr(deps.api, start_after)?;
     let start = binding.as_ref().map(Bound::exclusive);
     cw_paginate::paginate_map(&INITIAL_DUE, deps.storage, start, limit, |k, v| {
-        Ok(MemberBalanceVerified {
+        Ok(MemberBalanceChecked {
             addr: k,
             balance: v,
         })

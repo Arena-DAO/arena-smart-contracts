@@ -13,39 +13,39 @@ use crate::{is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified,
 
 // Struct to hold the verified member balance
 #[cw_serde]
-pub struct MemberBalanceVerified {
+pub struct MemberBalanceChecked {
     pub addr: Addr,
     pub balance: BalanceVerified,
 }
 
 // Struct to hold the member balance
 #[cw_serde]
-pub struct MemberBalance {
+pub struct MemberBalanceUnchecked {
     pub addr: String,
-    pub balance: Balance,
+    pub balance: BalanceUnchecked,
 }
 
 // Method to convert MemberBalance to MemberBalanceVerified
-impl MemberBalance {
-    pub fn to_verified(self, deps: Deps) -> StdResult<MemberBalanceVerified> {
-        Ok(MemberBalanceVerified {
+impl MemberBalanceUnchecked {
+    pub fn into_checked(self, deps: Deps) -> StdResult<MemberBalanceChecked> {
+        Ok(MemberBalanceChecked {
             addr: deps.api.addr_validate(&self.addr)?,
-            balance: self.balance.to_verified(deps)?,
+            balance: self.balance.into_checked(deps)?,
         })
     }
 }
 
 // Struct to hold the balance
 #[cw_serde]
-pub struct Balance {
+pub struct BalanceUnchecked {
     pub native: Vec<Coin>,
     pub cw20: Vec<Cw20Coin>,
     pub cw721: Vec<Cw721Collection>,
 }
 
 // Method to convert Balance to BalanceVerified
-impl Balance {
-    pub fn to_verified(self, deps: Deps) -> StdResult<BalanceVerified> {
+impl BalanceUnchecked {
+    pub fn into_checked(self, deps: Deps) -> StdResult<BalanceVerified> {
         Ok(BalanceVerified {
             native: self.native,
             cw20: self
@@ -531,13 +531,13 @@ impl BalanceVerified {
         &self,
         distribution: &Vec<MemberShare<Addr>>,
         remainder_address: &Addr,
-    ) -> Result<Vec<MemberBalanceVerified>, BalanceError> {
+    ) -> Result<Vec<MemberBalanceChecked>, BalanceError> {
         let total_weight = distribution
             .iter()
             .try_fold(Uint128::zero(), |accumulator, x| {
                 accumulator.checked_add(x.shares)
             })?;
-        let mut split_balances: Vec<MemberBalanceVerified> = Vec::new();
+        let mut split_balances: Vec<MemberBalanceChecked> = Vec::new();
 
         let mut remainders_native: BTreeMap<String, Uint128> = self
             .native
@@ -591,7 +591,7 @@ impl BalanceVerified {
                 cw721: vec![],
             };
 
-            let member_balance = MemberBalanceVerified {
+            let member_balance = MemberBalanceChecked {
                 addr: member_share.addr.clone(),
                 balance: split_balance,
             };
@@ -619,7 +619,7 @@ impl BalanceVerified {
             {
                 member_balance.balance = member_balance.balance.checked_add(&remainder_balance)?;
             } else {
-                split_balances.push(MemberBalanceVerified {
+                split_balances.push(MemberBalanceChecked {
                     addr: remainder_address.clone(),
                     balance: remainder_balance,
                 });

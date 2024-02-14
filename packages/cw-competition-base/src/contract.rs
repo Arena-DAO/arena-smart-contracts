@@ -669,7 +669,7 @@ where
         // Validate and convert distribution members
         let result = distribution
             .iter()
-            .map(|x| x.to_validated(deps.as_ref()))
+            .map(|x| x.into_checked(deps.as_ref()))
             .collect::<StdResult<Vec<MemberShare<Addr>>>>()?;
 
         competition.result = Some(result);
@@ -776,7 +776,7 @@ where
                 &self
                     .competitions
                     .load(deps.storage, id.u128())?
-                    .to_response(&env.block),
+                    .into_response(&env.block),
             ),
             QueryBase::DAO {} => to_json_binary(
                 &self
@@ -825,7 +825,7 @@ where
                 deps.storage,
                 start_after_bound,
                 Some(limit),
-                |_x, y| Ok(y.to_response(&env.block)),
+                |_x, y| Ok(y.into_response(&env.block)),
             ),
             Some(filter) => match filter {
                 CompetitionsFilter::CompetitionStatus { status } => self
@@ -839,7 +839,7 @@ where
                         None,
                         cosmwasm_std::Order::Ascending,
                     )
-                    .map(|x| x.map(|y| y.1.to_response(&env.block)))
+                    .map(|x| x.map(|y| y.1.into_response(&env.block)))
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
                 CompetitionsFilter::Category { id } => self
@@ -853,7 +853,7 @@ where
                         None,
                         cosmwasm_std::Order::Ascending,
                     )
-                    .map(|x| x.map(|y| y.1.to_response(&env.block)))
+                    .map(|x| x.map(|y| y.1.into_response(&env.block)))
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
             },

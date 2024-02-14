@@ -96,7 +96,7 @@ pub fn set_distribution(
     // Convert String keys to Addr
     let validated_distribution = distribution
         .into_iter()
-        .map(|x| x.to_validated(deps.as_ref()))
+        .map(|x| x.into_checked(deps.as_ref()))
         .collect::<StdResult<_>>()?;
 
     // Save distribution in the state
@@ -238,7 +238,7 @@ pub fn distribute(
         let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
         let validated_distribution: Vec<MemberShare<Addr>> = distribution
             .iter()
-            .map(|member| member.to_validated(deps.as_ref()))
+            .map(|member| member.into_checked(deps.as_ref()))
             .collect::<StdResult<_>>()?;
 
         // Calculate the distribution amounts based on the total balance and distribution

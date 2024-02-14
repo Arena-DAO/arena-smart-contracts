@@ -5,13 +5,13 @@ use cosmwasm_std::Binary;
 use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
 #[allow(unused_imports)]
-use cw_balance::{BalanceVerified, MemberBalance, MemberBalanceVerified, MemberShare};
+use cw_balance::{BalanceVerified, MemberBalanceChecked, MemberBalanceUnchecked, MemberShare};
 use cw_competition::escrow::CompetitionEscrowDistributeMsg;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub dues: Vec<MemberBalance>,
+    pub dues: Vec<MemberBalanceUnchecked>,
 }
 
 #[cw_ownable_execute]
@@ -37,7 +37,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(Vec<MemberBalanceVerified>)]
+    #[returns(Vec<MemberBalanceChecked>)]
     Balances {
         start_after: Option<String>,
         limit: Option<u32>,
@@ -46,12 +46,12 @@ pub enum QueryMsg {
     Balance { addr: String },
     #[returns(Option<BalanceVerified>)]
     Due { addr: String },
-    #[returns(Vec<MemberBalanceVerified>)]
+    #[returns(Vec<MemberBalanceChecked>)]
     Dues {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    #[returns(Vec<MemberBalanceVerified>)]
+    #[returns(Vec<MemberBalanceChecked>)]
     InitialDues {
         start_after: Option<String>,
         limit: Option<u32>,

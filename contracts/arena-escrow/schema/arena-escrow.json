@@ -13,13 +13,13 @@
       "dues": {
         "type": "array",
         "items": {
-          "$ref": "#/definitions/MemberBalance"
+          "$ref": "#/definitions/MemberBalanceUnchecked"
         }
       }
     },
     "additionalProperties": false,
     "definitions": {
-      "Balance": {
+      "BalanceUnchecked": {
         "type": "object",
         "required": [
           "cw20",
@@ -98,7 +98,7 @@
         },
         "additionalProperties": false
       },
-      "MemberBalance": {
+      "MemberBalanceUnchecked": {
         "type": "object",
         "required": [
           "addr",
@@ -109,7 +109,7 @@
             "type": "string"
           },
           "balance": {
-            "$ref": "#/definitions/Balance"
+            "$ref": "#/definitions/BalanceUnchecked"
           }
         },
         "additionalProperties": false
@@ -840,10 +840,10 @@
     },
     "balances": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_MemberBalanceVerified",
+      "title": "Array_of_MemberBalanceChecked",
       "type": "array",
       "items": {
-        "$ref": "#/definitions/MemberBalanceVerified"
+        "$ref": "#/definitions/MemberBalanceChecked"
       },
       "definitions": {
         "Addr": {
@@ -929,7 +929,7 @@
           },
           "additionalProperties": false
         },
-        "MemberBalanceVerified": {
+        "MemberBalanceChecked": {
           "type": "object",
           "required": [
             "addr",
@@ -1087,10 +1087,10 @@
     },
     "dues": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_MemberBalanceVerified",
+      "title": "Array_of_MemberBalanceChecked",
       "type": "array",
       "items": {
-        "$ref": "#/definitions/MemberBalanceVerified"
+        "$ref": "#/definitions/MemberBalanceChecked"
       },
       "definitions": {
         "Addr": {
@@ -1176,7 +1176,7 @@
           },
           "additionalProperties": false
         },
-        "MemberBalanceVerified": {
+        "MemberBalanceChecked": {
           "type": "object",
           "required": [
             "addr",
@@ -1333,10 +1333,10 @@
     },
     "initial_dues": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_MemberBalanceVerified",
+      "title": "Array_of_MemberBalanceChecked",
       "type": "array",
       "items": {
-        "$ref": "#/definitions/MemberBalanceVerified"
+        "$ref": "#/definitions/MemberBalanceChecked"
       },
       "definitions": {
         "Addr": {
@@ -1422,7 +1422,7 @@
           },
           "additionalProperties": false
         },
-        "MemberBalanceVerified": {
+        "MemberBalanceChecked": {
           "type": "object",
           "required": [
             "addr",

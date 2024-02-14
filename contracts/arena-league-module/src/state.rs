@@ -26,7 +26,7 @@ pub struct Round {
 }
 
 impl Round {
-    pub fn to_response(self, deps: Deps, league_id: Uint128) -> StdResult<RoundResponse> {
+    pub fn into_response(self, deps: Deps, league_id: Uint128) -> StdResult<RoundResponse> {
         let matches = MATCHES
             .prefix((league_id.u128(), self.round_number.u64()))
             .range(deps.storage, None, None, cosmwasm_std::Order::Descending)

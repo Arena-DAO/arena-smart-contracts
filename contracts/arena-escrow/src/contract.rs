@@ -9,7 +9,7 @@ use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
-use cw_balance::MemberBalance;
+use cw_balance::MemberBalanceUnchecked;
 
 // version info for migration info
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-escrow";
@@ -32,7 +32,7 @@ pub fn instantiate(
 pub fn instantiate_contract(
     deps: DepsMut,
     info: MessageInfo,
-    due: Vec<MemberBalance>,
+    due: Vec<MemberBalanceUnchecked>,
 ) -> Result<(), ContractError> {
     if due.is_empty() {
         return Err(ContractError::InvalidDue {
@@ -48,7 +48,7 @@ pub fn instantiate_contract(
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
     for member_balance in due {
-        let member_balance = member_balance.to_verified(deps.as_ref())?;
+        let member_balance = member_balance.into_checked(deps.as_ref())?;
 
         if INITIAL_DUE.has(deps.storage, &member_balance.addr) {
             return Err(ContractError::StdError(

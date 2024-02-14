@@ -16,7 +16,7 @@ pub struct Cw721Collection {
 }
 
 impl Cw721Collection {
-    pub fn to_validated(self, deps: Deps) -> StdResult<Cw721CollectionVerified> {
+    pub fn into_checked(self, deps: Deps) -> StdResult<Cw721CollectionVerified> {
         Ok(Cw721CollectionVerified {
             address: deps.api.addr_validate(&self.address)?,
             token_ids: self.token_ids,

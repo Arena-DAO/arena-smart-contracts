@@ -9,7 +9,7 @@ use arena_league_module::{
 };
 use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
 use cw4::Member;
-use cw_balance::MemberBalance;
+use cw_balance::MemberBalanceUnchecked;
 use cw_competition::msg::ModuleInfo;
 use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
 use cw_utils::{Duration, Expiration};
@@ -88,7 +88,7 @@ fn create_competition(
     context: &mut Context,
     expiration: Expiration,
     members: Vec<cw4::Member>,
-    dues: Option<Vec<MemberBalance>>,
+    dues: Option<Vec<MemberBalanceUnchecked>>,
     round_duration: Duration,
 ) -> Uint128 {
     let teams: Vec<String> = members.iter().map(|x| x.addr.to_string()).collect();
@@ -214,17 +214,17 @@ fn test_create_competition() {
             })
             .collect(),
         Some(vec![
-            MemberBalance {
+            MemberBalanceUnchecked {
                 addr: users[0].to_string(),
-                balance: cw_balance::Balance {
+                balance: cw_balance::BalanceUnchecked {
                     native: vec![Coin::from_str(&wager_amount).unwrap()],
                     cw20: vec![],
                     cw721: vec![],
                 },
             },
-            MemberBalance {
+            MemberBalanceUnchecked {
                 addr: users[1].to_string(),
-                balance: cw_balance::Balance {
+                balance: cw_balance::BalanceUnchecked {
                     native: vec![Coin::from_str(&wager_amount).unwrap()],
                     cw20: vec![],
                     cw721: vec![],

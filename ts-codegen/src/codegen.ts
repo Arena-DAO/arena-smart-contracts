@@ -40,6 +40,9 @@ glob("../@(contracts)/**/schema").then((matches) => {
         queryKeys: true,
         queryFactory: true,
       },
+      recoil: {
+        enabled: true,
+      },
     },
   }).then(() => {
     console.log("✨ all done!");

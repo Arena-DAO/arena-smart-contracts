@@ -1,6 +1,8 @@
 use cosmwasm_std::{Addr, Binary, Coin, Empty, Uint128};
 use cw20::{Cw20Coin, Cw20CoinVerified};
-use cw_balance::{Balance, BalanceVerified, Cw721Collection, MemberBalance, MemberShare};
+use cw_balance::{
+    BalanceUnchecked, BalanceVerified, Cw721Collection, MemberBalanceUnchecked, MemberShare,
+};
 use cw_multi_test::{App, Executor};
 
 use crate::{
@@ -128,9 +130,9 @@ fn setup() -> Context {
             Addr::unchecked(CREATOR),
             &InstantiateMsg {
                 dues: vec![
-                    MemberBalance {
+                    MemberBalanceUnchecked {
                         addr: ADDR1.to_string(),
-                        balance: Balance {
+                        balance: BalanceUnchecked {
                             native: vec![
                                 Coin {
                                     denom: "native1".to_string(),
@@ -151,9 +153,9 @@ fn setup() -> Context {
                             }],
                         },
                     },
-                    MemberBalance {
+                    MemberBalanceUnchecked {
                         addr: ADDR2.to_string(),
-                        balance: Balance {
+                        balance: BalanceUnchecked {
                             native: vec![
                                 Coin {
                                     denom: "native1".to_string(),

@@ -89,5 +89,5 @@ pub fn leaderboard(
 pub fn round(deps: Deps, league_id: Uint128, round_number: Uint64) -> StdResult<RoundResponse> {
     ROUNDS
         .load(deps.storage, (league_id.u128(), round_number.u64()))?
-        .to_response(deps, league_id)
+        .into_response(deps, league_id)
 }

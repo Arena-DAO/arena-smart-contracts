@@ -9,7 +9,7 @@ pub struct MemberShare<T: AddressLike> {
 }
 
 impl MemberShare<String> {
-    pub fn to_validated(&self, deps: Deps) -> StdResult<MemberShare<Addr>> {
+    pub fn into_checked(&self, deps: Deps) -> StdResult<MemberShare<Addr>> {
         Ok(MemberShare {
             addr: deps.api.addr_validate(&self.addr)?,
             shares: self.shares,
