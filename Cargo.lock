@@ -96,7 +96,6 @@ name = "arena-league-module"
 version = "0.9.7"
 dependencies = [
  "arena-core-interface",
- "arena-escrow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-balance",
@@ -377,6 +376,7 @@ dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-address-like",
  "cw-balance",
  "cw-ownable",
  "cw-utils 1.0.3",

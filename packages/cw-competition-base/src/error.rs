@@ -54,6 +54,6 @@ pub enum CompetitionError {
         rulesets: Vec<Uint128>,
     },
 
-    #[error("AttributeNotFound")]
-    AttributeNotFound { key: String },
+    #[error("InvalidDistribution")]
+    InvalidDistribution {},
 }

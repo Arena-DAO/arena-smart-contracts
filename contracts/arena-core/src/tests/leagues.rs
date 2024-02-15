@@ -5,9 +5,9 @@ use arena_league_module::{
         CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueResponse,
         MatchResult, MemberPoints, QueryExt, QueryMsg,
     },
-    state::{Match, Result, RoundResponse},
+    state::{Match, Result, RoundResponse, TournamentExt},
 };
-use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Empty, Uint128, Uint64, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Decimal, Uint128, Uint64, WasmMsg};
 use cw4::Member;
 use cw_balance::MemberBalanceUnchecked;
 use cw_competition::msg::ModuleInfo;
@@ -55,7 +55,10 @@ fn setup_league_context(
                             msg: to_json_binary(&InstantiateMsg {
                                 key: "Leagues".to_string(),
                                 description: "This is a description".to_string(),
-                                extension: Empty {},
+                                extension: TournamentExt {
+                                    cw20_msg: None,
+                                    cw721_msg: None,
+                                },
                             })
                             .unwrap(),
                             admin: None,
@@ -146,9 +149,9 @@ fn create_competition(
                 match_draw_points: Uint128::one(),
                 match_lose_points: Uint128::zero(),
                 distribution: vec![
-                    Uint128::from(70u128),
-                    Uint128::from(20u128),
-                    Uint128::from(10u128),
+                    Decimal::from_ratio(70u128, 100u128),
+                    Decimal::from_ratio(20u128, 100u128),
+                    Decimal::from_ratio(10u128, 100u128),
                 ],
             },
         },

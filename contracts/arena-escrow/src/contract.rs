@@ -2,7 +2,7 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{self, DUE, INITIAL_DUE, IS_LOCKED},
+    state::{self, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED},
     ContractError,
 };
 use cosmwasm_std::{
@@ -47,6 +47,7 @@ pub fn instantiate_contract(
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
+    HAS_DISTRIBUTED.save(deps.storage, &false)?;
     for member_balance in due {
         let member_balance = member_balance.into_checked(deps.as_ref())?;
 
@@ -91,6 +92,7 @@ pub fn execute(
             deps,
             info,
             competition_escrow_distribute_msg.distribution,
+            competition_escrow_distribute_msg.tax_info,
             competition_escrow_distribute_msg.remainder_addr,
         ),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),

@@ -28,6 +28,7 @@ cw4 = { workspace = true }
 cw-balance = { workspace = true }
 cw-ownable = { workspace = true }
 arena-core-interface = { workspace = true }
+cw-address-like = {workspace =true }
 
 dao-interface = { workspace = true }
 dao-pre-propose-base = { workspace = true }

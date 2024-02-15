@@ -14,7 +14,7 @@ impl CompetitionModule {
     pub fn to_response(&self, deps: Deps) -> StdResult<CompetitionModuleResponse<String>> {
         let competition_count: Uint128 = deps.querier.query_wasm_smart(
             self.addr.to_string(),
-            &cw_competition::msg::QueryBase::<Empty, Empty>::CompetitionCount {},
+            &cw_competition::msg::QueryBase::<Empty, Empty, Empty>::CompetitionCount {},
         )?;
 
         Ok(CompetitionModuleResponse {

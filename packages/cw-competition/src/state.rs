@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Timestamp, Uint128};
-use cw_balance::MemberShare;
+use cw_balance::MemberPercentage;
 use cw_utils::Expiration;
 use std::fmt;
 
@@ -40,7 +40,7 @@ pub struct Competition<CompetitionExt> {
     pub rulesets: Vec<Uint128>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
-    pub result: Option<Vec<MemberShare<Addr>>>,
+    pub result: Option<Vec<MemberPercentage<Addr>>>,
     pub evidence: Vec<Evidence>,
 }
 
@@ -61,7 +61,7 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
     pub expiration: Expiration,
-    pub result: Option<Vec<MemberShare<Addr>>>,
+    pub result: Option<Vec<MemberPercentage<Addr>>>,
     pub evidence: Vec<Evidence>,
 }
 
@@ -90,9 +90,10 @@ impl<CompetitionExt> Competition<CompetitionExt> {
 }
 
 #[cw_serde]
-pub struct Config {
+pub struct Config<InstantiateExt> {
     pub key: String,
     pub description: String,
+    pub extension: InstantiateExt,
 }
 
 #[cw_serde]

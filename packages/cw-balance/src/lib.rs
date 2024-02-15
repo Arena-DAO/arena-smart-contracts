@@ -8,7 +8,7 @@ pub use balance::{
     BalanceUnchecked, BalanceVerified, MemberBalanceChecked, MemberBalanceUnchecked,
 };
 pub use error::BalanceError;
-pub use shares::MemberShare;
+pub use shares::MemberPercentage;
 pub use tokens::{Cw721Collection, Cw721CollectionVerified};
 pub use util::is_contract;
 

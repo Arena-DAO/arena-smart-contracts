@@ -5,7 +5,7 @@ use cosmwasm_std::Binary;
 use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
 #[allow(unused_imports)]
-use cw_balance::{BalanceVerified, MemberBalanceChecked, MemberBalanceUnchecked, MemberShare};
+use cw_balance::{BalanceVerified, MemberBalanceChecked, MemberBalanceUnchecked, MemberPercentage};
 use cw_competition::escrow::CompetitionEscrowDistributeMsg;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
@@ -22,7 +22,7 @@ pub enum ExecuteMsg {
         cw721_msg: Option<Binary>,
     },
     SetDistribution {
-        distribution: Vec<MemberShare<String>>,
+        distribution: Vec<MemberPercentage<String>>,
     },
     ReceiveNative {},
     Receive(Cw20ReceiveMsg),
@@ -64,7 +64,7 @@ pub enum QueryMsg {
     TotalBalance {},
     #[returns(bool)]
     IsLocked {},
-    #[returns(Option<Vec<MemberShare<String>>>)]
+    #[returns(Option<Vec<MemberPercentage<String>>>)]
     Distribution { addr: String },
     #[returns(DumpStateResponse)]
     DumpState { addr: Option<String> },

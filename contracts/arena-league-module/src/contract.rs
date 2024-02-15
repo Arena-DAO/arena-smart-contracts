@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 use cw_competition::msg::{ExecuteBase, QueryBase};
@@ -13,13 +13,15 @@ use crate::{
         CompetitionExt, CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg,
         MigrateMsg, QueryExt, QueryMsg,
     },
-    query, ContractError,
+    query,
+    state::TournamentExt,
+    ContractError,
 };
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-league-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub type CompetitionModule = CompetitionModuleContract<
-    Empty,
+    TournamentExt,
     ExecuteExt,
     QueryExt,
     CompetitionExt,
@@ -94,6 +96,8 @@ pub fn execute(
         ExecuteBase::ProcessCompetition {
             id: _,
             distribution: _,
+            cw20_msg: _,
+            cw721_msg: _,
         } => Err(ContractError::InvalidExecute),
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }

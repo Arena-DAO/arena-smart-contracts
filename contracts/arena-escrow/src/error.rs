@@ -1,4 +1,4 @@
-use cosmwasm_std::{CheckedFromRatioError, OverflowError, StdError};
+use cosmwasm_std::{CheckedFromRatioError, CheckedMultiplyFractionError, OverflowError, StdError};
 use cw_balance::BalanceError;
 use cw_ownable::OwnershipError;
 use thiserror::Error;
@@ -20,6 +20,9 @@ pub enum ContractError {
     #[error("{0}")]
     BalanceError(#[from] BalanceError),
 
+    #[error("{0}")]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
+
     #[error("Locked")]
     Locked {},
 
@@ -31,4 +34,7 @@ pub enum ContractError {
 
     #[error("InvalidDue")]
     InvalidDue { msg: String },
+
+    #[error("EmptyBalance")]
+    EmptyBalance {},
 }

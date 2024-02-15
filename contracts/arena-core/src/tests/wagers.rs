@@ -4,9 +4,11 @@ use arena_core_interface::msg::{
     CompetitionModuleQuery, CompetitionModuleResponse, ProposeMessage, QueryExt,
 };
 use arena_wager_module::msg::{EmptyWrapper, ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
-use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, CosmosMsg, Empty, Uint128, WasmMsg};
+use cosmwasm_std::{
+    to_json_binary, Addr, Coin, Coins, CosmosMsg, Decimal, Empty, Uint128, WasmMsg,
+};
 use cw4::Member;
-use cw_balance::{MemberBalanceUnchecked, MemberShare};
+use cw_balance::{MemberBalanceUnchecked, MemberPercentage};
 use cw_competition::{
     msg::ModuleInfo,
     state::{CompetitionResponse, CompetitionStatus},
@@ -372,10 +374,12 @@ fn test_create_competition() {
                 msg: to_json_binary(
                     &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
                         id: competition1_id,
-                        distribution: vec![MemberShare {
+                        distribution: vec![MemberPercentage {
                             addr: user1.to_string(),
-                            shares: Uint128::one(),
+                            percentage: Decimal::one(),
                         }],
+                        cw20_msg: None,
+                        cw721_msg: None,
                     },
                 )
                 .unwrap(),
@@ -449,6 +453,18 @@ fn test_create_competition() {
         user1.clone(),
         competition1_proposal_module.address.clone(),
         &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Claim balances
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1.escrow.clone().unwrap(),
+        &arena_escrow::msg::ExecuteMsg::Withdraw {
+            cw20_msg: None,
+            cw721_msg: None,
+        },
         &[],
     );
     assert!(result.is_ok());
@@ -580,10 +596,12 @@ fn test_create_competition_jailed() {
         id: competition1_id,
         title: "Title".to_string(),
         description: "Description".to_string(),
-        distribution: vec![MemberShare {
+        distribution: vec![MemberPercentage {
             addr: user1.to_string(),
-            shares: Uint128::one(),
+            percentage: Decimal::one(),
         }],
+        cw20_msg: None,
+        cw721_msg: None,
     };
 
     let result = context.app.execute_contract(
@@ -692,6 +710,18 @@ fn test_create_competition_jailed() {
         admin.clone(),
         context.core.proposal_module_addr.clone(),
         &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Claim balances
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1.escrow.clone().unwrap(),
+        &arena_escrow::msg::ExecuteMsg::Withdraw {
+            cw20_msg: None,
+            cw721_msg: None,
+        },
         &[],
     );
     assert!(result.is_ok());

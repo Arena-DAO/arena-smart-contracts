@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, OverflowError,
-    OverflowOperation, StdResult, Uint128, WasmMsg,
+    to_json_binary, Addr, BankMsg, Binary, CheckedMultiplyFractionError, Coin, CosmosMsg, Decimal,
+    Deps, OverflowError, OverflowOperation, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
 use cw721::Cw721ExecuteMsg;
@@ -9,7 +9,9 @@ use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-use crate::{is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberShare};
+use crate::{
+    is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberPercentage,
+};
 
 // Struct to hold the verified member balance
 #[cw_serde]
@@ -186,6 +188,34 @@ impl BalanceVerified {
     // Method to check if BalanceVerified is empty
     pub fn is_empty(&self) -> bool {
         self.native.is_empty() && self.cw20.is_empty() && self.cw721.is_empty()
+    }
+
+    pub fn checked_mul_floor(
+        &self,
+        amount: Decimal,
+    ) -> Result<BalanceVerified, CheckedMultiplyFractionError> {
+        let mut native = vec![];
+        let mut cw20 = vec![];
+
+        for coin in self.native.iter() {
+            native.push(Coin {
+                denom: coin.denom.clone(),
+                amount: coin.amount.checked_mul_floor(amount)?,
+            })
+        }
+
+        for token in self.cw20.iter() {
+            cw20.push(Cw20CoinVerified {
+                address: token.address.clone(),
+                amount: token.amount.checked_mul_floor(amount)?,
+            })
+        }
+
+        Ok(BalanceVerified {
+            native,
+            cw20,
+            cw721: vec![],
+        })
     }
 
     // Method to add two BalanceVerified together
@@ -401,13 +431,13 @@ impl BalanceVerified {
         let mut messages: Vec<CosmosMsg> = Vec::new();
 
         // Transfer native tokens
-        messages.extend(self.send_native(recipient.to_string()));
+        messages.extend(self.send_native(recipient));
 
         // Transfer CW20 tokens
-        messages.extend(self.transfer_cw20(recipient.to_string())?);
+        messages.extend(self.transfer_cw20(recipient)?);
 
         // Transfer CW721 tokens
-        messages.extend(self.transfer_cw721(recipient.to_string())?);
+        messages.extend(self.transfer_cw721(recipient)?);
 
         Ok(messages)
     }
@@ -422,38 +452,38 @@ impl BalanceVerified {
         let mut messages: Vec<CosmosMsg> = Vec::new();
 
         // Send native tokens to contract
-        messages.extend(self.send_native(contract_addr.to_string()));
+        messages.extend(self.send_native(contract_addr));
 
         // Send CW20 tokens to contract
-        messages.extend(self.send_cw20(contract_addr.to_string(), cw20_msg.unwrap_or_default())?);
+        messages.extend(self.send_cw20(contract_addr, cw20_msg.unwrap_or_default())?);
 
         // Send CW721 tokens to contract
-        messages.extend(self.send_cw721(contract_addr.to_string(), cw721_msg.unwrap_or_default())?);
+        messages.extend(self.send_cw721(contract_addr, cw721_msg.unwrap_or_default())?);
 
         Ok(messages)
     }
 
     // Method to send native tokens to an address
-    pub fn send_native(&self, to_address: String) -> Vec<CosmosMsg> {
+    pub fn send_native(&self, address: &Addr) -> Vec<CosmosMsg> {
         if self.native.is_empty() {
             vec![]
         } else {
             vec![CosmosMsg::Bank(BankMsg::Send {
-                to_address,
+                to_address: address.to_string(),
                 amount: self.native.clone(),
             })]
         }
     }
 
     // Method to send CW20 tokens to a contract
-    pub fn send_cw20(&self, contract: String, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
+    pub fn send_cw20(&self, contract: &Addr, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
         self.cw20
             .iter()
             .map(|cw20_coin| {
                 let exec_msg = WasmMsg::Execute {
                     contract_addr: cw20_coin.address.to_string(),
                     msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                        contract: contract.clone(),
+                        contract: contract.to_string(),
                         amount: cw20_coin.amount,
                         msg: msg.clone(),
                     })?,
@@ -465,7 +495,7 @@ impl BalanceVerified {
     }
 
     // Method to send CW721 tokens to a contract
-    pub fn send_cw721(&self, contract: String, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
+    pub fn send_cw721(&self, contract: &Addr, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
         self.cw721
             .iter()
             .flat_map(|cw721_collection| {
@@ -475,7 +505,7 @@ impl BalanceVerified {
                     let exec_msg = WasmMsg::Execute {
                         contract_addr: cw721_collection.address.to_string(),
                         msg: to_json_binary(&Cw721ExecuteMsg::SendNft {
-                            contract: contract.clone(),
+                            contract: contract.to_string(),
                             token_id: token_id.clone(),
                             msg: msg.clone(),
                         })?,
@@ -488,11 +518,10 @@ impl BalanceVerified {
     }
 
     // Method to transfer CW721 tokens to a recipient
-    pub fn transfer_cw721(&self, recipient: String) -> StdResult<Vec<CosmosMsg>> {
+    pub fn transfer_cw721(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
         self.cw721
             .iter()
             .flat_map(|cw721_collection| {
-                let recipient = recipient.clone();
                 cw721_collection.token_ids.iter().map(move |token_id| {
                     let exec_msg = WasmMsg::Execute {
                         contract_addr: cw721_collection.address.to_string(),
@@ -509,14 +538,14 @@ impl BalanceVerified {
     }
 
     // Method to transfer CW20 tokens to a recipient
-    pub fn transfer_cw20(&self, recipient: String) -> StdResult<Vec<CosmosMsg>> {
+    pub fn transfer_cw20(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
         self.cw20
             .iter()
             .map(|cw20_coin| {
                 let exec_msg = WasmMsg::Execute {
                     contract_addr: cw20_coin.address.to_string(),
                     msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
-                        recipient: recipient.clone(),
+                        recipient: recipient.to_string(),
                         amount: cw20_coin.amount,
                     })?,
                     funds: vec![],
@@ -529,14 +558,19 @@ impl BalanceVerified {
     // Method to split the balance among multiple users based on their assigned weights
     pub fn split(
         &self,
-        distribution: &Vec<MemberShare<Addr>>,
+        distribution: &Vec<MemberPercentage<Addr>>,
         remainder_address: &Addr,
     ) -> Result<Vec<MemberBalanceChecked>, BalanceError> {
         let total_weight = distribution
             .iter()
-            .try_fold(Uint128::zero(), |accumulator, x| {
-                accumulator.checked_add(x.shares)
+            .try_fold(Decimal::zero(), |accumulator, x| {
+                accumulator.checked_add(x.percentage)
             })?;
+
+        if total_weight != Decimal::one() {
+            return Err(BalanceError::InvalidWeight {});
+        }
+
         let mut split_balances: Vec<MemberBalanceChecked> = Vec::new();
 
         let mut remainders_native: BTreeMap<String, Uint128> = self
@@ -551,12 +585,13 @@ impl BalanceVerified {
             .collect();
 
         for member_share in distribution {
-            let weight_fraction = Decimal::from_ratio(member_share.shares, total_weight);
-
             let mut split_native = BTreeMap::new();
             for coin in &self.native {
                 let decimal_amount = Decimal::from_atomics(coin.amount, 0u32)?;
-                let split_amount = weight_fraction.checked_mul(decimal_amount)?.to_uint_floor();
+                let split_amount = member_share
+                    .percentage
+                    .checked_mul(decimal_amount)?
+                    .to_uint_floor();
 
                 // Deduct the split amount from the remainder
                 if let Some(remainder) = remainders_native.get_mut(&coin.denom) {
@@ -569,7 +604,10 @@ impl BalanceVerified {
             let mut split_cw20 = BTreeMap::new();
             for cw20_coin in &self.cw20 {
                 let decimal_amount = Decimal::from_atomics(cw20_coin.amount, 0u32)?;
-                let split_amount = weight_fraction.checked_mul(decimal_amount)?.to_uint_floor();
+                let split_amount = member_share
+                    .percentage
+                    .checked_mul(decimal_amount)?
+                    .to_uint_floor();
 
                 // Deduct the split amount from the remainder
                 if let Some(remainder) = remainders_cw20.get_mut(&cw20_coin.address) {

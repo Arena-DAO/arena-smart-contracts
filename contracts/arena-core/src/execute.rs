@@ -189,6 +189,8 @@ pub fn propose(
                 &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
                     id: msg.id,
                     distribution: msg.distribution,
+                    cw20_msg: msg.cw20_msg,
+                    cw721_msg: msg.cw721_msg,
                 },
             )?,
             funds: vec![],

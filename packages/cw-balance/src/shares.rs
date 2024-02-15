@@ -1,18 +1,18 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Deps, StdResult, Uint128};
+use cosmwasm_std::{Addr, Decimal, Deps, StdResult};
 use cw_address_like::AddressLike;
 
 #[cw_serde]
-pub struct MemberShare<T: AddressLike> {
+pub struct MemberPercentage<T: AddressLike> {
     pub addr: T,
-    pub shares: Uint128,
+    pub percentage: Decimal,
 }
 
-impl MemberShare<String> {
-    pub fn into_checked(&self, deps: Deps) -> StdResult<MemberShare<Addr>> {
-        Ok(MemberShare {
+impl MemberPercentage<String> {
+    pub fn into_checked(&self, deps: Deps) -> StdResult<MemberPercentage<Addr>> {
+        Ok(MemberPercentage {
             addr: deps.api.addr_validate(&self.addr)?,
-            shares: self.shares,
+            percentage: self.percentage,
         })
     }
 }

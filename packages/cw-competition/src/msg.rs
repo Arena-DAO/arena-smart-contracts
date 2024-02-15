@@ -5,8 +5,8 @@ use crate::state::CompetitionStatus;
 use crate::state::{CompetitionResponse, Config};
 use arena_core_interface::msg::ProposeMessage;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Deps, StdResult, Uint128};
-use cw_balance::MemberShare;
+use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
+use cw_balance::MemberPercentage;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
@@ -34,7 +34,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     ExecuteCompetitionHook {
         id: Uint128,
-        distribution: Vec<MemberShare<String>>,
+        distribution: Vec<MemberPercentage<String>>,
     },
     CreateCompetition {
         category_id: Uint128,
@@ -53,7 +53,9 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     ProcessCompetition {
         id: Uint128,
-        distribution: Vec<MemberShare<String>>,
+        distribution: Vec<MemberPercentage<String>>,
+        cw20_msg: Option<Binary>,
+        cw721_msg: Option<Binary>,
     },
     Extension {
         msg: ExecuteExt,
@@ -63,11 +65,11 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryBase<QueryExt, CompetitionExt>
+pub enum QueryBase<InstantiateExt, QueryExt, CompetitionExt>
 where
     QueryExt: JsonSchema,
 {
-    #[returns(Config)]
+    #[returns(Config<InstantiateExt>)]
     Config {},
     #[returns(String)]
     DAO {},
@@ -84,8 +86,8 @@ where
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },
     #[serde(skip)]
-    #[returns(PhantomData<CompetitionExt>)]
-    _Phantom(PhantomData<CompetitionExt>),
+    #[returns(PhantomData<(InstantiateExt, CompetitionExt)>)]
+    _Phantom(PhantomData<(InstantiateExt, CompetitionExt)>),
 }
 
 #[cw_serde]

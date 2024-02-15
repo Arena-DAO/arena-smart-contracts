@@ -1,7 +1,7 @@
-use cosmwasm_std::{Addr, Coin, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw20::Cw20CoinVerified;
 
-use crate::{BalanceVerified, Cw721CollectionVerified, MemberShare};
+use crate::{BalanceVerified, Cw721CollectionVerified, MemberPercentage};
 
 #[test]
 fn test_split_balances() {
@@ -37,13 +37,13 @@ fn test_split_balances() {
     };
 
     let distribution = vec![
-        MemberShare {
+        MemberPercentage {
             addr: addr_a.clone(),
-            shares: Uint128::new(50u128),
+            percentage: Decimal::from_ratio(50u128, 80u128),
         },
-        MemberShare {
+        MemberPercentage {
             addr: addr_b.clone(),
-            shares: Uint128::new(30u128),
+            percentage: Decimal::from_ratio(30u128, 80u128),
         },
     ];
 
@@ -169,21 +169,24 @@ fn test_split_balances_with_remainder_as_member_share() {
             amount: Uint128::from(100u128),
         }],
         cw20: vec![],
-        cw721: vec![],
+        cw721: vec![Cw721CollectionVerified {
+            address: Addr::unchecked("cw721"),
+            token_ids: vec!["1".to_string()],
+        }],
     };
 
     let distribution = vec![
-        MemberShare {
+        MemberPercentage {
             addr: addr_a.clone(),
-            shares: Uint128::one(),
+            percentage: Decimal::from_ratio(33u128, 100u128),
         },
-        MemberShare {
+        MemberPercentage {
             addr: addr_b.clone(),
-            shares: Uint128::one(),
+            percentage: Decimal::from_ratio(33u128, 100u128),
         },
-        MemberShare {
+        MemberPercentage {
             addr: addr_c.clone(),
-            shares: Uint128::one(),
+            percentage: Decimal::from_ratio(34u128, 100u128),
         },
     ];
 
@@ -194,4 +197,5 @@ fn test_split_balances_with_remainder_as_member_share() {
     assert_eq!(split_result[0].balance.native[0].amount.u128(), 33u128);
     assert_eq!(split_result[1].balance.native[0].amount.u128(), 33u128);
     assert_eq!(split_result[2].balance.native[0].amount.u128(), 34u128);
+    assert_eq!(split_result[2].balance.cw721[0].token_ids, vec!["1"]);
 }

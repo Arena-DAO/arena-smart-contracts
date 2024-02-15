@@ -1,8 +1,8 @@
-use crate::state::Result;
 #[allow(unused_imports)]
 use crate::state::RoundResponse;
+use crate::state::{Result, TournamentExt};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Empty, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Decimal, StdResult, Uint128, Uint64};
 use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, IntoCompetitionExt, QueryBase},
     state::{Competition, CompetitionResponse},
@@ -18,7 +18,7 @@ pub enum ExecuteExt {
     },
     UpdateDistribution {
         league_id: Uint128,
-        distribution: Vec<Uint128>,
+        distribution: Vec<Decimal>,
     },
 }
 
@@ -65,7 +65,7 @@ pub struct CompetitionExt {
     pub matches: Uint128,
     pub teams: Uint64,
     pub processed_matches: Uint128,
-    pub distribution: Vec<Uint128>,
+    pub distribution: Vec<Decimal>,
 }
 
 #[cw_serde]
@@ -75,7 +75,7 @@ pub struct CompetitionInstantiateExt {
     pub match_lose_points: Uint128,
     pub teams: Vec<String>,
     pub round_duration: Duration,
-    pub distribution: Vec<Uint128>,
+    pub distribution: Vec<Decimal>,
 }
 
 impl IntoCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
@@ -100,8 +100,8 @@ pub struct MemberPoints {
     pub matches_played: Uint64,
 }
 
-pub type InstantiateMsg = InstantiateBase<Empty>;
+pub type InstantiateMsg = InstantiateBase<TournamentExt>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, CompetitionInstantiateExt>;
-pub type QueryMsg = QueryBase<QueryExt, CompetitionExt>;
+pub type QueryMsg = QueryBase<TournamentExt, QueryExt, CompetitionExt>;
 pub type League = Competition<CompetitionExt>;
 pub type LeagueResponse = CompetitionResponse<CompetitionExt>;

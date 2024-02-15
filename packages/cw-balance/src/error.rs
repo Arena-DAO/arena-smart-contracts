@@ -14,4 +14,7 @@ pub enum BalanceError {
 
     #[error("{0}")]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
+
+    #[error("Invalid Weight")]
+    InvalidWeight {},
 }

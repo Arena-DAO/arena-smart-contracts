@@ -1,7 +1,7 @@
-use cosmwasm_std::{Addr, Binary, Coin, Empty, Uint128};
+use cosmwasm_std::{Addr, Binary, Coin, Decimal, Empty, Uint128};
 use cw20::{Cw20Coin, Cw20CoinVerified};
 use cw_balance::{
-    BalanceUnchecked, BalanceVerified, Cw721Collection, MemberBalanceUnchecked, MemberShare,
+    BalanceUnchecked, BalanceVerified, Cw721Collection, MemberBalanceUnchecked, MemberPercentage,
 };
 use cw_multi_test::{App, Executor};
 
@@ -248,13 +248,13 @@ fn test_set_distribution() {
     let mut context = setup();
 
     let distribution = vec![
-        MemberShare {
+        MemberPercentage {
             addr: ADDR1.to_string(),
-            shares: Uint128::new(50),
+            percentage: Decimal::from_ratio(50u128, 80u128),
         },
-        MemberShare {
+        MemberPercentage {
             addr: ADDR2.to_string(),
-            shares: Uint128::new(30),
+            percentage: Decimal::from_ratio(30u128, 80u128),
         },
     ];
 
@@ -269,7 +269,7 @@ fn test_set_distribution() {
 
     assert!(res.is_ok());
 
-    let contract_distribution: Option<Vec<MemberShare<String>>> = context
+    let contract_distribution: Option<Vec<MemberPercentage<String>>> = context
         .app
         .wrap()
         .query_wasm_smart(

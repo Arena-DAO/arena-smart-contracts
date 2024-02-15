@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Binary, Decimal, Uint128};
 use cw_address_like::AddressLike;
-use cw_balance::MemberShare;
+use cw_balance::MemberPercentage;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
@@ -147,7 +147,9 @@ pub struct ProposeMessage {
     pub id: Uint128,
     pub title: String,
     pub description: String,
-    pub distribution: Vec<MemberShare<String>>,
+    pub distribution: Vec<MemberPercentage<String>>,
+    pub cw20_msg: Option<Binary>,
+    pub cw721_msg: Option<Binary>,
 }
 
 #[cw_serde]

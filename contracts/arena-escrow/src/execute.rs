@@ -1,80 +1,21 @@
 use cosmwasm_std::{
-    to_json_binary, Addr, Attribute, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response,
-    StdResult,
+    to_json_binary, Addr, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response, StdResult,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberShare};
+use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberPercentage};
+use cw_competition::escrow::TaxInformation;
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
     query::is_locked,
     state::{
-        is_fully_funded, BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE,
+        is_fully_funded, BALANCE, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED,
+        PRESET_DISTRIBUTION, TOTAL_BALANCE,
     },
     ContractError,
 };
 
-fn inner_withdraw(
-    deps: DepsMut,
-    addrs: Vec<Addr>,
-    cw20_msg: Option<Binary>,
-    cw721_msg: Option<Binary>,
-    is_processing: bool,
-) -> Result<Response, ContractError> {
-    // Initialize total_balance based on processing status
-    let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
-
-    let mut msgs = vec![];
-    let mut attrs = vec![];
-
-    for addr in addrs {
-        // Load and process balance for each address
-        if let Some(balance) = BALANCE.may_load(deps.storage, &addr)? {
-            if balance.is_empty() {
-                continue;
-            }
-
-            // Prepare messages for balance transmission
-            msgs.append(&mut balance.transmit_all(
-                deps.as_ref(),
-                &addr,
-                cw20_msg.clone(),
-                cw721_msg.clone(),
-            )?);
-
-            // Record processed address
-            attrs.push(Attribute {
-                key: "addr".to_string(),
-                value: addr.to_string(),
-            });
-
-            // Update total balance and related storage entries
-            BALANCE.remove(deps.storage, &addr);
-            total_balance = total_balance.checked_sub(&balance)?;
-
-            // Set due to the initial due
-            if !is_processing {
-                let initial_due = &INITIAL_DUE.load(deps.storage, &addr)?;
-                DUE.save(deps.storage, &addr, initial_due)?;
-            }
-        }
-    }
-
-    // Update or remove total balance
-    if is_processing || total_balance.is_empty() {
-        TOTAL_BALANCE.remove(deps.storage);
-    } else {
-        TOTAL_BALANCE.save(deps.storage, &total_balance)?;
-    }
-
-    Ok(Response::new()
-        .add_attribute("action", "withdraw")
-        .add_attributes(attrs)
-        .add_messages(msgs))
-}
-
-// This function handles refunds for the sender
 pub fn withdraw(
     deps: DepsMut,
     info: MessageInfo,
@@ -85,13 +26,52 @@ pub fn withdraw(
         return Err(ContractError::Locked {});
     }
 
-    inner_withdraw(deps, vec![info.sender], cw20_msg, cw721_msg, false)
+    // Initialize total_balance based on processing status
+    let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
+
+    // Load and process balance for each address
+    let msgs = if let Some(balance) = BALANCE.may_load(deps.storage, &info.sender)? {
+        if balance.is_empty() {
+            return Err(ContractError::EmptyBalance {});
+        }
+
+        // Update total balance and related storage entries
+        BALANCE.remove(deps.storage, &info.sender);
+        total_balance = total_balance.checked_sub(&balance)?;
+
+        if !HAS_DISTRIBUTED.load(deps.storage)? {
+            // Set due to the initial due
+            let initial_due = &INITIAL_DUE.load(deps.storage, &info.sender)?;
+            DUE.save(deps.storage, &info.sender, initial_due)?;
+        }
+
+        // Update or remove total balance
+        if total_balance.is_empty() {
+            TOTAL_BALANCE.remove(deps.storage);
+        } else {
+            TOTAL_BALANCE.save(deps.storage, &total_balance)?;
+        }
+
+        balance.transmit_all(
+            deps.as_ref(),
+            &info.sender,
+            cw20_msg.clone(),
+            cw721_msg.clone(),
+        )?
+    } else {
+        vec![]
+    };
+
+    Ok(Response::new()
+        .add_attribute("action", "withdraw")
+        .add_attribute("addr", info.sender)
+        .add_messages(msgs))
 }
 
 pub fn set_distribution(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Vec<MemberShare<String>>,
+    distribution: Vec<MemberPercentage<String>>,
 ) -> Result<Response, ContractError> {
     // Convert String keys to Addr
     let validated_distribution = distribution
@@ -172,9 +152,11 @@ fn receive_balance(
     }
 
     // Update the stored balance for the given address
-    let updated_balance = BALANCE.update(deps.storage, &addr, |existing_balance| {
-        existing_balance.unwrap_or_default().checked_add(&balance)
-    })?;
+    let updated_balance =
+        BALANCE.update(deps.storage, &addr, |maybe_balance| match maybe_balance {
+            Some(existing_balance) => existing_balance.checked_add(&balance),
+            None => Ok(balance),
+        })?;
 
     let due_balance = DUE.load(deps.storage, &addr)?;
     let remaining_due = updated_balance.difference(&due_balance)?;
@@ -219,66 +201,82 @@ fn receive_balance(
 pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Vec<MemberShare<String>>,
+    distribution: Vec<MemberPercentage<String>>,
+    tax_info: Option<TaxInformation<String>>,
     remainder_addr: String,
 ) -> Result<Response, ContractError> {
     // Ensure the sender is the owner
     assert_owner(deps.storage, &info.sender)?;
 
-    // Ensure the contract is fully funded
-    if !is_fully_funded(deps.as_ref()) {
-        return Err(ContractError::NotFullyFunded {});
-    }
+    // Load the total balance available for distribution
+    let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
 
-    if !distribution.is_empty() {
-        // Load the total balance available for distribution
-        let total_balance = TOTAL_BALANCE.load(deps.storage)?;
+    // Validate the remainder address
+    let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
 
-        // Validate the remainder address and distribution
-        let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
-        let validated_distribution: Vec<MemberShare<Addr>> = distribution
-            .iter()
-            .map(|member| member.into_checked(deps.as_ref()))
-            .collect::<StdResult<_>>()?;
+    // Validate the distribution
+    let validated_distribution: Vec<MemberPercentage<Addr>> = distribution
+        .iter()
+        .map(|member| member.into_checked(deps.as_ref()))
+        .collect::<StdResult<_>>()?;
 
-        // Calculate the distribution amounts based on the total balance and distribution
-        let distributed_amounts = total_balance.split(&validated_distribution, &remainder_addr)?;
+    // Validate the tax info
+    let tax_info = tax_info
+        .map(|tax_info| tax_info.into_checked(deps.as_ref()))
+        .transpose()?;
 
-        // Clear the existing balance storage and update with new distribution
-        BALANCE.clear(deps.storage);
-        for distributed_amount in distributed_amounts {
-            // Check for preset distribution and apply if available
-            if let Some(preset) =
-                PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
-            {
-                let new_balances = distributed_amount
-                    .balance
-                    .split(&preset, &distributed_amount.addr)?;
-                for new_balance in new_balances {
-                    BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
-                }
-            } else {
-                BALANCE.save(
-                    deps.storage,
-                    &distributed_amount.addr,
-                    &distributed_amount.balance,
-                )?;
+    // Process the tax
+    // This will automatically be sent to the receiver
+    let msgs = if let Some(tax_info) = tax_info {
+        let tax = total_balance.checked_mul_floor(tax_info.tax)?;
+
+        total_balance = total_balance.checked_sub(&tax)?;
+
+        tax.transmit_all(
+            deps.as_ref(),
+            &tax_info.receiver,
+            tax_info.cw20_msg,
+            tax_info.cw721_msg,
+        )?
+    } else {
+        vec![]
+    };
+
+    // Calculate the distribution amounts based on the total balance and distribution
+    let distributed_amounts = total_balance.split(&validated_distribution, &remainder_addr)?;
+
+    // Clear the existing balance storage and update with new distribution
+    BALANCE.clear(deps.storage);
+    for distributed_amount in distributed_amounts {
+        // Check for preset distribution and apply if available
+        if let Some(preset) =
+            PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
+        {
+            let new_balances = distributed_amount
+                .balance
+                .split(&preset, &distributed_amount.addr)?;
+            for new_balance in new_balances {
+                BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
             }
+        } else {
+            BALANCE.save(
+                deps.storage,
+                &distributed_amount.addr,
+                &distributed_amount.balance,
+            )?;
         }
     }
 
     IS_LOCKED.save(deps.storage, &false)?;
+    HAS_DISTRIBUTED.save(deps.storage, &true)?;
 
     // Clear the contract state
     DUE.clear(deps.storage);
     PRESET_DISTRIBUTION.clear(deps.storage);
 
-    // Construct the response and return
-    let keys = BALANCE
-        .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .collect::<StdResult<Vec<_>>>()?;
-    let response = inner_withdraw(deps, keys, None, None, true)?;
-    Ok(response.add_attribute("action", "handle_competition_result"))
+    Ok(Response::new()
+        .add_attribute("action", "handle_competition_result")
+        .add_messages(msgs))
 }
 
 pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, ContractError> {

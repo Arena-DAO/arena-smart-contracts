@@ -1,8 +1,8 @@
 use cosmwasm_std::{
-    Addr, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
+    Addr, Decimal, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
     StdResult, Uint128, Uint64,
 };
-use cw_balance::MemberShare;
+use cw_balance::MemberPercentage;
 use cw_utils::Duration;
 use itertools::Itertools;
 use std::{ops::Add, vec};
@@ -21,7 +21,7 @@ pub fn instantiate_rounds(
     env: Env,
     response: Response,
     teams: Vec<String>,
-    distribution: Vec<Uint128>,
+    distribution: Vec<Decimal>,
     round_duration: Duration,
 ) -> Result<Response, ContractError> {
     let team_count = teams.len();
@@ -220,20 +220,24 @@ pub fn process_matches(
 
             leaderboard.sort_by(|x, y| y.points.cmp(&x.points));
 
-            let mut member_shares = vec![];
+            let mut distribution = vec![];
 
             for (i, x) in league.extension.distribution.iter().enumerate() {
-                member_shares.push(MemberShare::<String> {
+                distribution.push(MemberPercentage::<String> {
                     addr: leaderboard[i].member.to_string(),
-                    shares: *x,
+                    percentage: *x,
                 })
             }
+
+            let config = CompetitionModule::default().config.load(deps.storage)?;
 
             response = CompetitionModule::default().execute_process_competition(
                 deps,
                 info,
                 league_id,
-                member_shares,
+                distribution,
+                config.extension.cw20_msg,
+                config.extension.cw721_msg,
             )?;
         }
     }
@@ -245,7 +249,7 @@ pub fn update_distribution(
     deps: DepsMut,
     info: MessageInfo,
     league_id: Uint128,
-    distribution: Vec<Uint128>,
+    distribution: Vec<Decimal>,
 ) -> Result<Response, ContractError> {
     let mut league = CompetitionModule::default()
         .competitions

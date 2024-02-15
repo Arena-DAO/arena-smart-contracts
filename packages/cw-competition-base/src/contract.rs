@@ -6,9 +6,9 @@ use cosmwasm_std::{
     instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty,
     Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
-use cw_balance::MemberShare;
+use cw_balance::MemberPercentage;
 use cw_competition::{
-    escrow::CompetitionEscrowDistributeMsg,
+    escrow::{CompetitionEscrowDistributeMsg, TaxInformation},
     msg::{
         CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, IntoCompetitionExt,
         ModuleInfo, QueryBase,
@@ -23,7 +23,6 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::error::CompetitionError;
 
 pub const PROCESS_REPLY_ID: u64 = 1;
-pub const PRECISION_MULTIPLIER: u128 = 1_000_000;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
@@ -48,7 +47,7 @@ pub struct CompetitionModuleContract<
     CompetitionExt: Serialize + Clone + DeserializeOwned,
     CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
 > {
-    pub config: Item<'static, Config>,
+    pub config: Item<'static, Config<InstantiateExt>>,
     pub competition_count: Item<'static, Uint128>,
     pub competitions: IndexedMap<
         'static,
@@ -67,9 +66,9 @@ pub struct CompetitionModuleContract<
 }
 
 impl<
-        InstantiateExt,
+        InstantiateExt: Serialize + DeserializeOwned + Clone,
         ExecuteExt,
-        QueryExt,
+        QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
         CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
     >
@@ -137,9 +136,9 @@ impl<
 }
 
 impl<
-        InstantiateExt,
+        InstantiateExt: Serialize + DeserializeOwned + Clone,
         ExecuteExt,
-        QueryExt,
+        QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
         CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
     > Default
@@ -166,9 +165,9 @@ impl<
 }
 
 impl<
-        InstantiateExt,
+        InstantiateExt: Serialize + DeserializeOwned + Clone,
         ExecuteExt,
-        QueryExt,
+        QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
         CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
     >
@@ -179,9 +178,6 @@ impl<
         CompetitionExt,
         CompetitionInstantiateExt,
     >
-where
-    CompetitionExt: Serialize + DeserializeOwned,
-    QueryExt: JsonSchema,
 {
     pub fn instantiate(
         &self,
@@ -195,6 +191,7 @@ where
             &Config {
                 key: msg.key.clone(),
                 description: msg.description.clone(),
+                extension: msg.extension,
             },
         )?;
         let ownership = initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
@@ -242,8 +239,13 @@ where
                 rulesets,
                 instantiate_extension,
             ),
-            ExecuteBase::ProcessCompetition { id, distribution } => {
-                self.execute_process_competition(deps, info, id, distribution)
+            ExecuteBase::ProcessCompetition {
+                id,
+                distribution,
+                cw20_msg,
+                cw721_msg,
+            } => {
+                self.execute_process_competition(deps, info, id, distribution, cw20_msg, cw721_msg)
             }
             ExecuteBase::UpdateOwnership(action) => {
                 let ownership =
@@ -639,7 +641,9 @@ where
         deps: DepsMut,
         info: MessageInfo,
         id: Uint128,
-        mut distribution: Vec<cw_balance::MemberShare<String>>,
+        distribution: Vec<cw_balance::MemberPercentage<String>>,
+        cw20_msg: Option<Binary>,
+        cw721_msg: Option<Binary>,
     ) -> Result<Response, CompetitionError> {
         // Load competition
         let mut competition = self
@@ -666,12 +670,21 @@ where
             }
         }
 
-        // Validate and convert distribution members
+        // Validate the distribution
         let result = distribution
             .iter()
             .map(|x| x.into_checked(deps.as_ref()))
-            .collect::<StdResult<Vec<MemberShare<Addr>>>>()?;
+            .collect::<StdResult<Vec<MemberPercentage<Addr>>>>()?;
 
+        let sum = distribution
+            .iter()
+            .try_fold(Decimal::zero(), |acc, x| acc.checked_add(x.percentage))?;
+
+        if sum != Decimal::one() {
+            return Err(CompetitionError::InvalidDistribution {});
+        }
+
+        // Set the result
         competition.result = Some(result);
         self.competitions
             .save(deps.storage, id.u128(), &competition)?;
@@ -700,7 +713,7 @@ where
 
         // If there's an escrow, handle distribution and tax
         if let Some(escrow) = competition.escrow {
-            if !distribution.is_empty() {
+            let tax_info = if !distribution.is_empty() {
                 let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.ok_or(
                     CompetitionError::OwnershipError(cw_ownable::OwnershipError::NoOwner),
                 )?;
@@ -714,37 +727,23 @@ where
                 )?;
 
                 if !tax.is_zero() {
-                    let precision_multiplier = Uint128::from(PRECISION_MULTIPLIER);
-                    let total_shares = distribution
-                        .iter()
-                        .try_fold(Uint128::zero(), |acc, x| acc.checked_add(x.shares))?;
-
-                    let dao_shares = tax
-                        .checked_mul(Decimal::from_atomics(
-                            total_shares.checked_mul(precision_multiplier)?,
-                            0u32,
-                        )?)?
-                        .checked_div(Decimal::one().checked_sub(tax)?)?
-                        .checked_div(Decimal::from_atomics(
-                            Uint128::new(10u128).checked_pow(tax.decimal_places())?,
-                            0u32,
-                        )?)?
-                        .atomics();
-
-                    for member in &mut distribution {
-                        member.shares = member.shares.checked_mul(precision_multiplier)?;
-                    }
-
-                    distribution.push(MemberShare {
-                        addr: competition.admin_dao.to_string(),
-                        shares: dao_shares,
-                    });
+                    Some(TaxInformation {
+                        tax,
+                        receiver: competition.admin_dao.to_string(),
+                        cw20_msg,
+                        cw721_msg,
+                    })
+                } else {
+                    None
                 }
-            }
+            } else {
+                None
+            };
 
             let sub_msg = SubMsg::reply_on_success(
                 CompetitionEscrowDistributeMsg {
                     distribution,
+                    tax_info,
                     remainder_addr: competition.admin_dao.to_string(),
                 }
                 .into_cosmos_msg(escrow.clone())?,
@@ -768,7 +767,7 @@ where
         &self,
         deps: Deps,
         env: Env,
-        msg: QueryBase<QueryExt, CompetitionExt>,
+        msg: QueryBase<InstantiateExt, QueryExt, CompetitionExt>,
     ) -> StdResult<Binary> {
         match msg {
             QueryBase::Config {} => to_json_binary(&self.config.load(deps.storage)?),
