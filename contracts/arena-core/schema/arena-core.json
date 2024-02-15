@@ -798,18 +798,18 @@
           }
         ]
       },
-      "MemberShare_for_String": {
+      "MemberPercentage_for_String": {
         "type": "object",
         "required": [
           "addr",
-          "shares"
+          "percentage"
         ],
         "properties": {
           "addr": {
             "type": "string"
           },
-          "shares": {
-            "$ref": "#/definitions/Uint128"
+          "percentage": {
+            "$ref": "#/definitions/Decimal"
           }
         },
         "additionalProperties": false
@@ -899,13 +899,33 @@
           "title"
         ],
         "properties": {
+          "cw20_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cw721_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "description": {
             "type": "string"
           },
           "distribution": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/MemberShare_for_String"
+              "$ref": "#/definitions/MemberPercentage_for_String"
             }
           },
           "id": {

@@ -126,7 +126,7 @@
               "distribution": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/MemberShare_for_String"
+                  "$ref": "#/definitions/MemberPercentage_for_String"
                 }
               },
               "id": {
@@ -244,10 +244,30 @@
               "id"
             ],
             "properties": {
+              "cw20_msg": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cw721_msg": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "distribution": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/MemberShare_for_String"
+                  "$ref": "#/definitions/MemberPercentage_for_String"
                 }
               },
               "id": {
@@ -391,6 +411,10 @@
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
       },
+      "Decimal": {
+        "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+        "type": "string"
+      },
       "Empty": {
         "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
         "type": "object"
@@ -445,18 +469,18 @@
           }
         ]
       },
-      "MemberShare_for_String": {
+      "MemberPercentage_for_String": {
         "type": "object",
         "required": [
           "addr",
-          "shares"
+          "percentage"
         ],
         "properties": {
           "addr": {
             "type": "string"
           },
-          "shares": {
-            "$ref": "#/definitions/Uint128"
+          "percentage": {
+            "$ref": "#/definitions/Decimal"
           }
         },
         "additionalProperties": false
@@ -557,13 +581,33 @@
           "title"
         ],
         "properties": {
+          "cw20_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cw721_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "description": {
             "type": "string"
           },
           "distribution": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/MemberShare_for_String"
+              "$ref": "#/definitions/MemberPercentage_for_String"
             }
           },
           "id": {
@@ -895,7 +939,7 @@
             "null"
           ],
           "items": {
-            "$ref": "#/definitions/MemberShare_for_Addr"
+            "$ref": "#/definitions/MemberPercentage_for_Addr"
           }
         },
         "rules": {
@@ -933,6 +977,10 @@
             "inactive",
             "jailed"
           ]
+        },
+        "Decimal": {
+          "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+          "type": "string"
         },
         "Empty": {
           "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
@@ -1005,18 +1053,18 @@
             }
           ]
         },
-        "MemberShare_for_Addr": {
+        "MemberPercentage_for_Addr": {
           "type": "object",
           "required": [
             "addr",
-            "shares"
+            "percentage"
           ],
           "properties": {
             "addr": {
               "$ref": "#/definitions/Addr"
             },
-            "shares": {
-              "$ref": "#/definitions/Uint128"
+            "percentage": {
+              "$ref": "#/definitions/Decimal"
             }
           },
           "additionalProperties": false
@@ -1122,7 +1170,7 @@
                 "null"
               ],
               "items": {
-                "$ref": "#/definitions/MemberShare_for_Addr"
+                "$ref": "#/definitions/MemberPercentage_for_Addr"
               }
             },
             "rules": {
@@ -1156,6 +1204,10 @@
             "inactive",
             "jailed"
           ]
+        },
+        "Decimal": {
+          "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+          "type": "string"
         },
         "Empty": {
           "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
@@ -1228,18 +1280,18 @@
             }
           ]
         },
-        "MemberShare_for_Addr": {
+        "MemberPercentage_for_Addr": {
           "type": "object",
           "required": [
             "addr",
-            "shares"
+            "percentage"
           ],
           "properties": {
             "addr": {
               "$ref": "#/definitions/Addr"
             },
-            "shares": {
-              "$ref": "#/definitions/Uint128"
+            "percentage": {
+              "$ref": "#/definitions/Decimal"
             }
           },
           "additionalProperties": false
@@ -1264,21 +1316,31 @@
     },
     "config": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Config",
+      "title": "Config_for_Empty",
       "type": "object",
       "required": [
         "description",
+        "extension",
         "key"
       ],
       "properties": {
         "description": {
           "type": "string"
         },
+        "extension": {
+          "$ref": "#/definitions/Empty"
+        },
         "key": {
           "type": "string"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "definitions": {
+        "Empty": {
+          "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
+          "type": "object"
+        }
+      }
     },
     "d_a_o": {
       "$schema": "http://json-schema.org/draft-07/schema#",
