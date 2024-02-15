@@ -744,7 +744,7 @@ impl<
                 CompetitionEscrowDistributeMsg {
                     distribution,
                     tax_info,
-                    remainder_addr: competition.admin_dao.to_string(),
+                    remainder_addr: competition.host.to_string(),
                 }
                 .into_cosmos_msg(escrow.clone())?,
                 PROCESS_REPLY_ID,
