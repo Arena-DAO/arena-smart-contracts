@@ -232,12 +232,16 @@ pub fn distribute(
 
         total_balance = total_balance.checked_sub(&tax)?;
 
-        tax.transmit_all(
-            deps.as_ref(),
-            &tax_info.receiver,
-            tax_info.cw20_msg,
-            tax_info.cw721_msg,
-        )?
+        if !tax.is_empty() {
+            tax.transmit_all(
+                deps.as_ref(),
+                &tax_info.receiver,
+                tax_info.cw20_msg,
+                tax_info.cw721_msg,
+            )?
+        } else {
+            vec![]
+        }
     } else {
         vec![]
     };
