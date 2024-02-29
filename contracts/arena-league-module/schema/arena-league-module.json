@@ -173,7 +173,6 @@
           "create_competition": {
             "type": "object",
             "required": [
-              "category_id",
               "description",
               "expiration",
               "host",
@@ -184,7 +183,14 @@
             ],
             "properties": {
               "category_id": {
-                "$ref": "#/definitions/Uint128"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "description": {
                 "type": "string"
@@ -1006,12 +1012,16 @@
             "properties": {
               "category": {
                 "type": "object",
-                "required": [
-                  "id"
-                ],
                 "properties": {
                   "id": {
-                    "$ref": "#/definitions/Uint128"
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Uint128"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -1291,7 +1301,6 @@
       "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
       "type": "object",
       "required": [
-        "category_id",
         "description",
         "evidence",
         "expiration",
@@ -1307,7 +1316,14 @@
       ],
       "properties": {
         "category_id": {
-          "$ref": "#/definitions/Uint128"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "description": {
           "type": "string"
@@ -1604,7 +1620,6 @@
           "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
           "type": "object",
           "required": [
-            "category_id",
             "description",
             "evidence",
             "expiration",
@@ -1620,7 +1635,14 @@
           ],
           "properties": {
             "category_id": {
-              "$ref": "#/definitions/Uint128"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "description": {
               "type": "string"

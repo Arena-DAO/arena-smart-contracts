@@ -154,7 +154,7 @@ pub fn setup_core_context(
                                                 }],
                                                 rulesets: vec![
                                                     NewRuleset {
-                                                        category_id: Uint128::one(),
+                                                        category_id: Some(Uint128::one()),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
@@ -162,7 +162,7 @@ pub fn setup_core_context(
                                                         description: "Test Ruleset 1".to_string(),
                                                     },
                                                     NewRuleset {
-                                                        category_id: Uint128::one(),
+                                                        category_id: Some(Uint128::one()),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
@@ -334,7 +334,7 @@ pub fn test_rulesets() {
                 msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
                     msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
                         to_add: vec![arena_core_interface::msg::NewRuleset {
-                            category_id: Uint128::one(),
+                            category_id: Some(Uint128::one()),
                             rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
                             description: "Test Ruleset 3".to_string(),
                         }],
@@ -356,7 +356,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::Rulesets {
-                    category_id: Uint128::one(),
+                    category_id: Some(Uint128::one()),
                     start_after: None,
                     limit: None,
                     include_disabled: None,
@@ -395,7 +395,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::Rulesets {
-                    category_id: Uint128::one(),
+                    category_id: Some(Uint128::one()),
                     start_after: None,
                     limit: None,
                     include_disabled: None,
@@ -411,7 +411,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_core_interface::msg::QueryMsg::QueryExtension {
                 msg: arena_core_interface::msg::QueryExt::Rulesets {
-                    category_id: Uint128::one(),
+                    category_id: Some(Uint128::one()),
                     start_after: None,
                     limit: None,
                     include_disabled: Some(true),
@@ -432,7 +432,7 @@ pub fn test_rulesets() {
                 msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
                     msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
                         to_add: vec![arena_core_interface::msg::NewRuleset {
-                            category_id: Uint128::from(9999u128), // Non-existent category
+                            category_id: Some(Uint128::from(9999u128)), // Non-existent category
                             rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
                             description: "Test Ruleset 4".to_string(),
                         }],

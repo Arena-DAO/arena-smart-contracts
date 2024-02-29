@@ -28,7 +28,7 @@ impl fmt::Display for CompetitionStatus {
 #[cw_serde]
 pub struct Competition<CompetitionExt> {
     pub id: Uint128,
-    pub category_id: Uint128,
+    pub category_id: Option<Uint128>,
     pub admin_dao: Addr,
     pub host: Addr,
     pub escrow: Option<Addr>,
@@ -49,7 +49,7 @@ pub struct Competition<CompetitionExt> {
 #[cw_serde]
 pub struct CompetitionResponse<CompetitionExt> {
     pub id: Uint128,
-    pub category_id: Uint128,
+    pub category_id: Option<Uint128>,
     pub host: Addr,
     pub escrow: Option<Addr>,
     pub name: String,

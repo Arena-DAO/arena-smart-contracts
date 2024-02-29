@@ -241,13 +241,19 @@
       "NewRuleset": {
         "type": "object",
         "required": [
-          "category_id",
           "description",
           "rules"
         ],
         "properties": {
           "category_id": {
-            "$ref": "#/definitions/Uint128"
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Uint128"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "description": {
             "type": "string"
@@ -870,13 +876,19 @@
       "NewRuleset": {
         "type": "object",
         "required": [
-          "category_id",
           "description",
           "rules"
         ],
         "properties": {
           "category_id": {
-            "$ref": "#/definitions/Uint128"
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Uint128"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "description": {
             "type": "string"
@@ -1273,12 +1285,16 @@
             "properties": {
               "rulesets": {
                 "type": "object",
-                "required": [
-                  "category_id"
-                ],
                 "properties": {
                   "category_id": {
-                    "$ref": "#/definitions/Uint128"
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Uint128"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "include_disabled": {
                     "type": [
@@ -1423,12 +1439,18 @@
               "is_valid_category_and_rulesets": {
                 "type": "object",
                 "required": [
-                  "category_id",
                   "rulesets"
                 ],
                 "properties": {
                   "category_id": {
-                    "$ref": "#/definitions/Uint128"
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Uint128"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "rulesets": {
                     "type": "array",
@@ -1575,7 +1597,6 @@
       "Ruleset": {
         "type": "object",
         "required": [
-          "category_id",
           "description",
           "id",
           "is_enabled",
@@ -1583,7 +1604,14 @@
         ],
         "properties": {
           "category_id": {
-            "$ref": "#/definitions/Uint128"
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Uint128"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "description": {
             "type": "string"

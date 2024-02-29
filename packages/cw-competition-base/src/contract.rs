@@ -26,7 +26,7 @@ pub const PROCESS_REPLY_ID: u64 = 1;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
-    pub category: MultiIndex<'a, u128, Competition<CompetitionExt>, u128>,
+    pub category: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
 }
 
 impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
@@ -126,7 +126,7 @@ impl<
                 competitions_status_key,
             ),
             category: MultiIndex::new(
-                |_x, d: &Competition<CompetitionExt>| d.category_id.u128(),
+                |_x, d: &Competition<CompetitionExt>| format!("{:?}", d.category_id),
                 competitions_key,
                 competitions_category_key,
             ),
@@ -498,7 +498,7 @@ impl<
         &self,
         deps: &mut DepsMut,
         env: &Env,
-        category_id: Uint128,
+        category_id: Option<Uint128>,
         host: ModuleInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
@@ -845,7 +845,7 @@ impl<
                     .competitions
                     .idx
                     .category
-                    .prefix(id.u128())
+                    .prefix(format!("{:?}", id))
                     .range(
                         deps.storage,
                         start_after_bound,

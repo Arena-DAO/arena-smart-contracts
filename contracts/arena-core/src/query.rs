@@ -75,7 +75,7 @@ pub fn tax(deps: Deps, env: Env, height: Option<u64>) -> StdResult<Decimal> {
 
 pub fn rulesets(
     deps: Deps,
-    category_id: Uint128,
+    category_id: Option<Uint128>,
     start_after: Option<Uint128>,
     limit: Option<u32>,
     include_disabled: Option<bool>,
@@ -206,11 +206,13 @@ pub fn dump_state(deps: Deps, env: Env) -> StdResult<DumpStateResponse> {
 
 pub fn is_valid_category_and_rulesets(
     deps: Deps,
-    category_id: Uint128,
+    category_id: Option<Uint128>,
     rulesets: Vec<Uint128>,
 ) -> bool {
-    if !competition_categories().has(deps.storage, category_id.u128()) {
-        return false;
+    if let Some(category_id) = category_id {
+        if !competition_categories().has(deps.storage, category_id.u128()) {
+            return false;
+        }
     }
 
     for ruleset_id in rulesets {

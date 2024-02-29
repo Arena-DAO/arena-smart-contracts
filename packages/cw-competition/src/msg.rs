@@ -37,7 +37,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         distribution: Vec<MemberPercentage<String>>,
     },
     CreateCompetition {
-        category_id: Uint128,
+        category_id: Option<Uint128>,
         host: ModuleInfo,
         escrow: Option<ModuleInstantiateInfo>,
         name: String,
@@ -93,7 +93,7 @@ where
 #[cw_serde]
 pub enum CompetitionsFilter {
     CompetitionStatus { status: CompetitionStatus },
-    Category { id: Uint128 },
+    Category { id: Option<Uint128> },
 }
 
 #[cw_serde]

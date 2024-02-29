@@ -108,10 +108,10 @@ pub fn update_rulesets(
     // Add new rulesets
     let mut current_id = RULESETS_COUNT.load(deps.storage)?;
     for ruleset in to_add {
-        if !competition_categories().has(deps.storage, ruleset.category_id.u128()) {
-            return Err(ContractError::CompetitionCategoryDoesNotExist {
-                id: ruleset.category_id,
-            });
+        if let Some(category_id) = ruleset.category_id {
+            if !competition_categories().has(deps.storage, category_id.u128()) {
+                return Err(ContractError::CompetitionCategoryDoesNotExist { id: category_id });
+            }
         }
         current_id = current_id.checked_add(Uint128::one())?;
 

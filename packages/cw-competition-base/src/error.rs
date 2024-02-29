@@ -50,7 +50,7 @@ pub enum CompetitionError {
 
     #[error("InvalidCategoryAndRulesets")]
     InvalidCategoryAndRulesets {
-        category_id: Uint128,
+        category_id: Option<Uint128>,
         rulesets: Vec<Uint128>,
     },
 

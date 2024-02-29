@@ -49,7 +49,7 @@ pub enum QueryExt {
     Ruleset { id: Uint128 },
     #[returns(Vec<Ruleset>)]
     Rulesets {
-        category_id: Uint128,
+        category_id: Option<Uint128>,
         start_after: Option<Uint128>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
@@ -68,7 +68,7 @@ pub enum QueryExt {
     },
     #[returns(bool)]
     IsValidCategoryAndRulesets {
-        category_id: Uint128,
+        category_id: Option<Uint128>,
         rulesets: Vec<Uint128>,
     },
     #[returns(DumpStateResponse)]
@@ -110,7 +110,7 @@ pub struct CompetitionModuleResponse<T: AddressLike> {
 
 #[cw_serde]
 pub struct NewRuleset {
-    pub category_id: Uint128,
+    pub category_id: Option<Uint128>,
     pub rules: Vec<String>,
     pub description: String,
 }
@@ -129,7 +129,7 @@ pub enum EditCompetitionCategory {
 #[cw_serde]
 pub struct Ruleset {
     pub id: Uint128,
-    pub category_id: Uint128,
+    pub category_id: Option<Uint128>,
     pub rules: Vec<String>,
     pub description: String,
     pub is_enabled: bool,

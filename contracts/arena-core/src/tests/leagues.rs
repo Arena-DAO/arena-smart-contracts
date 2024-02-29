@@ -100,7 +100,7 @@ fn create_competition(
         context.app.api().addr_make(ADMIN),
         context.league.league_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
-            category_id: Uint128::one(),
+            category_id: Some(Uint128::one()),
             host: ModuleInfo::New {
                 info: ModuleInstantiateInfo {
                     code_id: context.core.dao_core_id,
