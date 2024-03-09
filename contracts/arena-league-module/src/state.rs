@@ -5,8 +5,9 @@ use cw_utils::Expiration;
 
 #[cw_serde]
 pub struct TournamentExt {
-    pub cw20_msg: Option<Binary>,
-    pub cw721_msg: Option<Binary>,
+    pub tax_cw20_msg: Option<Binary>,
+    pub tax_cw721_msg: Option<Binary>,
+    pub remainder_addr: String,
 }
 
 #[cw_serde]

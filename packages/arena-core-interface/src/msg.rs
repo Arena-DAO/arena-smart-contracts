@@ -148,8 +148,9 @@ pub struct ProposeMessage {
     pub title: String,
     pub description: String,
     pub distribution: Vec<MemberPercentage<String>>,
-    pub cw20_msg: Option<Binary>,
-    pub cw721_msg: Option<Binary>,
+    pub tax_cw20_msg: Option<Binary>,
+    pub tax_cw721_msg: Option<Binary>,
+    pub remainder_addr: String,
 }
 
 #[cw_serde]

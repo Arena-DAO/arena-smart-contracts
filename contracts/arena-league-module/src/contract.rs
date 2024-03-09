@@ -35,6 +35,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    deps.api.addr_validate(&msg.extension.remainder_addr)?;
     let resp = CompetitionModule::default().instantiate(deps.branch(), env, info, msg)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(resp)
@@ -94,10 +95,11 @@ pub fn execute(
             } => execute::update_distribution(deps, info, league_id, distribution),
         },
         ExecuteBase::ProcessCompetition {
-            id: _,
+            competition_id: _,
             distribution: _,
-            cw20_msg: _,
-            cw721_msg: _,
+            tax_cw20_msg: _,
+            tax_cw721_msg: _,
+            remainder_addr: _,
         } => Err(ContractError::InvalidExecute),
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }

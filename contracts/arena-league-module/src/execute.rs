@@ -236,8 +236,9 @@ pub fn process_matches(
                 info,
                 league_id,
                 distribution,
-                config.extension.cw20_msg,
-                config.extension.cw721_msg,
+                config.extension.remainder_addr,
+                config.extension.tax_cw20_msg,
+                config.extension.tax_cw721_msg,
             )?;
         }
     }

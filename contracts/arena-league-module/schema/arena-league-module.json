@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-league-module",
-  "contract_version": "0.9.7",
+  "contract_version": "1.0.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -30,8 +30,14 @@
       },
       "TournamentExt": {
         "type": "object",
+        "required": [
+          "remainder_addr"
+        ],
         "properties": {
-          "cw20_msg": {
+          "remainder_addr": {
+            "type": "string"
+          },
+          "tax_cw20_msg": {
             "anyOf": [
               {
                 "$ref": "#/definitions/Binary"
@@ -41,7 +47,7 @@
               }
             ]
           },
-          "cw721_msg": {
+          "tax_cw721_msg": {
             "anyOf": [
               {
                 "$ref": "#/definitions/Binary"
@@ -103,10 +109,10 @@
           "add_competition_hook": {
             "type": "object",
             "required": [
-              "id"
+              "competition_id"
             ],
             "properties": {
-              "id": {
+              "competition_id": {
                 "$ref": "#/definitions/Uint128"
               }
             },
@@ -124,10 +130,10 @@
           "remove_competition_hook": {
             "type": "object",
             "required": [
-              "id"
+              "competition_id"
             ],
             "properties": {
-              "id": {
+              "competition_id": {
                 "$ref": "#/definitions/Uint128"
               }
             },
@@ -145,18 +151,18 @@
           "execute_competition_hook": {
             "type": "object",
             "required": [
-              "distribution",
-              "id"
+              "competition_id",
+              "distribution"
             ],
             "properties": {
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              },
               "distribution": {
                 "type": "array",
                 "items": {
                   "$ref": "#/definitions/MemberPercentage_for_String"
                 }
-              },
-              "id": {
-                "$ref": "#/definitions/Uint128"
               }
             },
             "additionalProperties": false
@@ -244,18 +250,18 @@
           "submit_evidence": {
             "type": "object",
             "required": [
-              "evidence",
-              "id"
+              "competition_id",
+              "evidence"
             ],
             "properties": {
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              },
               "evidence": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 }
-              },
-              "id": {
-                "$ref": "#/definitions/Uint128"
               }
             },
             "additionalProperties": false
@@ -272,29 +278,13 @@
           "process_competition": {
             "type": "object",
             "required": [
+              "competition_id",
               "distribution",
-              "id"
+              "remainder_addr"
             ],
             "properties": {
-              "cw20_msg": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/Binary"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "cw721_msg": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/Binary"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
               },
               "distribution": {
                 "type": "array",
@@ -302,8 +292,28 @@
                   "$ref": "#/definitions/MemberPercentage_for_String"
                 }
               },
-              "id": {
-                "$ref": "#/definitions/Uint128"
+              "remainder_addr": {
+                "type": "string"
+              },
+              "tax_cw20_msg": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "tax_cw721_msg": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -761,29 +771,10 @@
           "description",
           "distribution",
           "id",
+          "remainder_addr",
           "title"
         ],
         "properties": {
-          "cw20_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "cw721_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "description": {
             "type": "string"
           },
@@ -795,6 +786,29 @@
           },
           "id": {
             "$ref": "#/definitions/Uint128"
+          },
+          "remainder_addr": {
+            "type": "string"
+          },
+          "tax_cw20_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tax_cw721_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "title": {
             "type": "string"
@@ -880,10 +894,10 @@
           "competition": {
             "type": "object",
             "required": [
-              "id"
+              "competition_id"
             ],
             "properties": {
-              "id": {
+              "competition_id": {
                 "$ref": "#/definitions/Uint128"
               }
             },
@@ -928,6 +942,66 @@
                     "type": "null"
                   }
                 ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "evidence"
+        ],
+        "properties": {
+          "evidence": {
+            "type": "object",
+            "required": [
+              "competition_id"
+            ],
+            "properties": {
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              },
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "properties": {
+          "result": {
+            "type": "object",
+            "required": [
+              "competition_id"
+            ],
+            "properties": {
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
               }
             },
             "additionalProperties": false
@@ -1302,7 +1376,6 @@
       "type": "object",
       "required": [
         "description",
-        "evidence",
         "expiration",
         "extension",
         "host",
@@ -1338,12 +1411,6 @@
             }
           ]
         },
-        "evidence": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Evidence"
-          }
-        },
         "expiration": {
           "$ref": "#/definitions/Expiration"
         },
@@ -1361,15 +1428,6 @@
         },
         "name": {
           "type": "string"
-        },
-        "result": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/definitions/MemberPercentage_for_Addr"
-          }
         },
         "rules": {
           "type": "array",
@@ -1454,26 +1512,6 @@
           "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
           "type": "string"
         },
-        "Evidence": {
-          "type": "object",
-          "required": [
-            "content",
-            "submit_time",
-            "submit_user"
-          ],
-          "properties": {
-            "content": {
-              "type": "string"
-            },
-            "submit_time": {
-              "$ref": "#/definitions/Timestamp"
-            },
-            "submit_user": {
-              "$ref": "#/definitions/Addr"
-            }
-          },
-          "additionalProperties": false
-        },
         "Expiration": {
           "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
           "oneOf": [
@@ -1520,22 +1558,6 @@
               "additionalProperties": false
             }
           ]
-        },
-        "MemberPercentage_for_Addr": {
-          "type": "object",
-          "required": [
-            "addr",
-            "percentage"
-          ],
-          "properties": {
-            "addr": {
-              "$ref": "#/definitions/Addr"
-            },
-            "percentage": {
-              "$ref": "#/definitions/Decimal"
-            }
-          },
-          "additionalProperties": false
         },
         "Timestamp": {
           "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -1621,7 +1643,6 @@
           "type": "object",
           "required": [
             "description",
-            "evidence",
             "expiration",
             "extension",
             "host",
@@ -1657,12 +1678,6 @@
                 }
               ]
             },
-            "evidence": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Evidence"
-              }
-            },
             "expiration": {
               "$ref": "#/definitions/Expiration"
             },
@@ -1680,15 +1695,6 @@
             },
             "name": {
               "type": "string"
-            },
-            "result": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "$ref": "#/definitions/MemberPercentage_for_Addr"
-              }
             },
             "rules": {
               "type": "array",
@@ -1725,26 +1731,6 @@
         "Decimal": {
           "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
           "type": "string"
-        },
-        "Evidence": {
-          "type": "object",
-          "required": [
-            "content",
-            "submit_time",
-            "submit_user"
-          ],
-          "properties": {
-            "content": {
-              "type": "string"
-            },
-            "submit_time": {
-              "$ref": "#/definitions/Timestamp"
-            },
-            "submit_user": {
-              "$ref": "#/definitions/Addr"
-            }
-          },
-          "additionalProperties": false
         },
         "Expiration": {
           "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
@@ -1793,22 +1779,6 @@
             }
           ]
         },
-        "MemberPercentage_for_Addr": {
-          "type": "object",
-          "required": [
-            "addr",
-            "percentage"
-          ],
-          "properties": {
-            "addr": {
-              "$ref": "#/definitions/Addr"
-            },
-            "percentage": {
-              "$ref": "#/definitions/Decimal"
-            }
-          },
-          "additionalProperties": false
-        },
         "Timestamp": {
           "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
           "allOf": [
@@ -1855,8 +1825,14 @@
         },
         "TournamentExt": {
           "type": "object",
+          "required": [
+            "remainder_addr"
+          ],
           "properties": {
-            "cw20_msg": {
+            "remainder_addr": {
+              "type": "string"
+            },
+            "tax_cw20_msg": {
               "anyOf": [
                 {
                   "$ref": "#/definitions/Binary"
@@ -1866,7 +1842,7 @@
                 }
               ]
             },
-            "cw721_msg": {
+            "tax_cw721_msg": {
               "anyOf": [
                 {
                   "$ref": "#/definitions/Binary"
@@ -1885,6 +1861,52 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "String",
       "type": "string"
+    },
+    "evidence": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_Evidence",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Evidence"
+      },
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
+        "Evidence": {
+          "type": "object",
+          "required": [
+            "content",
+            "submit_time",
+            "submit_user"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "submit_time": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "submit_user": {
+              "$ref": "#/definitions/Addr"
+            }
+          },
+          "additionalProperties": false
+        },
+        "Timestamp": {
+          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint64"
+            }
+          ]
+        },
+        "Uint64": {
+          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+          "type": "string"
+        }
+      }
     },
     "ownership": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1986,6 +2008,36 @@
       "title": "Binary",
       "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
       "type": "string"
+    },
+    "result": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_MemberPercentage_for_String",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/MemberPercentage_for_String"
+      },
+      "definitions": {
+        "Decimal": {
+          "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+          "type": "string"
+        },
+        "MemberPercentage_for_String": {
+          "type": "object",
+          "required": [
+            "addr",
+            "percentage"
+          ],
+          "properties": {
+            "addr": {
+              "type": "string"
+            },
+            "percentage": {
+              "$ref": "#/definitions/Decimal"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
     }
   }
 }

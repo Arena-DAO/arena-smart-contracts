@@ -11,7 +11,7 @@ use cw4::Member;
 use cw_balance::{MemberBalanceUnchecked, MemberPercentage};
 use cw_competition::{
     msg::ModuleInfo,
-    state::{CompetitionResponse, CompetitionStatus},
+    state::{CompetitionListItemResponse, CompetitionStatus},
 };
 use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
 use cw_utils::Expiration;
@@ -148,7 +148,7 @@ fn create_competition(
     );
     assert!(result.is_ok());
 
-    let id = get_attr_value(&result.unwrap(), "id");
+    let id = get_attr_value(&result.unwrap(), "competition_id");
     assert!(id.is_some());
 
     let result = Uint128::from_str(&id.unwrap());
@@ -292,7 +292,7 @@ fn test_create_competition() {
     );
 
     // Ensure query by competition status works
-    let competitions: Vec<CompetitionResponse<Empty>> = context
+    let competitions: Vec<CompetitionListItemResponse<Empty>> = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -309,7 +309,7 @@ fn test_create_competition() {
     assert_eq!(competitions.len(), 1);
 
     // Ensure query by competition category works
-    let competitions: Vec<CompetitionResponse<Empty>> = context
+    let competitions: Vec<CompetitionListItemResponse<Empty>> = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -344,7 +344,7 @@ fn test_create_competition() {
         .query_wasm_smart(
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
-                id: competition1_id,
+                competition_id: competition1_id,
             },
         )
         .unwrap();
@@ -373,13 +373,14 @@ fn test_create_competition() {
                 contract_addr: context.wager.wager_module_addr.to_string(),
                 msg: to_json_binary(
                     &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
-                        id: competition1_id,
+                        competition_id: competition1_id,
                         distribution: vec![MemberPercentage {
                             addr: user1.to_string(),
                             percentage: Decimal::one(),
                         }],
-                        cw20_msg: None,
-                        cw721_msg: None,
+                        tax_cw20_msg: None,
+                        tax_cw721_msg: None,
+                        remainder_addr: context.core.dao_addr.to_string(),
                     },
                 )
                 .unwrap(),
@@ -418,7 +419,7 @@ fn test_create_competition() {
         .query_wasm_smart(
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
-                id: competition1_id,
+                competition_id: competition1_id,
             },
         )
         .unwrap();
@@ -484,17 +485,17 @@ fn test_create_competition() {
     assert_eq!(balance.amount, Uint128::from(3_000u128));
 
     // Assert result is populated
-    let competition1: WagerResponse = context
+    let result: Vec<MemberPercentage<String>> = context
         .app
         .wrap()
         .query_wasm_smart(
             context.wager.wager_module_addr.clone(),
-            &QueryMsg::Competition {
-                id: competition1_id,
+            &QueryMsg::Result {
+                competition_id: competition1_id,
             },
         )
         .unwrap();
-    assert!(competition1.result.is_some());
+    assert!(!result.is_empty());
 }
 
 #[test]
@@ -570,7 +571,7 @@ fn test_create_competition_jailed() {
         .query_wasm_smart(
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
-                id: competition1_id,
+                competition_id: competition1_id,
             },
         )
         .unwrap();
@@ -585,7 +586,7 @@ fn test_create_competition_jailed() {
         .query_wasm_smart(
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
-                id: competition1_id,
+                competition_id: competition1_id,
             },
         )
         .unwrap();
@@ -600,8 +601,9 @@ fn test_create_competition_jailed() {
             addr: user1.to_string(),
             percentage: Decimal::one(),
         }],
-        cw20_msg: None,
-        cw721_msg: None,
+        tax_cw20_msg: None,
+        tax_cw721_msg: None,
+        remainder_addr: context.core.dao_addr.to_string(),
     };
 
     let result = context.app.execute_contract(
@@ -641,7 +643,7 @@ fn test_create_competition_jailed() {
         .query_wasm_smart(
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
-                id: competition1_id,
+                competition_id: competition1_id,
             },
         )
         .unwrap();
@@ -676,7 +678,7 @@ fn test_create_competition_jailed() {
         .query_wasm_smart(
             context.wager.wager_module_addr.clone(),
             &QueryMsg::Competition {
-                id: competition1_id,
+                competition_id: competition1_id,
             },
         )
         .unwrap();

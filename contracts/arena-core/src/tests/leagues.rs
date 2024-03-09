@@ -56,8 +56,9 @@ fn setup_league_context(
                                 key: "Leagues".to_string(),
                                 description: "This is a description".to_string(),
                                 extension: TournamentExt {
-                                    cw20_msg: None,
-                                    cw721_msg: None,
+                                    tax_cw20_msg: None,
+                                    tax_cw721_msg: None,
+                                    remainder_addr: core_context.dao_addr.to_string(),
                                 },
                             })
                             .unwrap(),
@@ -159,7 +160,7 @@ fn create_competition(
     );
     assert!(result.is_ok());
 
-    let id = get_attr_value(&result.unwrap(), "id");
+    let id = get_attr_value(&result.unwrap(), "competition_id");
     assert!(id.is_some());
 
     let result = Uint128::from_str(&id.unwrap());
@@ -244,7 +245,7 @@ fn test_create_competition() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::Competition {
-                id: competition1_id,
+                competition_id: competition1_id,
             },
         )
         .unwrap();

@@ -13,7 +13,10 @@ use cw_competition::{
         CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, IntoCompetitionExt,
         ModuleInfo, QueryBase,
     },
-    state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
+    state::{
+        Competition, CompetitionListItemResponse, CompetitionResponse, CompetitionStatus, Config,
+        Evidence,
+    },
 };
 use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
@@ -55,6 +58,10 @@ pub struct CompetitionModuleContract<
         Competition<CompetitionExt>,
         CompetitionIndexes<'static, CompetitionExt>,
     >,
+    pub competition_evidence: Map<'static, (u128, u128), Evidence>,
+    pub competition_evidence_count: Map<'static, u128, Uint128>,
+    pub competition_result: Map<'static, u128, Vec<MemberPercentage<Addr>>>,
+    pub competition_rules: Map<'static, u128, Vec<String>>,
     pub escrows_to_competitions: Map<'static, Addr, u128>,
     pub temp_competition: Item<'static, u128>,
     pub competition_hooks: Map<'static, (u128, Addr), HookDirection>,
@@ -90,6 +97,10 @@ impl<
         escrows_to_competitions_key: &'static str,
         temp_competition_key: &'static str,
         competition_hooks_key: &'static str,
+        competition_evidence_key: &'static str,
+        competition_evidence_count_key: &'static str,
+        competition_result_key: &'static str,
+        competition_rules_key: &'static str,
     ) -> Self {
         Self {
             config: Item::new(config_key),
@@ -102,6 +113,10 @@ impl<
             escrows_to_competitions: Map::new(escrows_to_competitions_key),
             temp_competition: Item::new(temp_competition_key),
             competition_hooks: Map::new(competition_hooks_key),
+            competition_evidence: Map::new(competition_evidence_key),
+            competition_evidence_count: Map::new(competition_evidence_count_key),
+            competition_result: Map::new(competition_result_key),
+            competition_rules: Map::new(competition_rules_key),
             instantiate_type: PhantomData,
             execute_type: PhantomData,
             query_type: PhantomData,
@@ -157,9 +172,13 @@ impl<
             "competitions",
             "competitions__status",
             "competitions__category",
-            "escrows",
+            "escrows_to_competitions",
             "temp_competition",
             "competition_hooks",
+            "competition_evidence",
+            "competition_evidence_count",
+            "competition_result",
+            "competition_rules",
         )
     }
 }
@@ -218,7 +237,7 @@ impl<
             }
             ExecuteBase::CreateCompetition {
                 category_id,
-                host: competition_dao,
+                host,
                 escrow,
                 name,
                 description,
@@ -230,7 +249,7 @@ impl<
                 &mut deps,
                 &env,
                 category_id,
-                competition_dao,
+                host,
                 escrow,
                 name,
                 description,
@@ -240,30 +259,38 @@ impl<
                 instantiate_extension,
             ),
             ExecuteBase::ProcessCompetition {
-                id,
+                competition_id,
                 distribution,
-                cw20_msg,
-                cw721_msg,
-            } => {
-                self.execute_process_competition(deps, info, id, distribution, cw20_msg, cw721_msg)
-            }
+                remainder_addr,
+                tax_cw20_msg,
+                tax_cw721_msg,
+            } => self.execute_process_competition(
+                deps,
+                info,
+                competition_id,
+                distribution,
+                remainder_addr,
+                tax_cw20_msg,
+                tax_cw721_msg,
+            ),
             ExecuteBase::UpdateOwnership(action) => {
                 let ownership =
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
             ExecuteBase::Activate {} => self.execute_activate(deps, info),
-            ExecuteBase::SubmitEvidence { id, evidence } => {
-                self.execute_submit_evidence(deps, env, info, id, evidence)
+            ExecuteBase::SubmitEvidence {
+                competition_id: id,
+                evidence,
+            } => self.execute_submit_evidence(deps, env, info, id, evidence),
+            ExecuteBase::AddCompetitionHook { competition_id } => {
+                self.execute_add_competition_hook(deps, info, competition_id)
             }
-            ExecuteBase::AddCompetitionHook { id } => {
-                self.execute_add_competition_hook(deps, info, id)
-            }
-            ExecuteBase::RemoveCompetitionHook { id } => {
-                self.execute_remove_competition_hook(deps, info, id)
+            ExecuteBase::RemoveCompetitionHook { competition_id } => {
+                self.execute_remove_competition_hook(deps, info, competition_id)
             }
             ExecuteBase::ExecuteCompetitionHook {
-                id: _,
+                competition_id: _,
                 distribution: _,
             }
             | ExecuteBase::Extension { .. } => Ok(Response::default()),
@@ -275,34 +302,41 @@ impl<
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        id: Uint128,
+        competition_id: Uint128,
         evidence: Vec<String>,
     ) -> Result<Response, CompetitionError> {
-        self.competitions.update(
-            deps.storage,
-            id.u128(),
-            |x| -> Result<_, CompetitionError> {
-                match x {
-                    Some(mut competition) => {
-                        if competition.status != CompetitionStatus::Jailed {
-                            return Err(CompetitionError::InvalidCompetitionStatus {
-                                current_status: competition.status,
-                            });
-                        }
+        let competition = self
+            .competitions
+            .load(deps.storage, competition_id.u128())?;
 
-                        competition
-                            .evidence
-                            .extend(evidence.iter().map(|x| Evidence {
-                                submit_user: info.sender.clone(),
-                                content: x.to_string(),
-                                submit_time: env.block.time,
-                            }));
-                        Ok(competition)
-                    }
-                    None => Err(CompetitionError::UnknownCompetitionId { id: id.u128() }),
-                }
-            },
-        )?;
+        // Validate that competition is jailed
+        if competition.status != CompetitionStatus::Jailed {
+            return Err(CompetitionError::InvalidCompetitionStatus {
+                current_status: competition.status,
+            });
+        }
+
+        let mut evidence_id = self
+            .competition_evidence_count
+            .may_load(deps.storage, competition_id.u128())?
+            .unwrap_or_default();
+
+        for item in evidence {
+            self.competition_evidence.save(
+                deps.storage,
+                (competition_id.u128(), evidence_id.u128()),
+                &Evidence {
+                    submit_user: info.sender.clone(),
+                    content: item.to_string(),
+                    submit_time: env.block.time,
+                },
+            )?;
+
+            evidence_id = evidence_id.checked_add(Uint128::one())?;
+        }
+
+        self.competition_evidence_count
+            .save(deps.storage, competition_id.u128(), &evidence_id)?;
 
         Ok(Response::new()
             .add_attribute("action", "submit_evidence")
@@ -313,13 +347,13 @@ impl<
         &self,
         deps: DepsMut,
         info: MessageInfo,
-        id: Uint128,
+        competition_id: Uint128,
     ) -> Result<(), CompetitionError> {
         // Validate hook
         if HookDirection::Incoming
             != self
                 .competition_hooks
-                .load(deps.storage, (id.u128(), info.sender.clone()))?
+                .load(deps.storage, (competition_id.u128(), info.sender.clone()))?
         {
             return Err(CompetitionError::Unauthorized {});
         }
@@ -331,11 +365,13 @@ impl<
         &self,
         deps: DepsMut,
         info: MessageInfo,
-        id: Uint128,
+        competition_id: Uint128,
     ) -> Result<Response, CompetitionError> {
         // Load competition using the ID
-        if !self.competitions.has(deps.storage, id.u128()) {
-            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+        if !self.competitions.has(deps.storage, competition_id.u128()) {
+            return Err(CompetitionError::UnknownCompetitionId {
+                id: competition_id.u128(),
+            });
         };
 
         // Assert sender is a registered, active competition module
@@ -367,35 +403,37 @@ impl<
         // Add competition hook
         self.competition_hooks.save(
             deps.storage,
-            (id.u128(), info.sender.clone()),
+            (competition_id.u128(), info.sender.clone()),
             &HookDirection::Outgoing,
         )?;
 
         Ok(Response::new()
             .add_attribute("action", "add_competition_hook")
             .add_attribute("competition_module", info.sender)
-            .add_attribute("id", id.to_string()))
+            .add_attribute("id", competition_id.to_string()))
     }
 
     pub fn execute_remove_competition_hook(
         &self,
         deps: DepsMut,
         info: MessageInfo,
-        id: Uint128,
+        competition_id: Uint128,
     ) -> Result<Response, CompetitionError> {
         // Load competition using the ID
-        if !self.competitions.has(deps.storage, id.u128()) {
-            return Err(CompetitionError::UnknownCompetitionId { id: id.u128() });
+        if !self.competitions.has(deps.storage, competition_id.u128()) {
+            return Err(CompetitionError::UnknownCompetitionId {
+                id: competition_id.u128(),
+            });
         };
 
         // Remove competition hook
         self.competition_hooks
-            .remove(deps.storage, (id.u128(), info.sender.clone()));
+            .remove(deps.storage, (competition_id.u128(), info.sender.clone()));
 
         Ok(Response::new()
             .add_attribute("action", "add_competition_hook")
             .add_attribute("competition_module", info.sender)
-            .add_attribute("id", id.to_string()))
+            .add_attribute("id", competition_id.to_string()))
     }
 
     pub fn execute_activate(
@@ -521,12 +559,12 @@ impl<
         ))?;
 
         // Setup
-        let id = self
+        let competition_id = self
             .competition_count
             .update(deps.storage, |x| -> StdResult<_> {
                 Ok(x.checked_add(Uint128::one())?)
             })?;
-        let admin_dao = self.get_dao(deps.as_ref())?;
+        let admin_dao = self.query_dao(deps.as_ref())?;
         let mut msgs = vec![];
         let mut initial_status = CompetitionStatus::Pending;
 
@@ -572,8 +610,11 @@ impl<
 
                 let addr = deps.api.addr_humanize(&canonical_addr)?;
 
-                self.escrows_to_competitions
-                    .save(deps.storage, addr.clone(), &id.u128())?;
+                self.escrows_to_competitions.save(
+                    deps.storage,
+                    addr.clone(),
+                    &competition_id.u128(),
+                )?;
 
                 Some(addr)
             }
@@ -602,7 +643,7 @@ impl<
 
         // Create competition
         let competition = Competition {
-            id,
+            id: competition_id,
             category_id,
             admin_dao: admin_dao.clone(),
             host: host_addr,
@@ -611,20 +652,19 @@ impl<
             name,
             description,
             expiration,
-            rules,
             rulesets,
             status: initial_status,
             extension: extension.into_competition_ext(deps.as_ref())?,
-            result: None,
-            evidence: vec![],
         };
 
+        self.competition_rules
+            .save(deps.storage, competition_id.u128(), &rules)?;
         self.competitions
-            .save(deps.storage, id.u128(), &competition)?;
+            .save(deps.storage, competition_id.u128(), &competition)?;
 
         Ok(Response::new()
             .add_attribute("action", "create_competition")
-            .add_attribute("id", id)
+            .add_attribute("competition_id", competition_id)
             .add_attribute(
                 "escrow_addr",
                 competition
@@ -636,20 +676,24 @@ impl<
             .add_messages(msgs))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn execute_process_competition(
         &self,
         deps: DepsMut,
         info: MessageInfo,
-        id: Uint128,
-        distribution: Vec<cw_balance::MemberPercentage<String>>,
-        cw20_msg: Option<Binary>,
-        cw721_msg: Option<Binary>,
+        competition_id: Uint128,
+        distribution: Vec<MemberPercentage<String>>,
+        remainder_addr: String,
+        tax_cw20_msg: Option<Binary>,
+        tax_cw721_msg: Option<Binary>,
     ) -> Result<Response, CompetitionError> {
         // Load competition
-        let mut competition = self
+        let competition = self
             .competitions
-            .may_load(deps.storage, id.u128())?
-            .ok_or(CompetitionError::UnknownCompetitionId { id: id.u128() })?;
+            .may_load(deps.storage, competition_id.u128())?
+            .ok_or(CompetitionError::UnknownCompetitionId {
+                id: competition_id.u128(),
+            })?;
 
         // Validate competition status and sender's authorization
         match competition.status {
@@ -670,11 +714,14 @@ impl<
             }
         }
 
+        // Validate the remainder address
+        let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
+
         // Validate the distribution
         let result = distribution
             .iter()
             .map(|x| x.into_checked(deps.as_ref()))
-            .collect::<StdResult<Vec<MemberPercentage<Addr>>>>()?;
+            .collect::<StdResult<Vec<_>>>()?;
 
         let sum = distribution
             .iter()
@@ -685,18 +732,17 @@ impl<
         }
 
         // Set the result
-        competition.result = Some(result);
-        self.competitions
-            .save(deps.storage, id.u128(), &competition)?;
+        self.competition_result
+            .save(deps.storage, competition_id.u128(), &result)?;
 
         // Prepare hooks
         let hooks: Vec<(Addr, HookDirection)> = self
             .competition_hooks
-            .prefix(id.u128())
+            .prefix(competition_id.u128())
             .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
             .collect::<StdResult<_>>()?;
         let msg_binary = to_json_binary(&ExecuteBase::<Empty, Empty>::ExecuteCompetitionHook {
-            id,
+            competition_id,
             distribution: distribution.clone(),
         })?;
         let mut msgs: Vec<SubMsg> = hooks
@@ -730,8 +776,8 @@ impl<
                     Some(TaxInformation {
                         tax,
                         receiver: competition.admin_dao.to_string(),
-                        cw20_msg,
-                        cw721_msg,
+                        cw20_msg: tax_cw20_msg,
+                        cw721_msg: tax_cw721_msg,
                     })
                 } else {
                     None
@@ -744,13 +790,14 @@ impl<
                 CompetitionEscrowDistributeMsg {
                     distribution,
                     tax_info,
-                    remainder_addr: competition.host.to_string(),
+                    remainder_addr: remainder_addr.to_string(),
                 }
                 .into_cosmos_msg(escrow.clone())?,
                 PROCESS_REPLY_ID,
             );
 
-            self.temp_competition.save(deps.storage, &id.u128())?;
+            self.temp_competition
+                .save(deps.storage, &competition_id.u128())?;
 
             // We don't expect another activation message from the escrow
             self.escrows_to_competitions.remove(deps.storage, escrow);
@@ -771,17 +818,22 @@ impl<
     ) -> StdResult<Binary> {
         match msg {
             QueryBase::Config {} => to_json_binary(&self.config.load(deps.storage)?),
-            QueryBase::Competition { id } => to_json_binary(
-                &self
-                    .competitions
-                    .load(deps.storage, id.u128())?
-                    .into_response(&env.block),
-            ),
+            QueryBase::Competition { competition_id } => {
+                to_json_binary(&self.query_competition(deps, env, competition_id)?)
+            }
             QueryBase::DAO {} => to_json_binary(
                 &self
-                    .get_dao(deps)
+                    .query_dao(deps)
                     .map_err(|x| StdError::GenericErr { msg: x.to_string() })?,
             ),
+            QueryBase::Result { competition_id } => {
+                to_json_binary(&self.query_result(deps, competition_id)?)
+            }
+            QueryBase::Evidence {
+                competition_id,
+                start_after,
+                limit,
+            } => to_json_binary(&self.query_evidence(deps, competition_id, start_after, limit)?),
             QueryBase::Competitions {
                 start_after,
                 limit,
@@ -796,7 +848,55 @@ impl<
         }
     }
 
-    pub fn get_dao(&self, deps: Deps) -> Result<Addr, cw_ownable::OwnershipError> {
+    pub fn query_result(
+        &self,
+        deps: Deps,
+        competition_id: Uint128,
+    ) -> StdResult<Vec<MemberPercentage<Addr>>> {
+        self.competition_result
+            .load(deps.storage, competition_id.u128())
+    }
+
+    pub fn query_evidence(
+        &self,
+        deps: Deps,
+        competition_id: Uint128,
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+    ) -> StdResult<Vec<Evidence>> {
+        let start_after_bound = start_after.map(Bound::exclusive);
+        let limit = limit.unwrap_or(10).max(30);
+
+        self.competition_evidence
+            .prefix(competition_id.u128())
+            .range(
+                deps.storage,
+                start_after_bound,
+                None,
+                cosmwasm_std::Order::Ascending,
+            )
+            .map(|x| x.map(|y| y.1))
+            .take(limit as usize)
+            .collect::<StdResult<Vec<_>>>()
+    }
+
+    pub fn query_competition(
+        &self,
+        deps: Deps,
+        env: Env,
+        competition_id: Uint128,
+    ) -> StdResult<CompetitionResponse<CompetitionExt>> {
+        let rules = self
+            .competition_rules
+            .load(deps.storage, competition_id.u128())?;
+
+        Ok(self
+            .competitions
+            .load(deps.storage, competition_id.u128())?
+            .into_response(rules, &env.block))
+    }
+
+    pub fn query_dao(&self, deps: Deps) -> Result<Addr, cw_ownable::OwnershipError> {
         let core = cw_ownable::get_ownership(deps.storage)?;
         if core.owner.is_none() {
             return Err(cw_ownable::OwnershipError::NoOwner);
@@ -814,7 +914,7 @@ impl<
         start_after: Option<Uint128>,
         limit: Option<u32>,
         filter: Option<CompetitionsFilter>,
-    ) -> StdResult<Vec<CompetitionResponse<CompetitionExt>>> {
+    ) -> StdResult<Vec<CompetitionListItemResponse<CompetitionExt>>> {
         let start_after_bound = start_after.map(Bound::exclusive);
         let limit = limit.unwrap_or(10).max(30);
 
@@ -824,7 +924,7 @@ impl<
                 deps.storage,
                 start_after_bound,
                 Some(limit),
-                |_x, y| Ok(y.into_response(&env.block)),
+                |_x, y| Ok(y.into_list_item_response(&env.block)),
             ),
             Some(filter) => match filter {
                 CompetitionsFilter::CompetitionStatus { status } => self
@@ -838,7 +938,7 @@ impl<
                         None,
                         cosmwasm_std::Order::Ascending,
                     )
-                    .map(|x| x.map(|y| y.1.into_response(&env.block)))
+                    .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
                 CompetitionsFilter::Category { id } => self
@@ -852,7 +952,7 @@ impl<
                         None,
                         cosmwasm_std::Order::Ascending,
                     )
-                    .map(|x| x.map(|y| y.1.into_response(&env.block)))
+                    .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
             },

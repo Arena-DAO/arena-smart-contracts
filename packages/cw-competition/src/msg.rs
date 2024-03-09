@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::state::CompetitionStatus;
 #[allow(unused_imports)]
 use crate::state::{CompetitionResponse, Config};
+use crate::state::{CompetitionStatus, Evidence};
 use arena_core_interface::msg::ProposeMessage;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
@@ -27,13 +27,13 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     Activate {},
     AddCompetitionHook {
-        id: Uint128,
+        competition_id: Uint128,
     },
     RemoveCompetitionHook {
-        id: Uint128,
+        competition_id: Uint128,
     },
     ExecuteCompetitionHook {
-        id: Uint128,
+        competition_id: Uint128,
         distribution: Vec<MemberPercentage<String>>,
     },
     CreateCompetition {
@@ -48,14 +48,15 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         instantiate_extension: CompetitionInstantiateExt,
     },
     SubmitEvidence {
-        id: Uint128,
+        competition_id: Uint128,
         evidence: Vec<String>,
     },
     ProcessCompetition {
-        id: Uint128,
+        competition_id: Uint128,
         distribution: Vec<MemberPercentage<String>>,
-        cw20_msg: Option<Binary>,
-        cw721_msg: Option<Binary>,
+        remainder_addr: String,
+        tax_cw20_msg: Option<Binary>,
+        tax_cw721_msg: Option<Binary>,
     },
     Extension {
         msg: ExecuteExt,
@@ -76,13 +77,21 @@ where
     #[returns(Uint128)]
     CompetitionCount {},
     #[returns(CompetitionResponse<CompetitionExt>)]
-    Competition { id: Uint128 },
+    Competition { competition_id: Uint128 },
     #[returns(Vec<CompetitionResponse<CompetitionExt>>)]
     Competitions {
         start_after: Option<Uint128>,
         limit: Option<u32>,
         filter: Option<CompetitionsFilter>,
     },
+    #[returns(Vec<Evidence>)]
+    Evidence {
+        competition_id: Uint128,
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+    },
+    #[returns(Vec<MemberPercentage<String>>)]
+    Result { competition_id: Uint128 },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },
     #[serde(skip)]

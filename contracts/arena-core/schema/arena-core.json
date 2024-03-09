@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-core",
-  "contract_version": "0.9.7",
+  "contract_version": "1.0.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -908,29 +908,10 @@
           "description",
           "distribution",
           "id",
+          "remainder_addr",
           "title"
         ],
         "properties": {
-          "cw20_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "cw721_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "description": {
             "type": "string"
           },
@@ -942,6 +923,29 @@
           },
           "id": {
             "$ref": "#/definitions/Uint128"
+          },
+          "remainder_addr": {
+            "type": "string"
+          },
+          "tax_cw20_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tax_cw721_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "title": {
             "type": "string"

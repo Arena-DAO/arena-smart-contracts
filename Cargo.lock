@@ -21,7 +21,7 @@ checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
 name = "arena-core"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "arena-core-interface",
  "arena-escrow",
@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "arena-core-interface"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "arena-escrow"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "arena-testing",
  "cosmwasm-schema",
@@ -93,7 +93,7 @@ dependencies = [
 
 [[package]]
 name = "arena-league-module"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",
@@ -113,7 +113,7 @@ dependencies = [
 
 [[package]]
 name = "arena-testing"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "arena-core",
  "arena-escrow",
@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "arena-wager-module"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -357,7 +357,7 @@ dependencies = [
 
 [[package]]
 name = "cw-balance"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -371,7 +371,7 @@ dependencies = [
 
 [[package]]
 name = "cw-competition"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",
@@ -391,7 +391,7 @@ dependencies = [
 
 [[package]]
 name = "cw-competition-base"
-version = "0.9.7"
+version = "1.0.0"
 dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",

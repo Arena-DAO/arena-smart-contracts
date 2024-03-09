@@ -155,6 +155,9 @@ pub fn propose(
     info: MessageInfo,
     msg: ProposeMessage,
 ) -> Result<Response, PreProposeError> {
+    // Validate remainder addr
+    deps.api.addr_validate(&msg.remainder_addr)?;
+
     let config = PrePropose::default().config.load(deps.storage)?;
     check_can_submit(deps.as_ref(), info.sender.clone(), &config)?;
 
@@ -187,10 +190,11 @@ pub fn propose(
             contract_addr: info.sender.to_string(),
             msg: to_json_binary(
                 &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
-                    id: msg.id,
+                    competition_id: msg.id,
                     distribution: msg.distribution,
-                    cw20_msg: msg.cw20_msg,
-                    cw721_msg: msg.cw721_msg,
+                    tax_cw20_msg: msg.tax_cw20_msg,
+                    tax_cw721_msg: msg.tax_cw721_msg,
+                    remainder_addr: msg.remainder_addr,
                 },
             )?,
             funds: vec![],
