@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 #[allow(unused_imports)]
 use crate::state::{CompetitionResponse, Config};
+#[allow(unused_imports)]
 use crate::state::{CompetitionStatus, Evidence};
 use arena_core_interface::msg::ProposeMessage;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
