@@ -230,7 +230,8 @@ pub fn distribute(
     let msgs = if let Some(tax_info) = tax_info {
         let tax = total_balance.checked_mul_floor(tax_info.tax)?;
 
-        total_balance = total_balance.checked_sub(&tax)?;
+        total_balance =
+            TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> { x.checked_sub(&tax) })?;
 
         if !tax.is_empty() {
             tax.transmit_all(
