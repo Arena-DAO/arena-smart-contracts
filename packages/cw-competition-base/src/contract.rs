@@ -326,6 +326,7 @@ impl<
                 deps.storage,
                 (competition_id.u128(), evidence_id.u128()),
                 &Evidence {
+                    id: evidence_id,
                     submit_user: info.sender.clone(),
                     content: item.to_string(),
                     submit_time: env.block.time,

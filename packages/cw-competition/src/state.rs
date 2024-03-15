@@ -132,6 +132,7 @@ pub struct Config<InstantiateExt> {
 
 #[cw_serde]
 pub struct Evidence {
+    pub id: Uint128,
     pub submit_user: Addr,
     pub content: String,
     pub submit_time: Timestamp,
