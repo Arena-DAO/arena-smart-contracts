@@ -55,7 +55,7 @@ pub fn competition_modules(
                 deps.storage,
                 start_after_bound,
                 None,
-                cosmwasm_std::Order::Ascending,
+                cosmwasm_std::Order::Descending,
             )
             .map(|x| x.map(|y| y.1.to_response(deps)))
             .take(limit as usize)
