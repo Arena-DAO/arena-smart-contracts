@@ -8,7 +8,7 @@ use cosmwasm_std::{
     to_json_binary, Addr, Coin, Coins, CosmosMsg, Decimal, Empty, Uint128, WasmMsg,
 };
 use cw4::Member;
-use cw_balance::{MemberBalanceUnchecked, MemberPercentage};
+use cw_balance::{Distribution, MemberBalanceUnchecked, MemberPercentage};
 use cw_competition::{
     msg::ModuleInfo,
     state::{CompetitionListItemResponse, CompetitionStatus},
@@ -374,13 +374,15 @@ fn test_create_competition() {
                 msg: to_json_binary(
                     &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
                         competition_id: competition1_id,
-                        distribution: vec![MemberPercentage {
-                            addr: user1.to_string(),
-                            percentage: Decimal::one(),
-                        }],
+                        distribution: Distribution::<String> {
+                            member_percentages: vec![MemberPercentage {
+                                addr: user1.to_string(),
+                                percentage: Decimal::one(),
+                            }],
+                            remainder_addr: context.core.dao_addr.to_string(),
+                        },
                         tax_cw20_msg: None,
                         tax_cw721_msg: None,
-                        remainder_addr: context.core.dao_addr.to_string(),
                     },
                 )
                 .unwrap(),
@@ -485,7 +487,7 @@ fn test_create_competition() {
     assert_eq!(balance.amount, Uint128::from(3_000u128));
 
     // Assert result is populated
-    let result: Vec<MemberPercentage<String>> = context
+    let result: Distribution<String> = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -495,7 +497,7 @@ fn test_create_competition() {
             },
         )
         .unwrap();
-    assert!(!result.is_empty());
+    assert!(!result.member_percentages.is_empty());
 }
 
 #[test]
@@ -597,13 +599,15 @@ fn test_create_competition_jailed() {
         id: competition1_id,
         title: "Title".to_string(),
         description: "Description".to_string(),
-        distribution: vec![MemberPercentage {
-            addr: user1.to_string(),
-            percentage: Decimal::one(),
-        }],
+        distribution: Distribution::<String> {
+            member_percentages: vec![MemberPercentage {
+                addr: user1.to_string(),
+                percentage: Decimal::one(),
+            }],
+            remainder_addr: context.core.dao_addr.to_string(),
+        },
         tax_cw20_msg: None,
         tax_cw721_msg: None,
-        remainder_addr: context.core.dao_addr.to_string(),
     };
 
     let result = context.app.execute_contract(

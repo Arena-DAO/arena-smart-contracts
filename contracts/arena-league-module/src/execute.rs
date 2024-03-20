@@ -2,7 +2,7 @@ use cosmwasm_std::{
     Addr, Decimal, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
     StdResult, Uint128, Uint64,
 };
-use cw_balance::MemberPercentage;
+use cw_balance::{Distribution, MemberPercentage};
 use cw_utils::Duration;
 use itertools::Itertools;
 use std::{ops::Add, vec};
@@ -220,10 +220,10 @@ pub fn process_matches(
 
             leaderboard.sort_by(|x, y| y.points.cmp(&x.points));
 
-            let mut distribution = vec![];
+            let mut member_percentages = vec![];
 
             for (i, x) in league.extension.distribution.iter().enumerate() {
-                distribution.push(MemberPercentage::<String> {
+                member_percentages.push(MemberPercentage::<String> {
                     addr: leaderboard[i].member.to_string(),
                     percentage: *x,
                 })
@@ -235,8 +235,10 @@ pub fn process_matches(
                 deps,
                 info,
                 league_id,
-                distribution,
-                config.extension.remainder_addr,
+                Distribution::<String> {
+                    member_percentages,
+                    remainder_addr: leaderboard[0].member.to_string(),
+                },
                 config.extension.tax_cw20_msg,
                 config.extension.tax_cw721_msg,
             )?;

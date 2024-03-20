@@ -99,7 +99,6 @@ pub fn execute(
             distribution: _,
             tax_cw20_msg: _,
             tax_cw721_msg: _,
-            remainder_addr: _,
         } => Err(ContractError::InvalidExecute),
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }

@@ -172,10 +172,7 @@
             ],
             "properties": {
               "distribution": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/MemberPercentage_for_String"
-                }
+                "$ref": "#/definitions/Distribution_for_String"
               }
             },
             "additionalProperties": false
@@ -326,18 +323,11 @@
       "CompetitionEscrowDistributeMsg": {
         "type": "object",
         "required": [
-          "distribution",
-          "remainder_addr"
+          "distribution"
         ],
         "properties": {
           "distribution": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/MemberPercentage_for_String"
-            }
-          },
-          "remainder_addr": {
-            "type": "string"
+            "$ref": "#/definitions/Distribution_for_String"
           },
           "tax_info": {
             "anyOf": [
@@ -397,6 +387,25 @@
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
         "type": "string"
+      },
+      "Distribution_for_String": {
+        "type": "object",
+        "required": [
+          "member_percentages",
+          "remainder_addr"
+        ],
+        "properties": {
+          "member_percentages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/MemberPercentage_for_String"
+            }
+          },
+          "remainder_addr": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       },
       "Expiration": {
         "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
@@ -1003,18 +1012,38 @@
     },
     "distribution": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Nullable_Array_of_MemberPercentage_for_String",
-      "type": [
-        "array",
-        "null"
+      "title": "Nullable_Distribution_for_String",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Distribution_for_String"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "items": {
-        "$ref": "#/definitions/MemberPercentage_for_String"
-      },
       "definitions": {
         "Decimal": {
           "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
           "type": "string"
+        },
+        "Distribution_for_String": {
+          "type": "object",
+          "required": [
+            "member_percentages",
+            "remainder_addr"
+          ],
+          "properties": {
+            "member_percentages": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MemberPercentage_for_String"
+              }
+            },
+            "remainder_addr": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         },
         "MemberPercentage_for_String": {
           "type": "object",

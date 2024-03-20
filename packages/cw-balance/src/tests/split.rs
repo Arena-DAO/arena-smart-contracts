@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw20::Cw20CoinVerified;
 
-use crate::{BalanceVerified, Cw721CollectionVerified, MemberPercentage};
+use crate::{BalanceVerified, Cw721CollectionVerified, Distribution, MemberPercentage};
 
 #[test]
 fn test_split_balances() {
@@ -36,20 +36,21 @@ fn test_split_balances() {
         }],
     };
 
-    let distribution = vec![
-        MemberPercentage {
-            addr: addr_a.clone(),
-            percentage: Decimal::from_ratio(50u128, 80u128),
-        },
-        MemberPercentage {
-            addr: addr_b.clone(),
-            percentage: Decimal::from_ratio(30u128, 80u128),
-        },
-    ];
+    let distribution = Distribution::<Addr> {
+        member_percentages: vec![
+            MemberPercentage {
+                addr: addr_a.clone(),
+                percentage: Decimal::from_ratio(50u128, 80u128),
+            },
+            MemberPercentage {
+                addr: addr_b.clone(),
+                percentage: Decimal::from_ratio(30u128, 80u128),
+            },
+        ],
+        remainder_addr: addr_c.clone(),
+    };
 
-    let remainder_address = &addr_c;
-
-    let split_result = balance.split(&distribution, remainder_address).unwrap();
+    let split_result = balance.split(&distribution).unwrap();
     assert_eq!(split_result.len(), 3);
 
     let member_a_balance = split_result
@@ -175,24 +176,25 @@ fn test_split_balances_with_remainder_as_member_share() {
         }],
     };
 
-    let distribution = vec![
-        MemberPercentage {
-            addr: addr_a.clone(),
-            percentage: Decimal::from_ratio(33u128, 100u128),
-        },
-        MemberPercentage {
-            addr: addr_b.clone(),
-            percentage: Decimal::from_ratio(33u128, 100u128),
-        },
-        MemberPercentage {
-            addr: addr_c.clone(),
-            percentage: Decimal::from_ratio(34u128, 100u128),
-        },
-    ];
+    let distribution = Distribution::<Addr> {
+        member_percentages: vec![
+            MemberPercentage {
+                addr: addr_a.clone(),
+                percentage: Decimal::from_ratio(33u128, 100u128),
+            },
+            MemberPercentage {
+                addr: addr_b.clone(),
+                percentage: Decimal::from_ratio(33u128, 100u128),
+            },
+            MemberPercentage {
+                addr: addr_c.clone(),
+                percentage: Decimal::from_ratio(34u128, 100u128),
+            },
+        ],
+        remainder_addr: addr_c.clone(),
+    };
 
-    let remainder_address = &addr_c;
-
-    let split_result = balance.split(&distribution, remainder_address).unwrap();
+    let split_result = balance.split(&distribution).unwrap();
 
     assert_eq!(split_result[0].balance.native[0].amount.u128(), 33u128);
     assert_eq!(split_result[1].balance.native[0].amount.u128(), 33u128);

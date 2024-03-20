@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, StdResult};
-use cw_balance::{BalanceVerified, MemberBalanceChecked, MemberPercentage};
+use cw_balance::{BalanceVerified, Distribution, MemberBalanceChecked};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
@@ -32,7 +32,7 @@ pub fn is_locked(deps: Deps) -> bool {
     IS_LOCKED.load(deps.storage).unwrap_or_default()
 }
 
-pub fn distribution(deps: Deps, addr: String) -> StdResult<Option<Vec<MemberPercentage<Addr>>>> {
+pub fn distribution(deps: Deps, addr: String) -> StdResult<Option<Distribution<Addr>>> {
     let addr = deps.api.addr_validate(&addr)?;
     PRESET_DISTRIBUTION.may_load(deps.storage, &addr)
 }

@@ -93,7 +93,6 @@ pub fn execute(
             info,
             competition_escrow_distribute_msg.distribution,
             competition_escrow_distribute_msg.tax_info,
-            competition_escrow_distribute_msg.remainder_addr,
         ),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
         ExecuteMsg::UpdateOwnership(action) => {

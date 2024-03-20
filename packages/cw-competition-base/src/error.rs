@@ -53,7 +53,4 @@ pub enum CompetitionError {
         category_id: Option<Uint128>,
         rulesets: Vec<Uint128>,
     },
-
-    #[error("InvalidDistribution")]
-    InvalidDistribution {},
 }

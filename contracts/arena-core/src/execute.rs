@@ -156,7 +156,7 @@ pub fn propose(
     msg: ProposeMessage,
 ) -> Result<Response, PreProposeError> {
     // Validate remainder addr
-    deps.api.addr_validate(&msg.remainder_addr)?;
+    deps.api.addr_validate(&msg.distribution.remainder_addr)?;
 
     let config = PrePropose::default().config.load(deps.storage)?;
     check_can_submit(deps.as_ref(), info.sender.clone(), &config)?;
@@ -194,7 +194,6 @@ pub fn propose(
                     distribution: msg.distribution,
                     tax_cw20_msg: msg.tax_cw20_msg,
                     tax_cw721_msg: msg.tax_cw721_msg,
-                    remainder_addr: msg.remainder_addr,
                 },
             )?,
             funds: vec![],

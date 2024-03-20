@@ -9,9 +9,7 @@ use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-use crate::{
-    is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, MemberPercentage,
-};
+use crate::{is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, Distribution};
 
 // Struct to hold the verified member balance
 #[cw_serde]
@@ -556,21 +554,11 @@ impl BalanceVerified {
     }
 
     // Method to split the balance among multiple users based on their assigned weights
+    // Ensure percentages equal to one before calling this method
     pub fn split(
         &self,
-        distribution: &Vec<MemberPercentage<Addr>>,
-        remainder_address: &Addr,
+        distribution: &Distribution<Addr>,
     ) -> Result<Vec<MemberBalanceChecked>, BalanceError> {
-        let total_weight = distribution
-            .iter()
-            .try_fold(Decimal::zero(), |accumulator, x| {
-                accumulator.checked_add(x.percentage)
-            })?;
-
-        if total_weight != Decimal::one() {
-            return Err(BalanceError::InvalidWeight {});
-        }
-
         let mut split_balances: Vec<MemberBalanceChecked> = Vec::new();
 
         let mut remainders_native: BTreeMap<String, Uint128> = self
@@ -584,11 +572,11 @@ impl BalanceVerified {
             .map(|x| (x.address.clone(), x.amount))
             .collect();
 
-        for member_share in distribution {
+        for member_percentage in &distribution.member_percentages {
             let mut split_native = BTreeMap::new();
             for coin in &self.native {
                 let decimal_amount = Decimal::from_atomics(coin.amount, 0u32)?;
-                let split_amount = member_share
+                let split_amount = member_percentage
                     .percentage
                     .checked_mul(decimal_amount)?
                     .to_uint_floor();
@@ -604,7 +592,7 @@ impl BalanceVerified {
             let mut split_cw20 = BTreeMap::new();
             for cw20_coin in &self.cw20 {
                 let decimal_amount = Decimal::from_atomics(cw20_coin.amount, 0u32)?;
-                let split_amount = member_share
+                let split_amount = member_percentage
                     .percentage
                     .checked_mul(decimal_amount)?
                     .to_uint_floor();
@@ -630,7 +618,7 @@ impl BalanceVerified {
             };
 
             let member_balance = MemberBalanceChecked {
-                addr: member_share.addr.clone(),
+                addr: member_percentage.addr.clone(),
                 balance: split_balance,
             };
 
@@ -653,12 +641,12 @@ impl BalanceVerified {
         if !remainder_balance.is_empty() {
             if let Some(member_balance) = split_balances
                 .iter_mut()
-                .find(|mb| mb.addr == remainder_address)
+                .find(|mb| mb.addr == distribution.remainder_addr)
             {
                 member_balance.balance = member_balance.balance.checked_add(&remainder_balance)?;
             } else {
                 split_balances.push(MemberBalanceChecked {
-                    addr: remainder_address.clone(),
+                    addr: distribution.remainder_addr.clone(),
                     balance: remainder_balance,
                 });
             }

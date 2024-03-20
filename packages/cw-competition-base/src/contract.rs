@@ -6,7 +6,7 @@ use cosmwasm_std::{
     instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty,
     Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
-use cw_balance::MemberPercentage;
+use cw_balance::Distribution;
 use cw_competition::{
     escrow::{CompetitionEscrowDistributeMsg, TaxInformation},
     msg::{
@@ -60,7 +60,7 @@ pub struct CompetitionModuleContract<
     >,
     pub competition_evidence: Map<'static, (u128, u128), Evidence>,
     pub competition_evidence_count: Map<'static, u128, Uint128>,
-    pub competition_result: Map<'static, u128, Vec<MemberPercentage<Addr>>>,
+    pub competition_result: Map<'static, u128, Distribution<Addr>>,
     pub competition_rules: Map<'static, u128, Vec<String>>,
     pub escrows_to_competitions: Map<'static, Addr, u128>,
     pub temp_competition: Item<'static, u128>,
@@ -261,7 +261,6 @@ impl<
             ExecuteBase::ProcessCompetition {
                 competition_id,
                 distribution,
-                remainder_addr,
                 tax_cw20_msg,
                 tax_cw721_msg,
             } => self.execute_process_competition(
@@ -269,7 +268,6 @@ impl<
                 info,
                 competition_id,
                 distribution,
-                remainder_addr,
                 tax_cw20_msg,
                 tax_cw721_msg,
             ),
@@ -683,8 +681,7 @@ impl<
         deps: DepsMut,
         info: MessageInfo,
         competition_id: Uint128,
-        distribution: Vec<MemberPercentage<String>>,
-        remainder_addr: String,
+        distribution: Distribution<String>,
         tax_cw20_msg: Option<Binary>,
         tax_cw721_msg: Option<Binary>,
     ) -> Result<Response, CompetitionError> {
@@ -715,26 +712,15 @@ impl<
             }
         }
 
-        // Validate the remainder address
-        let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
-
         // Validate the distribution
-        let result = distribution
-            .iter()
-            .map(|x| x.into_checked(deps.as_ref()))
-            .collect::<StdResult<Vec<_>>>()?;
-
-        let sum = distribution
-            .iter()
-            .try_fold(Decimal::zero(), |acc, x| acc.checked_add(x.percentage))?;
-
-        if sum != Decimal::one() {
-            return Err(CompetitionError::InvalidDistribution {});
-        }
+        let validated_distribution = distribution.into_checked(deps.as_ref())?;
 
         // Set the result
-        self.competition_result
-            .save(deps.storage, competition_id.u128(), &result)?;
+        self.competition_result.save(
+            deps.storage,
+            competition_id.u128(),
+            &validated_distribution,
+        )?;
 
         // Prepare hooks
         let hooks: Vec<(Addr, HookDirection)> = self
@@ -760,7 +746,7 @@ impl<
 
         // If there's an escrow, handle distribution and tax
         if let Some(escrow) = competition.escrow {
-            let tax_info = if !distribution.is_empty() {
+            let tax_info = if !validated_distribution.member_percentages.is_empty() {
                 let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.ok_or(
                     CompetitionError::OwnershipError(cw_ownable::OwnershipError::NoOwner),
                 )?;
@@ -791,7 +777,6 @@ impl<
                 CompetitionEscrowDistributeMsg {
                     distribution,
                     tax_info,
-                    remainder_addr: remainder_addr.to_string(),
                 }
                 .into_cosmos_msg(escrow.clone())?,
                 PROCESS_REPLY_ID,
@@ -853,7 +838,7 @@ impl<
         &self,
         deps: Deps,
         competition_id: Uint128,
-    ) -> StdResult<Vec<MemberPercentage<Addr>>> {
+    ) -> StdResult<Distribution<Addr>> {
         self.competition_result
             .load(deps.storage, competition_id.u128())
     }
@@ -937,7 +922,7 @@ impl<
                         deps.storage,
                         start_after_bound,
                         None,
-                        cosmwasm_std::Order::Ascending,
+                        cosmwasm_std::Order::Descending,
                     )
                     .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
                     .take(limit as usize)
@@ -951,7 +936,7 @@ impl<
                         deps.storage,
                         start_after_bound,
                         None,
-                        cosmwasm_std::Order::Ascending,
+                        cosmwasm_std::Order::Descending,
                     )
                     .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
                     .take(limit as usize)

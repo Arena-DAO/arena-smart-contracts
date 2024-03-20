@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{BalanceVerified, Cw721CollectionVerified, MemberPercentage};
+use cw_balance::{BalanceVerified, Cw721CollectionVerified, Distribution};
 use cw_competition::escrow::TaxInformation;
 use cw_ownable::{assert_owner, get_ownership};
 
@@ -71,16 +71,13 @@ pub fn withdraw(
 pub fn set_distribution(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Vec<MemberPercentage<String>>,
+    distribution: Distribution<String>,
 ) -> Result<Response, ContractError> {
-    // Convert String keys to Addr
-    let validated_distribution = distribution
-        .into_iter()
-        .map(|x| x.into_checked(deps.as_ref()))
-        .collect::<StdResult<_>>()?;
+    // Validate
+    let distribution = distribution.into_checked(deps.as_ref())?;
 
     // Save distribution in the state
-    PRESET_DISTRIBUTION.save(deps.storage, &info.sender, &validated_distribution)?;
+    PRESET_DISTRIBUTION.save(deps.storage, &info.sender, &distribution)?;
 
     Ok(Response::new()
         .add_attribute("action", "set_distribution")
@@ -201,9 +198,8 @@ fn receive_balance(
 pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Vec<MemberPercentage<String>>,
+    distribution: Distribution<String>,
     tax_info: Option<TaxInformation<String>>,
-    remainder_addr: String,
 ) -> Result<Response, ContractError> {
     // Ensure the sender is the owner
     assert_owner(deps.storage, &info.sender)?;
@@ -211,14 +207,8 @@ pub fn distribute(
     // Load the total balance available for distribution
     let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
 
-    // Validate the remainder address
-    let remainder_addr = deps.api.addr_validate(&remainder_addr)?;
-
     // Validate the distribution
-    let validated_distribution: Vec<MemberPercentage<Addr>> = distribution
-        .iter()
-        .map(|member| member.into_checked(deps.as_ref()))
-        .collect::<StdResult<_>>()?;
+    let distribution = distribution.into_checked(deps.as_ref())?;
 
     // Validate the tax info
     let tax_info = tax_info
@@ -248,7 +238,7 @@ pub fn distribute(
     };
 
     // Calculate the distribution amounts based on the total balance and distribution
-    let distributed_amounts = total_balance.split(&validated_distribution, &remainder_addr)?;
+    let distributed_amounts = total_balance.split(&distribution)?;
 
     // Clear the existing balance storage and update with new distribution
     BALANCE.clear(deps.storage);
@@ -257,9 +247,7 @@ pub fn distribute(
         if let Some(preset) =
             PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
         {
-            let new_balances = distributed_amount
-                .balance
-                .split(&preset, &distributed_amount.addr)?;
+            let new_balances = distributed_amount.balance.split(&preset)?;
             for new_balance in new_balances {
                 BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
             }

@@ -7,7 +7,7 @@ use crate::state::{CompetitionStatus, Evidence};
 use arena_core_interface::msg::ProposeMessage;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
-use cw_balance::MemberPercentage;
+use cw_balance::Distribution;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
@@ -35,7 +35,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     ExecuteCompetitionHook {
         competition_id: Uint128,
-        distribution: Vec<MemberPercentage<String>>,
+        distribution: Distribution<String>,
     },
     CreateCompetition {
         category_id: Option<Uint128>,
@@ -54,8 +54,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     ProcessCompetition {
         competition_id: Uint128,
-        distribution: Vec<MemberPercentage<String>>,
-        remainder_addr: String,
+        distribution: Distribution<String>,
         tax_cw20_msg: Option<Binary>,
         tax_cw721_msg: Option<Binary>,
     },
@@ -91,7 +90,7 @@ where
         start_after: Option<Uint128>,
         limit: Option<u32>,
     },
-    #[returns(Vec<MemberPercentage<String>>)]
+    #[returns(Distribution<String>)]
     Result { competition_id: Uint128 },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },

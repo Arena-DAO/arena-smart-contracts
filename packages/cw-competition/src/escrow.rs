@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, StdResult, WasmMsg};
 use cw_address_like::AddressLike;
-use cw_balance::MemberPercentage;
+use cw_balance::Distribution;
 
 #[cw_serde]
 pub struct TaxInformation<T: AddressLike> {
@@ -24,9 +24,8 @@ impl TaxInformation<String> {
 
 #[cw_serde]
 pub struct CompetitionEscrowDistributeMsg {
-    pub distribution: Vec<MemberPercentage<String>>,
+    pub distribution: Distribution<String>,
     pub tax_info: Option<TaxInformation<String>>,
-    pub remainder_addr: String,
 }
 
 impl CompetitionEscrowDistributeMsg {

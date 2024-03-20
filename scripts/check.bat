@@ -1,3 +1,3 @@
 call cargo +nightly udeps
-call cargo +nightly fmt --all -- --check
-call cargo +nightly clippy --all-targets -- -D warnings
+call cargo +stable fmt --all -- --check
+call cargo +stable clippy --all-targets -- -D warnings

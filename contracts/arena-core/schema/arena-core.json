@@ -636,6 +636,25 @@
           }
         ]
       },
+      "Distribution_for_String": {
+        "type": "object",
+        "required": [
+          "member_percentages",
+          "remainder_addr"
+        ],
+        "properties": {
+          "member_percentages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/MemberPercentage_for_String"
+            }
+          },
+          "remainder_addr": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "EditCompetitionCategory": {
         "oneOf": [
           {
@@ -908,7 +927,6 @@
           "description",
           "distribution",
           "id",
-          "remainder_addr",
           "title"
         ],
         "properties": {
@@ -916,16 +934,10 @@
             "type": "string"
           },
           "distribution": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/MemberPercentage_for_String"
-            }
+            "$ref": "#/definitions/Distribution_for_String"
           },
           "id": {
             "$ref": "#/definitions/Uint128"
-          },
-          "remainder_addr": {
-            "type": "string"
           },
           "tax_cw20_msg": {
             "anyOf": [
