@@ -1,10 +1,12 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Deps, StdResult};
+use cosmwasm_std::{Addr, Deps, StdError, StdResult};
 use cw_balance::{BalanceVerified, Distribution, MemberBalanceChecked};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
-use crate::state::{BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE};
+use crate::state::{
+    BALANCE, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TAX_AT_WITHDRAWAL, TOTAL_BALANCE,
+};
 
 #[cw_serde]
 pub struct DumpStateResponse {
@@ -16,7 +18,24 @@ pub struct DumpStateResponse {
 
 pub fn balance(deps: Deps, addr: String) -> StdResult<Option<BalanceVerified>> {
     let addr = deps.api.addr_validate(&addr)?;
-    BALANCE.may_load(deps.storage, &addr)
+
+    Ok(
+        if let Some(balance) = BALANCE.may_load(deps.storage, &addr)? {
+            if let Some(tax) = TAX_AT_WITHDRAWAL.may_load(deps.storage)? {
+                Some(
+                    balance.checked_sub(
+                        &balance
+                            .checked_mul_floor(tax)
+                            .map_err(|e| StdError::generic_err(e.to_string()))?,
+                    )?,
+                )
+            } else {
+                Some(balance)
+            }
+        } else {
+            None
+        },
+    )
 }
 
 pub fn due(deps: Deps, addr: String) -> StdResult<Option<BalanceVerified>> {
@@ -49,11 +68,23 @@ pub fn balances(
 ) -> StdResult<Vec<MemberBalanceChecked>> {
     let binding = maybe_addr(deps.api, start_after)?;
     let start = binding.as_ref().map(Bound::exclusive);
+    let maybe_tax = TAX_AT_WITHDRAWAL.may_load(deps.storage)?;
+
     cw_paginate::paginate_map(&BALANCE, deps.storage, start, limit, |k, v| {
-        Ok(MemberBalanceChecked {
-            addr: k,
-            balance: v,
-        })
+        if let Some(tax) = maybe_tax {
+            Ok(MemberBalanceChecked {
+                addr: k,
+                balance: v.checked_sub(
+                    &v.checked_mul_floor(tax)
+                        .map_err(|e| StdError::generic_err(e.to_string()))?,
+                )?,
+            })
+        } else {
+            Ok(MemberBalanceChecked {
+                addr: k,
+                balance: v,
+            })
+        }
     })
 }
 

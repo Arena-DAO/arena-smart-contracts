@@ -8,7 +8,9 @@ use cosmwasm_std::{
     to_json_binary, Addr, Coin, Coins, CosmosMsg, Decimal, Empty, Uint128, WasmMsg,
 };
 use cw4::Member;
-use cw_balance::{Distribution, MemberBalanceUnchecked, MemberPercentage};
+use cw_balance::{
+    BalanceVerified, Distribution, MemberBalanceChecked, MemberBalanceUnchecked, MemberPercentage,
+};
 use cw_competition::{
     msg::ModuleInfo,
     state::{CompetitionListItemResponse, CompetitionStatus},
@@ -991,6 +993,42 @@ fn test_competition_draw() {
         &[],
     );
     assert!(result.is_ok());
+
+    // Assert query balances are correct
+    let balances: Vec<MemberBalanceChecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition1.escrow.clone().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        balances[0].balance.native[0].amount,
+        Uint128::from(8_500u128)
+    );
+    assert_eq!(
+        balances[1].balance.native[0].amount,
+        Uint128::from(8_500u128)
+    );
+
+    // Assert individual balance query is correct
+    let balance: Option<BalanceVerified> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition1.escrow.clone().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balance {
+                addr: user1.to_string(),
+            },
+        )
+        .unwrap();
+    assert!(balance.is_some());
+    assert_eq!(balance.unwrap().native[0].amount, Uint128::from(8_500u128));
 
     // Claim balances
     let result = context.app.execute_contract(
