@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-league-module",
-  "contract_version": "1.0.0",
+  "contract_version": "1.2.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -151,15 +151,21 @@
           "execute_competition_hook": {
             "type": "object",
             "required": [
-              "competition_id",
-              "distribution"
+              "competition_id"
             ],
             "properties": {
               "competition_id": {
                 "$ref": "#/definitions/Uint128"
               },
               "distribution": {
-                "$ref": "#/definitions/Distribution_for_String"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Distribution_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -275,15 +281,21 @@
           "process_competition": {
             "type": "object",
             "required": [
-              "competition_id",
-              "distribution"
+              "competition_id"
             ],
             "properties": {
               "competition_id": {
                 "$ref": "#/definitions/Uint128"
               },
               "distribution": {
-                "$ref": "#/definitions/Distribution_for_String"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Distribution_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "tax_cw20_msg": {
                 "anyOf": [
@@ -778,7 +790,6 @@
         "type": "object",
         "required": [
           "description",
-          "distribution",
           "id",
           "title"
         ],
@@ -787,7 +798,14 @@
             "type": "string"
           },
           "distribution": {
-            "$ref": "#/definitions/Distribution_for_String"
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Distribution_for_String"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "id": {
             "$ref": "#/definitions/Uint128"
@@ -2021,28 +2039,38 @@
     },
     "result": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Distribution_for_String",
-      "type": "object",
-      "required": [
-        "member_percentages",
-        "remainder_addr"
-      ],
-      "properties": {
-        "member_percentages": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/MemberPercentage_for_String"
-          }
+      "title": "Nullable_Distribution_for_String",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Distribution_for_String"
         },
-        "remainder_addr": {
-          "type": "string"
+        {
+          "type": "null"
         }
-      },
-      "additionalProperties": false,
+      ],
       "definitions": {
         "Decimal": {
           "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
           "type": "string"
+        },
+        "Distribution_for_String": {
+          "type": "object",
+          "required": [
+            "member_percentages",
+            "remainder_addr"
+          ],
+          "properties": {
+            "member_percentages": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MemberPercentage_for_String"
+              }
+            },
+            "remainder_addr": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         },
         "MemberPercentage_for_String": {
           "type": "object",

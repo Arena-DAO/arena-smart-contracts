@@ -11,7 +11,7 @@ use crate::{
     query::is_locked,
     state::{
         is_fully_funded, BALANCE, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED,
-        PRESET_DISTRIBUTION, TOTAL_BALANCE,
+        PRESET_DISTRIBUTION, TAX_AT_WITHDRAWAL, TOTAL_BALANCE,
     },
     ContractError,
 };
@@ -30,9 +30,14 @@ pub fn withdraw(
     let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
 
     // Load and process balance for each address
-    let msgs = if let Some(balance) = BALANCE.may_load(deps.storage, &info.sender)? {
+    let msgs = if let Some(mut balance) = BALANCE.may_load(deps.storage, &info.sender)? {
         if balance.is_empty() {
             return Err(ContractError::EmptyBalance {});
+        }
+
+        // If the total balance has already been taxed, then deduct at the individual level
+        if let Some(tax) = TAX_AT_WITHDRAWAL.may_load(deps.storage)? {
+            balance = balance.checked_sub(&balance.checked_mul_floor(tax)?)?;
         }
 
         // Update total balance and related storage entries
@@ -71,17 +76,26 @@ pub fn withdraw(
 pub fn set_distribution(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Distribution<String>,
+    distribution: Option<Distribution<String>>,
 ) -> Result<Response, ContractError> {
-    // Validate
-    let distribution = distribution.into_checked(deps.as_ref())?;
+    if let Some(distribution) = &distribution {
+        // Validate
+        let distribution = distribution.into_checked(deps.as_ref())?;
 
-    // Save distribution in the state
-    PRESET_DISTRIBUTION.save(deps.storage, &info.sender, &distribution)?;
+        // Save distribution in the state
+        PRESET_DISTRIBUTION.save(deps.storage, &info.sender, &distribution)?;
+    } else {
+        PRESET_DISTRIBUTION.remove(deps.storage, &info.sender);
+    }
 
     Ok(Response::new()
         .add_attribute("action", "set_distribution")
-        .add_attribute("sender", info.sender.to_string()))
+        .add_attribute(
+            "distribution",
+            distribution
+                .map(|some| some.to_string())
+                .unwrap_or("None".to_owned()),
+        ))
 }
 
 // This function receives native tokens and updates the balance
@@ -198,7 +212,7 @@ fn receive_balance(
 pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
-    distribution: Distribution<String>,
+    distribution: Option<Distribution<String>>,
     tax_info: Option<TaxInformation<String>>,
 ) -> Result<Response, ContractError> {
     // Ensure the sender is the owner
@@ -207,21 +221,24 @@ pub fn distribute(
     // Load the total balance available for distribution
     let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
 
-    // Validate the distribution
-    let distribution = distribution.into_checked(deps.as_ref())?;
-
     // Validate the tax info
-    let tax_info = tax_info
+    let validated_tax_info = tax_info
+        .as_ref()
         .map(|tax_info| tax_info.into_checked(deps.as_ref()))
         .transpose()?;
 
     // Process the tax
     // This will automatically be sent to the receiver
-    let msgs = if let Some(tax_info) = tax_info {
+    let msgs = if let Some(tax_info) = validated_tax_info {
         let tax = total_balance.checked_mul_floor(tax_info.tax)?;
 
         total_balance =
             TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> { x.checked_sub(&tax) })?;
+
+        // If funds are not split, then we should have the tax at withdrawal
+        if distribution.is_none() {
+            TAX_AT_WITHDRAWAL.save(deps.storage, &tax_info.tax)?;
+        }
 
         if !tax.is_empty() {
             tax.transmit_all(
@@ -237,26 +254,30 @@ pub fn distribute(
         vec![]
     };
 
-    // Calculate the distribution amounts based on the total balance and distribution
-    let distributed_amounts = total_balance.split(&distribution)?;
-
     // Clear the existing balance storage and update with new distribution
-    BALANCE.clear(deps.storage);
-    for distributed_amount in distributed_amounts {
-        // Check for preset distribution and apply if available
-        if let Some(preset) =
-            PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
-        {
-            let new_balances = distributed_amount.balance.split(&preset)?;
-            for new_balance in new_balances {
-                BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
+    if let Some(distribution) = &distribution {
+        let distribution = distribution.into_checked(deps.as_ref())?;
+
+        // Calculate the distribution amounts based on the total balance and distribution
+        let distributed_amounts = total_balance.split(&distribution)?;
+
+        BALANCE.clear(deps.storage);
+        for distributed_amount in distributed_amounts {
+            // Check for preset distribution and apply if available
+            if let Some(preset) =
+                PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
+            {
+                let new_balances = distributed_amount.balance.split(&preset)?;
+                for new_balance in new_balances {
+                    BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
+                }
+            } else {
+                BALANCE.save(
+                    deps.storage,
+                    &distributed_amount.addr,
+                    &distributed_amount.balance,
+                )?;
             }
-        } else {
-            BALANCE.save(
-                deps.storage,
-                &distributed_amount.addr,
-                &distributed_amount.balance,
-            )?;
         }
     }
 
@@ -269,6 +290,12 @@ pub fn distribute(
 
     Ok(Response::new()
         .add_attribute("action", "handle_competition_result")
+        .add_attribute(
+            "tax",
+            tax_info
+                .map(|some| some.tax.to_string())
+                .unwrap_or("None".to_owned()),
+        )
         .add_messages(msgs))
 }
 

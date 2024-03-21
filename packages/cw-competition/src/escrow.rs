@@ -24,7 +24,7 @@ impl TaxInformation<String> {
 
 #[cw_serde]
 pub struct CompetitionEscrowDistributeMsg {
-    pub distribution: Distribution<String>,
+    pub distribution: Option<Distribution<String>>,
     pub tax_info: Option<TaxInformation<String>>,
 }
 

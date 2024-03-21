@@ -235,10 +235,10 @@ pub fn process_matches(
                 deps,
                 info,
                 league_id,
-                Distribution::<String> {
+                Some(Distribution::<String> {
                     member_percentages,
                     remainder_addr: leaderboard[0].member.to_string(),
-                },
+                }),
                 config.extension.tax_cw20_msg,
                 config.extension.tax_cw721_msg,
             )?;

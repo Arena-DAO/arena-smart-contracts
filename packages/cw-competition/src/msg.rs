@@ -35,7 +35,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     ExecuteCompetitionHook {
         competition_id: Uint128,
-        distribution: Distribution<String>,
+        distribution: Option<Distribution<String>>,
     },
     CreateCompetition {
         category_id: Option<Uint128>,
@@ -54,7 +54,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     ProcessCompetition {
         competition_id: Uint128,
-        distribution: Distribution<String>,
+        distribution: Option<Distribution<String>>,
         tax_cw20_msg: Option<Binary>,
         tax_cw721_msg: Option<Binary>,
     },
@@ -90,7 +90,7 @@ where
         start_after: Option<Uint128>,
         limit: Option<u32>,
     },
-    #[returns(Distribution<String>)]
+    #[returns(Option<Distribution<String>>)]
     Result { competition_id: Uint128 },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },

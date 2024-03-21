@@ -24,7 +24,7 @@ pub enum ExecuteMsg {
         cw721_msg: Option<Binary>,
     },
     SetDistribution {
-        distribution: Distribution<String>,
+        distribution: Option<Distribution<String>>,
     },
     ReceiveNative {},
     Receive(Cw20ReceiveMsg),

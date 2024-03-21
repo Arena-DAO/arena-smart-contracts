@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-escrow",
-  "contract_version": "1.0.0",
+  "contract_version": "1.2.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -167,12 +167,16 @@
         "properties": {
           "set_distribution": {
             "type": "object",
-            "required": [
-              "distribution"
-            ],
             "properties": {
               "distribution": {
-                "$ref": "#/definitions/Distribution_for_String"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Distribution_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -322,12 +326,16 @@
       },
       "CompetitionEscrowDistributeMsg": {
         "type": "object",
-        "required": [
-          "distribution"
-        ],
         "properties": {
           "distribution": {
-            "$ref": "#/definitions/Distribution_for_String"
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Distribution_for_String"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "tax_info": {
             "anyOf": [

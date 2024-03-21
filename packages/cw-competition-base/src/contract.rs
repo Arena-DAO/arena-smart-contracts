@@ -60,7 +60,7 @@ pub struct CompetitionModuleContract<
     >,
     pub competition_evidence: Map<'static, (u128, u128), Evidence>,
     pub competition_evidence_count: Map<'static, u128, Uint128>,
-    pub competition_result: Map<'static, u128, Distribution<Addr>>,
+    pub competition_result: Map<'static, u128, Option<Distribution<Addr>>>,
     pub competition_rules: Map<'static, u128, Vec<String>>,
     pub escrows_to_competitions: Map<'static, Addr, u128>,
     pub temp_competition: Item<'static, u128>,
@@ -681,7 +681,7 @@ impl<
         deps: DepsMut,
         info: MessageInfo,
         competition_id: Uint128,
-        distribution: Distribution<String>,
+        distribution: Option<Distribution<String>>,
         tax_cw20_msg: Option<Binary>,
         tax_cw721_msg: Option<Binary>,
     ) -> Result<Response, CompetitionError> {
@@ -713,7 +713,10 @@ impl<
         }
 
         // Validate the distribution
-        let validated_distribution = distribution.into_checked(deps.as_ref())?;
+        let validated_distribution = distribution
+            .as_ref()
+            .map(|some| some.into_checked(deps.as_ref()))
+            .transpose()?;
 
         // Set the result
         self.competition_result.save(
@@ -746,7 +749,7 @@ impl<
 
         // If there's an escrow, handle distribution and tax
         if let Some(escrow) = competition.escrow {
-            let tax_info = if !validated_distribution.member_percentages.is_empty() {
+            let tax_info = {
                 let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.ok_or(
                     CompetitionError::OwnershipError(cw_ownable::OwnershipError::NoOwner),
                 )?;
@@ -769,8 +772,6 @@ impl<
                 } else {
                     None
                 }
-            } else {
-                None
             };
 
             let sub_msg = SubMsg::reply_on_success(
@@ -791,8 +792,15 @@ impl<
             msgs.push(sub_msg);
         }
 
+        // Tax info is displayed in the escrow response
         Ok(Response::new()
             .add_attribute("action", "process_competition")
+            .add_attribute(
+                "distribution",
+                validated_distribution
+                    .map(|some| some.to_string())
+                    .unwrap_or("None".to_owned()),
+            )
             .add_submessages(msgs))
     }
 
@@ -838,7 +846,7 @@ impl<
         &self,
         deps: Deps,
         competition_id: Uint128,
-    ) -> StdResult<Distribution<Addr>> {
+    ) -> StdResult<Option<Distribution<Addr>>> {
         self.competition_result
             .load(deps.storage, competition_id.u128())
     }

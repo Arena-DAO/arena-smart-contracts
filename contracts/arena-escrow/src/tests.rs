@@ -266,7 +266,7 @@ fn test_set_distribution() {
         Addr::unchecked(ADDR1),
         context.escrow_addr.clone(),
         &ExecuteMsg::SetDistribution {
-            distribution: distribution.clone(),
+            distribution: Some(distribution.clone()),
         },
         &[],
     );

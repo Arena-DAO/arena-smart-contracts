@@ -374,13 +374,13 @@ fn test_create_competition() {
                 msg: to_json_binary(
                     &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
                         competition_id: competition1_id,
-                        distribution: Distribution::<String> {
+                        distribution: Some(Distribution::<String> {
                             member_percentages: vec![MemberPercentage {
                                 addr: user1.to_string(),
                                 percentage: Decimal::one(),
                             }],
                             remainder_addr: context.core.dao_addr.to_string(),
-                        },
+                        }),
                         tax_cw20_msg: None,
                         tax_cw721_msg: None,
                     },
@@ -427,7 +427,7 @@ fn test_create_competition() {
         .unwrap();
     assert_eq!(competition1.status, CompetitionStatus::Active);
 
-    // Vote and execute jail
+    // Vote and execute
     let result = context.app.execute_contract(
         user1.clone(),
         competition1_proposal_module.address.clone(),
@@ -487,7 +487,7 @@ fn test_create_competition() {
     assert_eq!(balance.amount, Uint128::from(3_000u128));
 
     // Assert result is populated
-    let result: Distribution<String> = context
+    let result: Option<Distribution<String>> = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -497,7 +497,7 @@ fn test_create_competition() {
             },
         )
         .unwrap();
-    assert!(!result.member_percentages.is_empty());
+    assert!(result.is_some());
 }
 
 #[test]
@@ -599,13 +599,13 @@ fn test_create_competition_jailed() {
         id: competition1_id,
         title: "Title".to_string(),
         description: "Description".to_string(),
-        distribution: Distribution::<String> {
+        distribution: Some(Distribution::<String> {
             member_percentages: vec![MemberPercentage {
                 addr: user1.to_string(),
                 percentage: Decimal::one(),
             }],
             remainder_addr: context.core.dao_addr.to_string(),
-        },
+        }),
         tax_cw20_msg: None,
         tax_cw721_msg: None,
     };
@@ -820,4 +820,230 @@ pub fn test_disabling_module() {
         .unwrap();
     assert!(competition_module.is_some());
     assert!(!competition_module.unwrap().is_enabled);
+}
+
+#[test]
+fn test_competition_draw() {
+    let mut app = get_app();
+    let user1 = app.api().addr_make("user1");
+    let user2 = app.api().addr_make("user2");
+    let wager_amount_uint128 = Uint128::from(10_000u128);
+    let wager_amount = format!("{}{}", wager_amount_uint128, "juno");
+    let admin = app.api().addr_make(ADMIN);
+
+    set_balances(
+        &mut app,
+        vec![
+            (user1.clone(), Coins::from_str(&wager_amount).unwrap()),
+            (user2.clone(), Coins::from_str(&wager_amount).unwrap()),
+        ],
+    );
+    let core_context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    );
+    let wager_context = setup_wager_context(&mut app, &core_context);
+    let mut context = Context {
+        app,
+        core: core_context,
+        wager: wager_context,
+    };
+
+    let starting_height = context.app.block_info().height;
+
+    // Create competiton
+    let competition1_id = create_competition(
+        &mut context,
+        Expiration::AtHeight(starting_height + 10),
+        vec![
+            cw4::Member {
+                addr: user1.to_string(),
+                weight: 1u64,
+            },
+            cw4::Member {
+                addr: user2.to_string(),
+                weight: 1u64,
+            },
+        ],
+        Some(vec![
+            MemberBalanceUnchecked {
+                addr: user1.to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+            MemberBalanceUnchecked {
+                addr: user2.to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+        ]),
+    );
+
+    // Get competition1
+    let competition1: WagerResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.wager.wager_module_addr.clone(),
+            &QueryMsg::Competition {
+                competition_id: competition1_id,
+            },
+        )
+        .unwrap();
+
+    // Get competition1 proposal module
+    let result = context.app.wrap().query_wasm_smart::<Vec<ProposalModule>>(
+        competition1.host,
+        &dao_interface::msg::QueryMsg::ProposalModules {
+            start_after: None,
+            limit: None,
+        },
+    );
+    assert!(result.is_ok());
+    assert!(!result.as_ref().unwrap().is_empty());
+    let competition1_proposal_module = result.as_ref().unwrap().first().unwrap();
+
+    // Generate proposals
+    context.app.update_block(next_block);
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Propose(SingleChoiceProposeMsg {
+            title: "Title".to_string(),
+            description: "Description".to_string(),
+            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: context.wager.wager_module_addr.to_string(),
+                msg: to_json_binary(
+                    &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+                        competition_id: competition1_id,
+                        distribution: None,
+                        tax_cw20_msg: None,
+                        tax_cw721_msg: None,
+                    },
+                )
+                .unwrap(),
+                funds: vec![],
+            })],
+            proposer: None,
+        }),
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            user1.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            user2.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    // Vote and execute
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Vote {
+            proposal_id: 1u64,
+            rationale: None,
+            vote: dao_voting::voting::Vote::Yes,
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let result = context.app.execute_contract(
+        user2.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Vote {
+            proposal_id: 1u64,
+            vote: dao_voting::voting::Vote::Yes,
+            rationale: None,
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Claim balances
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1.escrow.clone().unwrap(),
+        &arena_escrow::msg::ExecuteMsg::Withdraw {
+            cw20_msg: None,
+            cw721_msg: None,
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+    let result = context.app.execute_contract(
+        user2.clone(),
+        competition1.escrow.clone().unwrap(),
+        &arena_escrow::msg::ExecuteMsg::Withdraw {
+            cw20_msg: None,
+            cw721_msg: None,
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Assert correct balances user 1 - 10_000*.85, user 2 - 10_000*.85, dao - 20_000*.15
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(user1.to_string(), "juno")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::from(8_500u128));
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(user2.to_string(), "juno")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::from(8_500u128));
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(context.core.dao_addr.to_string(), "juno")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::from(3_000u128));
+
+    // Assert result is populated
+    let result: Option<Distribution<String>> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.wager.wager_module_addr.clone(),
+            &QueryMsg::Result {
+                competition_id: competition1_id,
+            },
+        )
+        .unwrap();
+    assert!(result.is_none());
 }

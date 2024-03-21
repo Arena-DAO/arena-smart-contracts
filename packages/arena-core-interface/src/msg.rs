@@ -147,7 +147,7 @@ pub struct ProposeMessage {
     pub id: Uint128,
     pub title: String,
     pub description: String,
-    pub distribution: Distribution<String>,
+    pub distribution: Option<Distribution<String>>,
     pub tax_cw20_msg: Option<Binary>,
     pub tax_cw721_msg: Option<Binary>,
 }

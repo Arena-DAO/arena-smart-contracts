@@ -155,9 +155,6 @@ pub fn propose(
     info: MessageInfo,
     msg: ProposeMessage,
 ) -> Result<Response, PreProposeError> {
-    // Validate remainder addr
-    deps.api.addr_validate(&msg.distribution.remainder_addr)?;
-
     let config = PrePropose::default().config.load(deps.storage)?;
     check_can_submit(deps.as_ref(), info.sender.clone(), &config)?;
 
@@ -181,6 +178,11 @@ pub fn propose(
         next_id,
         &(config.deposit_info, info.sender.clone()),
     )?;
+
+    // Validate distribution
+    if let Some(distribution) = &msg.distribution {
+        distribution.into_checked(deps.as_ref())?;
+    }
 
     // Construct message
     let msg = ProposeMessages::Propose(SingleChoiceProposeMsg {

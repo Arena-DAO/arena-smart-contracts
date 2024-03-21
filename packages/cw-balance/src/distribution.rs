@@ -1,7 +1,10 @@
+use std::fmt::Display;
+
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Deps, StdError, StdResult};
+use cosmwasm_std::{to_json_string, Addr, Decimal, Deps, StdError, StdResult};
 use cw_address_like::AddressLike;
 use itertools::Itertools;
+use serde::Serialize;
 
 #[cw_serde]
 pub struct MemberPercentage<T: AddressLike> {
@@ -37,6 +40,10 @@ impl Distribution<String> {
             return Err(StdError::generic_err("Total weight is not equal to 1"));
         }
 
+        if self.member_percentages.is_empty() {
+            return Err(StdError::generic_err("Member percentages cannot be empty"));
+        }
+
         let unique_members = self
             .member_percentages
             .iter()
@@ -55,5 +62,14 @@ impl Distribution<String> {
                 .collect::<StdResult<_>>()?,
             remainder_addr: deps.api.addr_validate(&self.remainder_addr)?,
         })
+    }
+}
+
+impl<T: AddressLike + Serialize> Display for Distribution<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match to_json_string(self) {
+            Ok(json) => write!(f, "{}", json),
+            Err(e) => write!(f, "Serialization Error: {}", e),
+        }
     }
 }
