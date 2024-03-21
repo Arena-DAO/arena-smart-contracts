@@ -353,6 +353,7 @@ dependencies = [
  "cw-address-like",
  "cw20 1.1.2",
  "cw721 0.18.0",
+ "itertools 0.12.1",
  "serde",
  "thiserror",
 ]

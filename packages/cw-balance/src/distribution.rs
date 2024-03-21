@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Deps, StdError, StdResult};
 use cw_address_like::AddressLike;
+use itertools::Itertools;
 
 #[cw_serde]
 pub struct MemberPercentage<T: AddressLike> {
@@ -34,6 +35,16 @@ impl Distribution<String> {
 
         if total_weight != Decimal::one() {
             return Err(StdError::generic_err("Total weight is not equal to 1"));
+        }
+
+        let unique_members = self
+            .member_percentages
+            .iter()
+            .unique_by(|x| &x.addr)
+            .count();
+
+        if unique_members != self.member_percentages.len() {
+            return Err(StdError::generic_err("All members must be unique"));
         }
 
         Ok(Distribution::<Addr> {
