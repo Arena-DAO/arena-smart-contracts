@@ -172,7 +172,7 @@ fn create_competition(
 #[test]
 fn test_create_competition() {
     let mut app = get_app();
-    let users = vec![
+    let users = [
         app.api().addr_make("user1"),
         app.api().addr_make("user2"),
         app.api().addr_make("user3"),
