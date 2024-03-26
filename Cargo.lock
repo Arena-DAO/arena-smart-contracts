@@ -90,6 +90,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "arena-fundraise"
+version = "1.2.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
+ "thiserror",
+]
+
+[[package]]
 name = "arena-league-module"
 version = "1.2.0"
 dependencies = [
