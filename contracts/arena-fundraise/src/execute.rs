@@ -130,8 +130,18 @@ pub fn expire(deps: DepsMut, env: Env, _info: MessageInfo) -> Result<Response, C
 
     let total_deposited = TOTAL_DEPOSITED.load(deps.storage)?;
 
+    let mut msgs = vec![];
     if total_deposited > config.soft_cap {
         config.state = FundraiseState::Successful;
+
+        // Send the fundraise amount to the recipient
+        msgs.push(CosmosMsg::Bank(BankMsg::Send {
+            to_address: config.recipient.to_string(),
+            amount: vec![Coin {
+                amount: total_deposited,
+                denom: config.deposit_denom.clone(),
+            }],
+        }))
     } else {
         config.state = FundraiseState::Failed;
     }
@@ -140,5 +150,6 @@ pub fn expire(deps: DepsMut, env: Env, _info: MessageInfo) -> Result<Response, C
 
     Ok(Response::new()
         .add_attribute("action", "expire")
-        .add_attribute("outcome", config.state.to_string()))
+        .add_attribute("outcome", config.state.to_string())
+        .add_messages(msgs))
 }

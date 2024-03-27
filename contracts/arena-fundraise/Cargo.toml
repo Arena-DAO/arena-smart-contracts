@@ -22,3 +22,6 @@ cw2 = { workspace = true }
 thiserror = { workspace = true }
 cw-utils = { workspace = true }
 cw-storage-plus = { workspace = true }
+
+[dev-dependencies]
+cw-multi-test = { workspace = true }
