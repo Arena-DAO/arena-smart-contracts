@@ -10,7 +10,6 @@
       "deposit_denom",
       "duration",
       "fundraise",
-      "recipient",
       "soft_cap"
     ],
     "properties": {
@@ -32,9 +31,6 @@
             "type": "null"
           }
         ]
-      },
-      "recipient": {
-        "type": "string"
       },
       "soft_cap": {
         "$ref": "#/definitions/Uint128"
