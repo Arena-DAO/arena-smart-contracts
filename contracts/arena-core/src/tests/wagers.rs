@@ -825,6 +825,267 @@ pub fn test_disabling_module() {
 }
 
 #[test]
+fn test_preset_distribution() {
+    let mut app = get_app();
+    let user1 = app.api().addr_make("user1");
+    let user2 = app.api().addr_make("user2");
+    let wager_amount_uint128 = Uint128::from(10_000u128);
+    let wager_amount = format!("{}{}", wager_amount_uint128, "juno");
+    let admin = app.api().addr_make(ADMIN);
+
+    set_balances(
+        &mut app,
+        vec![
+            (user1.clone(), Coins::from_str(&wager_amount).unwrap()),
+            (user2.clone(), Coins::from_str(&wager_amount).unwrap()),
+        ],
+    );
+    let core_context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    );
+    let wager_context = setup_wager_context(&mut app, &core_context);
+    let mut context = Context {
+        app,
+        core: core_context,
+        wager: wager_context,
+    };
+
+    let starting_height = context.app.block_info().height;
+
+    // Create competiton
+    let competition1_id = create_competition(
+        &mut context,
+        Expiration::AtHeight(starting_height + 10),
+        vec![
+            cw4::Member {
+                addr: user1.to_string(),
+                weight: 1u64,
+            },
+            cw4::Member {
+                addr: user2.to_string(),
+                weight: 1u64,
+            },
+        ],
+        Some(vec![
+            MemberBalanceUnchecked {
+                addr: user1.to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+            MemberBalanceUnchecked {
+                addr: user2.to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+        ]),
+    );
+
+    // Get competition1
+    let competition1: WagerResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.wager.wager_module_addr.clone(),
+            &QueryMsg::Competition {
+                competition_id: competition1_id,
+            },
+        )
+        .unwrap();
+
+    // Get competition1 proposal module
+    let result = context.app.wrap().query_wasm_smart::<Vec<ProposalModule>>(
+        competition1.host,
+        &dao_interface::msg::QueryMsg::ProposalModules {
+            start_after: None,
+            limit: None,
+        },
+    );
+    assert!(result.is_ok());
+    assert!(!result.as_ref().unwrap().is_empty());
+    let competition1_proposal_module = result.as_ref().unwrap().first().unwrap();
+
+    // Generate proposals
+    context.app.update_block(next_block);
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Propose(SingleChoiceProposeMsg {
+            title: "Title".to_string(),
+            description: "Description".to_string(),
+            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: context.wager.wager_module_addr.to_string(),
+                msg: to_json_binary(
+                    &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+                        competition_id: competition1_id,
+                        distribution: Some(Distribution::<String> {
+                            member_percentages: vec![
+                                MemberPercentage::<String> {
+                                    addr: user1.to_string(),
+                                    percentage: Decimal::from_ratio(25u128, 100u128),
+                                },
+                                MemberPercentage::<String> {
+                                    addr: user2.to_string(),
+                                    percentage: Decimal::from_ratio(75u128, 100u128),
+                                },
+                            ],
+                            remainder_addr: user1.to_string(),
+                        }),
+                        tax_cw20_msg: None,
+                        tax_cw721_msg: None,
+                    },
+                )
+                .unwrap(),
+                funds: vec![],
+            })],
+            proposer: None,
+        }),
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            user1.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            user2.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    // Set distributions .25 to user1 and .75 to user2 in both cases
+    context
+        .app
+        .execute_contract(
+            user1.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::SetDistribution {
+                distribution: Some(Distribution::<String> {
+                    member_percentages: vec![
+                        MemberPercentage::<String> {
+                            addr: user1.to_string(),
+                            percentage: Decimal::from_ratio(25u128, 100u128),
+                        },
+                        MemberPercentage::<String> {
+                            addr: user2.to_string(),
+                            percentage: Decimal::from_ratio(75u128, 100u128),
+                        },
+                    ],
+                    remainder_addr: user1.to_string(),
+                }),
+            },
+            &[],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            user2.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::SetDistribution {
+                distribution: Some(Distribution::<String> {
+                    member_percentages: vec![
+                        MemberPercentage::<String> {
+                            addr: user1.to_string(),
+                            percentage: Decimal::from_ratio(50u128, 100u128),
+                        },
+                        MemberPercentage::<String> {
+                            addr: user2.to_string(),
+                            percentage: Decimal::from_ratio(50u128, 100u128),
+                        },
+                    ],
+                    remainder_addr: user2.to_string(),
+                }),
+            },
+            &[],
+        )
+        .unwrap();
+
+    // Vote and execute
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Vote {
+            proposal_id: 1u64,
+            rationale: None,
+            vote: dao_voting::voting::Vote::Yes,
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let result = context.app.execute_contract(
+        user2.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Vote {
+            proposal_id: 1u64,
+            vote: dao_voting::voting::Vote::Yes,
+            rationale: None,
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1_proposal_module.address.clone(),
+        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Assert query balances are correct
+    /*
+       20,000 wager is 17,000 distribution after 15% tax
+       result = .25 u1 and .75 u2, so u1 = 4250 and u2 = 12750
+       applying preset distributions
+        u1 has .25u1 and .75u2 with remainder u1, so u1_1 = 1063 and u2_1 = 3187
+        u2 has .5u1 and .5u2, so u1_2 = 6375 and u2_2 = 6375
+        u1 = u1_1 + u1_2 = 7438 and u2 = u2_1 + u2_2 = 9562
+    */
+    let balances: Vec<MemberBalanceChecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition1.escrow.clone().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        balances[0].balance.native[0].amount,
+        Uint128::from(7_438u128)
+    );
+    assert_eq!(
+        balances[1].balance.native[0].amount,
+        Uint128::from(9_562u128)
+    );
+}
+
+#[test]
 fn test_competition_draw() {
     let mut app = get_app();
     let user1 = app.api().addr_make("user1");
