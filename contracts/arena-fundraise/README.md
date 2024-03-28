@@ -19,7 +19,7 @@ The contract is instantiated with the following parameters:
 
 - `Deposit`: Allows a user to deposit funds into the fundraise campaign.
 - `Withdraw`: Allows a user to withdraw their deposit or reward based off the current fundraise status. Users can withdraw deposits at any point while active. They withdraw deposits on failure and rewards on success.
-- `Expire`: Locks in the fundraiser's status.
+- `Expire`: Locks in the fundraise's status and sends funds to the fundraise recipient.
 
 ### Query Messages
 
