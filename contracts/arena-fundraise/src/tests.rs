@@ -23,11 +23,11 @@ fn arena_fundraise_contract() -> Box<dyn Contract<Empty>> {
 }
 
 /// Fundraise 1m arena for 10k usdc up to 100k usdc with start at block + 10 and duration 100 blocks
-fn setup(balances: &Vec<(Addr, Coins)>) -> Context {
+fn setup(balances: &[(Addr, Coins)]) -> Context {
     let mut app = App::default();
 
     app.init_modules(|router, _, storage| {
-        for balance in balances.clone() {
+        for balance in balances {
             router
                 .bank
                 .init_balance(storage, &balance.0, balance.1.clone().into_vec())
@@ -86,7 +86,7 @@ fn test_success() {
 
     let coin = Coin {
         denom: "usdc".to_string(),
-        amount: Uint128::new(10_000u128),
+        amount: Uint128::new(5_000u128),
     };
 
     // Execute fails - not started
@@ -100,14 +100,61 @@ fn test_success() {
 
     context.app.update_block(|x| x.height += 20);
 
-    // Deposit success after start
+    for i in 0..10 {
+        // Deposit success after start
+        let response = context.app.execute_contract(
+            balances[i + 1].0.clone(),
+            context.fundraise.clone(),
+            &ExecuteMsg::Deposit {},
+            &[coin.clone()],
+        );
+        assert!(response.is_ok());
+    }
+
+    context.app.update_block(|x| x.height += 10000);
+
+    // Execute fails - expired
     let response = context.app.execute_contract(
         balances[1].0.clone(),
         context.fundraise.clone(),
         &ExecuteMsg::Deposit {},
         &[coin.clone()],
     );
+    assert!(response.is_err());
+
+    // Execute success after end
+    let response = context.app.execute_contract(
+        balances[0].0.clone(),
+        context.fundraise.clone(),
+        &ExecuteMsg::Expire {},
+        &[],
+    );
     assert!(response.is_ok());
+
+    // Query balance - 10 * 5k
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(balances[0].0.clone(), "usdc")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(50_000u128));
+
+    // User can withdraw new token
+    let response = context.app.execute_contract(
+        balances[1].0.clone(),
+        context.fundraise.clone(),
+        &ExecuteMsg::Withdraw {},
+        &[],
+    );
+    assert!(response.is_ok());
+
+    // Query balance - 1m / 10
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(balances[1].0.clone(), "arena")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(100_000u128));
 }
 
 #[test]
@@ -115,6 +162,8 @@ fn test_failure() {
     let balances = get_basic_balances();
 
     let mut context = setup(&balances);
+
+    context.app.update_block(|x| x.height += 20);
 
     // Execute fails - not ended
     let response = context.app.execute_contract(
@@ -125,7 +174,19 @@ fn test_failure() {
     );
     assert!(response.is_err());
 
-    // rip no one sent :(
+    // Send 1 amount below soft cap
+    let response = context.app.execute_contract(
+        balances[1].0.clone(),
+        context.fundraise.clone(),
+        &ExecuteMsg::Deposit {},
+        &[Coin {
+            denom: "usdc".to_string(),
+            amount: Uint128::new(5000),
+        }],
+    );
+    assert!(response.is_ok());
+
+    // rip no one else sent :(
     context.app.update_block(|x| x.height += 1000);
 
     // Execute success after end
@@ -136,4 +197,29 @@ fn test_failure() {
         &[],
     );
     assert!(response.is_ok());
+
+    // Query balance
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(balances[0].0.clone(), "arena")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(1_000_000u128));
+
+    // Withdraw
+    let response = context.app.execute_contract(
+        balances[1].0.clone(),
+        context.fundraise.clone(),
+        &ExecuteMsg::Withdraw {},
+        &[],
+    );
+    assert!(response.is_ok());
+
+    // Query balance - 5k deposit + 5k wallet
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(balances[1].0.clone(), "usdc")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(10_000u128));
 }

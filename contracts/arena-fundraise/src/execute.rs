@@ -56,7 +56,7 @@ pub fn deposit(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, C
 }
 
 pub fn withdraw(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    if USER_DEPOSIT.has(deps.storage, &info.sender) {
+    if !USER_DEPOSIT.has(deps.storage, &info.sender) {
         return Err(ContractError::StdError(StdError::generic_err(
             "User has no balance",
         )));
@@ -134,7 +134,7 @@ pub fn expire(deps: DepsMut, env: Env, _info: MessageInfo) -> Result<Response, C
     if total_deposited > config.soft_cap {
         config.state = FundraiseState::Successful;
 
-        // Send the fundraise amount to the recipient
+        // Send the deposits to the recipient
         msgs.push(CosmosMsg::Bank(BankMsg::Send {
             to_address: config.recipient.to_string(),
             amount: vec![Coin {
@@ -144,6 +144,12 @@ pub fn expire(deps: DepsMut, env: Env, _info: MessageInfo) -> Result<Response, C
         }))
     } else {
         config.state = FundraiseState::Failed;
+
+        // Send the fundraise amount back to the recipient
+        msgs.push(CosmosMsg::Bank(BankMsg::Send {
+            to_address: config.recipient.to_string(),
+            amount: vec![config.fundraise.clone()],
+        }))
     }
 
     CONFIG.save(deps.storage, &config)?;
