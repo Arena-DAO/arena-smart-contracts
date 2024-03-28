@@ -269,13 +269,31 @@ pub fn distribute(
             {
                 let new_balances = distributed_amount.balance.split(&preset)?;
                 for new_balance in new_balances {
-                    BALANCE.save(deps.storage, &new_balance.addr, &new_balance.balance)?;
+                    BALANCE.update(
+                        deps.storage,
+                        &new_balance.addr,
+                        |old_balance| -> Result<_, ContractError> {
+                            match old_balance {
+                                Some(old_balance) => {
+                                    Ok(old_balance.checked_add(&new_balance.balance)?)
+                                }
+                                None => Ok(new_balance.balance),
+                            }
+                        },
+                    )?;
                 }
             } else {
-                BALANCE.save(
+                BALANCE.update(
                     deps.storage,
                     &distributed_amount.addr,
-                    &distributed_amount.balance,
+                    |old_balance| -> Result<_, ContractError> {
+                        match old_balance {
+                            Some(old_balance) => {
+                                Ok(old_balance.checked_add(&distributed_amount.balance)?)
+                            }
+                            None => Ok(distributed_amount.balance),
+                        }
+                    },
                 )?;
             }
         }
