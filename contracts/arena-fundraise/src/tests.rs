@@ -51,7 +51,6 @@ fn setup(balances: &[(Addr, Coins)]) -> Context {
                 hard_cap: Some(Uint128::new(100_000u128)),
                 start: Some(Expiration::AtHeight(12355)),
                 duration: Duration::Height(100u64),
-                recipient: balances[0].0.to_string(),
             },
             &coins,
             "Arena Fundraise",

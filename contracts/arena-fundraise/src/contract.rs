@@ -85,7 +85,7 @@ pub fn instantiate(
             hard_cap: msg.hard_cap,
             start: msg.start,
             end,
-            recipient: deps.api.addr_validate(&msg.recipient)?,
+            recipient: info.sender,
         },
     )?;
 

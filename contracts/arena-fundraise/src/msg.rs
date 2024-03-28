@@ -17,7 +17,6 @@ pub struct InstantiateMsg {
     pub hard_cap: Option<Uint128>,
     pub start: Option<Expiration>,
     pub duration: Duration,
-    pub recipient: String,
 }
 
 #[cw_serde]

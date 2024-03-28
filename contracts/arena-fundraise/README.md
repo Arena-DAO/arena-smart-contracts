@@ -1,8 +1,34 @@
-# Arena-Fundraise
+# Arena Fundraise Contract
 
-Arena-Fundraise is a smart contract for raising funds within the initial parameters. This contract will only support native tokens.
+This contract is designed to facilitate fundraising for native tokens.
 
-The fundraiser will define the `fundraise` coin to be paid on instantiation along with a `start` and `expiration`. 
-Users will be able to deposit the `deposit_token` for a share of the allocated `fundraise` coin.
-Additionally, if a `soft_cap` is defined but not reached upon expiration, then the fundraise will be considered failed with all deposited tokens available for withdrawal.
-If a `hard_cap` is defined, users will not be able to deposit more than its amount.
+## Contract Usage
+
+### Instantiation
+
+The contract is instantiated with the following parameters:
+
+- `fundraise`: The coin containing a denom and amount to be distributed on a successful fundraiser.
+- `deposit_denom`: The denomination of the deposits.
+- `soft_cap`: The minimum amount that needs to be raised for the fundraise to be considered successful.
+- `hard_cap`: (Optional) The maximum amount that can be raised.
+- `start`: (Optional) The start time of the fundraise campaign.
+- `duration`: The duration of the fundraise campaign.
+
+### Execute Messages
+
+- `Deposit`: Allows a user to deposit funds into the fundraise campaign.
+- `Withdraw`: Allows a user to withdraw their deposit or reward based off the current fundraise status. Users can withdraw deposits at any point while active. They withdraw deposits on failure and rewards on success.
+- `Expire`: Locks in the fundraiser's status.
+
+### Query Messages
+
+- `Config`: Returns the configuration of the fundraise campaign.
+- `TotalDeposited`: Returns the total amount deposited into the fundraise campaign.
+- `Deposit`: Returns the amount deposited by a specific address.
+- `Reward`: Returns the reward for a specific address.
+- `DumpState`: Returns the complete state of the fundraise campaign for a specific address.
+
+## Error Handling
+
+The contract includes error handling for various scenarios such as invalid amounts, expired start times, and incorrect cap configurations.
