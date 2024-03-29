@@ -1,10 +1,11 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, Addr, BankMsg, Binary, CheckedMultiplyFractionError, Coin, CosmosMsg, Decimal,
-    Deps, OverflowError, OverflowOperation, StdResult, Uint128, WasmMsg,
+    Deps, OverflowError, OverflowOperation, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
 use cw721::Cw721ExecuteMsg;
+use itertools::Itertools;
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::{Display, Formatter, Result as FmtResult};
@@ -46,6 +47,21 @@ pub struct BalanceUnchecked {
 // Method to convert Balance to BalanceVerified
 impl BalanceUnchecked {
     pub fn into_checked(self, deps: Deps) -> StdResult<BalanceVerified> {
+        if !self.native.iter().map(|x| x.denom.clone()).all_unique() {
+            return Err(StdError::generic_err("Native tokens are not unique"));
+        }
+        if !self.cw20.iter().map(|x| x.address.clone()).all_unique() {
+            return Err(StdError::generic_err("Cw20 tokens are not unique"));
+        }
+        if !self.cw721.iter().map(|x| x.address.clone()).all_unique() {
+            return Err(StdError::generic_err("Cw721 tokens are not unique"));
+        }
+        for collection in self.cw721.iter() {
+            if !collection.token_ids.iter().all_unique() {
+                return Err(StdError::generic_err("Cw721 token ids are not unique"));
+            }
+        }
+
         Ok(BalanceVerified {
             native: self.native,
             cw20: self
