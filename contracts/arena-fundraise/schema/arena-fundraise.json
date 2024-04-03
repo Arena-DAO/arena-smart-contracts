@@ -493,6 +493,7 @@
       "type": "object",
       "required": [
         "config",
+        "has_expired",
         "total_deposited"
       ],
       "properties": {
@@ -507,6 +508,15 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "has_expired": {
+          "type": "boolean"
+        },
+        "has_started": {
+          "type": [
+            "boolean",
+            "null"
           ]
         },
         "reward": {

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, StdError, StdResult, Uint128};
+use cosmwasm_std::{Deps, Env, StdError, StdResult, Uint128};
 
 use crate::{
     msg::DumpStateResponse,
@@ -37,9 +37,11 @@ pub fn reward(deps: Deps, addr: String) -> Result<Option<Uint128>, ContractError
     }
 }
 
-pub fn dump_state(deps: Deps, addr: Option<String>) -> StdResult<DumpStateResponse> {
+pub fn dump_state(deps: Deps, env: Env, addr: Option<String>) -> StdResult<DumpStateResponse> {
     let config = config(deps)?;
     let total_deposited = total_deposited(deps)?;
+    let has_expired = config.end.is_expired(&env.block);
+    let has_started = config.start.map(|x| x.is_expired(&env.block));
 
     match addr {
         Some(addr) => Ok(DumpStateResponse {
@@ -47,12 +49,16 @@ pub fn dump_state(deps: Deps, addr: Option<String>) -> StdResult<DumpStateRespon
             total_deposited,
             deposit: deposit(deps, addr.clone())?,
             reward: reward(deps, addr).map_err(|e| StdError::generic_err(e.to_string()))?,
+            has_expired,
+            has_started,
         }),
         None => Ok(DumpStateResponse {
             config,
             total_deposited,
             deposit: None,
             reward: None,
+            has_expired,
+            has_started,
         }),
     }
 }

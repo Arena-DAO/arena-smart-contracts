@@ -47,4 +47,6 @@ pub struct DumpStateResponse {
     pub deposit: Option<Uint128>,
     pub reward: Option<Uint128>,
     pub total_deposited: Uint128,
+    pub has_expired: bool,
+    pub has_started: Option<bool>,
 }

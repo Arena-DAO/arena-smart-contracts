@@ -107,7 +107,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&query::config(deps)?),
         QueryMsg::TotalDeposited {} => to_json_binary(&query::total_deposited(deps)?),
@@ -115,7 +115,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Reward { addr } => to_json_binary(
             &query::reward(deps, addr).map_err(|e| StdError::generic_err(e.to_string()))?,
         ),
-        QueryMsg::DumpState { addr } => to_json_binary(&query::dump_state(deps, addr)?),
+        QueryMsg::DumpState { addr } => to_json_binary(&query::dump_state(deps, env, addr)?),
     }
 }
 
