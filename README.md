@@ -12,23 +12,18 @@ The project is organized into several directories:
 
 - `packages`: This directory contains Rust packages that are used by the contracts. Each package has a Cargo.toml file and a src directory.
 
-- `scripts`: This directory contains batch files for generating the contract schemas and TypeScript types.
+- `scripts`: This directory contains batch files for checking and optimizing the contracts.
 
-- `ts-codegen`: This directory contains TypeScript code for generating TypeScript types from the contract schemas. The src directory contains the source code and the package.json file specifies the dependencies.
 
 ## Building and Testing
 
-The `scripts/check.bat` file is used to check for unused dependencies, format the code, and run clippy for linting. It uses the nightly version of cargo for these tasks.
+The `scripts/check` file is used to check for unused dependencies, format the code, and run clippy for linting. It uses the nightly version of cargo for these tasks.
 
-The `scripts/gen.bat` file is used to generate the contract schemas and TypeScript types. It first generates the schemas for all contracts and then generates the TypeScript types.
+The `scripts/gen` file is used to generate the contract schemas and TypeScript types. It first generates the schemas for all contracts and then generates the TypeScript types.
 
-The `scripts/optimize.bat` file is used to optimize the smart contracts. It uses the Docker image `cosmwasm/workspace-optimizer:0.14.0` to run the optimization process.
+The `scripts/optimize` file is used to optimize the smart contracts. It uses the Docker image `cosmwasm/workspace-optimizer:0.15.0` to run the optimization process.
 
 The GitHub Actions workflows in the `.github/workflows` directory are used to run tests and lints on every push and pull request.
-
-## TypeScript Code Generation
-
-The TypeScript code generation is done by the `ts-codegen` package. The `src/codegen.ts` file uses the `@cosmwasm/ts-codegen` package to generate TypeScript types from the contract schemas. The generated types are output to the `./output` directory.
 
 ## Smart Contracts
 

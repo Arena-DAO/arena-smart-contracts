@@ -4,7 +4,7 @@ use crate::state::{Result, TournamentExt};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, StdResult, Uint128, Uint64};
 use cw_competition::{
-    msg::{ExecuteBase, InstantiateBase, IntoCompetitionExt, QueryBase},
+    msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
 };
 use cw_utils::Duration;
@@ -78,8 +78,8 @@ pub struct CompetitionInstantiateExt {
     pub distribution: Vec<Decimal>,
 }
 
-impl IntoCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
-    fn into_competition_ext(self, _deps: cosmwasm_std::Deps) -> StdResult<CompetitionExt> {
+impl ToCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
+    fn to_competition_ext(&self, _deps: cosmwasm_std::Deps) -> StdResult<CompetitionExt> {
         Ok(CompetitionExt {
             match_win_points: self.match_win_points,
             match_draw_points: self.match_draw_points,
@@ -88,7 +88,7 @@ impl IntoCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
             rounds: Uint64::zero(),
             matches: Uint128::zero(),
             processed_matches: Uint128::zero(),
-            distribution: self.distribution,
+            distribution: self.distribution.clone(),
         })
     }
 }

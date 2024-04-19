@@ -117,6 +117,6 @@ pub enum ModuleInfo {
     Existing { addr: String },
 }
 
-pub trait IntoCompetitionExt<T> {
-    fn into_competition_ext(self, deps: Deps) -> StdResult<T>;
+pub trait ToCompetitionExt<T> {
+    fn to_competition_ext(&self, deps: Deps) -> StdResult<T>;
 }

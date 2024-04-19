@@ -10,8 +10,8 @@ use cw_balance::Distribution;
 use cw_competition::{
     escrow::{CompetitionEscrowDistributeMsg, TaxInformation},
     msg::{
-        CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, IntoCompetitionExt,
-        ModuleInfo, QueryBase,
+        CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, ModuleInfo, QueryBase,
+        ToCompetitionExt,
     },
     state::{
         Competition, CompetitionListItemResponse, CompetitionResponse, CompetitionStatus, Config,
@@ -48,7 +48,7 @@ pub struct CompetitionModuleContract<
     ExecuteExt,
     QueryExt,
     CompetitionExt: Serialize + Clone + DeserializeOwned,
-    CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
+    CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
 > {
     pub config: Item<'static, Config<InstantiateExt>>,
     pub competition_count: Item<'static, Uint128>,
@@ -77,7 +77,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
+        CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
         InstantiateExt,
@@ -155,7 +155,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
+        CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
     > Default
     for CompetitionModuleContract<
         InstantiateExt,
@@ -188,7 +188,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: IntoCompetitionExt<CompetitionExt>,
+        CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
         InstantiateExt,
@@ -256,7 +256,7 @@ impl<
                 expiration,
                 rules,
                 rulesets,
-                instantiate_extension,
+                &instantiate_extension,
             ),
             ExecuteBase::ProcessCompetition {
                 competition_id,
@@ -543,7 +543,7 @@ impl<
         expiration: cw_utils::Expiration,
         rules: Vec<String>,
         rulesets: Vec<Uint128>,
-        extension: CompetitionInstantiateExt,
+        extension: &CompetitionInstantiateExt,
     ) -> Result<Response, CompetitionError> {
         if expiration.is_expired(&env.block) {
             return Err(CompetitionError::StdError(StdError::GenericErr {
@@ -653,7 +653,7 @@ impl<
             expiration,
             rulesets,
             status: initial_status,
-            extension: extension.into_competition_ext(deps.as_ref())?,
+            extension: extension.to_competition_ext(deps.as_ref())?,
         };
 
         self.competition_rules

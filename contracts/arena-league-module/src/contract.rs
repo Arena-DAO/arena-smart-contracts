@@ -71,7 +71,7 @@ pub fn execute(
                 expiration,
                 rules,
                 rulesets,
-                instantiate_extension.clone(),
+                &instantiate_extension,
             )?;
 
             execute::instantiate_rounds(

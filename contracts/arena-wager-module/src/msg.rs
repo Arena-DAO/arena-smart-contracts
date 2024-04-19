@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Empty;
 use cw_competition::{
-    msg::{ExecuteBase, InstantiateBase, IntoCompetitionExt, QueryBase},
+    msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
 };
 
@@ -29,8 +29,8 @@ impl Default for EmptyWrapper {
     }
 }
 
-impl IntoCompetitionExt<Empty> for EmptyWrapper {
-    fn into_competition_ext(self, _deps: cosmwasm_std::Deps) -> cosmwasm_std::StdResult<Empty> {
+impl ToCompetitionExt<Empty> for EmptyWrapper {
+    fn to_competition_ext(&self, _deps: cosmwasm_std::Deps) -> cosmwasm_std::StdResult<Empty> {
         Ok(Empty {})
     }
 }
