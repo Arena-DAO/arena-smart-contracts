@@ -78,6 +78,10 @@ pub fn set_distribution(
     info: MessageInfo,
     distribution: Option<Distribution<String>>,
 ) -> Result<Response, ContractError> {
+    if is_locked(deps.as_ref()) {
+        return Err(ContractError::Locked {});
+    }
+
     if let Some(distribution) = &distribution {
         // Validate
         let distribution = distribution.into_checked(deps.as_ref())?;

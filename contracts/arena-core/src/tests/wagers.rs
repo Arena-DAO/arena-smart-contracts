@@ -953,26 +953,6 @@ fn test_preset_distribution() {
     );
     assert!(result.is_ok());
 
-    // Fund escrow
-    context
-        .app
-        .execute_contract(
-            user1.clone(),
-            competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
-            &[Coin::from_str(&wager_amount).unwrap()],
-        )
-        .unwrap();
-    context
-        .app
-        .execute_contract(
-            user2.clone(),
-            competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
-            &[Coin::from_str(&wager_amount).unwrap()],
-        )
-        .unwrap();
-
     // Set distributions .25 to user1 and .75 to user2 in both cases
     context
         .app
@@ -1020,6 +1000,35 @@ fn test_preset_distribution() {
             &[],
         )
         .unwrap();
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            user1.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            user2.clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    // Trying to update the preset distribution while locked is an error
+    let result = context.app.execute_contract(
+        user1.clone(),
+        competition1.escrow.as_ref().unwrap().clone(),
+        &arena_escrow::msg::ExecuteMsg::SetDistribution { distribution: None },
+        &[],
+    );
+    assert!(result.is_err());
 
     // Vote and execute
     let result = context.app.execute_contract(
