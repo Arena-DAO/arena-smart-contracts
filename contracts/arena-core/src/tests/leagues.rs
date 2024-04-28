@@ -58,7 +58,6 @@ fn setup_league_context(
                                 extension: TournamentExt {
                                     tax_cw20_msg: None,
                                     tax_cw721_msg: None,
-                                    remainder_addr: core_context.dao_addr.to_string(),
                                 },
                             })
                             .unwrap(),

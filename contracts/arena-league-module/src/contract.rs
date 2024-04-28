@@ -35,7 +35,6 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    deps.api.addr_validate(&msg.extension.remainder_addr)?;
     let resp = CompetitionModule::default().instantiate(deps.branch(), env, info, msg)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(resp)

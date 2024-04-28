@@ -30,13 +30,7 @@
       },
       "TournamentExt": {
         "type": "object",
-        "required": [
-          "remainder_addr"
-        ],
         "properties": {
-          "remainder_addr": {
-            "type": "string"
-          },
           "tax_cw20_msg": {
             "anyOf": [
               {
@@ -1845,13 +1839,7 @@
         },
         "TournamentExt": {
           "type": "object",
-          "required": [
-            "remainder_addr"
-          ],
           "properties": {
-            "remainder_addr": {
-              "type": "string"
-            },
             "tax_cw20_msg": {
               "anyOf": [
                 {
