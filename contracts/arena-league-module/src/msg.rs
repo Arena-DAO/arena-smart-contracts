@@ -7,7 +7,6 @@ use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
 };
-use cw_utils::Duration;
 
 #[cw_serde]
 pub enum ExecuteExt {
@@ -74,7 +73,6 @@ pub struct CompetitionInstantiateExt {
     pub match_draw_points: Uint128,
     pub match_lose_points: Uint128,
     pub teams: Vec<String>,
-    pub round_duration: Duration,
     pub distribution: Vec<Decimal>,
 }
 

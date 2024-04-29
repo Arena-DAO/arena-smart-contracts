@@ -39,11 +39,6 @@ pub fn instantiate_contract(
             msg: "None due".to_string(),
         });
     }
-    if due.len() == 1 {
-        return Err(ContractError::InvalidDue {
-            msg: "Only one due".to_string(),
-        });
-    }
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;

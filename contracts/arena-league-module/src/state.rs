@@ -1,7 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, Deps, StdResult, Uint128, Uint64};
 use cw_storage_plus::Map;
-use cw_utils::Expiration;
 
 #[cw_serde]
 pub struct TournamentExt {
@@ -28,7 +27,6 @@ pub enum Result {
 pub struct Round {
     pub round_number: Uint64,
     pub matches: Vec<Uint128>, // A link to the Match by match_number
-    pub expiration: Expiration,
 }
 
 impl Round {
@@ -42,7 +40,6 @@ impl Round {
         Ok(RoundResponse {
             round_number: self.round_number,
             matches,
-            expiration: self.expiration,
         })
     }
 }
@@ -51,7 +48,6 @@ impl Round {
 pub struct RoundResponse {
     pub round_number: Uint64,
     pub matches: Vec<Match>,
-    pub expiration: Expiration,
 }
 
 /// (League Id, Round Number)

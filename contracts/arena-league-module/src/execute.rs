@@ -1,11 +1,9 @@
 use cosmwasm_std::{
-    Addr, Decimal, DepsMut, Env, MessageInfo, OverflowError, OverflowOperation, Response, StdError,
-    StdResult, Uint128, Uint64,
+    Addr, Decimal, DepsMut, MessageInfo, Response, StdError, StdResult, Uint128, Uint64,
 };
 use cw_balance::{Distribution, MemberPercentage};
-use cw_utils::Duration;
 use itertools::Itertools;
-use std::{ops::Add, vec};
+use std::vec;
 
 use crate::{
     contract::CompetitionModule,
@@ -18,11 +16,9 @@ use crate::{
 #[allow(clippy::too_many_arguments)]
 pub fn instantiate_rounds(
     deps: DepsMut,
-    env: Env,
     response: Response,
     teams: Vec<String>,
     distribution: Vec<Decimal>,
-    round_duration: Duration,
 ) -> Result<Response, ContractError> {
     let team_count = teams.len();
     if team_count < 2 {
@@ -81,13 +77,11 @@ pub fn instantiate_rounds(
         .load(deps.storage)?;
 
     // Save rounds and matches to storage
-    let mut duration = round_duration;
     let mut match_number = 1u128;
     let mut rounds_count = 0u64;
     for (i, round_pairings) in matches.iter().enumerate() {
         let round_number = i as u64 + 1;
         let mut matches = vec![];
-        let expiration = duration.after(&env.block);
 
         for &(idx1, idx2) in round_pairings {
             MATCHES.save(
@@ -110,10 +104,8 @@ pub fn instantiate_rounds(
             &Round {
                 round_number: Uint64::from(round_number),
                 matches,
-                expiration,
             },
         )?;
-        duration = duration.add(round_duration)?;
         rounds_count += 1;
     }
 
@@ -135,24 +127,14 @@ pub fn instantiate_rounds(
         },
     )?;
 
-    // Check competition expiration is greater than the last match's expiration + 1 match expiration duration
-    let competition_expiration = duration.after(&env.block);
-    if competition.expiration < competition_expiration {
-        return Err(ContractError::OverflowError(OverflowError::new(
-            OverflowOperation::Add,
-            competition_expiration,
-            competition.expiration,
-        )));
-    }
-
     Ok(response
-        .add_attribute("round_duration", round_duration.to_string())
-        .add_attribute("rounds", rounds_count.to_string()))
+        .add_attribute("rounds", competition.extension.rounds)
+        .add_attribute("matches", competition.extension.matches)
+        .add_attribute("teams", competition.extension.teams))
 }
 
 pub fn process_matches(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     league_id: Uint128,
     round_number: Uint64,
@@ -168,14 +150,6 @@ pub fn process_matches(
                 cw_ownable::OwnershipError::NotOwner,
             ),
         ));
-    }
-
-    let round = ROUNDS.load(deps.storage, (league_id.u128(), round_number.u64()))?;
-    // Limit when results can be set to prevent malicious vote spam
-    if !round.expiration.is_expired(&env.block) {
-        return Err(ContractError::NotExpired {
-            expiration: round.expiration,
-        });
     }
 
     for match_result in match_results {

@@ -12,7 +12,7 @@ use cw4::Member;
 use cw_balance::MemberBalanceUnchecked;
 use cw_competition::msg::ModuleInfo;
 use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
-use cw_utils::{Duration, Expiration};
+use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
 
 use crate::tests::{
@@ -92,7 +92,6 @@ fn create_competition(
     expiration: Expiration,
     members: Vec<cw4::Member>,
     dues: Option<Vec<MemberBalanceUnchecked>>,
-    round_duration: Duration,
 ) -> Uint128 {
     let teams: Vec<String> = members.iter().map(|x| x.addr.to_string()).collect();
 
@@ -144,7 +143,6 @@ fn create_competition(
             rulesets: vec![],
             instantiate_extension: CompetitionInstantiateExt {
                 teams,
-                round_duration,
                 match_win_points: Uint128::from(3u128),
                 match_draw_points: Uint128::one(),
                 match_lose_points: Uint128::zero(),
@@ -204,7 +202,7 @@ fn test_create_competition() {
         league: league_context,
     };
 
-    // Create competiton
+    // Create competition
     let starting_height = context.app.block_info().height;
     let competition1_id = create_competition(
         &mut context,
@@ -234,7 +232,6 @@ fn test_create_competition() {
                 },
             },
         ]),
-        Duration::Height(10u64),
     );
 
     // Get competition1
@@ -282,7 +279,6 @@ fn test_create_competition() {
                     result: None
                 }
             ],
-            expiration: Expiration::AtHeight(starting_height + 10u64),
         },
     );
 
@@ -318,7 +314,6 @@ fn test_create_competition() {
                     result: None
                 }
             ],
-            expiration: Expiration::AtHeight(starting_height + 20u64),
         },
     );
 
