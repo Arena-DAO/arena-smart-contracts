@@ -131,7 +131,11 @@ pub fn instantiate_rounds(
     Ok(response
         .add_attribute("rounds", competition.extension.rounds)
         .add_attribute("matches", competition.extension.matches)
-        .add_attribute("teams", competition.extension.teams))
+        .add_attribute("teams", competition.extension.teams)
+        .add_attribute(
+            "distribution",
+            format!("{:#?}", competition.extension.distribution),
+        ))
 }
 
 pub fn process_matches(
@@ -182,13 +186,13 @@ pub fn process_matches(
 
     // Check if the processed matches have changed and update the league data accordingly.
     if processed_matches != league.extension.processed_matches {
-        let mut new_league = league.clone();
-        new_league.extension.processed_matches = processed_matches;
+        let mut updated_league = league.clone();
+        updated_league.extension.processed_matches = processed_matches;
 
         CompetitionModule::default().competitions.replace(
             deps.storage,
             league_id.u128(),
-            Some(&new_league),
+            Some(&updated_league),
             Some(&league),
         )?;
 
@@ -299,7 +303,7 @@ pub fn update_distribution(
     league_id: Uint128,
     distribution: Vec<Decimal>,
 ) -> Result<Response, ContractError> {
-    let mut league = CompetitionModule::default()
+    let league = CompetitionModule::default()
         .competitions
         .load(deps.storage, league_id.u128())?;
 
@@ -313,14 +317,25 @@ pub fn update_distribution(
             msg: "Cannot have a distribution size bigger than the teams size".to_string(),
         }));
     }
+    if distribution.iter().sum::<Decimal>() != Decimal::one() {
+        return Err(ContractError::StdError(StdError::generic_err(
+            "The distribution must sum up to 1",
+        )));
+    }
+    let mut updated_league = league.clone();
+    updated_league.extension.distribution = distribution;
 
-    league.extension.distribution = distribution.clone();
-
-    CompetitionModule::default()
-        .competitions
-        .save(deps.storage, league_id.u128(), &league)?;
+    CompetitionModule::default().competitions.replace(
+        deps.storage,
+        league_id.u128(),
+        Some(&updated_league),
+        Some(&league),
+    )?;
 
     Ok(Response::new()
         .add_attribute("action", "update_distribution")
-        .add_attribute("distribution", format!("{:#?}", distribution)))
+        .add_attribute(
+            "distribution",
+            format!("{:#?}", updated_league.extension.distribution),
+        ))
 }
