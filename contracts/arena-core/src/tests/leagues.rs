@@ -228,20 +228,6 @@ fn test_league_validation() {
     );
     assert!(result.is_err());
 
-    // Error on distributions not sorted
-    let result = create_competition(
-        &mut context,
-        Expiration::Never {},
-        members.clone(),
-        None,
-        vec![
-            Decimal::from_ratio(20u128, 100u128),
-            Decimal::from_ratio(70u128, 100u128),
-            Decimal::from_ratio(10u128, 100u128),
-        ],
-    );
-    assert!(result.is_err());
-
     // Error on distributions greater than teams size
     let result = create_competition(
         &mut context,
@@ -370,21 +356,19 @@ fn test_leagues() {
         ],
     );
     assert!(result.is_ok());
-    let competition1_id = get_id_from_competition_creation_result(result);
+    let competition_id = get_id_from_competition_creation_result(result);
 
-    // Get competition1
-    let competition1: LeagueResponse = context
+    // Get competition
+    let competition: LeagueResponse = context
         .app
         .wrap()
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
-            &QueryMsg::Competition {
-                competition_id: competition1_id,
-            },
+            &QueryMsg::Competition { competition_id },
         )
         .unwrap();
-    assert_eq!(competition1.extension.rounds, Uint64::from(5u64));
-    assert_eq!(competition1.extension.matches, Uint128::from(10u64));
+    assert_eq!(competition.extension.rounds, Uint64::from(5u64));
+    assert_eq!(competition.extension.matches, Uint128::from(10u64));
 
     // Get round 1
     let round1: RoundResponse = context
@@ -394,7 +378,7 @@ fn test_leagues() {
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Round {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round_number: Uint64::one(),
                 },
             },
@@ -429,7 +413,7 @@ fn test_leagues() {
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Round {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round_number: Uint64::from(2u64),
                 },
             },
@@ -464,7 +448,7 @@ fn test_leagues() {
             contract_addr: context.league.league_module_addr.to_string(),
             msg: to_json_binary(&ExecuteMsg::Extension {
                 msg: ExecuteExt::ProcessMatch {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round_number: Uint64::one(),
                     match_results: vec![
                         MatchResult {
@@ -496,7 +480,7 @@ fn test_leagues() {
         .app
         .execute_contract(
             users[0].clone(),
-            competition1.escrow.as_ref().unwrap().clone(),
+            competition.escrow.as_ref().unwrap().clone(),
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
@@ -505,7 +489,7 @@ fn test_leagues() {
         .app
         .execute_contract(
             users[1].clone(),
-            competition1.escrow.as_ref().unwrap().clone(),
+            competition.escrow.as_ref().unwrap().clone(),
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
@@ -521,20 +505,15 @@ fn test_leagues() {
     assert!(result.is_ok());
 
     // Check that processed matches was updated
-    let competition1: LeagueResponse = context
+    let competition: LeagueResponse = context
         .app
         .wrap()
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
-            &QueryMsg::Competition {
-                competition_id: competition1_id,
-            },
+            &QueryMsg::Competition { competition_id },
         )
         .unwrap();
-    assert_eq!(
-        competition1.extension.processed_matches,
-        Uint128::from(2u64)
-    );
+    assert_eq!(competition.extension.processed_matches, Uint128::from(2u64));
 
     let leaderboard: Vec<MemberPoints> = context
         .app
@@ -543,7 +522,7 @@ fn test_leagues() {
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round: None,
                 },
             },
@@ -593,7 +572,7 @@ fn test_leagues() {
                 contract_addr: context.league.league_module_addr.to_string(),
                 msg: to_json_binary(&ExecuteMsg::Extension {
                     msg: ExecuteExt::ProcessMatch {
-                        league_id: competition1_id,
+                        league_id: competition_id,
                         round_number: Uint64::from(2u64),
                         match_results: vec![
                             MatchResult {
@@ -623,7 +602,7 @@ fn test_leagues() {
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round: None,
                 },
             },
@@ -681,7 +660,7 @@ fn test_leagues() {
                 contract_addr: context.league.league_module_addr.to_string(),
                 msg: to_json_binary(&ExecuteMsg::Extension {
                     msg: ExecuteExt::ProcessMatch {
-                        league_id: competition1_id,
+                        league_id: competition_id,
                         round_number: Uint64::from(3u64),
                         match_results: vec![
                             MatchResult {
@@ -711,7 +690,7 @@ fn test_leagues() {
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round: None,
                 },
             },
@@ -769,7 +748,7 @@ fn test_leagues() {
                 contract_addr: context.league.league_module_addr.to_string(),
                 msg: to_json_binary(&ExecuteMsg::Extension {
                     msg: ExecuteExt::ProcessMatch {
-                        league_id: competition1_id,
+                        league_id: competition_id,
                         round_number: Uint64::from(4u64),
                         match_results: vec![
                             MatchResult {
@@ -799,7 +778,7 @@ fn test_leagues() {
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round: None,
                 },
             },
@@ -857,7 +836,7 @@ fn test_leagues() {
                 contract_addr: context.league.league_module_addr.to_string(),
                 msg: to_json_binary(&ExecuteMsg::Extension {
                     msg: ExecuteExt::ProcessMatch {
-                        league_id: competition1_id,
+                        league_id: competition_id,
                         round_number: Uint64::from(5u64),
                         match_results: vec![
                             MatchResult {
@@ -887,7 +866,7 @@ fn test_leagues() {
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
                 msg: QueryExt::Leaderboard {
-                    league_id: competition1_id,
+                    league_id: competition_id,
                     round: None,
                 },
             },
@@ -941,7 +920,7 @@ fn test_leagues() {
         .app
         .wrap()
         .query_wasm_smart(
-            competition1.escrow.as_ref().unwrap(),
+            competition.escrow.as_ref().unwrap(),
             &arena_escrow::msg::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
@@ -982,7 +961,7 @@ fn test_leagues() {
 /// What if all matches are tied or many are tied for a position? Test the optimization for this.
 /// Extra placement percentages should be evenly distributed into the percentages
 #[test]
-fn test_distribution_transformation() {
+fn test_distributions() {
     let mut app = get_app();
     let users = [
         app.api().addr_make("user1"),
@@ -1054,17 +1033,15 @@ fn test_distribution_transformation() {
         ],
     );
     assert!(result.is_ok());
-    let competition1_id = get_id_from_competition_creation_result(result);
+    let competition_id = get_id_from_competition_creation_result(result);
 
     // Get the competition
-    let competition1: LeagueResponse = context
+    let competition: LeagueResponse = context
         .app
         .wrap()
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
-            &QueryMsg::Competition {
-                competition_id: competition1_id,
-            },
+            &QueryMsg::Competition { competition_id },
         )
         .unwrap();
 
@@ -1073,7 +1050,7 @@ fn test_distribution_transformation() {
         .app
         .execute_contract(
             users[0].clone(),
-            competition1.escrow.as_ref().unwrap().clone(),
+            competition.escrow.as_ref().unwrap().clone(),
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
@@ -1082,7 +1059,7 @@ fn test_distribution_transformation() {
         .app
         .execute_contract(
             users[1].clone(),
-            competition1.escrow.as_ref().unwrap().clone(),
+            competition.escrow.as_ref().unwrap().clone(),
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
@@ -1099,7 +1076,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition1_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(1u64),
                             match_results: vec![
                                 MatchResult {
@@ -1121,7 +1098,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition1_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(2u64),
                             match_results: vec![
                                 MatchResult {
@@ -1143,7 +1120,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition1_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(3u64),
                             match_results: vec![
                                 MatchResult {
@@ -1165,7 +1142,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition1_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(4u64),
                             match_results: vec![
                                 MatchResult {
@@ -1187,7 +1164,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition1_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(5u64),
                             match_results: vec![
                                 MatchResult {
@@ -1217,7 +1194,7 @@ fn test_distribution_transformation() {
         .app
         .wrap()
         .query_wasm_smart(
-            competition1.escrow.as_ref().unwrap(),
+            competition.escrow.as_ref().unwrap(),
             &arena_escrow::msg::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
@@ -1306,17 +1283,15 @@ fn test_distribution_transformation() {
         ],
     );
     assert!(result.is_ok());
-    let competition2_id = get_id_from_competition_creation_result(result);
+    let competition_id = get_id_from_competition_creation_result(result);
 
     // Get the competition
-    let competition2: LeagueResponse = context
+    let competition: LeagueResponse = context
         .app
         .wrap()
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
-            &QueryMsg::Competition {
-                competition_id: competition2_id,
-            },
+            &QueryMsg::Competition { competition_id },
         )
         .unwrap();
 
@@ -1325,7 +1300,7 @@ fn test_distribution_transformation() {
         .app
         .execute_contract(
             users[0].clone(),
-            competition2.escrow.as_ref().unwrap().clone(),
+            competition.escrow.as_ref().unwrap().clone(),
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
@@ -1334,7 +1309,7 @@ fn test_distribution_transformation() {
         .app
         .execute_contract(
             users[1].clone(),
-            competition2.escrow.as_ref().unwrap().clone(),
+            competition.escrow.as_ref().unwrap().clone(),
             &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
@@ -1351,7 +1326,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition2_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(1u64),
                             match_results: vec![
                                 MatchResult {
@@ -1373,7 +1348,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition2_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(2u64),
                             match_results: vec![
                                 MatchResult {
@@ -1395,7 +1370,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition2_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(3u64),
                             match_results: vec![
                                 MatchResult {
@@ -1417,7 +1392,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition2_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(4u64),
                             match_results: vec![
                                 MatchResult {
@@ -1439,7 +1414,7 @@ fn test_distribution_transformation() {
                     contract_addr: context.league.league_module_addr.to_string(),
                     msg: to_json_binary(&ExecuteMsg::Extension {
                         msg: ExecuteExt::ProcessMatch {
-                            league_id: competition2_id,
+                            league_id: competition_id,
                             round_number: Uint64::from(5u64),
                             match_results: vec![
                                 MatchResult {
@@ -1471,7 +1446,7 @@ fn test_distribution_transformation() {
         .app
         .wrap()
         .query_wasm_smart(
-            competition2.escrow.as_ref().unwrap(),
+            competition.escrow.as_ref().unwrap(),
             &arena_escrow::msg::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
@@ -1506,5 +1481,395 @@ fn test_distribution_transformation() {
                 }
             }
         ]
-    )
+    );
+
+    // Let's test a 1st, 2nd, and 3rd place tie
+    let result = create_competition(
+        &mut context,
+        Expiration::AtHeight(starting_height + 100),
+        users[0..4] // Only 4 members this time
+            .iter()
+            .map(|x| Member {
+                addr: x.to_string(),
+                weight: 1u64,
+            })
+            .collect(),
+        Some(vec![
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+        ]),
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+    );
+    assert!(result.is_ok());
+    let competition_id = get_id_from_competition_creation_result(result);
+
+    // Get the competition
+    let competition: LeagueResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::Competition { competition_id },
+        )
+        .unwrap();
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            users[0].clone(),
+            competition.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            users[1].clone(),
+            competition.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    context.app.update_block(|x| x.height += 10);
+    // Process all matches
+    let result = context.app.execute_contract(
+        admin.clone(),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(1u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(1u128),
+                                    result: Some(Result::Team1),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(2u128),
+                                    result: Some(Result::Team1),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(2u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(3u128),
+                                    result: Some(Result::Team1),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(4u128),
+                                    result: Some(Result::Team2),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(3u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(5u128),
+                                    result: Some(Result::Team1),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(6u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+            ],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Check escrow balance was distributed after all matches were processed
+    // Distribution was 1st - 70%, 2nd - 20%, 3rd - 10%
+    // 1st place is 1 person, 2nd place is 1 person, and 3rd place is 2 people
+    let balances: Vec<MemberBalanceUnchecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition.escrow.as_ref().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        balances,
+        vec![
+            MemberBalanceUnchecked {
+                addr: users[3].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(850, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(11900, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[2].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(850, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3400, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            }
+        ]
+    );
+
+    // Let's test a 1st with 2nd place tie - 3 members out of 3 distribution
+    let result = create_competition(
+        &mut context,
+        Expiration::AtHeight(starting_height + 100),
+        users[0..4] // Only 4 members this time
+            .iter()
+            .map(|x| Member {
+                addr: x.to_string(),
+                weight: 1u64,
+            })
+            .collect(),
+        Some(vec![
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+        ]),
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+    );
+    assert!(result.is_ok());
+    let competition_id = get_id_from_competition_creation_result(result);
+
+    // Get the competition
+    let competition: LeagueResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::Competition { competition_id },
+        )
+        .unwrap();
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            users[0].clone(),
+            competition.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            users[1].clone(),
+            competition.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    context.app.update_block(|x| x.height += 10);
+    // Process all matches
+    let result = context.app.execute_contract(
+        admin.clone(),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(1u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(1u128),
+                                    result: Some(Result::Team1),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(2u128),
+                                    result: Some(Result::Team1),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(2u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(3u128),
+                                    result: Some(Result::Team2),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(4u128),
+                                    result: Some(Result::Team2),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(3u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(5u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(6u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+            ],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Check escrow balance was distributed after all matches were processed
+    // Distribution was 1st - 70%, 2nd - 20%, 3rd - 10%
+    // 1st place is 1 person and 2nd place is 2 people so 3rd's 10% is redistributed up
+    let balances: Vec<MemberBalanceUnchecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition.escrow.as_ref().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        balances,
+        vec![
+            MemberBalanceUnchecked {
+                addr: users[3].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(2125, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(2125, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(12750, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            }
+        ]
+    );
 }

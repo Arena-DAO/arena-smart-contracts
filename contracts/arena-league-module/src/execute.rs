@@ -41,17 +41,6 @@ pub fn instantiate_rounds(
             "The distribution must sum up to 1",
         )));
     }
-    // Ensure that the distribution is sorted.
-    // This is important for the processing of leagues, because the last percentages can be summed up.
-    if !distribution
-        .iter()
-        .sorted_by(|x, y| y.cmp(x))
-        .eq(distribution.iter())
-    {
-        return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "The distribution must be sorted".to_string(),
-        }));
-    }
 
     // Retrieve the current league's id
     let league_id = CompetitionModule::default()
@@ -231,13 +220,13 @@ pub fn process_matches(
                 if previous.points == member_points.points {
                     placement_members[current_placement - 1].push(member_points.member.clone());
                 } else {
-                    placement_members.push(vec![member_points.member.clone()]);
-
                     // If we have processed all users that can be fit by placement, then exit early
                     // The last percentages will be summed to the end
-                    if i >= placements - 1 {
+                    if i >= placements {
                         break;
                     }
+
+                    placement_members.push(vec![member_points.member.clone()]);
 
                     current_placement += 1;
                 }
@@ -250,51 +239,41 @@ pub fn process_matches(
 
         // Adjust the distribution of funds based on member placements.
         let mut member_percentages = vec![];
-        if placements > placement_members.len() {
-            // Transform the distribution
-            let summed_extras: Decimal = league.extension.distribution
-                [placement_members.len()..placements]
-                .iter()
-                .sum();
-            let mut distribution =
-                league.extension.distribution[0..placement_members.len()].to_vec();
 
-            let redistributed_percentage_share = summed_extras
-                / Decimal::from_ratio(placement_members.len() as u128, Uint128::one());
-            for entry in distribution.iter_mut() {
-                *entry += redistributed_percentage_share;
-            }
+        // Transform the distribution
+        let summed_extras: Decimal = league.extension.distribution
+            [placement_members.len()..placements]
+            .iter()
+            .sum();
+        let mut distribution = league.extension.distribution[0..placement_members.len()].to_vec();
 
-            // Generate the member percentages
-            let mut remainder_percentage = Decimal::one();
+        let redistributed_percentage_share =
+            summed_extras / Decimal::from_ratio(placement_members.len() as u128, Uint128::one());
+        for entry in distribution.iter_mut() {
+            *entry += redistributed_percentage_share;
+        }
 
-            for i in 0..placement_members.len() {
-                let members = &placement_members[i];
-                let placement_percentage =
-                    distribution[i] / Decimal::from_ratio(members.len() as u128, Uint128::one());
-                for member in members {
-                    remainder_percentage -= placement_percentage;
+        // Generate the member percentages
+        let mut remainder_percentage = Decimal::one();
 
-                    member_percentages.push(MemberPercentage::<Addr> {
-                        addr: member.clone(),
-                        percentage: placement_percentage,
-                    })
-                }
-            }
+        for i in 0..placement_members.len() {
+            let members = &placement_members[i];
+            let placement_percentage =
+                distribution[i] / Decimal::from_ratio(members.len() as u128, Uint128::one());
+            for member in members {
+                remainder_percentage -= placement_percentage;
 
-            // Increase 1st place by the remainder
-            if remainder_percentage > Decimal::zero() {
-                member_percentages[0].percentage += remainder_percentage;
-            }
-        } else {
-            // If the number of placements matches the number of members, assign directly.
-            for (index, &percentage) in league.extension.distribution.iter().enumerate() {
                 member_percentages.push(MemberPercentage::<Addr> {
-                    addr: leaderboard[index].member.clone(),
-                    percentage,
-                });
+                    addr: member.clone(),
+                    percentage: placement_percentage,
+                })
             }
-        };
+        }
+
+        // Increase 1st place by the remainder
+        if remainder_percentage > Decimal::zero() {
+            member_percentages[0].percentage += remainder_percentage;
+        }
 
         // Load up the custom distribution info
         let config = CompetitionModule::default().config.load(deps.storage)?;
