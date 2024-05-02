@@ -623,21 +623,23 @@ impl<
             }
         };
 
-        // Validate that category and rulesets are valid
-        let result: bool = deps.querier.query_wasm_smart(
-            arena_core,
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
-                msg: arena_core_interface::msg::QueryExt::IsValidCategoryAndRulesets {
-                    category_id,
-                    rulesets: rulesets.clone(),
+        if category_id.is_some() || !rulesets.is_empty() {
+            // Validate that category and rulesets are valid
+            let result: bool = deps.querier.query_wasm_smart(
+                arena_core,
+                &arena_core_interface::msg::QueryMsg::QueryExtension {
+                    msg: arena_core_interface::msg::QueryExt::IsValidCategoryAndRulesets {
+                        category_id,
+                        rulesets: rulesets.clone(),
+                    },
                 },
-            },
-        )?;
-        if !result {
-            return Err(CompetitionError::InvalidCategoryAndRulesets {
-                category_id,
-                rulesets,
-            });
+            )?;
+            if !result {
+                return Err(CompetitionError::InvalidCategoryAndRulesets {
+                    category_id,
+                    rulesets,
+                });
+            }
         }
 
         // Create competition
@@ -669,7 +671,7 @@ impl<
                 competition
                     .escrow
                     .map(|x| x.to_string())
-                    .unwrap_or_default(),
+                    .unwrap_or("None".to_string()),
             )
             .add_attribute("host", competition.host)
             .add_messages(msgs))
@@ -694,14 +696,38 @@ impl<
             })?;
 
         // Validate competition status and sender's authorization
+        self.inner_validate_auth(&info.sender, &competition)?;
+
+        // Validate the distribution
+        let validated_distribution = distribution
+            .as_ref()
+            .map(|some| some.into_checked(deps.as_ref()))
+            .transpose()?;
+
+        // Process the competition
+        self.inner_process(
+            deps,
+            competition,
+            validated_distribution,
+            tax_cw20_msg,
+            tax_cw721_msg,
+        )
+    }
+
+    // Validate competition status and sender's authorization
+    pub fn inner_validate_auth(
+        &self,
+        sender: &Addr,
+        competition: &Competition<CompetitionExt>,
+    ) -> Result<(), CompetitionError> {
         match competition.status {
             CompetitionStatus::Active => {
-                if competition.host != info.sender && competition.admin_dao != info.sender {
+                if competition.host != sender && competition.admin_dao != sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
             }
             CompetitionStatus::Jailed => {
-                if competition.admin_dao != info.sender {
+                if competition.admin_dao != sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
             }
@@ -712,28 +738,34 @@ impl<
             }
         }
 
-        // Validate the distribution
-        let validated_distribution = distribution
-            .as_ref()
-            .map(|some| some.into_checked(deps.as_ref()))
-            .transpose()?;
+        Ok(())
+    }
 
+    // Process a competition
+    pub fn inner_process(
+        &self,
+        deps: DepsMut,
+        competition: Competition<CompetitionExt>,
+        distribution: Option<Distribution<Addr>>,
+        tax_cw20_msg: Option<Binary>,
+        tax_cw721_msg: Option<Binary>,
+    ) -> Result<Response, CompetitionError> {
         // Set the result
-        self.competition_result.save(
-            deps.storage,
-            competition_id.u128(),
-            &validated_distribution,
-        )?;
+        self.competition_result
+            .save(deps.storage, competition.id.u128(), &distribution)?;
+
+        // Get a distribution for messaging
+        let distribution_msg = distribution.as_ref().map(|x| x.into_unchecked());
 
         // Prepare hooks
         let hooks: Vec<(Addr, HookDirection)> = self
             .competition_hooks
-            .prefix(competition_id.u128())
+            .prefix(competition.id.u128())
             .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
             .collect::<StdResult<_>>()?;
         let msg_binary = to_json_binary(&ExecuteBase::<Empty, Empty>::ExecuteCompetitionHook {
-            competition_id,
-            distribution: distribution.clone(),
+            competition_id: competition.id,
+            distribution: distribution_msg.clone(),
         })?;
         let mut msgs: Vec<SubMsg> = hooks
             .iter()
@@ -776,7 +808,7 @@ impl<
 
             let sub_msg = SubMsg::reply_on_success(
                 CompetitionEscrowDistributeMsg {
-                    distribution,
+                    distribution: distribution_msg,
                     tax_info,
                 }
                 .into_cosmos_msg(escrow.clone())?,
@@ -784,7 +816,7 @@ impl<
             );
 
             self.temp_competition
-                .save(deps.storage, &competition_id.u128())?;
+                .save(deps.storage, &competition.id.u128())?;
 
             // We don't expect another activation message from the escrow
             self.escrows_to_competitions.remove(deps.storage, escrow);
@@ -797,7 +829,7 @@ impl<
             .add_attribute("action", "process_competition")
             .add_attribute(
                 "distribution",
-                validated_distribution
+                distribution
                     .map(|some| some.to_string())
                     .unwrap_or("None".to_owned()),
             )

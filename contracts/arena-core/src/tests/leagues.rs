@@ -7,11 +7,11 @@ use arena_league_module::{
     },
     state::{Match, Result, RoundResponse, TournamentExt},
 };
-use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Decimal, Uint128, Uint64, WasmMsg};
+use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Coins, Decimal, Uint128, Uint64, WasmMsg};
 use cw4::Member;
-use cw_balance::MemberBalanceUnchecked;
+use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_competition::msg::ModuleInfo;
-use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
+use cw_multi_test::{addons::MockApiBech32, next_block, App, AppResponse, BankKeeper, Executor};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
 
@@ -40,7 +40,7 @@ fn setup_league_context(
     let league_module_id = app.store_code(arena_testing::contracts::arena_league_module_contract());
     let escrow_id = app.store_code(arena_testing::contracts::arena_dao_escrow_contract());
 
-    // Attach the arena-wager-module to the arena-core
+    // Attach the arena-league-module to the arena-core
     let result = app.execute_contract(
         app.api().addr_make(ADMIN),
         core_context.sudo_proposal_addr.clone(),
@@ -76,7 +76,7 @@ fn setup_league_context(
     assert!(result.is_ok());
     app.update_block(next_block);
 
-    // Get the wager module addr from the response
+    // Get the league module addr from the response
     let maybe_val = get_attr_value(result.as_ref().unwrap(), "competition_module_addr");
     assert!(maybe_val.is_some());
     let league_module_addr = Addr::unchecked(maybe_val.unwrap());
@@ -92,12 +92,13 @@ fn create_competition(
     expiration: Expiration,
     members: Vec<cw4::Member>,
     dues: Option<Vec<MemberBalanceUnchecked>>,
-) -> Uint128 {
+    distribution: Vec<Decimal>,
+) -> cw_multi_test::error::AnyResult<AppResponse> {
     let teams: Vec<String> = members.iter().map(|x| x.addr.to_string()).collect();
 
-    let result = context.app.execute_contract(
+    context.app.execute_contract(
         context.app.api().addr_make(ADMIN),
-        context.league.league_module_addr.clone(), // errors out bc dao not set
+        context.league.league_module_addr.clone(),
         &ExecuteMsg::CreateCompetition {
             category_id: Some(Uint128::one()),
             host: ModuleInfo::New {
@@ -146,17 +147,16 @@ fn create_competition(
                 match_win_points: Uint128::from(3u128),
                 match_draw_points: Uint128::one(),
                 match_lose_points: Uint128::zero(),
-                distribution: vec![
-                    Decimal::from_ratio(70u128, 100u128),
-                    Decimal::from_ratio(20u128, 100u128),
-                    Decimal::from_ratio(10u128, 100u128),
-                ],
+                distribution,
             },
         },
         &[],
-    );
-    assert!(result.is_ok());
+    )
+}
 
+fn get_id_from_competition_creation_result(
+    result: cw_multi_test::error::AnyResult<AppResponse>,
+) -> Uint128 {
     let id = get_attr_value(&result.unwrap(), "competition_id");
     assert!(id.is_some());
 
@@ -167,7 +167,138 @@ fn create_competition(
 }
 
 #[test]
-fn test_create_competition() {
+fn test_league_validation() {
+    let mut app = get_app();
+    let users = [
+        app.api().addr_make("user1"),
+        app.api().addr_make("user2"),
+        app.api().addr_make("user3"),
+        app.api().addr_make("user4"),
+        app.api().addr_make("user5"),
+    ];
+    let admin = app.api().addr_make(ADMIN);
+
+    let core_context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    );
+    let league_context = setup_league_context(&mut app, &core_context);
+    let mut context = Context {
+        app,
+        core: core_context,
+        league: league_context,
+    };
+
+    let members: Vec<_> = users
+        .iter()
+        .map(|x| Member {
+            addr: x.to_string(),
+            weight: 1u64,
+        })
+        .collect();
+
+    // First show a successful distribution
+    let result = create_competition(
+        &mut context,
+        Expiration::Never {},
+        members.clone(),
+        None,
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+    );
+    assert!(result.is_ok());
+
+    // Error on distributions not summing to 1
+    let result = create_competition(
+        &mut context,
+        Expiration::Never {},
+        members.clone(),
+        None,
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(5u128, 100u128),
+        ],
+    );
+    assert!(result.is_err());
+
+    // Error on distributions not sorted
+    let result = create_competition(
+        &mut context,
+        Expiration::Never {},
+        members.clone(),
+        None,
+        vec![
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+    );
+    assert!(result.is_err());
+
+    // Error on distributions greater than teams size
+    let result = create_competition(
+        &mut context,
+        Expiration::Never {},
+        members.clone(),
+        None,
+        vec![
+            Decimal::from_ratio(15u128, 100u128),
+            Decimal::from_ratio(15u128, 100u128),
+            Decimal::from_ratio(15u128, 100u128),
+            Decimal::from_ratio(15u128, 100u128),
+            Decimal::from_ratio(15u128, 100u128),
+            Decimal::from_ratio(15u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+    );
+    assert!(result.is_err());
+
+    // Error on teams not greater than 1
+    let result = create_competition(
+        &mut context,
+        Expiration::Never {},
+        vec![members[0].clone()],
+        None,
+        vec![Decimal::one()],
+    );
+    assert!(result.is_err());
+
+    // Error on teams not unique
+    let result = create_competition(
+        &mut context,
+        Expiration::Never {},
+        vec![members[0].clone(), members[0].clone()],
+        None,
+        vec![Decimal::one()],
+    );
+    assert!(result.is_err());
+
+    // Test 4 members
+    context.app.update_block(|x| x.height += 10); // Need to update block for instantiate2 to work
+    let result = create_competition(
+        &mut context,
+        Expiration::Never {},
+        members[0..members.len() - 1].to_vec(),
+        None,
+        vec![Decimal::one()],
+    );
+    assert!(result.is_ok());
+    let response = result.unwrap();
+
+    assert_eq!(get_attr_value(&response, "rounds"), Some("3".to_string()));
+    assert_eq!(get_attr_value(&response, "matches"), Some("6".to_string()));
+    assert_eq!(get_attr_value(&response, "teams"), Some("4".to_string()));
+}
+
+#[test]
+fn test_leagues() {
     let mut app = get_app();
     let users = [
         app.api().addr_make("user1"),
@@ -204,7 +335,7 @@ fn test_create_competition() {
 
     // Create competition
     let starting_height = context.app.block_info().height;
-    let competition1_id = create_competition(
+    let result = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 100),
         users
@@ -232,7 +363,14 @@ fn test_create_competition() {
                 },
             },
         ]),
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
     );
+    assert!(result.is_ok());
+    let competition1_id = get_id_from_competition_creation_result(result);
 
     // Get competition1
     let competition1: LeagueResponse = context
@@ -246,6 +384,7 @@ fn test_create_competition() {
         )
         .unwrap();
     assert_eq!(competition1.extension.rounds, Uint64::from(5u64));
+    assert_eq!(competition1.extension.matches, Uint128::from(10u64));
 
     // Get round 1
     let round1: RoundResponse = context
@@ -268,14 +407,14 @@ fn test_create_competition() {
             matches: vec![
                 Match {
                     match_number: Uint128::from(2u128),
-                    team_1: users[2].clone(),
-                    team_2: users[3].clone(),
+                    team_1: users[1].clone(),
+                    team_2: users[4].clone(),
                     result: None
                 },
                 Match {
                     match_number: Uint128::one(),
-                    team_1: users[1].clone(),
-                    team_2: users[4].clone(),
+                    team_1: users[0].clone(),
+                    team_2: users[3].clone(),
                     result: None
                 }
             ],
@@ -318,37 +457,84 @@ fn test_create_competition() {
     );
 
     context.app.update_block(|x| x.height += 10);
-    // Process 1st round of matches
+
+    // Check that matches can't be processed until the league is active
+    let msg = dao_proposal_sudo::msg::ExecuteMsg::Execute {
+        msgs: vec![WasmMsg::Execute {
+            contract_addr: context.league.league_module_addr.to_string(),
+            msg: to_json_binary(&ExecuteMsg::Extension {
+                msg: ExecuteExt::ProcessMatch {
+                    league_id: competition1_id,
+                    round_number: Uint64::one(),
+                    match_results: vec![
+                        MatchResult {
+                            match_number: Uint128::one(),
+                            result: Some(Result::Team1),
+                        },
+                        MatchResult {
+                            match_number: Uint128::from(2u128),
+                            result: Some(Result::Draw),
+                        },
+                    ],
+                },
+            })
+            .unwrap(),
+            funds: vec![],
+        }
+        .into()],
+    };
     let result = context.app.execute_contract(
         admin.clone(),
         context.core.sudo_proposal_addr.clone(),
-        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
-            msgs: vec![WasmMsg::Execute {
-                contract_addr: context.league.league_module_addr.to_string(),
-                msg: to_json_binary(&ExecuteMsg::Extension {
-                    msg: ExecuteExt::ProcessMatch {
-                        league_id: competition1_id,
-                        round_number: Uint64::one(),
-                        match_results: vec![
-                            MatchResult {
-                                match_number: Uint128::one(),
-                                result: Some(Result::Team1),
-                            },
-                            MatchResult {
-                                match_number: Uint128::from(2u128),
-                                result: Some(Result::Draw),
-                            },
-                        ],
-                    },
-                })
-                .unwrap(),
-                funds: vec![],
-            }
-            .into()],
-        },
+        &msg,
+        &[],
+    );
+    assert!(result.is_err());
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            users[0].clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            users[1].clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    // Check that we can now process
+    let result = context.app.execute_contract(
+        admin.clone(),
+        context.core.sudo_proposal_addr.clone(),
+        &msg,
         &[],
     );
     assert!(result.is_ok());
+
+    // Check that processed matches was updated
+    let competition1: LeagueResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::Competition {
+                competition_id: competition1_id,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        competition1.extension.processed_matches,
+        Uint128::from(2u64)
+    );
 
     let leaderboard: Vec<MemberPoints> = context
         .app
@@ -368,15 +554,15 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(3u128),
+            points: Uint128::one(),
             matches_played: Uint64::one()
         }
     );
     assert_eq!(
-        *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
+        *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
         MemberPoints {
-            member: users[2].clone(),
-            points: Uint128::one(),
+            member: users[0].clone(),
+            points: Uint128::from(3u128),
             matches_played: Uint64::one()
         }
     );
@@ -384,7 +570,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::one(),
+            points: Uint128::zero(),
             matches_played: Uint64::one()
         }
     );
@@ -392,7 +578,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::zero(),
+            points: Uint128::one(),
             matches_played: Uint64::one()
         }
     );
@@ -448,15 +634,15 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
         MemberPoints {
             member: users[0].clone(),
-            points: Uint128::from(3u128),
-            matches_played: Uint64::one()
+            points: Uint128::from(6u128),
+            matches_played: Uint64::from(2u64)
         }
     );
     assert_eq!(
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(6u128),
+            points: Uint128::from(4u128),
             matches_played: Uint64::from(2u64)
         }
     );
@@ -464,15 +650,15 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::one(),
-            matches_played: Uint64::from(2u64)
+            points: Uint128::zero(),
+            matches_played: Uint64::one()
         }
     );
     assert_eq!(
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::one(),
+            points: Uint128::zero(),
             matches_played: Uint64::one()
         }
     );
@@ -480,7 +666,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::zero(),
+            points: Uint128::one(),
             matches_played: Uint64::from(2u64)
         }
     );
@@ -544,23 +730,23 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(6u128),
-            matches_played: Uint64::from(2u64)
+            points: Uint128::from(4u128),
+            matches_played: Uint64::from(3u64)
         }
     );
     assert_eq!(
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::one(),
-            matches_played: Uint64::from(3u64)
+            points: Uint128::zero(),
+            matches_played: Uint64::from(2u64)
         },
     );
     assert_eq!(
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::one(),
+            points: Uint128::from(3u128),
             matches_played: Uint64::from(2u64)
         },
     );
@@ -568,7 +754,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::from(3u128),
+            points: Uint128::from(4u128),
             matches_played: Uint64::from(3u64)
         }
     );
@@ -632,7 +818,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(6u128),
+            points: Uint128::from(4u128),
             matches_played: Uint64::from(3u64)
         },
     );
@@ -640,15 +826,15 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::one(),
-            matches_played: Uint64::from(4u64)
+            points: Uint128::zero(),
+            matches_played: Uint64::from(3u64)
         },
     );
     assert_eq!(
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::from(4u128),
+            points: Uint128::from(3u128),
             matches_played: Uint64::from(3u64)
         },
     );
@@ -656,8 +842,8 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::from(3u128),
-            matches_played: Uint64::from(3u64)
+            points: Uint128::from(7u128),
+            matches_played: Uint64::from(4u64)
         }
     );
 
@@ -720,7 +906,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(6u128),
+            points: Uint128::from(4u128),
             matches_played: Uint64::from(4u64)
         },
     );
@@ -728,7 +914,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::one(),
+            points: Uint128::from(3u128),
             matches_played: Uint64::from(4u64)
         },
     );
@@ -736,7 +922,7 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::from(7u128),
+            points: Uint128::from(3u128),
             matches_played: Uint64::from(4u64)
         },
     );
@@ -744,8 +930,581 @@ fn test_create_competition() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::from(3u128),
+            points: Uint128::from(7u128),
             matches_played: Uint64::from(4u64)
         }
     );
+
+    // Check escrow balance was distributed after all matches were processed
+    // Distribution was 1st - 70%, 2nd - 20%, 3rd - 10%
+    let balances: Vec<MemberBalanceUnchecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition1.escrow.as_ref().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        balances,
+        vec![
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(), // 2nd
+                balance: BalanceUnchecked {
+                    native: coins(11900, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[4].to_string(), // 1st 20000 (prize pool) * .85 (tax) * .7 (1st place earnings) = 11900
+                balance: BalanceUnchecked {
+                    native: coins(3400, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(), // 3rd
+                balance: BalanceUnchecked {
+                    native: coins(1700, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            }
+        ]
+    )
+}
+
+/// What if all matches are tied or many are tied for a position? Test the optimization for this.
+/// Extra placement percentages should be evenly distributed into the percentages
+#[test]
+fn test_distribution_transformation() {
+    let mut app = get_app();
+    let users = [
+        app.api().addr_make("user1"),
+        app.api().addr_make("user2"),
+        app.api().addr_make("user3"),
+        app.api().addr_make("user4"),
+        app.api().addr_make("user5"),
+    ];
+    let admin = app.api().addr_make(ADMIN);
+    let wager_amount_uint128 = Uint128::from(10_000u128);
+    let wager_amount = format!("{}{}", wager_amount_uint128, "juno");
+
+    set_balances(
+        &mut app,
+        vec![
+            (users[0].clone(), Coins::from_str("100000juno").unwrap()),
+            (users[1].clone(), Coins::from_str("100000juno").unwrap()),
+        ],
+    );
+
+    let core_context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    );
+    let league_context = setup_league_context(&mut app, &core_context);
+    let mut context = Context {
+        app,
+        core: core_context,
+        league: league_context,
+    };
+
+    // Create competition
+    let starting_height = context.app.block_info().height;
+    let result = create_competition(
+        &mut context,
+        Expiration::AtHeight(starting_height + 100),
+        users
+            .iter()
+            .map(|x| Member {
+                addr: x.to_string(),
+                weight: 1u64,
+            })
+            .collect(),
+        Some(vec![
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+        ]),
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+    );
+    assert!(result.is_ok());
+    let competition1_id = get_id_from_competition_creation_result(result);
+
+    // Get the competition
+    let competition1: LeagueResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::Competition {
+                competition_id: competition1_id,
+            },
+        )
+        .unwrap();
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            users[0].clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            users[1].clone(),
+            competition1.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    context.app.update_block(|x| x.height += 10);
+    // Process all matches
+    let result = context.app.execute_contract(
+        admin.clone(),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition1_id,
+                            round_number: Uint64::from(1u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(1u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(2u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition1_id,
+                            round_number: Uint64::from(2u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(3u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(4u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition1_id,
+                            round_number: Uint64::from(3u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(5u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(6u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition1_id,
+                            round_number: Uint64::from(4u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(7u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(8u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition1_id,
+                            round_number: Uint64::from(5u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(9u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(10u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+            ],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Check escrow balance was distributed after all matches were processed
+    // Distribution was 1st - 70%, 2nd - 20%, 3rd - 10%, but all members tied so it's 20% for everyone
+    let balances: Vec<MemberBalanceUnchecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition1.escrow.as_ref().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        balances,
+        vec![
+            MemberBalanceUnchecked {
+                addr: users[3].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3400, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3400, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[4].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3400, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[2].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3400, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3400, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            }
+        ]
+    );
+
+    // Now setup the next league for tied winners
+    let result = create_competition(
+        &mut context,
+        Expiration::AtHeight(starting_height + 100),
+        users
+            .iter()
+            .map(|x| Member {
+                addr: x.to_string(),
+                weight: 1u64,
+            })
+            .collect(),
+        Some(vec![
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+        ]),
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+    );
+    assert!(result.is_ok());
+    let competition2_id = get_id_from_competition_creation_result(result);
+
+    // Get the competition
+    let competition2: LeagueResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::Competition {
+                competition_id: competition2_id,
+            },
+        )
+        .unwrap();
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            users[0].clone(),
+            competition2.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            users[1].clone(),
+            competition2.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    context.app.update_block(|x| x.height += 10);
+    // Process all matches - 2 wins then all draws
+    let result = context.app.execute_contract(
+        admin.clone(),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition2_id,
+                            round_number: Uint64::from(1u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(1u128),
+                                    result: Some(Result::Team1),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(2u128),
+                                    result: Some(Result::Team1),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition2_id,
+                            round_number: Uint64::from(2u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(3u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(4u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition2_id,
+                            round_number: Uint64::from(3u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(5u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(6u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition2_id,
+                            round_number: Uint64::from(4u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(7u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(8u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition2_id,
+                            round_number: Uint64::from(5u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(9u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(10u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+            ],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Check escrow balance was distributed after all matches were processed
+    // Distribution was 1st - 70%, 2nd - 20%, 3rd - 10%
+    // 1st place is tied between 2 and 2nd place is 1 person - 3rd place's 10% will then be split between 1st and 2nd
+    // The new distribution will become 1st - 75% split between 2 and 2nd - 25% for one person
+    let balances: Vec<MemberBalanceUnchecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition2.escrow.as_ref().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        balances,
+        vec![
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(6375, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[2].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(4250, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(6375, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            }
+        ]
+    )
 }

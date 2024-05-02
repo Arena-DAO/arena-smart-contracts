@@ -36,6 +36,27 @@ pub fn instantiate_rounds(
             msg: "Cannot have a distribution size bigger than the teams size".to_string(),
         }));
     }
+    if distribution.iter().sum::<Decimal>() != Decimal::one() {
+        return Err(ContractError::StdError(StdError::generic_err(
+            "The distribution must sum up to 1",
+        )));
+    }
+    // Ensure that the distribution is sorted.
+    // This is important for the processing of leagues, because the last percentages can be summed up.
+    if !distribution
+        .iter()
+        .sorted_by(|x, y| y.cmp(x))
+        .eq(distribution.iter())
+    {
+        return Err(ContractError::StdError(StdError::GenericErr {
+            msg: "The distribution must be sorted".to_string(),
+        }));
+    }
+
+    // Retrieve the current league's id
+    let league_id = CompetitionModule::default()
+        .competition_count
+        .load(deps.storage)?;
 
     // Convert teams to addresses
     let team_addresses: Vec<Addr> = teams
@@ -43,59 +64,50 @@ pub fn instantiate_rounds(
         .map(|x| deps.api.addr_validate(x))
         .collect::<StdResult<_>>()?;
 
-    // Determine the number of rounds and matches per round
-    let rounds = if team_count % 2 == 1 {
-        team_count
+    let mut teams_list = (1..=team_count).collect::<Vec<_>>();
+    let rounds = if team_count % 2 != 0 {
+        teams_list.push(0); // Using 0 as dummy team
+
+        team_count + 1
     } else {
-        team_count - 1
+        team_count
     };
-    let matches_per_round = (rounds + 1) / 2;
 
-    // Table of teams, starting from 1 to n
-    let mut table: Vec<usize> = (1..=(rounds + 1)).collect();
+    // Split teams into two groups
+    let (x, y) = teams_list.split_at(rounds / 2);
+    let mut x = x.to_vec();
+    let mut y = y.to_vec();
 
-    // Stores the rounds with the corresponding matches
-    let mut matches: Vec<Vec<(usize, usize)>> = Vec::new();
-    for r in 0..rounds {
-        matches.push(vec![]);
-        for m in 0..matches_per_round {
-            // Ignore the dummy team
-            if table[table.len() - 1 - m] != rounds + 1 && table[m] != rounds + 1 {
-                // Pair the teams based on the circle method
-                matches[r].push((table[m], table[table.len() - 1 - m]));
-            }
-        }
-
-        if let Some(last) = table.pop() {
-            table.insert(1, last);
-        }
-    }
-
-    // Retrieve the current league ID
-    let league_id = CompetitionModule::default()
-        .competition_count
-        .load(deps.storage)?;
-
-    // Save rounds and matches to storage
+    let mut round_number = 1u64;
     let mut match_number = 1u128;
-    let mut rounds_count = 0u64;
-    for (i, round_pairings) in matches.iter().enumerate() {
-        let round_number = i as u64 + 1;
-        let mut matches = vec![];
+    for i in 0..rounds - 1 {
+        let mut matches = Vec::new();
 
-        for &(idx1, idx2) in round_pairings {
-            MATCHES.save(
-                deps.storage,
-                (league_id.u128(), round_number, match_number),
-                &Match {
-                    team_1: team_addresses[idx1 - 1].clone(),
-                    team_2: team_addresses[idx2 - 1].clone(),
-                    result: None,
-                    match_number: Uint128::from(match_number),
-                },
-            )?;
-            matches.push(Uint128::from(match_number));
-            match_number += 1;
+        // Rotate teams between x and y after the first round
+        if i != 0 {
+            let first_y = y.remove(0);
+            x.insert(1, first_y);
+            let last_x = x.pop().unwrap();
+            y.push(last_x);
+        }
+
+        // Create matches for the round
+        for j in 0..x.len() {
+            if x[j] != 0 && y[j] != 0 {
+                matches.push(Uint128::from(match_number));
+
+                MATCHES.save(
+                    deps.storage,
+                    (league_id.u128(), round_number, match_number),
+                    &Match {
+                        team_1: team_addresses[x[j] - 1].clone(), // adjust index for 0-based array
+                        team_2: team_addresses[y[j] - 1].clone(),
+                        result: None,
+                        match_number: Uint128::from(match_number),
+                    },
+                )?;
+                match_number += 1;
+            }
         }
 
         ROUNDS.save(
@@ -106,7 +118,7 @@ pub fn instantiate_rounds(
                 matches,
             },
         )?;
-        rounds_count += 1;
+        round_number += 1;
     }
 
     // Update competition matches and rounds count
@@ -115,7 +127,7 @@ pub fn instantiate_rounds(
         league_id.u128(),
         |maybe_competition| {
             if let Some(mut competition) = maybe_competition {
-                competition.extension.rounds = Uint64::from(rounds_count);
+                competition.extension.rounds = Uint64::from(round_number - 1);
                 competition.extension.matches = Uint128::from(match_number - 1);
                 competition.extension.teams = Uint64::from(team_count as u64);
                 Ok(competition)
@@ -140,18 +152,15 @@ pub fn process_matches(
     round_number: Uint64,
     match_results: Vec<MatchResult>,
 ) -> Result<Response, ContractError> {
+    // Load the league data from storage
     let mut league = CompetitionModule::default()
         .competitions
         .load(deps.storage, league_id.u128())?;
 
-    if league.host != info.sender && league.admin_dao != info.sender {
-        return Err(ContractError::CompetitionError(
-            cw_competition_base::error::CompetitionError::OwnershipError(
-                cw_ownable::OwnershipError::NotOwner,
-            ),
-        ));
-    }
+    // Validate state and authorization
+    CompetitionModule::default().inner_validate_auth(&info.sender, &league)?;
 
+    let mut processed_matches = league.extension.processed_matches;
     for match_result in match_results {
         let key = (
             league_id.u128(),
@@ -169,10 +178,7 @@ pub fn process_matches(
                             ),
                         ));
                     } else if m.result.is_none() {
-                        league.extension.processed_matches = league
-                            .extension
-                            .processed_matches
-                            .checked_add(Uint128::one())?;
+                        processed_matches += Uint128::one();
                     }
                     m.result = match_result.result;
 
@@ -185,38 +191,124 @@ pub fn process_matches(
         })?;
     }
 
+    // Check if the processed matches have changed and update the league data accordingly.
+    if processed_matches != league.extension.processed_matches {
+        let mut new_league = league.clone();
+        new_league.extension.processed_matches = processed_matches;
+
+        CompetitionModule::default().competitions.replace(
+            deps.storage,
+            league_id.u128(),
+            Some(&new_league),
+            Some(&league),
+        )?;
+
+        league.extension.processed_matches = processed_matches;
+    }
+
     let mut response = Response::new();
 
-    if let Some(_escrow) = league.escrow {
-        if league.extension.processed_matches >= league.extension.matches {
-            // Distribute funds if we have processed all of the matches
-            let mut leaderboard = query::leaderboard(deps.as_ref(), league_id, None)?;
+    // Distribute funds if all matches have been processed.
+    if league.extension.processed_matches >= league.extension.matches {
+        let mut leaderboard = query::leaderboard(deps.as_ref(), league_id, None)?;
 
-            leaderboard.sort_by(|x, y| y.points.cmp(&x.points));
+        // Sort the leaderboard based on points.
+        leaderboard.sort_by(|x, y| y.points.cmp(&x.points));
 
-            let mut member_percentages = vec![];
+        let placements = league.extension.distribution.len();
+        let mut placement_members: Vec<Vec<Addr>> = vec![];
+        let mut current_placement = 1;
 
-            for (i, x) in league.extension.distribution.iter().enumerate() {
-                member_percentages.push(MemberPercentage::<String> {
-                    addr: leaderboard[i].member.to_string(),
-                    percentage: *x,
-                })
+        // Group members into placements based on their points.
+        for (i, member_points) in leaderboard.iter().enumerate() {
+            if i == 0 {
+                // If we are first, then we can just insert into 1st
+                placement_members.push(vec![member_points.member.clone()]);
+            } else {
+                // Check if the previous member is tied on points
+                let previous = &leaderboard[i - 1];
+
+                if previous.points == member_points.points {
+                    placement_members[current_placement - 1].push(member_points.member.clone());
+                } else {
+                    placement_members.push(vec![member_points.member.clone()]);
+
+                    // If we have processed all users that can be fit by placement, then exit early
+                    // The last percentages will be summed to the end
+                    if i >= placements - 1 {
+                        break;
+                    }
+
+                    current_placement += 1;
+                }
+            }
+            // If all placements are found, then break
+            if current_placement > placements {
+                break;
+            }
+        }
+
+        // Adjust the distribution of funds based on member placements.
+        let mut member_percentages = vec![];
+        if placements > placement_members.len() {
+            // Transform the distribution
+            let summed_extras: Decimal = league.extension.distribution
+                [placement_members.len()..placements]
+                .iter()
+                .sum();
+            let mut distribution =
+                league.extension.distribution[0..placement_members.len()].to_vec();
+
+            let redistributed_percentage_share = summed_extras
+                / Decimal::from_ratio(placement_members.len() as u128, Uint128::one());
+            for entry in distribution.iter_mut() {
+                *entry += redistributed_percentage_share;
             }
 
-            let config = CompetitionModule::default().config.load(deps.storage)?;
+            // Generate the member percentages
+            let mut remainder_percentage = Decimal::one();
 
-            response = CompetitionModule::default().execute_process_competition(
-                deps,
-                info,
-                league_id,
-                Some(Distribution::<String> {
-                    member_percentages,
-                    remainder_addr: leaderboard[0].member.to_string(),
-                }),
-                config.extension.tax_cw20_msg,
-                config.extension.tax_cw721_msg,
-            )?;
-        }
+            for i in 0..placement_members.len() {
+                let members = &placement_members[i];
+                let placement_percentage =
+                    distribution[i] / Decimal::from_ratio(members.len() as u128, Uint128::one());
+                for member in members {
+                    remainder_percentage -= placement_percentage;
+
+                    member_percentages.push(MemberPercentage::<Addr> {
+                        addr: member.clone(),
+                        percentage: placement_percentage,
+                    })
+                }
+            }
+
+            // Increase 1st place by the remainder
+            if remainder_percentage > Decimal::zero() {
+                member_percentages[0].percentage += remainder_percentage;
+            }
+        } else {
+            // If the number of placements matches the number of members, assign directly.
+            for (index, &percentage) in league.extension.distribution.iter().enumerate() {
+                member_percentages.push(MemberPercentage::<Addr> {
+                    addr: leaderboard[index].member.clone(),
+                    percentage,
+                });
+            }
+        };
+
+        // Load up the custom distribution info
+        let config = CompetitionModule::default().config.load(deps.storage)?;
+
+        response = CompetitionModule::default().inner_process(
+            deps,
+            league,
+            Some(Distribution::<Addr> {
+                member_percentages,
+                remainder_addr: leaderboard[0].member.clone(),
+            }),
+            config.extension.tax_cw20_msg,
+            config.extension.tax_cw721_msg,
+        )?;
     }
 
     Ok(response.add_attribute("action", "process_matches"))

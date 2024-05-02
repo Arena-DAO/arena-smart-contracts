@@ -73,3 +73,19 @@ impl<T: AddressLike + Serialize> Display for Distribution<T> {
         }
     }
 }
+
+impl Distribution<Addr> {
+    pub fn into_unchecked(&self) -> Distribution<String> {
+        Distribution::<String> {
+            member_percentages: self
+                .member_percentages
+                .iter()
+                .map(|x| MemberPercentage::<String> {
+                    addr: x.addr.to_string(),
+                    percentage: x.percentage,
+                })
+                .collect(),
+            remainder_addr: self.remainder_addr.to_string(),
+        }
+    }
+}
