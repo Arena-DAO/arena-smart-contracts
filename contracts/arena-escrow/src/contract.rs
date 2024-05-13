@@ -2,14 +2,14 @@ use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{self, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED, TOTAL_BALANCE},
+    state::{self, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED},
     ContractError,
 };
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
-use cw_balance::{BalanceVerified, MemberBalanceUnchecked};
+use cw_balance::MemberBalanceUnchecked;
 
 // version info for migration info
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-escrow";
@@ -57,7 +57,6 @@ pub fn instantiate_contract(
         INITIAL_DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
         DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
     }
-    TOTAL_BALANCE.save(deps.storage, &BalanceVerified::new())?;
 
     Ok(())
 }
