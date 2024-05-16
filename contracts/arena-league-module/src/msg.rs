@@ -1,8 +1,6 @@
-#[allow(unused_imports)]
-use crate::state::RoundResponse;
-use crate::state::{Result, TournamentExt};
+use crate::state::{Match, PointAdjustment, Result, TournamentExt};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Decimal, Int128, StdResult, Uint128, Uint64};
 use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
@@ -18,6 +16,11 @@ pub enum ExecuteExt {
     UpdateDistribution {
         league_id: Uint128,
         distribution: Vec<Decimal>,
+    },
+    AddPointAdjustments {
+        league_id: Uint128,
+        addr: String,
+        point_adjustments: Vec<PointAdjustment>,
     },
 }
 
@@ -40,6 +43,17 @@ pub enum QueryExt {
         league_id: Uint128,
         round_number: Uint64,
     },
+    #[returns(Vec<PointAdjustmentResponse>)]
+    PointAdjustments {
+        league_id: Uint128,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    #[returns(DumpStateResponse)]
+    DumpState {
+        league_id: Uint128,
+        round_number: Uint64,
+    },
 }
 
 #[cw_serde]
@@ -57,9 +71,9 @@ pub struct SudoMsg {
 
 #[cw_serde]
 pub struct CompetitionExt {
-    pub match_win_points: Uint128,
-    pub match_draw_points: Uint128,
-    pub match_lose_points: Uint128,
+    pub match_win_points: Uint64,
+    pub match_draw_points: Uint64,
+    pub match_lose_points: Uint64,
     pub rounds: Uint64,
     pub matches: Uint128,
     pub teams: Uint64,
@@ -69,9 +83,9 @@ pub struct CompetitionExt {
 
 #[cw_serde]
 pub struct CompetitionInstantiateExt {
-    pub match_win_points: Uint128,
-    pub match_draw_points: Uint128,
-    pub match_lose_points: Uint128,
+    pub match_win_points: Uint64,
+    pub match_draw_points: Uint64,
+    pub match_lose_points: Uint64,
     pub teams: Vec<String>,
     pub distribution: Vec<Decimal>,
 }
@@ -94,8 +108,27 @@ impl ToCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
 #[cw_serde]
 pub struct MemberPoints {
     pub member: Addr,
-    pub points: Uint128,
+    pub points: Int128,
     pub matches_played: Uint64,
+}
+
+#[cw_serde]
+pub struct RoundResponse {
+    pub round_number: Uint64,
+    pub matches: Vec<Match>,
+}
+
+#[cw_serde]
+pub struct PointAdjustmentResponse {
+    pub addr: Addr,
+    pub point_adjustments: Vec<PointAdjustment>,
+}
+
+#[cw_serde]
+pub struct DumpStateResponse {
+    pub leaderboard: Vec<MemberPoints>,
+    pub round: RoundResponse,
+    pub point_adjustments: Vec<PointAdjustmentResponse>,
 }
 
 pub type InstantiateMsg = InstantiateBase<TournamentExt>;

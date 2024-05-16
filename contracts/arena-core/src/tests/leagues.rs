@@ -3,11 +3,13 @@ use std::str::FromStr;
 use arena_league_module::{
     msg::{
         CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueResponse,
-        MatchResult, MemberPoints, QueryExt, QueryMsg,
+        MatchResult, MemberPoints, QueryExt, QueryMsg, RoundResponse,
     },
-    state::{Match, Result, RoundResponse, TournamentExt},
+    state::{Match, PointAdjustment, Result, TournamentExt},
 };
-use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Coins, Decimal, Uint128, Uint64, WasmMsg};
+use cosmwasm_std::{
+    coins, to_json_binary, Addr, Coin, Coins, Decimal, Int128, Uint128, Uint64, WasmMsg,
+};
 use cw4::Member;
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_competition::msg::ModuleInfo;
@@ -144,9 +146,9 @@ fn create_competition(
             rulesets: vec![],
             instantiate_extension: CompetitionInstantiateExt {
                 teams,
-                match_win_points: Uint128::from(3u128),
-                match_draw_points: Uint128::one(),
-                match_lose_points: Uint128::zero(),
+                match_win_points: Uint64::from(3u64),
+                match_draw_points: Uint64::one(),
+                match_lose_points: Uint64::zero(),
                 distribution,
             },
         },
@@ -533,7 +535,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::one(),
+            points: Int128::one(),
             matches_played: Uint64::one()
         }
     );
@@ -541,7 +543,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
         MemberPoints {
             member: users[0].clone(),
-            points: Uint128::from(3u128),
+            points: Int128::from(3),
             matches_played: Uint64::one()
         }
     );
@@ -549,7 +551,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::zero(),
+            points: Int128::zero(),
             matches_played: Uint64::one()
         }
     );
@@ -557,12 +559,62 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::one(),
+            points: Int128::one(),
             matches_played: Uint64::one()
         }
     );
 
     context.app.update_block(|x| x.height += 10);
+
+    // Owners realized that users[1] was cheating and have deducted 5 points
+    let result = context.app.execute_contract(
+        admin.clone(),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![WasmMsg::Execute {
+                contract_addr: context.league.league_module_addr.to_string(),
+                msg: to_json_binary(&ExecuteMsg::Extension {
+                    msg: ExecuteExt::AddPointAdjustments {
+                        league_id: competition_id,
+                        addr: users[1].to_string(),
+                        point_adjustments: vec![PointAdjustment {
+                            description: "Team was caught cheating".to_string(),
+                            amount: Int128::new(-3),
+                        }],
+                    },
+                })
+                .unwrap(),
+                funds: vec![],
+            }
+            .into()],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Check users[1] new points
+    let leaderboard: Vec<MemberPoints> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::QueryExtension {
+                msg: QueryExt::Leaderboard {
+                    league_id: competition_id,
+                    round: None,
+                },
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
+        MemberPoints {
+            member: users[1].clone(),
+            points: Int128::from(-2),
+            matches_played: Uint64::one()
+        }
+    );
+
     // Process 2nd round of matches
     let result = context.app.execute_contract(
         admin.clone(),
@@ -613,7 +665,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
         MemberPoints {
             member: users[0].clone(),
-            points: Uint128::from(6u128),
+            points: Int128::from(6),
             matches_played: Uint64::from(2u64)
         }
     );
@@ -621,7 +673,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(4u128),
+            points: Int128::from(1),
             matches_played: Uint64::from(2u64)
         }
     );
@@ -629,7 +681,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::zero(),
+            points: Int128::zero(),
             matches_played: Uint64::one()
         }
     );
@@ -637,7 +689,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::zero(),
+            points: Int128::zero(),
             matches_played: Uint64::one()
         }
     );
@@ -645,7 +697,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::one(),
+            points: Int128::one(),
             matches_played: Uint64::from(2u64)
         }
     );
@@ -701,7 +753,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
         MemberPoints {
             member: users[0].clone(),
-            points: Uint128::from(6u128),
+            points: Int128::from(6),
             matches_played: Uint64::from(2u64)
         }
     );
@@ -709,7 +761,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(4u128),
+            points: Int128::from(1),
             matches_played: Uint64::from(3u64)
         }
     );
@@ -717,7 +769,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::zero(),
+            points: Int128::zero(),
             matches_played: Uint64::from(2u64)
         },
     );
@@ -725,7 +777,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::from(3u128),
+            points: Int128::from(3),
             matches_played: Uint64::from(2u64)
         },
     );
@@ -733,7 +785,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::from(4u128),
+            points: Int128::from(4),
             matches_played: Uint64::from(3u64)
         }
     );
@@ -789,7 +841,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
         MemberPoints {
             member: users[0].clone(),
-            points: Uint128::from(9u128),
+            points: Int128::from(9),
             matches_played: Uint64::from(3u64)
         }
     );
@@ -797,7 +849,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(4u128),
+            points: Int128::from(1),
             matches_played: Uint64::from(3u64)
         },
     );
@@ -805,7 +857,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::zero(),
+            points: Int128::zero(),
             matches_played: Uint64::from(3u64)
         },
     );
@@ -813,7 +865,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::from(3u128),
+            points: Int128::from(3),
             matches_played: Uint64::from(3u64)
         },
     );
@@ -821,7 +873,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::from(7u128),
+            points: Int128::from(7),
             matches_played: Uint64::from(4u64)
         }
     );
@@ -845,7 +897,7 @@ fn test_leagues() {
                             },
                             MatchResult {
                                 match_number: Uint128::from(10u128),
-                                result: Some(Result::Team1),
+                                result: Some(Result::Team2),
                             },
                         ],
                     },
@@ -877,7 +929,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[0]).unwrap(),
         MemberPoints {
             member: users[0].clone(),
-            points: Uint128::from(12u128),
+            points: Int128::from(12),
             matches_played: Uint64::from(4u64)
         },
     );
@@ -885,7 +937,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[1]).unwrap(),
         MemberPoints {
             member: users[1].clone(),
-            points: Uint128::from(4u128),
+            points: Int128::from(1),
             matches_played: Uint64::from(4u64)
         },
     );
@@ -893,7 +945,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[2]).unwrap(),
         MemberPoints {
             member: users[2].clone(),
-            points: Uint128::from(3u128),
+            points: Int128::from(0),
             matches_played: Uint64::from(4u64)
         },
     );
@@ -901,7 +953,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[3]).unwrap(),
         MemberPoints {
             member: users[3].clone(),
-            points: Uint128::from(3u128),
+            points: Int128::from(6),
             matches_played: Uint64::from(4u64)
         },
     );
@@ -909,7 +961,7 @@ fn test_leagues() {
         *leaderboard.iter().find(|x| x.member == users[4]).unwrap(),
         MemberPoints {
             member: users[4].clone(),
-            points: Uint128::from(7u128),
+            points: Int128::from(7),
             matches_played: Uint64::from(4u64)
         }
     );
@@ -931,6 +983,14 @@ fn test_leagues() {
         balances,
         vec![
             MemberBalanceUnchecked {
+                addr: users[3].to_string(), // 3rd
+                balance: BalanceUnchecked {
+                    native: coins(1700, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
                 addr: users[0].to_string(), // 2nd
                 balance: BalanceUnchecked {
                     native: coins(11900, "juno"),
@@ -942,14 +1002,6 @@ fn test_leagues() {
                 addr: users[4].to_string(), // 1st 20000 (prize pool) * .85 (tax) * .7 (1st place earnings) = 11900
                 balance: BalanceUnchecked {
                     native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
-                }
-            },
-            MemberBalanceUnchecked {
-                addr: users[1].to_string(), // 3rd
-                balance: BalanceUnchecked {
-                    native: coins(1700, "juno"),
                     cw20: vec![],
                     cw721: vec![]
                 }

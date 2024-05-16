@@ -90,6 +90,11 @@ pub fn execute(
                 league_id,
                 distribution,
             } => execute::update_distribution(deps, info, league_id, distribution),
+            ExecuteExt::AddPointAdjustments {
+                league_id,
+                addr,
+                point_adjustments,
+            } => execute::add_point_adjustments(deps, info, league_id, addr, point_adjustments),
         },
         ExecuteBase::ProcessCompetition {
             competition_id: _,
@@ -117,6 +122,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 league_id,
                 round_number,
             } => to_json_binary(&query::round(deps, league_id, round_number)?),
+            QueryExt::PointAdjustments {
+                league_id,
+                start_after,
+                limit,
+            } => to_json_binary(&query::point_adjustments(
+                deps,
+                league_id,
+                start_after,
+                limit,
+            )?),
+            QueryExt::DumpState {
+                league_id,
+                round_number,
+            } => to_json_binary(&query::dump_state(deps, league_id, round_number)?),
         },
         _ => CompetitionModule::default().query(deps, env, msg),
     }

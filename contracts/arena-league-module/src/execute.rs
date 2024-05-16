@@ -9,7 +9,7 @@ use crate::{
     contract::CompetitionModule,
     msg::MatchResult,
     query,
-    state::{Match, Round, MATCHES, ROUNDS},
+    state::{Match, PointAdjustment, Round, MATCHES, POINT_ADJUSTMENTS, ROUNDS},
     ContractError,
 };
 
@@ -163,14 +163,7 @@ pub fn process_matches(
         MATCHES.update(deps.storage, key, |x| -> Result<_, ContractError> {
             match x {
                 Some(mut m) => {
-                    // Only the admin dao can override an existing result
-                    if m.result.is_some() && league.admin_dao != info.sender {
-                        return Err(ContractError::CompetitionError(
-                            cw_competition_base::error::CompetitionError::OwnershipError(
-                                cw_ownable::OwnershipError::NotOwner,
-                            ),
-                        ));
-                    } else if m.result.is_none() {
+                    if m.result.is_none() {
                         processed_matches += Uint128::one();
                     }
                     m.result = match_result.result;
@@ -338,4 +331,70 @@ pub fn update_distribution(
             "distribution",
             format!("{:#?}", updated_league.extension.distribution),
         ))
+}
+
+pub fn add_point_adjustments(
+    deps: DepsMut,
+    info: MessageInfo,
+    league_id: Uint128,
+    addr: String,
+    mut point_adjustments: Vec<PointAdjustment>,
+) -> Result<Response, ContractError> {
+    let league = CompetitionModule::default()
+        .competitions
+        .load(deps.storage, league_id.u128())?;
+
+    // Validate state and authorization
+    CompetitionModule::default().inner_validate_auth(&info.sender, &league)?;
+
+    if point_adjustments.iter().any(|x| x.amount.is_zero()) {
+        return Err(ContractError::StdError(StdError::generic_err(
+            "Cannot adjust points by 0",
+        )));
+    }
+
+    let addr = deps.api.addr_validate(&addr)?;
+
+    // iterate through max 2 sets of matches to find addr
+    let mut is_found = false;
+    'outer: for i in 1..=2 {
+        if let Some(round) = ROUNDS.may_load(deps.storage, (league_id.u128(), i as u64))? {
+            for j in round.matches {
+                if let Some(m) = MATCHES.may_load(
+                    deps.storage,
+                    (league_id.u128(), round.round_number.u64(), j.u128()),
+                )? {
+                    if m.team_1 == addr || m.team_2 == addr {
+                        is_found = true;
+
+                        break 'outer;
+                    }
+                }
+            }
+        }
+    }
+
+    if !is_found {
+        return Err(ContractError::StdError(StdError::generic_err(format!(
+            "{} is not a member of the competition",
+            addr
+        ))));
+    }
+
+    POINT_ADJUSTMENTS.update(
+        deps.storage,
+        (league_id.u128(), &addr),
+        |x| -> StdResult<_> {
+            match x {
+                Some(mut previous_adjustments) => {
+                    previous_adjustments.append(&mut point_adjustments);
+
+                    Ok(previous_adjustments)
+                }
+                None => Ok(point_adjustments),
+            }
+        },
+    )?;
+
+    Ok(Response::new().add_attribute("action", "add_point_adjustments"))
 }

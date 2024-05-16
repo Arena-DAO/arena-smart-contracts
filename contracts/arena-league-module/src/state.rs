@@ -1,6 +1,8 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Binary, Deps, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Binary, Deps, Int128, StdResult, Uint128, Uint64};
 use cw_storage_plus::Map;
+
+use crate::msg::RoundResponse;
 
 #[cw_serde]
 pub struct TournamentExt {
@@ -45,12 +47,15 @@ impl Round {
 }
 
 #[cw_serde]
-pub struct RoundResponse {
-    pub round_number: Uint64,
-    pub matches: Vec<Match>,
+pub struct PointAdjustment {
+    pub description: String,
+    pub amount: Int128,
 }
 
 /// (League Id, Round Number)
 pub const ROUNDS: Map<(u128, u64), Round> = Map::new("rounds");
 /// (League Id, Round Number, Match Number)
 pub const MATCHES: Map<(u128, u64, u128), Match> = Map::new("matches");
+/// (League Id, Addr)
+pub const POINT_ADJUSTMENTS: Map<(u128, &Addr), Vec<PointAdjustment>> =
+    Map::new("point_adjustments");
