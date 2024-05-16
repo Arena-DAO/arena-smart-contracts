@@ -394,9 +394,9 @@ impl<
         )?;
 
         if !competition_module.is_enabled {
-            return Err(CompetitionError::StdError(StdError::GenericErr {
-                msg: "Competition module is not enabled".to_string(),
-            }));
+            return Err(CompetitionError::StdError(StdError::generic_err(
+                "Competition module is not enabled",
+            )));
         }
 
         // Add competition hook
@@ -546,9 +546,9 @@ impl<
         extension: &CompetitionInstantiateExt,
     ) -> Result<Response, CompetitionError> {
         if expiration.is_expired(&env.block) {
-            return Err(CompetitionError::StdError(StdError::GenericErr {
-                msg: "Cannot create an expired competition".to_string(),
-            }));
+            return Err(CompetitionError::StdError(StdError::generic_err(
+                "Cannot create an expired competition",
+            )));
         }
 
         // Ensure Module has an owner
@@ -850,7 +850,7 @@ impl<
             QueryBase::DAO {} => to_json_binary(
                 &self
                     .query_dao(deps)
-                    .map_err(|x| StdError::GenericErr { msg: x.to_string() })?,
+                    .map_err(|x| StdError::generic_err(x.to_string()))?,
             ),
             QueryBase::Result { competition_id } => {
                 to_json_binary(&self.query_result(deps, competition_id)?)

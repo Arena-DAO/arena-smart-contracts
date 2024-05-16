@@ -1,6 +1,6 @@
 [package]
 name = "cw-balance"
-authors = ["ismellike <glopez11193@gmail.com>"]
+authors = ["Gabe Lopez <ismellike@users.noreply.github.com>"]
 description = "The Balance package is a Rust library for managing and manipulating balances of native tokens, CW20, and CW721 tokens in a CosmWasm smart contract. This package simplifies handling different token types and provides utility functions for common operations like adding, subtracting, sending, and splitting balances."
 edition = { workspace = true }
 license = { workspace = true }
@@ -8,11 +8,9 @@ repository = { workspace = true }
 version = { workspace = true }
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+doctest = false
 
 [features]
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 

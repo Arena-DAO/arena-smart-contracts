@@ -273,9 +273,11 @@ impl BalanceVerified {
             for token_id in &token.token_ids {
                 // If the token_id is already present, it's a duplicate and we return an error.
                 if !entry.insert(token_id) {
-                    return Err(cosmwasm_std::StdError::Overflow {
-                        source: OverflowError::new(OverflowOperation::Add, self, other),
-                    });
+                    return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
+                        OverflowOperation::Add,
+                        self,
+                        other,
+                    )));
                 }
             }
         }
@@ -331,13 +333,11 @@ impl BalanceVerified {
                 }
 
                 Entry::Vacant(_) => {
-                    return Err(cosmwasm_std::StdError::Overflow {
-                        source: cosmwasm_std::OverflowError::new(
-                            OverflowOperation::Sub,
-                            self,
-                            other,
-                        ),
-                    });
+                    return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
+                        OverflowOperation::Sub,
+                        self,
+                        other,
+                    )));
                 }
             }
         }
@@ -359,13 +359,11 @@ impl BalanceVerified {
                 }
 
                 Entry::Vacant(_) => {
-                    return Err(cosmwasm_std::StdError::Overflow {
-                        source: cosmwasm_std::OverflowError::new(
-                            OverflowOperation::Sub,
-                            self,
-                            other,
-                        ),
-                    });
+                    return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
+                        OverflowOperation::Sub,
+                        self,
+                        other,
+                    )));
                 }
             }
         }
@@ -381,9 +379,11 @@ impl BalanceVerified {
                     // Removes the token_id from the set if it exists; no-op if it doesn't
                     if !entry_set.remove(token_id) {
                         // Return error if a token_id is missing
-                        return Err(cosmwasm_std::StdError::Overflow {
-                            source: OverflowError::new(OverflowOperation::Sub, self, other),
-                        });
+                        return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
+                            OverflowOperation::Sub,
+                            self,
+                            other,
+                        )));
                     }
                 }
 
@@ -392,9 +392,11 @@ impl BalanceVerified {
                 }
             } else {
                 // Return error if a corresponding addr is missing
-                return Err(cosmwasm_std::StdError::Overflow {
-                    source: OverflowError::new(OverflowOperation::Sub, self, other),
-                });
+                return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
+                    OverflowOperation::Sub,
+                    self,
+                    other,
+                )));
             }
         }
 

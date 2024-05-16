@@ -36,7 +36,3 @@ packages/**/Cargo.lock
 debug/**/Cargo.lock
 ci/**/Cargo.lock
 typescript/**
-
-# experiment
-neutron/
-scripts/deploy_testnet.sh

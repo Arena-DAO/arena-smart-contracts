@@ -15,7 +15,7 @@ use cw_competition::{
     msg::ModuleInfo,
     state::{CompetitionListItemResponse, CompetitionStatus},
 };
-use cw_multi_test::{addons::MockApiBech32, next_block, App, BankKeeper, Executor};
+use cw_multi_test::{next_block, App, BankKeeper, Executor, MockApiBech32};
 use cw_utils::Expiration;
 use dao_interface::state::{ModuleInstantiateInfo, ProposalModule};
 use dao_voting::proposal::SingleChoiceProposeMsg;

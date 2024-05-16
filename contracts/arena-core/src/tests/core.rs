@@ -5,8 +5,7 @@ use arena_core_interface::msg::{
 use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_multi_test::{
-    addons::MockApiBech32, next_block, App, AppResponse, BankKeeper, Contract, ContractWrapper,
-    Executor,
+    next_block, App, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, MockApiBech32,
 };
 use dao_interface::{
     query::GetItemResponse,

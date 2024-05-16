@@ -11,7 +11,7 @@ use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Coins, Decimal, Uint128, U
 use cw4::Member;
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_competition::msg::ModuleInfo;
-use cw_multi_test::{addons::MockApiBech32, next_block, App, AppResponse, BankKeeper, Executor};
+use cw_multi_test::{next_block, App, AppResponse, BankKeeper, Executor, MockApiBech32};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
 

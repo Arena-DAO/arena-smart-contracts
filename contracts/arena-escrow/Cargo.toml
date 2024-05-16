@@ -1,6 +1,6 @@
 [package]
 name = "arena-escrow"
-authors = ["ismellike <glopez11193@gmail.com>"]
+authors = ["Gabe Lopez <ismellike@users.noreply.github.com>"]
 edition = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
@@ -8,10 +8,9 @@ version = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+doctest = false
 
 [features]
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 

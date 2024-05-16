@@ -1,11 +1,14 @@
 [package]
 name = "arena-testing"
-authors = ["ismellike <glopez11193@gmail.com>"]
+authors = ["Gabe Lopez <ismellike@users.noreply.github.com>"]
 description = "This package provides a set of helper functions to create tests for multiple CosmWasm contracts."
 edition = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
 version = { workspace = true }
+
+[lib]
+doctest = false
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cosmwasm-schema = { workspace = true }

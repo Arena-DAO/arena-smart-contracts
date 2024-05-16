@@ -1,8 +1,5 @@
 use cosmwasm_std::{Addr, Coins};
-use cw_multi_test::{
-    addons::{MockAddressGenerator, MockApiBech32},
-    App, AppBuilder, BankKeeper, WasmKeeper,
-};
+use cw_multi_test::{App, AppBuilder, BankKeeper, MockAddressGenerator, MockApiBech32, WasmKeeper};
 
 pub fn get_app() -> App<BankKeeper, MockApiBech32> {
     AppBuilder::default()
