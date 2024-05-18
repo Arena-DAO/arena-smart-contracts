@@ -1,6 +1,9 @@
-use arena_core_interface::msg::{
-    CompetitionCategory, EditCompetitionCategory, InstantiateExt, InstantiateMsg,
-    NewCompetitionCategory, NewRuleset, Ruleset,
+use arena_core_interface::{
+    fees::TaxConfiguration,
+    msg::{
+        CompetitionCategory, EditCompetitionCategory, InstantiateExt, InstantiateMsg,
+        NewCompetitionCategory, NewRuleset, Ruleset,
+    },
 };
 use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
@@ -172,6 +175,10 @@ pub fn setup_core_context(
                                                 tax: Decimal::new(Uint128::from(
                                                     150000000000000000u128,
                                                 )),
+                                                tax_configuration: TaxConfiguration {
+                                                    cw20_msg: None,
+                                                    cw721_msg: None,
+                                                },
                                             },
                                         })
                                         .unwrap(),

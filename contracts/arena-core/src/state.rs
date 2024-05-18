@@ -1,10 +1,14 @@
-use arena_core_interface::msg::{CompetitionCategory, Ruleset};
+use arena_core_interface::{
+    fees::TaxConfiguration,
+    msg::{CompetitionCategory, Ruleset},
+};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex, SnapshotItem, SnapshotMap};
 
-pub const COMPETITION_CATEGORIES_COUNT: Item<Uint128> = Item::new("competition-categories-count");
-pub const COMPETITION_MODULES_COUNT: Item<Uint128> = Item::new("competition-modules-count");
+pub const ARENA_TAX_CONFIG: Item<TaxConfiguration> = Item::new("arena_tax_config");
+pub const COMPETITION_CATEGORIES_COUNT: Item<Uint128> = Item::new("competition_categories_count");
+pub const COMPETITION_MODULES_COUNT: Item<Uint128> = Item::new("competition_modules_count");
 pub const TAX: SnapshotItem<Decimal> = SnapshotItem::new(
     "tax",
     "tax__check",
@@ -20,7 +24,6 @@ pub const KEYS: SnapshotMap<String, Addr> = SnapshotMap::new(
 );
 
 // Competition Modules
-
 #[cw_serde]
 pub struct CompetitionModule {
     pub key: String,
@@ -52,7 +55,6 @@ pub fn competition_modules<'a>(
 }
 
 // Competition Categories
-
 pub struct CompetitionCategoryIndexes<'a> {
     pub is_enabled: MultiIndex<'a, String, CompetitionCategory, u128>,
 }

@@ -1,17 +1,21 @@
 use std::marker::PhantomData;
 
-use arena_core_interface::msg::{CompetitionModuleResponse, ProposeMessage};
+use arena_core_interface::{
+    fees::FeeInformation,
+    msg::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
+};
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
-    instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Empty,
-    Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    ensure, instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal,
+    DecimalRangeExceeded, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError,
+    StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::Distribution;
 use cw_competition::{
-    escrow::{CompetitionEscrowDistributeMsg, TaxInformation},
+    escrow::CompetitionEscrowDistributeMsg,
     msg::{
-        CompetitionsFilter, ExecuteBase, HookDirection, InstantiateBase, ModuleInfo, QueryBase,
-        ToCompetitionExt,
+        CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
+        ModuleInfo, QueryBase, ToCompetitionExt,
     },
     state::{
         Competition, CompetitionListItemResponse, CompetitionResponse, CompetitionStatus, Config,
@@ -20,7 +24,6 @@ use cw_competition::{
 };
 use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
-use dao_interface::state::ModuleInstantiateInfo;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::CompetitionError;
@@ -261,16 +264,7 @@ impl<
             ExecuteBase::ProcessCompetition {
                 competition_id,
                 distribution,
-                tax_cw20_msg,
-                tax_cw721_msg,
-            } => self.execute_process_competition(
-                deps,
-                info,
-                competition_id,
-                distribution,
-                tax_cw20_msg,
-                tax_cw721_msg,
-            ),
+            } => self.execute_process_competition(deps, info, competition_id, distribution),
             ExecuteBase::UpdateOwnership(action) => {
                 let ownership =
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
@@ -477,7 +471,7 @@ impl<
             cw_ownable::OwnershipError::NoOwner,
         ))?;
 
-        let id = propose_message.id;
+        let id = propose_message.competition_id;
 
         // Update competition status
         self.competitions.update(deps.storage, id.u128(), |x| {
@@ -537,7 +531,7 @@ impl<
         env: &Env,
         category_id: Option<Uint128>,
         host: ModuleInfo,
-        escrow: Option<ModuleInstantiateInfo>,
+        escrow: Option<EscrowInstantiateInfo>,
         name: String,
         description: String,
         expiration: cw_utils::Expiration,
@@ -592,6 +586,32 @@ impl<
             }
             ModuleInfo::Existing { addr } => deps.api.addr_validate(&addr),
         }?;
+
+        // Validate fees
+        let fees = escrow
+            .as_ref()
+            .and_then(|x| {
+                x.additional_layered_fees.as_ref().map(|y| {
+                    y.iter()
+                        .map(|z| z.into_checked(deps.as_ref()))
+                        .collect::<StdResult<Vec<FeeInformation<Addr>>>>()
+                })
+            })
+            .transpose()?;
+
+        if let Some(ref fees) = fees {
+            for fee in fees {
+                ensure!(
+                    fee.tax < Decimal::one(),
+                    CompetitionError::DecimalRangeExceeded(DecimalRangeExceeded {})
+                );
+                ensure!(
+                    !fee.tax.is_zero(),
+                    CompetitionError::StdError(StdError::generic_err("Fee cannot be 0"))
+                );
+            }
+        }
+        // instantiate2 escrow
         let escrow_addr = match escrow {
             Some(info) => {
                 let code_info = deps.querier.query_wasm_code_info(info.code_id)?;
@@ -601,8 +621,8 @@ impl<
                 msgs.push(WasmMsg::Instantiate2 {
                     admin: Some(host_addr.to_string()),
                     code_id: info.code_id,
-                    label: info.label,
-                    msg: info.msg,
+                    label: info.label.clone(),
+                    msg: info.msg.clone(),
                     funds: vec![],
                     salt: salt.into(),
                 });
@@ -656,6 +676,7 @@ impl<
             rulesets,
             status: initial_status,
             extension: extension.to_competition_ext(deps.as_ref())?,
+            fees,
         };
 
         self.competition_rules
@@ -684,8 +705,6 @@ impl<
         info: MessageInfo,
         competition_id: Uint128,
         distribution: Option<Distribution<String>>,
-        tax_cw20_msg: Option<Binary>,
-        tax_cw721_msg: Option<Binary>,
     ) -> Result<Response, CompetitionError> {
         // Load competition
         let competition = self
@@ -705,13 +724,7 @@ impl<
             .transpose()?;
 
         // Process the competition
-        self.inner_process(
-            deps,
-            competition,
-            validated_distribution,
-            tax_cw20_msg,
-            tax_cw721_msg,
-        )
+        self.inner_process(deps, competition, validated_distribution)
     }
 
     // Validate competition status and sender's authorization
@@ -747,8 +760,6 @@ impl<
         deps: DepsMut,
         competition: Competition<CompetitionExt>,
         distribution: Option<Distribution<Addr>>,
-        tax_cw20_msg: Option<Binary>,
-        tax_cw721_msg: Option<Binary>,
     ) -> Result<Response, CompetitionError> {
         // Set the result
         self.competition_result
@@ -779,37 +790,44 @@ impl<
             })
             .collect();
 
-        // If there's an escrow, handle distribution and tax
+        // If there's an escrow, handle distribution, tax, and fees
         if let Some(escrow) = competition.escrow {
-            let tax_info = {
-                let arena_core = cw_ownable::get_ownership(deps.storage)?.owner.ok_or(
-                    CompetitionError::OwnershipError(cw_ownable::OwnershipError::NoOwner),
-                )?;
-                let tax: Decimal = deps.querier.query_wasm_smart(
-                    arena_core,
-                    &arena_core_interface::msg::QueryMsg::QueryExtension {
-                        msg: arena_core_interface::msg::QueryExt::Tax {
-                            height: Some(competition.start_height),
-                        },
-                    },
-                )?;
+            // Get Arena Tax config
+            let arena_tax_config =
+                self.query_arena_tax_config(deps.as_ref(), competition.start_height)?;
 
-                if !tax.is_zero() {
-                    Some(TaxInformation {
-                        tax,
-                        receiver: competition.admin_dao.to_string(),
-                        cw20_msg: tax_cw20_msg,
-                        cw721_msg: tax_cw721_msg,
-                    })
-                } else {
-                    None
-                }
+            let mut layered_fees = vec![];
+
+            // Apply Arena Tax
+            if !arena_tax_config.tax.is_zero() {
+                layered_fees.push(FeeInformation {
+                    tax: arena_tax_config.tax,
+                    receiver: competition.admin_dao.to_string(),
+                    cw20_msg: arena_tax_config.cw20_msg,
+                    cw721_msg: arena_tax_config.cw721_msg,
+                });
+            }
+
+            // Apply additional layered fees
+            if let Some(additional_layered_fees) = competition.fees {
+                layered_fees.extend(additional_layered_fees.into_iter().map(|x| FeeInformation {
+                    tax: x.tax,
+                    receiver: x.receiver.to_string(),
+                    cw20_msg: x.cw20_msg,
+                    cw721_msg: x.cw721_msg,
+                }));
+            }
+
+            let layered_fees = if layered_fees.is_empty() {
+                None
+            } else {
+                Some(layered_fees)
             };
 
             let sub_msg = SubMsg::reply_on_success(
                 CompetitionEscrowDistributeMsg {
                     distribution: distribution_msg,
-                    tax_info,
+                    layered_fees,
                 }
                 .into_cosmos_msg(escrow.clone())?,
                 PROCESS_REPLY_ID,
@@ -920,6 +938,26 @@ impl<
             .competitions
             .load(deps.storage, competition_id.u128())?
             .into_response(rules, &env.block))
+    }
+
+    pub fn query_arena_tax_config(
+        &self,
+        deps: Deps,
+        height: u64,
+    ) -> Result<TaxConfigurationResponse, CompetitionError> {
+        let core = cw_ownable::get_ownership(deps.storage)?;
+        if core.owner.is_none() {
+            return Err(CompetitionError::OwnershipError(
+                cw_ownable::OwnershipError::NoOwner,
+            ));
+        }
+
+        Ok(deps.querier.query_wasm_smart(core.owner.unwrap(),
+        &dao_pre_propose_base::msg::QueryMsg::<arena_core_interface::msg::QueryExt>::QueryExtension
+                {
+                    msg: arena_core_interface::msg::QueryExt::TaxConfig { height }
+                })?
+       )
     }
 
     pub fn query_dao(&self, deps: Deps) -> Result<Addr, cw_ownable::OwnershipError> {

@@ -192,10 +192,8 @@ pub fn propose(
             contract_addr: info.sender.to_string(),
             msg: to_json_binary(
                 &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
-                    competition_id: msg.id,
+                    competition_id: msg.competition_id,
                     distribution: msg.distribution,
-                    tax_cw20_msg: msg.tax_cw20_msg,
-                    tax_cw721_msg: msg.tax_cw721_msg,
                 },
             )?,
             funds: vec![],

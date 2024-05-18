@@ -221,6 +221,18 @@ fn test_lock() {
         ContractError::Locked {}.to_string()
     );
 
+    // Send to have a balance
+    let result = context.app.execute_contract(
+        Addr::unchecked(ADDR1),
+        context.escrow_addr.clone(),
+        &ExecuteMsg::ReceiveNative {},
+        &[Coin {
+            denom: "native1".to_owned(),
+            amount: Uint128::one(),
+        }],
+    );
+    assert!(result.is_ok());
+
     // Try to withdraw when the contract is unlocked
     context
         .app
@@ -233,7 +245,7 @@ fn test_lock() {
         .unwrap();
 
     let res = context.app.execute_contract(
-        Addr::unchecked(CREATOR),
+        Addr::unchecked(ADDR1),
         context.escrow_addr.clone(),
         &ExecuteMsg::Withdraw {
             cw20_msg: None,

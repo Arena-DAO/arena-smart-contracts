@@ -1,27 +1,25 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
 };
-use cw2::set_contract_version;
+use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition::msg::{ExecuteBase, QueryBase};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
 use crate::{
-    execute,
+    execute, migrate,
     msg::{
         CompetitionExt, CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg,
         MigrateMsg, QueryExt, QueryMsg,
     },
-    query,
-    state::TournamentExt,
-    ContractError,
+    query, ContractError,
 };
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-league-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub type CompetitionModule = CompetitionModuleContract<
-    TournamentExt,
+    Empty,
     ExecuteExt,
     QueryExt,
     CompetitionExt,
@@ -99,8 +97,6 @@ pub fn execute(
         ExecuteBase::ProcessCompetition {
             competition_id: _,
             distribution: _,
-            tax_cw20_msg: _,
-            tax_cw721_msg: _,
         } => Err(ContractError::InvalidExecute),
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }
@@ -142,7 +138,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, CompetitionError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    if version.major == 1 && version.minor == 3 {
+        migrate::from_v1_3_to_v_1_4(deps.branch())?;
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }

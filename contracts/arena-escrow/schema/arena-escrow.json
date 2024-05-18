@@ -337,15 +337,15 @@
               }
             ]
           },
-          "tax_info": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/TaxInformation_for_String"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "layered_fees": {
+            "description": "Layered fees is an ordered list of fees to be applied before the distribution. The term layered refers to the implementation: Arena Tax -> Host Fee? -> Other Fee? Each fee is calculated based off the available funds at its layer",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/definitions/FeeInformation_for_String"
+            }
           }
         },
         "additionalProperties": false
@@ -462,23 +462,7 @@
           }
         ]
       },
-      "MemberPercentage_for_String": {
-        "type": "object",
-        "required": [
-          "addr",
-          "percentage"
-        ],
-        "properties": {
-          "addr": {
-            "type": "string"
-          },
-          "percentage": {
-            "$ref": "#/definitions/Decimal"
-          }
-        },
-        "additionalProperties": false
-      },
-      "TaxInformation_for_String": {
+      "FeeInformation_for_String": {
         "type": "object",
         "required": [
           "receiver",
@@ -509,6 +493,22 @@
             "type": "string"
           },
           "tax": {
+            "$ref": "#/definitions/Decimal"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MemberPercentage_for_String": {
+        "type": "object",
+        "required": [
+          "addr",
+          "percentage"
+        ],
+        "properties": {
+          "addr": {
+            "type": "string"
+          },
+          "percentage": {
             "$ref": "#/definitions/Decimal"
           }
         },

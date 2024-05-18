@@ -158,7 +158,8 @@
           "categories",
           "competition_modules_instantiate_info",
           "rulesets",
-          "tax"
+          "tax",
+          "tax_configuration"
         ],
         "properties": {
           "categories": {
@@ -181,6 +182,9 @@
           },
           "tax": {
             "$ref": "#/definitions/Decimal"
+          },
+          "tax_configuration": {
+            "$ref": "#/definitions/TaxConfiguration"
           }
         },
         "additionalProperties": false
@@ -263,6 +267,32 @@
             "items": {
               "type": "string"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaxConfiguration": {
+        "type": "object",
+        "properties": {
+          "cw20_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cw721_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -823,6 +853,42 @@
           }
         ]
       },
+      "FeeInformation_for_String": {
+        "type": "object",
+        "required": [
+          "receiver",
+          "tax"
+        ],
+        "properties": {
+          "cw20_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cw721_msg": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receiver": {
+            "type": "string"
+          },
+          "tax": {
+            "$ref": "#/definitions/Decimal"
+          }
+        },
+        "additionalProperties": false
+      },
       "MemberPercentage_for_String": {
         "type": "object",
         "required": [
@@ -924,11 +990,24 @@
       "ProposeMessage": {
         "type": "object",
         "required": [
+          "competition_id",
           "description",
-          "id",
           "title"
         ],
         "properties": {
+          "additional_layered_fees": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/FeeInformation_for_String"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "competition_id": {
+            "$ref": "#/definitions/Uint128"
+          },
           "description": {
             "type": "string"
           },
@@ -936,29 +1015,6 @@
             "anyOf": [
               {
                 "$ref": "#/definitions/Distribution_for_String"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "id": {
-            "$ref": "#/definitions/Uint128"
-          },
-          "tax_cw20_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "tax_cw721_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
               },
               {
                 "type": "null"
@@ -1494,6 +1550,30 @@
             "properties": {
               "dump_state": {
                 "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "This query is used to get a competition's fee configuration for the Arena tax at its start height",
+            "type": "object",
+            "required": [
+              "tax_config"
+            ],
+            "properties": {
+              "tax_config": {
+                "type": "object",
+                "required": [
+                  "height"
+                ],
+                "properties": {
+                  "height": {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
                 "additionalProperties": false
               }
             },

@@ -9,12 +9,15 @@ use dao_pre_propose_base::{
 };
 use dao_voting::proposal::SingleChoiceProposeMsg;
 
+use crate::fees::{FeeInformation, TaxConfiguration};
+
 #[cw_serde]
 pub struct InstantiateExt {
     pub competition_modules_instantiate_info: Vec<ModuleInstantiateInfo>,
     pub rulesets: Vec<NewRuleset>,
     pub categories: Vec<NewCompetitionCategory>,
     pub tax: Decimal,
+    pub tax_configuration: TaxConfiguration,
 }
 
 #[cw_serde]
@@ -73,6 +76,9 @@ pub enum QueryExt {
     },
     #[returns(DumpStateResponse)]
     DumpState {},
+    /// This query is used to get a competition's fee configuration for the Arena tax at its start height
+    #[returns(TaxConfigurationResponse)]
+    TaxConfig { height: u64 },
 }
 
 #[cw_serde]
@@ -144,12 +150,18 @@ pub struct CompetitionCategory {
 
 #[cw_serde]
 pub struct ProposeMessage {
-    pub id: Uint128,
+    pub competition_id: Uint128,
     pub title: String,
     pub description: String,
     pub distribution: Option<Distribution<String>>,
-    pub tax_cw20_msg: Option<Binary>,
-    pub tax_cw721_msg: Option<Binary>,
+    pub additional_layered_fees: Option<FeeInformation<String>>,
+}
+
+#[cw_serde]
+pub struct TaxConfigurationResponse {
+    pub tax: Decimal,
+    pub cw20_msg: Option<Binary>,
+    pub cw721_msg: Option<Binary>,
 }
 
 #[cw_serde]

@@ -23,18 +23,21 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
-    #[error("Locked")]
+    #[error("Cannot perform action while locked")]
     Locked {},
 
-    #[error("NotFullyFunded")]
+    #[error("Escrow is not fully funded")]
     NotFullyFunded {},
 
-    #[error("InvalidDistribution")]
+    #[error("The distribution is invalid")]
     InvalidDistribution { msg: String },
 
-    #[error("InvalidDue")]
+    #[error("Invalid due")]
     InvalidDue { msg: String },
 
-    #[error("EmptyBalance")]
+    #[error("Cannot provide an empty balance")]
     EmptyBalance {},
+
+    #[error("Already distributed")]
+    AlreadyDistributed {},
 }

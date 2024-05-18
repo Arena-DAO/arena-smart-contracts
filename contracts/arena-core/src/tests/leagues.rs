@@ -1,18 +1,19 @@
 use std::str::FromStr;
 
+use arena_core_interface::fees::FeeInformation;
 use arena_league_module::{
     msg::{
         CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueResponse,
         MatchResult, MemberPoints, QueryExt, QueryMsg, RoundResponse,
     },
-    state::{Match, PointAdjustment, Result, TournamentExt},
+    state::{Match, PointAdjustment, Result},
 };
 use cosmwasm_std::{
-    coins, to_json_binary, Addr, Coin, Coins, Decimal, Int128, Uint128, Uint64, WasmMsg,
+    coins, to_json_binary, Addr, Coin, Coins, Decimal, Empty, Int128, Uint128, Uint64, WasmMsg,
 };
 use cw4::Member;
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
-use cw_competition::msg::ModuleInfo;
+use cw_competition::msg::{EscrowInstantiateInfo, ModuleInfo};
 use cw_multi_test::{next_block, App, AppResponse, BankKeeper, Executor, MockApiBech32};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
@@ -57,10 +58,7 @@ fn setup_league_context(
                             msg: to_json_binary(&InstantiateMsg {
                                 key: "Leagues".to_string(),
                                 description: "This is a description".to_string(),
-                                extension: TournamentExt {
-                                    tax_cw20_msg: None,
-                                    tax_cw721_msg: None,
-                                },
+                                extension: Empty {},
                             })
                             .unwrap(),
                             admin: None,
@@ -95,6 +93,7 @@ fn create_competition(
     members: Vec<cw4::Member>,
     dues: Option<Vec<MemberBalanceUnchecked>>,
     distribution: Vec<Decimal>,
+    additional_layered_fees: Option<Vec<FeeInformation<String>>>,
 ) -> cw_multi_test::error::AnyResult<AppResponse> {
     let teams: Vec<String> = members.iter().map(|x| x.addr.to_string()).collect();
 
@@ -129,11 +128,11 @@ fn create_competition(
                     label: "DAO".to_owned(),
                 },
             },
-            escrow: dues.map(|x| ModuleInstantiateInfo {
+            escrow: dues.map(|x| EscrowInstantiateInfo {
                 code_id: context.league.escrow_id,
                 msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
-                admin: None,
                 label: "Escrow".to_owned(),
+                additional_layered_fees,
             }),
             name: "This is a competition name".to_string(),
             description: "This is a description".to_string(),
@@ -213,6 +212,7 @@ fn test_league_validation() {
             Decimal::from_ratio(20u128, 100u128),
             Decimal::from_ratio(10u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_ok());
 
@@ -227,6 +227,7 @@ fn test_league_validation() {
             Decimal::from_ratio(20u128, 100u128),
             Decimal::from_ratio(5u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_err());
 
@@ -245,6 +246,7 @@ fn test_league_validation() {
             Decimal::from_ratio(15u128, 100u128),
             Decimal::from_ratio(10u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_err());
 
@@ -255,6 +257,7 @@ fn test_league_validation() {
         vec![members[0].clone()],
         None,
         vec![Decimal::one()],
+        None,
     );
     assert!(result.is_err());
 
@@ -265,6 +268,7 @@ fn test_league_validation() {
         vec![members[0].clone(), members[0].clone()],
         None,
         vec![Decimal::one()],
+        None,
     );
     assert!(result.is_err());
 
@@ -276,6 +280,7 @@ fn test_league_validation() {
         members[0..members.len() - 1].to_vec(),
         None,
         vec![Decimal::one()],
+        None,
     );
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -356,6 +361,7 @@ fn test_leagues() {
             Decimal::from_ratio(20u128, 100u128),
             Decimal::from_ratio(10u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_ok());
     let competition_id = get_id_from_competition_creation_result(result);
@@ -1083,6 +1089,7 @@ fn test_distributions() {
             Decimal::from_ratio(20u128, 100u128),
             Decimal::from_ratio(10u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_ok());
     let competition_id = get_id_from_competition_creation_result(result);
@@ -1333,6 +1340,7 @@ fn test_distributions() {
             Decimal::from_ratio(20u128, 100u128),
             Decimal::from_ratio(10u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_ok());
     let competition_id = get_id_from_competition_creation_result(result);
@@ -1569,6 +1577,7 @@ fn test_distributions() {
             Decimal::from_ratio(20u128, 100u128),
             Decimal::from_ratio(10u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_ok());
     let competition_id = get_id_from_competition_creation_result(result);
@@ -1768,6 +1777,7 @@ fn test_distributions() {
             Decimal::from_ratio(20u128, 100u128),
             Decimal::from_ratio(10u128, 100u128),
         ],
+        None,
     );
     assert!(result.is_ok());
     let competition_id = get_id_from_competition_creation_result(result);
@@ -1924,4 +1934,328 @@ fn test_distributions() {
             }
         ]
     );
+}
+
+#[test]
+fn test_additional_layered_fees() {
+    let mut app = get_app();
+    let users = [
+        app.api().addr_make("user1"),
+        app.api().addr_make("user2"),
+        app.api().addr_make("user3"),
+        app.api().addr_make("user4"),
+        app.api().addr_make("user5"),
+    ];
+    let admin = app.api().addr_make(ADMIN);
+    let wager_amount_uint128 = Uint128::from(10_000u128);
+    let wager_amount = format!("{}{}", wager_amount_uint128, "juno");
+
+    set_balances(
+        &mut app,
+        vec![
+            (users[0].clone(), Coins::from_str("100000juno").unwrap()),
+            (users[1].clone(), Coins::from_str("100000juno").unwrap()),
+        ],
+    );
+
+    let core_context = setup_core_context(
+        &mut app,
+        vec![Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    );
+    let league_context = setup_league_context(&mut app, &core_context);
+    let mut context = Context {
+        app,
+        core: core_context,
+        league: league_context,
+    };
+
+    // Define additional layered fees
+    let additional_layered_fees = Some(vec![
+        FeeInformation {
+            tax: Decimal::from_ratio(5u128, 100u128),
+            receiver: users[2].to_string(),
+            cw20_msg: None,
+            cw721_msg: None,
+        },
+        FeeInformation {
+            tax: Decimal::from_ratio(5u128, 100u128),
+            receiver: users[3].to_string(),
+            cw20_msg: None,
+            cw721_msg: None,
+        },
+    ]);
+
+    // Create competition
+    let starting_height = context.app.block_info().height;
+    let result = create_competition(
+        &mut context,
+        Expiration::AtHeight(starting_height + 100),
+        users
+            .iter()
+            .map(|x| Member {
+                addr: x.to_string(),
+                weight: 1u64,
+            })
+            .collect(),
+        Some(vec![
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: cw_balance::BalanceUnchecked {
+                    native: vec![Coin::from_str(&wager_amount).unwrap()],
+                    cw20: vec![],
+                    cw721: vec![],
+                },
+            },
+        ]),
+        vec![
+            Decimal::from_ratio(70u128, 100u128),
+            Decimal::from_ratio(20u128, 100u128),
+            Decimal::from_ratio(10u128, 100u128),
+        ],
+        additional_layered_fees,
+    );
+    assert!(result.is_ok());
+    let competition_id = get_id_from_competition_creation_result(result);
+
+    // Get the competition
+    let competition: LeagueResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.league.league_module_addr.clone(),
+            &QueryMsg::Competition { competition_id },
+        )
+        .unwrap();
+
+    // Fund escrow
+    context
+        .app
+        .execute_contract(
+            users[0].clone(),
+            competition.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+    context
+        .app
+        .execute_contract(
+            users[1].clone(),
+            competition.escrow.as_ref().unwrap().clone(),
+            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &[Coin::from_str(&wager_amount).unwrap()],
+        )
+        .unwrap();
+
+    context.app.update_block(|x| x.height += 10);
+    // Process all matches
+    let result = context.app.execute_contract(
+        admin.clone(),
+        context.core.sudo_proposal_addr.clone(),
+        &dao_proposal_sudo::msg::ExecuteMsg::Execute {
+            msgs: vec![
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(1u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(1u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(2u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(2u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(3u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(4u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(3u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(5u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(6u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(4u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(7u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(8u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+                WasmMsg::Execute {
+                    contract_addr: context.league.league_module_addr.to_string(),
+                    msg: to_json_binary(&ExecuteMsg::Extension {
+                        msg: ExecuteExt::ProcessMatch {
+                            league_id: competition_id,
+                            round_number: Uint64::from(5u64),
+                            match_results: vec![
+                                MatchResult {
+                                    match_number: Uint128::from(9u128),
+                                    result: Some(Result::Draw),
+                                },
+                                MatchResult {
+                                    match_number: Uint128::from(10u128),
+                                    result: Some(Result::Draw),
+                                },
+                            ],
+                        },
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }
+                .into(),
+            ],
+        },
+        &[],
+    );
+    assert!(result.is_ok());
+
+    // Check escrow balance was distributed after all matches were processed
+    // Distribution was 1st - 70%, 2nd - 20%, 3rd - 10%, but all members tied so it's 20% for everyone
+    // Additional layered fees were applied users[2] - 5% then users[3] - 5%
+    let balances: Vec<MemberBalanceUnchecked> = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            competition.escrow.as_ref().unwrap(),
+            &arena_escrow::msg::QueryMsg::Balances {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        balances,
+        vec![
+            MemberBalanceUnchecked {
+                addr: users[3].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3071, "juno"), // This one had the remainders added to it 4 + 3068
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[0].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3068, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[4].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3068, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[2].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3068, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            },
+            MemberBalanceUnchecked {
+                addr: users[1].to_string(),
+                balance: BalanceUnchecked {
+                    native: coins(3068, "juno"),
+                    cw20: vec![],
+                    cw721: vec![]
+                }
+            }
+        ]
+    );
+
+    // Let's check that the 5% layered fee was automatically sent
+    // 20000 * .85 * .05
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(users[2].to_string(), "juno")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::from(850u128));
+
+    // Let's check that the 5% layered fee was automatically sent
+    // 20000 * .85 * .95 * .05
+    let balance = context
+        .app
+        .wrap()
+        .query_balance(users[3].to_string(), "juno")
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::from(807u128));
 }

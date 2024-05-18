@@ -1,3 +1,4 @@
+use arena_core_interface::fees::FeeInformation;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Timestamp, Uint128};
 use cw_utils::Expiration;
@@ -38,6 +39,7 @@ pub struct Competition<CompetitionExt> {
     pub rulesets: Vec<Uint128>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
+    pub fees: Option<Vec<FeeInformation<Addr>>>,
 }
 
 /// CompetitionResponse has all of the same fields as Competition
@@ -57,6 +59,7 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
     pub expiration: Expiration,
+    pub fees: Option<Vec<FeeInformation<Addr>>>,
 }
 
 #[cw_serde]
@@ -97,6 +100,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             status: self.status,
             extension: self.extension,
             expiration: self.expiration,
+            fees: self.fees,
         }
     }
 

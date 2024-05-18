@@ -1,8 +1,8 @@
 use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
-    query,
+    migrate, query,
     state::{
-        competition_modules, CompetitionModule, COMPETITION_CATEGORIES_COUNT,
+        competition_modules, CompetitionModule, ARENA_TAX_CONFIG, COMPETITION_CATEGORIES_COUNT,
         COMPETITION_MODULES_COUNT, KEYS, RULESETS_COUNT,
     },
     ContractError,
@@ -17,7 +17,7 @@ use cosmwasm_std::{
     from_json, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdError, StdResult, Uint128, WasmMsg,
 };
-use cw2::set_contract_version;
+use cw2::{ensure_from_older_version, set_contract_version};
 use cw_utils::parse_reply_instantiate_data;
 use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::ModuleInstantiateCallback};
 
@@ -47,9 +47,10 @@ pub fn instantiate_extension(
     COMPETITION_MODULES_COUNT.save(deps.storage, &Uint128::zero())?;
     RULESETS_COUNT.save(deps.storage, &Uint128::zero())?;
     COMPETITION_CATEGORIES_COUNT.save(deps.storage, &Uint128::zero())?;
-    crate::execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
-    crate::execute::update_categories(deps.branch(), dao.clone(), extension.categories, vec![])?;
-    crate::execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
+    execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
+    execute::update_categories(deps.branch(), dao.clone(), extension.categories, vec![])?;
+    execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
+    ARENA_TAX_CONFIG.save(deps.storage, &extension.tax_configuration)?;
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
         dao.clone(),
@@ -200,6 +201,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
                 category_id,
                 rulesets,
             )),
+            QueryExt::TaxConfig { height } => {
+                to_json_binary(&query::arena_fee_config(deps, height)?)
+            }
         },
         _ => PrePropose::default().query(deps, env, msg),
     };
@@ -208,7 +212,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    if version.major == 1 && version.minor == 3 {
+        migrate::from_v1_3_to_v_1_4(deps.branch())?;
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }

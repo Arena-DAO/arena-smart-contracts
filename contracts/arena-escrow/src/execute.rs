@@ -1,17 +1,17 @@
+use arena_core_interface::fees::FeeInformation;
 use cosmwasm_std::{
     to_json_binary, Addr, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response, StdResult,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
 use cw_balance::{BalanceVerified, Cw721CollectionVerified, Distribution};
-use cw_competition::escrow::TaxInformation;
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
     query::is_locked,
     state::{
-        is_fully_funded, BALANCE, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED,
-        PRESET_DISTRIBUTION, TAX_AT_WITHDRAWAL, TOTAL_BALANCE,
+        is_fully_funded, BALANCE, DEFERRED_FEES, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED,
+        PRESET_DISTRIBUTION, TOTAL_BALANCE,
     },
     ContractError,
 };
@@ -26,25 +26,30 @@ pub fn withdraw(
         return Err(ContractError::Locked {});
     }
 
-    // Initialize total_balance based on processing status
+    // Load and process balance for each address
+    let mut balance = BALANCE.load(deps.storage, &info.sender)?;
+
+    // Load the total balance
     let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
 
-    // Load and process balance for each address
-    let msgs = if let Some(mut balance) = BALANCE.may_load(deps.storage, &info.sender)? {
-        if balance.is_empty() {
-            return Err(ContractError::EmptyBalance {});
-        }
+    let msgs = if balance.is_empty() {
+        BALANCE.remove(deps.storage, &info.sender);
 
+        vec![]
+    } else {
         // If the total balance has already been taxed, then deduct at the individual level
-        if let Some(tax) = TAX_AT_WITHDRAWAL.may_load(deps.storage)? {
-            balance = balance.checked_sub(&balance.checked_mul_floor(tax)?)?;
+        if let Some(fees) = DEFERRED_FEES.may_load(deps.storage)? {
+            for fee in fees {
+                balance = balance.checked_sub(&balance.checked_mul_floor(fee)?)?;
+            }
         }
 
         // Update total balance and related storage entries
         BALANCE.remove(deps.storage, &info.sender);
         total_balance = total_balance.checked_sub(&balance)?;
 
-        if !HAS_DISTRIBUTED.load(deps.storage)? {
+        let has_distributed = HAS_DISTRIBUTED.may_load(deps.storage)?.unwrap_or_default();
+        if !has_distributed {
             // Set due to the initial due
             let initial_due = &INITIAL_DUE.load(deps.storage, &info.sender)?;
             DUE.save(deps.storage, &info.sender, initial_due)?;
@@ -53,6 +58,13 @@ pub fn withdraw(
         // Update or remove total balance
         if total_balance.is_empty() {
             TOTAL_BALANCE.remove(deps.storage);
+
+            if let Some(has_distributed) = HAS_DISTRIBUTED.may_load(deps.storage)? {
+                if has_distributed {
+                    // Clean up state if the last user has withdrawn
+                    DEFERRED_FEES.remove(deps.storage);
+                }
+            }
         } else {
             TOTAL_BALANCE.save(deps.storage, &total_balance)?;
         }
@@ -63,8 +75,6 @@ pub fn withdraw(
             cw20_msg.clone(),
             cw721_msg.clone(),
         )?
-    } else {
-        vec![]
     };
 
     Ok(Response::new()
@@ -165,6 +175,9 @@ fn receive_balance(
             msg: "User is not a participant".to_string(),
         });
     }
+    if HAS_DISTRIBUTED.exists(deps.storage) {
+        return Err(ContractError::AlreadyDistributed {});
+    }
 
     // Update the stored balance for the given address
     let updated_balance =
@@ -217,7 +230,7 @@ pub fn distribute(
     deps: DepsMut,
     info: MessageInfo,
     distribution: Option<Distribution<String>>,
-    tax_info: Option<TaxInformation<String>>,
+    layered_fees: Option<Vec<FeeInformation<String>>>,
 ) -> Result<Response, ContractError> {
     // Ensure the sender is the owner
     assert_owner(deps.storage, &info.sender)?;
@@ -226,34 +239,46 @@ pub fn distribute(
     let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
 
     // Validate the tax info
-    let validated_tax_info = tax_info
+    let validated_layered_fees = layered_fees
         .as_ref()
-        .map(|tax_info| tax_info.into_checked(deps.as_ref()))
+        .map(|layered_fees| {
+            layered_fees
+                .iter()
+                .map(|layered_fee| layered_fee.into_checked(deps.as_ref()))
+                .collect::<StdResult<Vec<FeeInformation<Addr>>>>()
+        })
         .transpose()?;
 
-    // Process the tax
+    // Process the layered fees
     // This will automatically be sent to the receiver
-    let msgs = if let Some(tax_info) = validated_tax_info {
-        let tax = total_balance.checked_mul_floor(tax_info.tax)?;
+    let mut attrs = vec![];
+    let msgs = if let Some(layered_fees) = validated_layered_fees {
+        let mut msgs = vec![];
 
-        total_balance =
-            TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> { x.checked_sub(&tax) })?;
-
-        // If funds are not split, then we should have the tax at withdrawal
+        // If funds will not be split, then we should have the fees available at withdrawal
         if distribution.is_none() {
-            TAX_AT_WITHDRAWAL.save(deps.storage, &tax_info.tax)?;
+            DEFERRED_FEES.save(deps.storage, &layered_fees.iter().map(|x| x.tax).collect())?;
         }
 
-        if !tax.is_empty() {
-            tax.transmit_all(
-                deps.as_ref(),
-                &tax_info.receiver,
-                tax_info.cw20_msg,
-                tax_info.cw721_msg,
-            )?
-        } else {
-            vec![]
+        for fee in layered_fees {
+            let fee_amounts = total_balance.checked_mul_floor(fee.tax)?;
+
+            total_balance = TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
+                x.checked_sub(&fee_amounts)
+            })?;
+
+            if !fee_amounts.is_empty() {
+                msgs.append(&mut fee_amounts.transmit_all(
+                    deps.as_ref(),
+                    &fee.receiver,
+                    fee.cw20_msg,
+                    fee.cw721_msg,
+                )?);
+                attrs.push(("Fee", fee.receiver.to_string()));
+            }
         }
+
+        msgs
     } else {
         vec![]
     };
@@ -312,12 +337,7 @@ pub fn distribute(
 
     Ok(Response::new()
         .add_attribute("action", "handle_competition_result")
-        .add_attribute(
-            "tax",
-            tax_info
-                .map(|some| some.tax.to_string())
-                .unwrap_or("None".to_owned()),
-        )
+        .add_attributes(attrs)
         .add_messages(msgs))
 }
 

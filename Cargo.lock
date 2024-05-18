@@ -70,6 +70,7 @@ dependencies = [
 name = "arena-escrow"
 version = "1.4.0"
 dependencies = [
+ "arena-core-interface",
  "arena-testing",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -372,11 +373,9 @@ dependencies = [
  "arena-core-interface",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-address-like",
  "cw-balance",
  "cw-ownable",
  "cw-utils 1.0.3",
- "cw4 1.1.2",
  "dao-interface",
  "dao-pre-propose-base",
  "dao-voting 2.2.0",
@@ -398,7 +397,6 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "cw4 1.1.2",
  "dao-interface",
  "dao-pre-propose-base",
  "dao-voting 2.2.0",

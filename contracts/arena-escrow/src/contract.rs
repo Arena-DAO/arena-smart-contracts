@@ -1,14 +1,14 @@
 use crate::{
-    execute,
+    execute, migrate,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{self, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED},
+    state::{self, DUE, INITIAL_DUE, IS_LOCKED},
     ContractError,
 };
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
-use cw2::set_contract_version;
+use cw2::{ensure_from_older_version, set_contract_version};
 use cw_balance::MemberBalanceUnchecked;
 
 // version info for migration info
@@ -42,7 +42,6 @@ pub fn instantiate_contract(
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
-    HAS_DISTRIBUTED.save(deps.storage, &false)?;
     for member_balance in due {
         let member_balance = member_balance.into_checked(deps.as_ref())?;
 
@@ -87,7 +86,7 @@ pub fn execute(
             deps,
             info,
             competition_escrow_distribute_msg.distribution,
-            competition_escrow_distribute_msg.tax_info,
+            competition_escrow_distribute_msg.layered_fees,
         ),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
         ExecuteMsg::UpdateOwnership(action) => {
@@ -122,7 +121,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    if version.major == 1 && version.minor == 3 {
+        migrate::from_v1_3_to_v_1_4(deps.branch())?;
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }

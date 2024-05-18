@@ -12,7 +12,7 @@ use cw_balance::{
     BalanceVerified, Distribution, MemberBalanceChecked, MemberBalanceUnchecked, MemberPercentage,
 };
 use cw_competition::{
-    msg::ModuleInfo,
+    msg::{EscrowInstantiateInfo, ModuleInfo},
     state::{CompetitionListItemResponse, CompetitionStatus},
 };
 use cw_multi_test::{next_block, App, BankKeeper, Executor, MockApiBech32};
@@ -129,11 +129,11 @@ fn create_competition(
                     label: "DAO".to_owned(),
                 },
             },
-            escrow: dues.map(|x| ModuleInstantiateInfo {
+            escrow: dues.map(|x| EscrowInstantiateInfo {
                 code_id: context.wager.escrow_id,
                 msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
-                admin: None,
                 label: "Escrow".to_owned(),
+                additional_layered_fees: None,
             }),
             name: "This is a competition name".to_string(),
             description: "This is a description".to_string(),
@@ -259,7 +259,7 @@ fn test_create_competition() {
     );
     assert!(result.is_err());
 
-    // Create competiton
+    // Create competition
     let competition1_id = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 10),
@@ -383,8 +383,6 @@ fn test_create_competition() {
                             }],
                             remainder_addr: context.core.dao_addr.to_string(),
                         }),
-                        tax_cw20_msg: None,
-                        tax_cw721_msg: None,
                     },
                 )
                 .unwrap(),
@@ -533,7 +531,7 @@ fn test_create_competition_jailed() {
         wager: wager_context,
     };
 
-    // Create competiton
+    // Create competition
     let starting_height = context.app.block_info().height;
     let competition1_id = create_competition(
         &mut context,
@@ -598,7 +596,7 @@ fn test_create_competition_jailed() {
 
     // Cannot jail - not active
     let propose_message = ProposeMessage {
-        id: competition1_id,
+        competition_id: competition1_id,
         title: "Title".to_string(),
         description: "Description".to_string(),
         distribution: Some(Distribution::<String> {
@@ -608,8 +606,7 @@ fn test_create_competition_jailed() {
             }],
             remainder_addr: context.core.dao_addr.to_string(),
         }),
-        tax_cw20_msg: None,
-        tax_cw721_msg: None,
+        additional_layered_fees: None,
     };
 
     let result = context.app.execute_contract(
@@ -856,7 +853,7 @@ fn test_preset_distribution() {
 
     let starting_height = context.app.block_info().height;
 
-    // Create competiton
+    // Create competition
     let competition1_id = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 10),
@@ -940,8 +937,6 @@ fn test_preset_distribution() {
                             ],
                             remainder_addr: user1.to_string(),
                         }),
-                        tax_cw20_msg: None,
-                        tax_cw721_msg: None,
                     },
                 )
                 .unwrap(),
@@ -1126,7 +1121,7 @@ fn test_competition_draw() {
 
     let starting_height = context.app.block_info().height;
 
-    // Create competiton
+    // Create competition
     let competition1_id = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 10),
@@ -1198,8 +1193,6 @@ fn test_competition_draw() {
                     &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
                         competition_id: competition1_id,
                         distribution: None,
-                        tax_cw20_msg: None,
-                        tax_cw721_msg: None,
                     },
                 )
                 .unwrap(),

@@ -272,9 +272,6 @@ pub fn process_matches(
             member_percentages[0].percentage += remainder_percentage;
         }
 
-        // Load up the custom distribution info
-        let config = CompetitionModule::default().config.load(deps.storage)?;
-
         response = CompetitionModule::default().inner_process(
             deps,
             league,
@@ -282,8 +279,6 @@ pub fn process_matches(
                 member_percentages,
                 remainder_addr: leaderboard[0].member.clone(),
             }),
-            config.extension.tax_cw20_msg,
-            config.extension.tax_cw721_msg,
         )?;
     }
 

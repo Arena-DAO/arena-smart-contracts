@@ -9,7 +9,7 @@ pub const DUE: Map<&Addr, BalanceVerified> = Map::new("due");
 pub const IS_LOCKED: Item<bool> = Item::new("is_locked");
 pub const HAS_DISTRIBUTED: Item<bool> = Item::new("has_distributed");
 pub const PRESET_DISTRIBUTION: Map<&Addr, Distribution<Addr>> = Map::new("distribution");
-pub const TAX_AT_WITHDRAWAL: Item<Decimal> = Item::new("tax_at_withdrawal");
+pub const DEFERRED_FEES: Item<Vec<Decimal>> = Item::new("deferred_fees");
 
 pub fn is_fully_funded(deps: Deps) -> bool {
     DUE.is_empty(deps.storage)

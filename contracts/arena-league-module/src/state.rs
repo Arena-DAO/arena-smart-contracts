@@ -1,14 +1,8 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Binary, Deps, Int128, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Deps, Int128, StdResult, Uint128, Uint64};
 use cw_storage_plus::Map;
 
 use crate::msg::RoundResponse;
-
-#[cw_serde]
-pub struct TournamentExt {
-    pub tax_cw20_msg: Option<Binary>,
-    pub tax_cw721_msg: Option<Binary>,
-}
 
 #[cw_serde]
 pub struct Match {

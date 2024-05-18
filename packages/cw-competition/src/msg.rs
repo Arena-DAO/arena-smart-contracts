@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use crate::state::{CompetitionResponse, Config};
 #[allow(unused_imports)]
 use crate::state::{CompetitionStatus, Evidence};
+use arena_core_interface::fees::FeeInformation;
 use arena_core_interface::msg::ProposeMessage;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
@@ -40,7 +41,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     CreateCompetition {
         category_id: Option<Uint128>,
         host: ModuleInfo,
-        escrow: Option<ModuleInstantiateInfo>,
+        escrow: Option<EscrowInstantiateInfo>,
         name: String,
         description: String,
         expiration: Expiration,
@@ -55,8 +56,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     ProcessCompetition {
         competition_id: Uint128,
         distribution: Option<Distribution<String>>,
-        tax_cw20_msg: Option<Binary>,
-        tax_cw721_msg: Option<Binary>,
     },
     Extension {
         msg: ExecuteExt,
@@ -97,6 +96,18 @@ where
     #[serde(skip)]
     #[returns(PhantomData<(InstantiateExt, CompetitionExt)>)]
     _Phantom(PhantomData<(InstantiateExt, CompetitionExt)>),
+}
+
+#[cw_serde]
+pub struct EscrowInstantiateInfo {
+    /// Code ID of the contract to be instantiated.
+    pub code_id: u64,
+    /// Instantiate message to be used to create the contract.
+    pub msg: Binary,
+    /// Label for the instantiated contract.
+    pub label: String,
+    /// Optional additional layered fees
+    pub additional_layered_fees: Option<Vec<FeeInformation<String>>>,
 }
 
 #[cw_serde]

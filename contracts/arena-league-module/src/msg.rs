@@ -1,6 +1,6 @@
-use crate::state::{Match, PointAdjustment, Result, TournamentExt};
+use crate::state::{Match, PointAdjustment, Result};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Int128, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Decimal, Empty, Int128, StdResult, Uint128, Uint64};
 use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
@@ -131,8 +131,8 @@ pub struct DumpStateResponse {
     pub point_adjustments: Vec<PointAdjustmentResponse>,
 }
 
-pub type InstantiateMsg = InstantiateBase<TournamentExt>;
+pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, CompetitionInstantiateExt>;
-pub type QueryMsg = QueryBase<TournamentExt, QueryExt, CompetitionExt>;
+pub type QueryMsg = QueryBase<Empty, QueryExt, CompetitionExt>;
 pub type League = Competition<CompetitionExt>;
 pub type LeagueResponse = CompetitionResponse<CompetitionExt>;

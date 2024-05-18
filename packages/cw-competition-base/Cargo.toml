@@ -23,7 +23,6 @@ cw-storage-plus = { workspace = true }
 thiserror = { workspace = true }
 
 cw2 = { workspace = true }
-cw4 = { workspace = true }
 cw-balance = { workspace = true }
 cw-ownable = { workspace = true }
 cw-competition = { workspace = true }

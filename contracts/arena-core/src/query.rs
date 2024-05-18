@@ -1,9 +1,10 @@
 use crate::state::{
-    competition_categories, get_rulesets_category_and_is_enabled_idx, CompetitionModule, KEYS, TAX,
+    competition_categories, get_rulesets_category_and_is_enabled_idx, CompetitionModule,
+    ARENA_TAX_CONFIG, KEYS, TAX,
 };
 use arena_core_interface::msg::{
     CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
-    Ruleset,
+    Ruleset, TaxConfigurationResponse,
 };
 use cosmwasm_std::{Decimal, Deps, Empty, Env, StdResult, Uint128};
 use cw_paginate::paginate_indexed_map;
@@ -234,4 +235,11 @@ pub fn is_valid_category_and_rulesets(
     }
 
     true
+}
+
+pub fn arena_fee_config(deps: Deps, height: u64) -> StdResult<TaxConfigurationResponse> {
+    Ok(ARENA_TAX_CONFIG.load(deps.storage)?.into_response(
+        TAX.may_load_at_height(deps.storage, height)?
+            .unwrap_or_default(),
+    ))
 }
