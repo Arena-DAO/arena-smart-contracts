@@ -4,6 +4,10 @@
 
 This project contains the smart contracts for the Arena DAO. The contracts are written in Rust and use the CosmWasm framework. The project also includes TypeScript code for generating TypeScript types from the contract schemas.
 
+## License
+
+This project is licensed under the terms of the GNU General Public License v3.0. See the [LICENSE](./LICENSE) file for details.
+
 ## Project Structure
 
 The project is organized into several directories:
