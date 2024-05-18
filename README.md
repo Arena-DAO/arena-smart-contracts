@@ -21,7 +21,7 @@ The `scripts/check` file is used to check for unused dependencies, format the co
 
 The `scripts/gen` file is used to generate the contract schemas and TypeScript types. It first generates the schemas for all contracts and then generates the TypeScript types.
 
-The `scripts/optimize` file is used to optimize the smart contracts. It uses the Docker image `cosmwasm/workspace-optimizer:0.15.0` to run the optimization process.
+The `scripts/optimize` file is used to optimize the smart contracts. It uses the Docker image `cosmwasm/workspace-optimizer:0.15.1` to run the optimization process.
 
 The GitHub Actions workflows in the `.github/workflows` directory are used to run tests and lints on every push and pull request.
 
