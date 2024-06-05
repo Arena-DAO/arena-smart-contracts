@@ -3,8 +3,8 @@ use std::str::FromStr;
 use arena_core_interface::fees::FeeInformation;
 use arena_league_module::{
     msg::{
-        CompetitionInstantiateExt, ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueResponse,
-        MatchResult, MemberPoints, QueryExt, QueryMsg, RoundResponse,
+        ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueInstantiateExt, LeagueQueryExt,
+        LeagueResponse, MatchResult, MemberPoints, QueryMsg, RoundResponse,
     },
     state::{Match, PointAdjustment, Result},
 };
@@ -143,7 +143,7 @@ fn create_competition(
                 "Rule 3".to_string(),
             ],
             rulesets: vec![],
-            instantiate_extension: CompetitionInstantiateExt {
+            instantiate_extension: LeagueInstantiateExt {
                 teams,
                 match_win_points: Uint64::from(3u64),
                 match_draw_points: Uint64::one(),
@@ -385,7 +385,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Round {
+                msg: LeagueQueryExt::Round {
                     league_id: competition_id,
                     round_number: Uint64::one(),
                 },
@@ -420,7 +420,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Round {
+                msg: LeagueQueryExt::Round {
                     league_id: competition_id,
                     round_number: Uint64::from(2u64),
                 },
@@ -529,7 +529,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Leaderboard {
+                msg: LeagueQueryExt::Leaderboard {
                     league_id: competition_id,
                     round: None,
                 },
@@ -605,7 +605,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Leaderboard {
+                msg: LeagueQueryExt::Leaderboard {
                     league_id: competition_id,
                     round: None,
                 },
@@ -659,7 +659,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Leaderboard {
+                msg: LeagueQueryExt::Leaderboard {
                     league_id: competition_id,
                     round: None,
                 },
@@ -747,7 +747,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Leaderboard {
+                msg: LeagueQueryExt::Leaderboard {
                     league_id: competition_id,
                     round: None,
                 },
@@ -835,7 +835,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Leaderboard {
+                msg: LeagueQueryExt::Leaderboard {
                     league_id: competition_id,
                     round: None,
                 },
@@ -923,7 +923,7 @@ fn test_leagues() {
         .query_wasm_smart(
             context.league.league_module_addr.clone(),
             &QueryMsg::QueryExtension {
-                msg: QueryExt::Leaderboard {
+                msg: LeagueQueryExt::Leaderboard {
                     league_id: competition_id,
                     round: None,
                 },

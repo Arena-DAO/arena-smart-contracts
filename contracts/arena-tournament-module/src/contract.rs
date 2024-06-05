@@ -8,20 +8,20 @@ use cw_competition::msg::{ExecuteBase, QueryBase};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
 use crate::{
-    execute, migrate,
+    execute,
     msg::{
-        ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueInstantiateExt, LeagueQueryExt, MigrateMsg,
-        QueryMsg,
+        ExecuteExt, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryExt, QueryMsg,
+        TournamentInstantiateExt,
     },
     query,
-    state::LeagueExt,
+    state::TournamentExt,
     ContractError,
 };
 
-pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-league-module";
+pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-tournament-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub type CompetitionModule =
-    CompetitionModuleContract<Empty, ExecuteExt, LeagueQueryExt, LeagueExt, LeagueInstantiateExt>;
+    CompetitionModuleContract<Empty, ExecuteExt, QueryExt, TournamentExt, TournamentInstantiateExt>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -68,23 +68,18 @@ pub fn execute(
                 &instantiate_extension,
             )?;
 
-            execute::instantiate_rounds(deps, response, instantiate_extension.teams)
+            execute::instantiate_tournament(
+                deps,
+                response,
+                instantiate_extension.teams,
+                instantiate_extension.elimination_type,
+            )
         }
         ExecuteBase::Extension { msg } => match msg {
             ExecuteExt::ProcessMatch {
-                league_id,
-                round_number,
+                tournament_id,
                 match_results,
-            } => execute::process_matches(deps, info, league_id, round_number, match_results),
-            ExecuteExt::UpdateDistribution {
-                league_id,
-                distribution,
-            } => execute::update_distribution(deps, info, league_id, distribution),
-            ExecuteExt::AddPointAdjustments {
-                league_id,
-                addr,
-                point_adjustments,
-            } => execute::add_point_adjustments(deps, info, league_id, addr, point_adjustments),
+            } => execute::process_matches(deps, info, tournament_id, match_results),
         },
         ExecuteBase::ProcessCompetition {
             competition_id: _,
@@ -103,39 +98,18 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Competitio
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryBase::QueryExtension { msg } => match msg {
-            LeagueQueryExt::Leaderboard { league_id, round } => {
-                to_json_binary(&query::leaderboard(deps, league_id, round)?)
-            }
-            LeagueQueryExt::Round {
-                league_id,
-                round_number,
-            } => to_json_binary(&query::round(deps, league_id, round_number)?),
-            LeagueQueryExt::PointAdjustments {
-                league_id,
+            QueryExt::Bracket {
+                tournament_id,
                 start_after,
-                limit,
-            } => to_json_binary(&query::point_adjustments(
-                deps,
-                league_id,
-                start_after,
-                limit,
-            )?),
-            LeagueQueryExt::DumpState {
-                league_id,
-                round_number,
-            } => to_json_binary(&query::dump_state(deps, league_id, round_number)?),
+            } => to_json_binary(&query::query_bracket(deps, tournament_id, start_after)?),
         },
         _ => CompetitionModule::default().query(deps, env, msg),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-    if version.major == 1 && version.minor == 3 {
-        migrate::from_v1_3_to_v_1_4(deps.branch())?;
-    }
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let _version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())

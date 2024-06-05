@@ -1,13 +1,13 @@
 [package]
-name = "cw-competition"
+name = "arena-tournament-module"
 authors = ["Gabe Lopez <ismellike@users.noreply.github.com>"]
-description = "An interface for interacting with cw-competition."
 edition = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
 version = { workspace = true }
 
 [lib]
+crate-type = ["cdylib", "rlib"]
 doctest = false
 
 [features]
@@ -17,15 +17,16 @@ library = []
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-serde = { workspace = true }
-cw-utils = { workspace= true }
-thiserror = { workspace = true }
-
-cw-balance = { workspace = true }
-cw-ownable = { workspace = true }
+cw2 = { workspace = true }
+cw-competition = { workspace = true }
+cw-competition-base = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw-utils = { workspace = true }
 arena-core-interface = { workspace = true }
-
+thiserror = { workspace = true }
 dao-interface = { workspace = true }
-dao-pre-propose-base = { workspace = true }
-dao-voting = { workspace = true }
+cw-ownable = { workspace = true }
+itertools = { workspace = true }
+cw-balance = { workspace = true }
+cw-paginate = { workspace = true }
 cw-orch = { workspace = true }

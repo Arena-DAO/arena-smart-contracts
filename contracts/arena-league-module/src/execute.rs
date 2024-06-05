@@ -2,7 +2,6 @@ use cosmwasm_std::{
     Addr, Decimal, DepsMut, MessageInfo, Response, StdError, StdResult, Uint128, Uint64,
 };
 use cw_balance::{Distribution, MemberPercentage};
-use itertools::Itertools;
 use std::vec;
 
 use crate::{
@@ -18,31 +17,7 @@ pub fn instantiate_rounds(
     deps: DepsMut,
     response: Response,
     teams: Vec<String>,
-    distribution: Vec<Decimal>,
 ) -> Result<Response, ContractError> {
-    let team_count = teams.len();
-    if team_count < 2 {
-        return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "At least 2 teams should be provided".to_string(),
-        }));
-    }
-    if teams.iter().unique().count() != team_count {
-        return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "Teams should not contain duplicates".to_string(),
-        }));
-    }
-    if distribution.len() > team_count {
-        return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "Cannot have a distribution size bigger than the teams size".to_string(),
-        }));
-    }
-    if distribution.iter().sum::<Decimal>() != Decimal::one() {
-        return Err(ContractError::StdError(StdError::generic_err(
-            "The distribution must sum up to 1",
-        )));
-    }
-
-    // Retrieve the current league's id
     let league_id = CompetitionModule::default()
         .competition_count
         .load(deps.storage)?;
@@ -52,6 +27,8 @@ pub fn instantiate_rounds(
         .iter()
         .map(|x| deps.api.addr_validate(x))
         .collect::<StdResult<_>>()?;
+
+    let team_count = teams.len();
 
     let mut teams_list = (1..=team_count).collect::<Vec<_>>();
     let rounds = if team_count % 2 != 0 {
@@ -110,32 +87,10 @@ pub fn instantiate_rounds(
         round_number += 1;
     }
 
-    // Update competition matches and rounds count
-    let competition = CompetitionModule::default().competitions.update(
-        deps.storage,
-        league_id.u128(),
-        |maybe_competition| {
-            if let Some(mut competition) = maybe_competition {
-                competition.extension.rounds = Uint64::from(round_number - 1);
-                competition.extension.matches = Uint128::from(match_number - 1);
-                competition.extension.teams = Uint64::from(team_count as u64);
-                Ok(competition)
-            } else {
-                Err(StdError::NotFound {
-                    kind: "Competition".to_string(),
-                })
-            }
-        },
-    )?;
-
     Ok(response
-        .add_attribute("rounds", competition.extension.rounds)
-        .add_attribute("matches", competition.extension.matches)
-        .add_attribute("teams", competition.extension.teams)
-        .add_attribute(
-            "distribution",
-            format!("{:#?}", competition.extension.distribution),
-        ))
+        .add_attribute("rounds", (round_number - 1).to_string())
+        .add_attribute("matches", (match_number - 1).to_string())
+        .add_attribute("teams", team_count.to_string()))
 }
 
 pub fn process_matches(

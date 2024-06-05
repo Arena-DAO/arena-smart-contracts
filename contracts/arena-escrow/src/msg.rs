@@ -18,6 +18,7 @@ pub struct InstantiateMsg {
 
 #[cw_ownable_execute]
 #[cw_serde]
+#[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
     Withdraw {
         cw20_msg: Option<Binary>,
@@ -26,6 +27,7 @@ pub enum ExecuteMsg {
     SetDistribution {
         distribution: Option<Distribution<String>>,
     },
+    #[payable]
     ReceiveNative {},
     Receive(Cw20ReceiveMsg),
     ReceiveNft(Cw721ReceiveMsg),
@@ -37,7 +39,7 @@ pub enum ExecuteMsg {
 
 #[cw_ownable_query]
 #[cw_serde]
-#[derive(QueryResponses)]
+#[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum QueryMsg {
     #[returns(Vec<MemberBalanceChecked>)]
     Balances {

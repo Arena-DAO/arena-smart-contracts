@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Deps, Int128, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Decimal, Deps, Int128, StdResult, Uint128, Uint64};
 use cw_storage_plus::Map;
 
 use crate::msg::RoundResponse;
@@ -38,6 +38,18 @@ impl Round {
             matches,
         })
     }
+}
+
+#[cw_serde]
+pub struct LeagueExt {
+    pub match_win_points: Uint64,
+    pub match_draw_points: Uint64,
+    pub match_lose_points: Uint64,
+    pub rounds: Uint64,
+    pub matches: Uint128,
+    pub teams: Uint64,
+    pub processed_matches: Uint128,
+    pub distribution: Vec<Decimal>,
 }
 
 #[cw_serde]

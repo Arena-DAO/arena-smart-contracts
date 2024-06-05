@@ -187,10 +187,10 @@ impl<
 }
 
 impl<
-        InstantiateExt: Serialize + DeserializeOwned + Clone,
+        InstantiateExt: Serialize + DeserializeOwned + Clone + std::fmt::Debug,
         ExecuteExt,
         QueryExt: JsonSchema,
-        CompetitionExt: Serialize + Clone + DeserializeOwned,
+        CompetitionExt: Serialize + Clone + DeserializeOwned + std::fmt::Debug,
         CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<

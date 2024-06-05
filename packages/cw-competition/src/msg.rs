@@ -12,6 +12,8 @@ use cw_balance::Distribution;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
@@ -23,6 +25,7 @@ pub struct InstantiateBase<InstantiateExt> {
 #[cw_ownable_execute]
 #[cw_serde]
 #[allow(clippy::large_enum_variant)]
+#[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     JailCompetition {
         propose_message: ProposeMessage,
@@ -64,10 +67,12 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
 
 #[cw_ownable_query]
 #[cw_serde]
-#[derive(QueryResponses)]
+#[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum QueryBase<InstantiateExt, QueryExt, CompetitionExt>
 where
+    InstantiateExt: Serialize + std::fmt::Debug + DeserializeOwned,
     QueryExt: JsonSchema,
+    CompetitionExt: Serialize + std::fmt::Debug + DeserializeOwned,
 {
     #[returns(Config<InstantiateExt>)]
     Config {},

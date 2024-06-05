@@ -16,27 +16,37 @@ The project is organized into several directories:
 
 - `packages`: This directory contains Rust packages that are used by the contracts. Each package has a Cargo.toml file and a src directory.
 
-- `scripts`: This directory contains batch files for checking and optimizing the contracts.
+- `scripts`: This directory contains the justfile and `cw-orch` scripts and tests.
 
 
-## Building and Testing
+## Scripts
 
-The `scripts/check` file is used to check for unused dependencies, format the code, and run clippy for linting. It uses the nightly version of cargo for these tasks.
+This project uses `just` as a command runner to simplify common tasks. Below are the available scripts:
 
-The `scripts/gen` file is used to generate the contract schemas and TypeScript types. It first generates the schemas for all contracts and then generates the TypeScript types.
+### `check`
+Runs formatting and linting checks to ensure code quality:
 
-The `scripts/optimize` file is used to optimize the smart contracts. It uses the Docker image `cosmwasm/workspace-optimizer:0.15.1` to run the optimization process.
+- **Format check**: Ensures the code formatting adheres to the standard Rust format using `cargo fmt`.
+- **Lint check**: Runs `clippy` to catch common mistakes and improve your Rust code.
 
-The GitHub Actions workflows in the `.github/workflows` directory are used to run tests and lints on every push and pull request.
+### `download-deps`
 
-## Smart Contracts
+Downloads necessary wasm artifacts for the project:
 
-The smart contracts are written in Rust and use the CosmWasm framework. Each contract has its own directory under the `contracts` directory. The `Cargo.toml` file in each contract directory specifies the contract's dependencies.
+Downloads various wasm modules like cw20_base, cw4_group, cw721_base, from the CosmWasm repository and dao_contracts from the DAO-DAO repository into the artifacts directory.
+
+### `udeps`
+
+Finds unused dependencies in the project using cargo udeps. This helps in identifying unnecessary dependencies that can be removed to streamline the project.
+
+### `optimize`
+
+Optimizes the wasm builds using Docker and the CosmWasm optimizer.
+
+### `schema`
+
+Generates JSON schema for messages used in the smart contracts.
 
 ## Continuous Integration
 
 The project uses GitHub Actions for continuous integration. The workflows are defined in the `.github/workflows` directory. The `basic.yml` workflow runs tests and lints on every push and pull request.
-
-## Architecture Diagram
-
-![image](https://showme.redstarplugin.com/d/d:LvtiZJV2)

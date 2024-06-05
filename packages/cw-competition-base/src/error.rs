@@ -33,22 +33,22 @@ pub enum CompetitionError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("UnknownCompetitionId")]
+    #[error("Unknown competition id")]
     UnknownCompetitionId { id: u128 },
 
-    #[error("CompetitionNotExpired")]
+    #[error("Competition is not expired")]
     CompetitionNotExpired {},
 
-    #[error("UnknownEscrow")]
+    #[error("Unknown escrow address")]
     UnknownEscrow { addr: String },
 
-    #[error("UnknownReplyId")]
+    #[error("Unknown reply id")]
     UnknownReplyId { id: u64 },
 
-    #[error("InvalidCompetitionStatus")]
+    #[error("Invalid competition status for action")]
     InvalidCompetitionStatus { current_status: CompetitionStatus },
 
-    #[error("InvalidCategoryAndRulesets")]
+    #[error("Invalid category and rulesets")]
     InvalidCategoryAndRulesets {
         category_id: Option<Uint128>,
         rulesets: Vec<Uint128>,

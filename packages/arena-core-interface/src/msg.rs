@@ -21,6 +21,8 @@ pub struct InstantiateExt {
 }
 
 #[cw_serde]
+#[derive(cw_orch::ExecuteFns)]
+#[impl_into(ExecuteMsg)]
 pub enum ExecuteExt {
     UpdateCompetitionModules {
         to_add: Vec<ModuleInstantiateInfo>,
@@ -39,8 +41,15 @@ pub enum ExecuteExt {
     },
 }
 
+impl From<ExecuteExt> for ExecuteMsg {
+    fn from(msg: ExecuteExt) -> Self {
+        ExecuteMsg::Extension { msg }
+    }
+}
+
 #[cw_serde]
-#[derive(QueryResponses)]
+#[derive(QueryResponses, cw_orch::QueryFns)]
+#[impl_into(QueryMsg)]
 pub enum QueryExt {
     #[returns(Vec<CompetitionModuleResponse<String>>)]
     CompetitionModules {
@@ -79,6 +88,12 @@ pub enum QueryExt {
     /// This query is used to get a competition's fee configuration for the Arena tax at its start height
     #[returns(TaxConfigurationResponse)]
     TaxConfig { height: u64 },
+}
+
+impl From<QueryExt> for QueryMsg {
+    fn from(msg: QueryExt) -> Self {
+        QueryMsg::QueryExtension { msg }
+    }
 }
 
 #[cw_serde]

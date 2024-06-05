@@ -1,0 +1,18 @@
+[package]
+name = "interface"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+cw-orch = { workspace = true }
+arena-tournament-module = { workspace = true }
+arena-core = { workspace = true }
+arena-core-interface = { workspace = true }
+arena-escrow = { workspace = true }
+cosmwasm-std = { workspace = true }
+
+cw4-group = { package = "abstract-cw4-group", git = "https://github.com/AbstractSDK/cw-plus", branch = "abstract_versions" }
+# cw20-base = { package = "abstract-cw20-base", git = "https://github.com/AbstractSDK/cw-plus", branch = "abstract_versions" }
+cw721-base = { git = "https://github.com/AbstractSDK/cw-nfts", branch = "main" }

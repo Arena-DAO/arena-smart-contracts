@@ -1,10 +1,11 @@
-use crate::state::{Match, PointAdjustment, Result};
+use crate::state::{LeagueExt, Match, PointAdjustment, Result};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Empty, Int128, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, Decimal, Empty, Int128, StdError, StdResult, Uint128, Uint64};
 use cw_competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
 };
+use itertools::Itertools;
 
 #[cw_serde]
 pub enum ExecuteExt {
@@ -32,7 +33,7 @@ pub struct MatchResult {
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryExt {
+pub enum LeagueQueryExt {
     #[returns(Vec<MemberPoints>)]
     Leaderboard {
         league_id: Uint128,
@@ -70,19 +71,7 @@ pub struct SudoMsg {
 }
 
 #[cw_serde]
-pub struct CompetitionExt {
-    pub match_win_points: Uint64,
-    pub match_draw_points: Uint64,
-    pub match_lose_points: Uint64,
-    pub rounds: Uint64,
-    pub matches: Uint128,
-    pub teams: Uint64,
-    pub processed_matches: Uint128,
-    pub distribution: Vec<Decimal>,
-}
-
-#[cw_serde]
-pub struct CompetitionInstantiateExt {
+pub struct LeagueInstantiateExt {
     pub match_win_points: Uint64,
     pub match_draw_points: Uint64,
     pub match_lose_points: Uint64,
@@ -90,15 +79,42 @@ pub struct CompetitionInstantiateExt {
     pub distribution: Vec<Decimal>,
 }
 
-impl ToCompetitionExt<CompetitionExt> for CompetitionInstantiateExt {
-    fn to_competition_ext(&self, _deps: cosmwasm_std::Deps) -> StdResult<CompetitionExt> {
-        Ok(CompetitionExt {
+impl ToCompetitionExt<LeagueExt> for LeagueInstantiateExt {
+    fn to_competition_ext(&self, _deps: cosmwasm_std::Deps) -> StdResult<LeagueExt> {
+        let team_count = self.teams.len();
+        if team_count < 2 {
+            return Err(StdError::GenericErr {
+                msg: "At least 2 teams should be provided".to_string(),
+            });
+        }
+        if self.teams.iter().unique().count() != team_count {
+            return Err(StdError::GenericErr {
+                msg: "Teams should not contain duplicates".to_string(),
+            });
+        }
+        if self.distribution.len() > team_count {
+            return Err(StdError::GenericErr {
+                msg: "Cannot have a distribution size bigger than the teams size".to_string(),
+            });
+        }
+        if self.distribution.iter().sum::<Decimal>() != Decimal::one() {
+            return Err(StdError::generic_err("The distribution must sum up to 1"));
+        }
+
+        let matches = team_count * (team_count - 1) / 2;
+        let rounds = if team_count % 2 == 0 {
+            team_count - 1
+        } else {
+            team_count
+        };
+
+        Ok(LeagueExt {
             match_win_points: self.match_win_points,
             match_draw_points: self.match_draw_points,
             match_lose_points: self.match_lose_points,
-            teams: Uint64::zero(),
-            rounds: Uint64::zero(),
-            matches: Uint128::zero(),
+            teams: Uint64::from(team_count as u64),
+            rounds: Uint64::from(rounds as u64),
+            matches: Uint128::from(matches as u128),
             processed_matches: Uint128::zero(),
             distribution: self.distribution.clone(),
         })
@@ -132,7 +148,7 @@ pub struct DumpStateResponse {
 }
 
 pub type InstantiateMsg = InstantiateBase<Empty>;
-pub type ExecuteMsg = ExecuteBase<ExecuteExt, CompetitionInstantiateExt>;
-pub type QueryMsg = QueryBase<Empty, QueryExt, CompetitionExt>;
-pub type League = Competition<CompetitionExt>;
-pub type LeagueResponse = CompetitionResponse<CompetitionExt>;
+pub type ExecuteMsg = ExecuteBase<ExecuteExt, LeagueInstantiateExt>;
+pub type QueryMsg = QueryBase<Empty, LeagueQueryExt, LeagueExt>;
+pub type League = Competition<LeagueExt>;
+pub type LeagueResponse = CompetitionResponse<LeagueExt>;
