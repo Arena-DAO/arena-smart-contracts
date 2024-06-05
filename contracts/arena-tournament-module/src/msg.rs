@@ -32,6 +32,11 @@ pub enum QueryExt {
         tournament_id: Uint128,
         start_after: Option<Uint128>,
     },
+    #[returns(crate::state::Match)]
+    r#Match {
+        tournament_id: Uint128,
+        match_number: Uint128,
+    },
 }
 
 impl From<QueryExt> for QueryMsg {

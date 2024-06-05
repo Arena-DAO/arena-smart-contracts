@@ -16,3 +16,7 @@ pub fn query_bracket(
         .map(|x| x.map(|y| y.1))
         .collect::<StdResult<Vec<_>>>()
 }
+
+pub fn query_match(deps: Deps, tournament_id: Uint128, match_number: Uint128) -> StdResult<Match> {
+    MATCHES.load(deps.storage, (tournament_id.u128(), match_number.u128()))
+}

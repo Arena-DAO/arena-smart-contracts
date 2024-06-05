@@ -102,6 +102,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 tournament_id,
                 start_after,
             } => to_json_binary(&query::query_bracket(deps, tournament_id, start_after)?),
+            QueryExt::Match {
+                tournament_id,
+                match_number,
+            } => to_json_binary(&query::query_match(deps, tournament_id, match_number)?),
         },
         _ => CompetitionModule::default().query(deps, env, msg),
     }

@@ -452,11 +452,16 @@ pub fn process_matches(
                     return Err(StdError::generic_err("Match is not populated yet"));
                 }
 
-                let previous_result = match match_info.result {
-                    Some(previous_result) => Some(match previous_result {
-                        MatchResult::Team1 => match_info.team_1.clone(),
-                        MatchResult::Team2 => match_info.team_2.clone(),
-                    }),
+                let previous_team = match match_info.result.as_ref() {
+                    Some(previous_result) => {
+                        if *previous_result == result.match_result {
+                            return Ok(match_info);
+                        }
+                        Some(match previous_result {
+                            MatchResult::Team1 => match_info.team_1.clone(),
+                            MatchResult::Team2 => match_info.team_2.clone(),
+                        })
+                    }
                     None => {
                         newly_processed_matches += 1;
                         None
@@ -474,16 +479,12 @@ pub fn process_matches(
 
                 // Update the next match with the losing team in double elimination and third place matches
                 if let Some(next_match_loser) = match_info.next_match_loser {
-                    updates.push((
-                        next_match_loser,
-                        loser_team.clone(),
-                        previous_result.clone(),
-                    ));
+                    updates.push((next_match_loser, loser_team, previous_team.clone()));
                 }
 
                 // Update the next match with the winning team
                 if let Some(next_match_winner) = match_info.next_match_winner {
-                    updates.push((next_match_winner, winner_team.clone(), previous_result));
+                    updates.push((next_match_winner, winner_team, previous_team));
                 }
 
                 Ok(match_info)
@@ -549,56 +550,39 @@ pub fn process_matches(
     // Apply updates to the next matches
     let mut index = 0;
     while index < updates.len() {
-        let (next_match_number, team, previous) = updates[index].clone();
+        let (target_match_number, team, previous_team) = updates[index].clone();
         index += 1;
 
         MATCHES.update(
             deps.storage,
-            (tournament_id.u128(), next_match_number.u128()),
-            |next_match| -> StdResult<_> {
-                let mut next_match = next_match.ok_or_else(|| {
+            (tournament_id.u128(), target_match_number.u128()),
+            |target_match| -> StdResult<_> {
+                let mut target_match = target_match.ok_or_else(|| {
                     StdError::generic_err(format!(
                         "Next match number {} not found",
-                        next_match_number
+                        target_match_number
                     ))
                 })?;
 
-                if next_match.team_1 == previous {
-                    next_match.team_1.clone_from(&team);
-                } else {
-                    next_match.team_2.clone_from(&team);
+                if target_match.team_1 == previous_team {
+                    target_match.team_1.clone_from(&team);
+                } else if target_match.team_2 == previous_team {
+                    target_match.team_2.clone_from(&team);
                 }
 
-                if next_match.result.is_some() {
-                    // Determine the winning and losing teams for the next match
-                    let (winner_team, loser_team) = match next_match.result {
-                        None => (None, None), // This case should not occur but kept for completeness
-                        Some(ref result) => match result {
-                            MatchResult::Team1 => {
-                                (next_match.team_1.clone(), next_match.team_2.clone())
-                            }
-                            MatchResult::Team2 => {
-                                (next_match.team_2.clone(), next_match.team_1.clone())
-                            }
-                        },
-                    };
-
+                if target_match.result.is_some() {
                     // Update the next match with the losing team in double elimination and third place matches
-                    if let Some(next_match_loser) = next_match.next_match_loser {
-                        if loser_team == previous {
-                            updates.push((next_match_loser, loser_team.clone(), previous.clone()));
-                        }
+                    if let Some(next_match_loser) = target_match.next_match_loser {
+                        updates.push((next_match_loser, team.clone(), previous_team.clone()));
                     }
 
                     // Update the next match with the winning team
-                    if let Some(next_match_winner) = next_match.next_match_winner {
-                        if winner_team == previous {
-                            updates.push((next_match_winner, winner_team.clone(), previous));
-                        }
+                    if let Some(next_match_winner) = target_match.next_match_winner {
+                        updates.push((next_match_winner, team.clone(), previous_team));
                     }
                 }
 
-                Ok(next_match)
+                Ok(target_match)
             },
         )?;
     }

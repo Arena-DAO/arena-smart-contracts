@@ -1116,6 +1116,31 @@
               }
             },
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "match"
+            ],
+            "properties": {
+              "match": {
+                "type": "object",
+                "required": [
+                  "match_number",
+                  "tournament_id"
+                ],
+                "properties": {
+                  "match_number": {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  "tournament_id": {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           }
         ]
       },

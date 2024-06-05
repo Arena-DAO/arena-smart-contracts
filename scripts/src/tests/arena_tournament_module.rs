@@ -873,6 +873,159 @@ pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
     Ok(())
 }
 
+#[test]
+pub fn test_match_updates() -> Result<(), CwOrchError> {
+    let mock = MockBech32::new(PREFIX);
+    let admin = mock.addr_make(ADMIN);
+    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
+    mock.next_block()?; // Ensure tax is available for competition
+
+    // Set teams
+    let mut teams = vec![];
+    for i in 0..10 {
+        teams.push(mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?);
+    }
+    arena.arena_tournament_module.set_sender(&admin);
+
+    // Create a tournament w/ 10k due from each team
+    let response = arena.arena_tournament_module.execute(
+        &create_competition_msg(
+            &arena,
+            &admin,
+            &teams,
+            EliminationType::DoubleElimination {},
+            vec![
+                Decimal::from_ratio(65u128, 100u128),
+                Decimal::from_ratio(25u128, 100u128),
+                Decimal::from_ratio(10u128, 100u128),
+            ],
+        ),
+        None,
+    )?;
+    mock.next_block()?;
+
+    // Get and set escrow addr
+    let escrow_addr = response.events.iter().find_map(|event| {
+        event
+            .attributes
+            .iter()
+            .find(|attr| attr.key == "escrow_addr")
+            .map(|attr| attr.value.clone())
+    });
+    assert!(escrow_addr.is_some());
+    arena
+        .arena_escrow
+        .set_address(&Addr::unchecked(escrow_addr.unwrap()));
+
+    // Fund tournament
+    for team in teams.iter() {
+        arena.arena_escrow.set_sender(team);
+        arena
+            .arena_escrow
+            .receive_native(&coins(10_000u128, DENOM))?;
+    }
+
+    // This should create 2(n-1) matches
+    let bracket = arena
+        .arena_tournament_module
+        .bracket(Uint128::new(1u128), None)?;
+    assert_eq!(bracket.len(), 18);
+
+    // Process first round of matches
+    arena.arena_tournament_module.process_match(
+        vec![
+            MatchResultMsg {
+                match_number: Uint128::new(2),
+                match_result: MatchResult::Team1,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(4),
+                match_result: MatchResult::Team1,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(5),
+                match_result: MatchResult::Team1,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(6),
+                match_result: MatchResult::Team1,
+            },
+        ],
+        Uint128::one(),
+    )?;
+    mock.next_block()?;
+
+    // Process 2nd round of matches
+    arena.arena_tournament_module.process_match(
+        vec![
+            MatchResultMsg {
+                match_number: Uint128::new(1),
+                match_result: MatchResult::Team1,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(3),
+                match_result: MatchResult::Team1,
+            },
+        ],
+        Uint128::one(),
+    )?;
+    mock.next_block()?;
+
+    // Process base round of loser's bracket
+    arena.arena_tournament_module.process_match(
+        vec![
+            MatchResultMsg {
+                match_number: Uint128::new(7),
+                match_result: MatchResult::Team1,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(8),
+                match_result: MatchResult::Team1,
+            },
+        ],
+        Uint128::one(),
+    )?;
+    mock.next_block()?;
+
+    // Get match to update
+    let match_ = arena
+        .arena_tournament_module
+        .r#match(Uint128::new(2), Uint128::one())?;
+    let previous_winner = match_.team_1;
+
+    // Update a match result
+    arena.arena_tournament_module.process_match(
+        vec![MatchResultMsg {
+            match_number: Uint128::new(2),
+            match_result: MatchResult::Team2,
+        }],
+        Uint128::one(),
+    )?;
+    mock.next_block()?;
+
+    // Get match again
+    let match_ = arena
+        .arena_tournament_module
+        .r#match(Uint128::new(2), Uint128::one())?;
+    assert_eq!(match_.result, Some(MatchResult::Team2 {}));
+
+    // Get next match winner
+    let next_match_winner = arena
+        .arena_tournament_module
+        .r#match(Uint128::new(8), Uint128::one())?;
+    assert_ne!(next_match_winner.team_1, previous_winner);
+    assert_ne!(next_match_winner.team_2, previous_winner);
+
+    // Get next match loser
+    let next_match_loser = arena
+        .arena_tournament_module
+        .r#match(Uint128::new(9), Uint128::one())?;
+    assert_ne!(next_match_loser.team_1, previous_winner);
+    assert_ne!(next_match_loser.team_2, previous_winner);
+
+    Ok(())
+}
+
 fn create_competition_msg<Chain: ChainState>(
     arena: &Arena<Chain>,
     admin: &Addr,
