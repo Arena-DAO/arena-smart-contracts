@@ -4,41 +4,14 @@ use arena_core_interface::{
 };
 use cosmwasm_std::{to_json_binary, Decimal};
 use cw_orch::prelude::*;
-use dao_cw_orch::{DaoDaoCore, DaoProposalSingle, DaoProposalSudo};
 use dao_interface::{
     state::{Admin, ModuleInstantiateInfo},
     CoreQueryMsgFns,
 };
 
 use dao_voting::threshold::Threshold;
-use interface::{
-    arena_core::ArenaCoreContract, arena_escrow::ArenaEscrowContract,
-    arena_tournament_module::ArenaTournamentModuleContract,
-};
 
-pub struct Arena<Chain> {
-    pub dao_core: DaoDaoCore<Chain>,
-    pub dao_proposal_single: DaoProposalSingle<Chain>,
-    pub dao_proposal_sudo: DaoProposalSudo<Chain>,
-
-    pub arena_core: ArenaCoreContract<Chain>,
-    pub arena_tournament_module: ArenaTournamentModuleContract<Chain>,
-    pub arena_escrow: ArenaEscrowContract<Chain>,
-}
-
-impl<Chain: CwEnv> Arena<Chain> {
-    pub fn new(chain: Chain) -> Arena<Chain> {
-        Arena::<Chain> {
-            dao_core: DaoDaoCore::new("dao_dao_core", chain.clone()),
-            dao_proposal_single: DaoProposalSingle::new("dao_proposal_single", chain.clone()),
-            dao_proposal_sudo: DaoProposalSudo::new("dao_proposal_sudo", chain.clone()),
-
-            arena_core: ArenaCoreContract::new(chain.clone()),
-            arena_tournament_module: ArenaTournamentModuleContract::new(chain.clone()),
-            arena_escrow: ArenaEscrowContract::new(chain.clone()),
-        }
-    }
-}
+use crate::arena::Arena;
 
 impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
     // We don't have a custom error type
@@ -46,16 +19,9 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
     type DeployData = Addr;
 
     fn store_on(chain: Chain) -> Result<Self, Self::Error> {
-        let arena = Arena::new(chain);
+        let arena = Arena::new(chain.clone());
 
-        // Upload the contracts to the chain
-        arena.dao_core.upload()?;
-        arena.dao_proposal_single.upload()?;
-        arena.dao_proposal_sudo.upload()?;
-
-        arena.arena_core.upload()?;
-        arena.arena_tournament_module.upload()?;
-        arena.arena_escrow.upload()?;
+        arena.upload(true)?;
 
         Ok(arena)
     }
@@ -68,7 +34,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
         let sudo_instantiate = dao_proposal_sudo::msg::InstantiateMsg {
             root: admin.to_string(),
         };
-        arena.dao_core.instantiate(
+        arena.dao_dao.dao_core.instantiate(
             &dao_interface::msg::InstantiateMsg {
                 dao_uri: None,
                 admin: None,
@@ -78,7 +44,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                 automatically_add_cw20s: true,
                 automatically_add_cw721s: true,
                 voting_module_instantiate_info: ModuleInstantiateInfo {
-                    code_id: arena.dao_proposal_sudo.code_id()?,
+                    code_id: arena.dao_dao.dao_proposal_sudo.code_id()?,
                     msg: to_json_binary(&sudo_instantiate)?,
                     admin: Some(Admin::CoreModule {}),
                     label: "voting module".to_string(),
@@ -86,14 +52,14 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                 },
                 proposal_modules_instantiate_info: vec![
                     ModuleInstantiateInfo {
-                        code_id: arena.dao_proposal_sudo.code_id()?,
+                        code_id: arena.dao_dao.dao_proposal_sudo.code_id()?,
                         msg: to_json_binary(&sudo_instantiate)?,
                         admin: Some(Admin::CoreModule {}),
                         label: "sudo proposal module".to_string(),
                         funds: vec![],
                     },
                     ModuleInstantiateInfo {
-                        code_id: arena.dao_proposal_single.code_id()?,
+                        code_id: arena.dao_dao.dao_proposal_single.code_id()?,
                         msg: to_json_binary(&dao_proposal_single::msg::InstantiateMsg {
                             threshold: Threshold::AbsolutePercentage {
                                 percentage: dao_voting::threshold::PercentageThreshold::Majority {},
@@ -154,15 +120,17 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             None,
         )?;
 
-        let proposal_modules = arena.dao_core.proposal_modules(None, None)?;
+        let proposal_modules = arena.dao_dao.dao_core.proposal_modules(None, None)?;
         arena
+            .dao_dao
             .dao_proposal_sudo
             .set_address(&proposal_modules[0].address);
         arena
+            .dao_dao
             .dao_proposal_single
             .set_address(&proposal_modules[1].address);
 
-        let get_item_response = arena.dao_core.get_item("Arena".to_string())?;
+        let get_item_response = arena.dao_dao.dao_core.get_item("Arena".to_string())?;
         arena
             .arena_core
             .set_address(&Addr::unchecked(get_item_response.item.unwrap()));
@@ -188,9 +156,9 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
         &mut self,
     ) -> Vec<Box<&mut dyn cw_orch::prelude::ContractInstance<Chain>>> {
         vec![
-            Box::new(&mut self.dao_core),
-            Box::new(&mut self.dao_proposal_single),
-            Box::new(&mut self.dao_proposal_sudo),
+            Box::new(&mut self.dao_dao.dao_core),
+            Box::new(&mut self.dao_dao.dao_proposal_single),
+            Box::new(&mut self.dao_dao.dao_proposal_sudo),
             Box::new(&mut self.arena_core),
             Box::new(&mut self.arena_tournament_module),
             Box::new(&mut self.arena_escrow),

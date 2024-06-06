@@ -23,3 +23,6 @@ optimize:
 
 schema:
     ./scripts/schema.sh
+
+deploy_testnet:
+    cargo run --bin scripts -- deploy testnet

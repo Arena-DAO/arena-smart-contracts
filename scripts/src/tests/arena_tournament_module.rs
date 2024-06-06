@@ -8,7 +8,7 @@ use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_competition::msg::{EscrowInstantiateInfo, ModuleInfo};
 use cw_orch::{environment::ChainState, prelude::*};
 
-use crate::deploy::Arena;
+use crate::Arena;
 
 use super::{ADMIN, DENOM, PREFIX};
 
@@ -55,7 +55,8 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
             vec![
                 Decimal::from_ratio(75u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
-                Decimal::from_ratio(10u128, 100u128),
+                Decimal::from_ratio(5u128, 100u128),
+                Decimal::from_ratio(5u128, 100u128),
                 Decimal::from_ratio(5u128, 100u128),
             ],
         ),
@@ -91,8 +92,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
             vec![
                 Decimal::from_ratio(75u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
-                Decimal::from_ratio(5u128, 100u128),
-                Decimal::from_ratio(5u128, 100u128),
+                Decimal::from_ratio(10u128, 100u128),
                 Decimal::from_ratio(5u128, 100u128),
             ],
         ),

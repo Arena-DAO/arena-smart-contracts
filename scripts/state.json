@@ -1,0 +1,10 @@
+{
+  "neutron": {
+    "pion-1": {
+      "code_ids": {
+        "arena_tournament_module": 5155
+      },
+      "default": {}
+    }
+  }
+}

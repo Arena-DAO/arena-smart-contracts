@@ -36,3 +36,6 @@ packages/**/Cargo.lock
 debug/**/Cargo.lock
 ci/**/Cargo.lock
 typescript/**
+
+# Env
+.env.keys
