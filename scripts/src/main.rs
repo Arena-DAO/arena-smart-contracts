@@ -3,6 +3,7 @@ use cw_orch::prelude::*;
 use interface::arena_tournament_module::ArenaTournamentModuleContract;
 use std::env;
 
+#[allow(clippy::collapsible_if)]
 fn main() {
     let args: Vec<String> = env::args().collect();
 
