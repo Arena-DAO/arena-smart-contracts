@@ -56,6 +56,13 @@ pub enum MigrateMsg {
     FromCompatible {},
 }
 
+/// This is used to completely generate schema types
+/// QueryExt response types are hidden by the QueryBase mapping to Binary output
+#[cw_serde]
+pub struct SudoMsg {
+    pub matches: Vec<crate::state::Match>,
+}
+
 #[cw_serde]
 pub struct TournamentInstantiateExt {
     pub elimination_type: EliminationType, // Enum for single or double elimination
