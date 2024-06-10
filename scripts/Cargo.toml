@@ -18,6 +18,7 @@ cw-utils = { workspace = true }
 cw-competition = { workspace = true }
 cw-balance = { workspace = true }
 dao-cw-orch = { git = "https://github.com/Kayanski/dao-contracts", branch = "development" }
+itertools = { workspace = true }
 
 # scripts specific
 dotenv = { version = "0.15.0" }

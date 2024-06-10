@@ -11,7 +11,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "1.5.0"
+version = "1.5.1"
 
 [profile.release]
 codegen-units = 1

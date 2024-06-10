@@ -50,6 +50,7 @@ fn generate_matches(
     teams: &[Addr],
     matches: &mut HashMap<u128, Match>,
     layer_map: &mut BTreeMap<usize, BTreeSet<u128>>,
+    has_byes: &mut bool,
 ) {
     let mut queue = VecDeque::new();
     queue.push_back((nested, None::<Uint128>, 1));
@@ -76,14 +77,7 @@ fn generate_matches(
                                     match_.team_2 = Some(team);
                                 }
 
-                                // Insert into layer
-                                let layer_values = layer_map.entry(layer).or_default();
-                                layer_values.insert(match_.match_number.u128());
-
-                                // Remove from previous layer
-                                let previous_layer_values =
-                                    layer_map.get_mut(&(layer - 1)).unwrap();
-                                previous_layer_values.remove(&parent_num.u128());
+                                *has_byes = true;
                             }
                         }
                     }
@@ -115,26 +109,6 @@ fn generate_matches(
                 for nested_element in nested_vec {
                     queue.push_back((nested_element, Some(match_number), layer + 1));
                 }
-            }
-        }
-    }
-
-    // Setup to find and potentially remove the second-to-last entry if empty
-    let keys = layer_map.keys().copied().collect_vec();
-    let total_keys = keys.len();
-
-    // Check if there are at least two keys to process
-    if total_keys >= 2 {
-        let second_last_key = keys[total_keys - 2];
-        let last_key = keys[total_keys - 1];
-
-        // Check if the second-to-last entry is empty and process
-        if layer_map
-            .get(&second_last_key)
-            .map_or(false, BTreeSet::is_empty)
-        {
-            if let Some(last_value) = layer_map.remove(&last_key) {
-                layer_map.insert(second_last_key, last_value);
             }
         }
     }
@@ -181,8 +155,15 @@ fn generate_single_elimination_bracket(
         // Get the bracket structure
         let n = teams.len().next_power_of_two();
         let sorted_indexes = NestedArray::Single((0..n).collect_vec()).nest();
+        let mut has_byes = false;
 
-        generate_matches(&sorted_indexes, teams, &mut matches, &mut layer_map);
+        generate_matches(
+            &sorted_indexes,
+            teams,
+            &mut matches,
+            &mut layer_map,
+            &mut has_byes,
+        );
     }
 
     // Optionally add a third place match
@@ -269,19 +250,33 @@ fn generate_double_elimination_bracket(
 ) -> StdResult<()> {
     let mut matches = HashMap::new();
     let mut layer_map = BTreeMap::new();
+    let mut has_byes = false;
 
     {
         // Get the bracket structure
         let n = teams.len().next_power_of_two();
         let sorted_indexes = NestedArray::Single((0..n).collect_vec()).nest();
 
-        generate_matches(&sorted_indexes, teams, &mut matches, &mut layer_map);
+        generate_matches(
+            &sorted_indexes,
+            teams,
+            &mut matches,
+            &mut layer_map,
+            &mut has_byes,
+        );
     }
 
     // Once we have the winner's bracket, we can generate the loser's bracket + additional matches
     let mut next_layer_matches = BTreeSet::new();
-    let layers = layer_map.keys().rev().cloned().collect_vec();
+    let layers = layer_map.keys().rev().copied().collect_vec();
     for layer in layers {
+        if has_byes {
+            next_layer_matches.clone_from(&layer_map[&layer]);
+
+            has_byes = false;
+            continue;
+        }
+
         // Remove matches from previous layer
         if let Some(layer_matches) = layer_map.get_mut(&(layer + 1)) {
             for match_number in next_layer_matches.iter() {
