@@ -33,6 +33,7 @@ pub const PROCESS_REPLY_ID: u64 = 1;
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
     pub category: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
+    pub host: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
 }
 
 impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
@@ -41,7 +42,8 @@ impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
     fn get_indexes(
         &'_ self,
     ) -> Box<dyn Iterator<Item = &'_ dyn Index<Competition<CompetitionExt>>> + '_> {
-        let v: Vec<&dyn Index<Competition<CompetitionExt>>> = vec![&self.status, &self.category];
+        let v: Vec<&dyn Index<Competition<CompetitionExt>>> =
+            vec![&self.status, &self.category, &self.host];
         Box::new(v.into_iter())
     }
 }
@@ -97,6 +99,7 @@ impl<
         competitions_key: &'static str,
         competitions_status_key: &'static str,
         competitions_category_key: &'static str,
+        competitions_host_key: &'static str,
         escrows_to_competitions_key: &'static str,
         temp_competition_key: &'static str,
         competition_hooks_key: &'static str,
@@ -112,6 +115,7 @@ impl<
                 competitions_key,
                 competitions_status_key,
                 competitions_category_key,
+                competitions_host_key,
             ),
             escrows_to_competitions: Map::new(escrows_to_competitions_key),
             temp_competition: Item::new(temp_competition_key),
@@ -131,6 +135,7 @@ impl<
         competitions_key: &'static str,
         competitions_status_key: &'static str,
         competitions_category_key: &'static str,
+        competitions_host_key: &'static str,
     ) -> IndexedMap<
         'static,
         u128,
@@ -147,6 +152,11 @@ impl<
                 |_x, d: &Competition<CompetitionExt>| format!("{:?}", d.category_id),
                 competitions_key,
                 competitions_category_key,
+            ),
+            host: MultiIndex::new(
+                |_x, d: &Competition<CompetitionExt>| d.host.to_string(),
+                competitions_key,
+                &competitions_host_key,
             ),
         };
         IndexedMap::new(competitions_key, indexes)
@@ -175,6 +185,7 @@ impl<
             "competitions",
             "competitions__status",
             "competitions__category",
+            "competitions__host",
             "escrows_to_competitions",
             "temp_competition",
             "competition_hooks",
@@ -1010,6 +1021,20 @@ impl<
                     .idx
                     .category
                     .prefix(format!("{:?}", id))
+                    .range(
+                        deps.storage,
+                        start_after_bound,
+                        None,
+                        cosmwasm_std::Order::Descending,
+                    )
+                    .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
+                    .take(limit as usize)
+                    .collect::<StdResult<Vec<_>>>(),
+                CompetitionsFilter::Host { addr } => self
+                    .competitions
+                    .idx
+                    .host
+                    .prefix(addr)
                     .range(
                         deps.storage,
                         start_after_bound,

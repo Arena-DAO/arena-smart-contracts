@@ -404,7 +404,7 @@ pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(),
     assert_eq!(balances.len(), 4);
     assert_eq!(
         balances[0].balance.native[0].amount,
-        Uint128::new(61750) // 100k * .95 (Arena tax) * .15 (user share)
+        Uint128::new(61750) // 100k * .95 (Arena tax) * .65 (user share)
     );
     assert_eq!(
         balances[1].balance.native[0].amount,
@@ -412,7 +412,7 @@ pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(),
     );
     assert_eq!(
         balances[2].balance.native[0].amount,
-        Uint128::new(14250) // 100k * .95 (Arena tax) * .65 (user share)
+        Uint128::new(14250) // 100k * .95 (Arena tax) * .15 (user share)
     );
     assert_eq!(
         balances[3].balance.native[0].amount,
@@ -484,15 +484,15 @@ pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchEr
     arena.arena_tournament_module.process_match(
         vec![
             MatchResultMsg {
-                match_number: Uint128::new(1),
-                match_result: MatchResult::Team1,
-            },
-            MatchResultMsg {
                 match_number: Uint128::new(2),
                 match_result: MatchResult::Team1,
             },
             MatchResultMsg {
                 match_number: Uint128::new(4),
+                match_result: MatchResult::Team1,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(5),
                 match_result: MatchResult::Team1,
             },
             MatchResultMsg {
@@ -508,11 +508,11 @@ pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchEr
     arena.arena_tournament_module.process_match(
         vec![
             MatchResultMsg {
-                match_number: Uint128::new(3),
+                match_number: Uint128::new(1),
                 match_result: MatchResult::Team1,
             },
             MatchResultMsg {
-                match_number: Uint128::new(5),
+                match_number: Uint128::new(3),
                 match_result: MatchResult::Team1,
             },
         ],
@@ -864,11 +864,11 @@ pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
     );
     assert_eq!(
         balances[1].balance.native[0].amount,
-        Uint128::new(14250) // 100k * .95 (Arena tax) * .10 (user share)
+        Uint128::new(61750) // 100k * .95 (Arena tax) * .65 (user share)
     );
     assert_eq!(
         balances[2].balance.native[0].amount,
-        Uint128::new(61750) // 100k * .95 (Arena tax) * .65 (user share)
+        Uint128::new(9500) // 100k * .95 (Arena tax) * .10 (user share)
     );
 
     Ok(())

@@ -119,6 +119,7 @@ pub struct EscrowInstantiateInfo {
 pub enum CompetitionsFilter {
     CompetitionStatus { status: CompetitionStatus },
     Category { id: Option<Uint128> },
+    Host { addr: String },
 }
 
 #[cw_serde]

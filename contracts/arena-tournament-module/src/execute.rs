@@ -6,7 +6,7 @@ use cosmwasm_std::{Addr, MessageInfo, StdError, Storage};
 use cosmwasm_std::{DepsMut, Response, StdResult, Uint128};
 use cw_balance::{Distribution, MemberPercentage};
 use itertools::Itertools;
-use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::iter::repeat;
 
 pub fn instantiate_tournament(
@@ -48,7 +48,7 @@ pub fn instantiate_tournament(
 fn generate_matches(
     nested: &NestedArray<usize>,
     teams: &[Addr],
-    matches: &mut HashMap<u128, Match>,
+    matches: &mut BTreeMap<u128, Match>,
     layer_map: &mut BTreeMap<usize, BTreeSet<u128>>,
     has_byes: &mut bool,
 ) {
@@ -118,7 +118,7 @@ fn create_match(
     team_1: Option<Addr>,
     team_2: Option<Addr>,
     parent_match_number: Option<Uint128>,
-    matches: &mut HashMap<u128, Match>,
+    matches: &mut BTreeMap<u128, Match>,
     layer_map: &mut BTreeMap<usize, BTreeSet<u128>>,
     layer: usize,
     is_losers_bracket: Option<bool>,
@@ -148,7 +148,7 @@ fn generate_single_elimination_bracket(
     tournament_id: u128,
     play_third_place_match: bool,
 ) -> StdResult<()> {
-    let mut matches = HashMap::new();
+    let mut matches = BTreeMap::new();
     let mut layer_map = BTreeMap::new();
 
     {
@@ -197,14 +197,14 @@ fn generate_single_elimination_bracket(
 
 // Updates the match ordering and saves them to storage
 fn save_matches(
-    matches: &mut HashMap<u128, Match>,
+    matches: &mut BTreeMap<u128, Match>,
     layer_map: BTreeMap<usize, BTreeSet<u128>>,
     tournament_id: u128,
     storage: &mut dyn Storage,
 ) -> StdResult<()> {
     // Fix match ordering and save
     // The final should be the last match number
-    let mut updates = HashMap::new();
+    let mut updates = BTreeMap::new();
     let mut match_number = Uint128::zero();
 
     // First pass to update match numbers
@@ -248,7 +248,7 @@ fn generate_double_elimination_bracket(
     teams: &[Addr],
     tournament_id: u128,
 ) -> StdResult<()> {
-    let mut matches = HashMap::new();
+    let mut matches = BTreeMap::new();
     let mut layer_map = BTreeMap::new();
     let mut has_byes = false;
 
