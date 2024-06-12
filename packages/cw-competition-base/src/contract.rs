@@ -156,7 +156,7 @@ impl<
             host: MultiIndex::new(
                 |_x, d: &Competition<CompetitionExt>| d.host.to_string(),
                 competitions_key,
-                &competitions_host_key,
+                competitions_host_key,
             ),
         };
         IndexedMap::new(competitions_key, indexes)
