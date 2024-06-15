@@ -1,6 +1,6 @@
 use arena_core_interface::{
     fees::TaxConfiguration,
-    msg::{InstantiateExt, InstantiateMsg, QueryExtFns},
+    msg::{InstantiateExt, InstantiateMsg, NewCompetitionCategory, QueryExtFns},
 };
 use cosmwasm_std::{to_json_binary, Decimal};
 use cw_orch::prelude::*;
@@ -94,7 +94,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                     },
                                                 ],
                                                 rulesets: vec![],
-                                                categories: vec![],
+                                                categories: vec![NewCompetitionCategory { name: "Category".to_string() }, NewCompetitionCategory{ name: "Other Category".to_string() }],
                                                 tax: Decimal::from_ratio(5u128, 100u128),
                                                 tax_configuration: TaxConfiguration {
                                                     cw20_msg: None,

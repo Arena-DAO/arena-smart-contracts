@@ -102,7 +102,7 @@ pub enum QueryExt {
     TaxConfig { height: u64 },
     #[returns(Option<Rating>)]
     Rating { category_id: Uint128, addr: String },
-    #[returns(Vec<Rating>)]
+    #[returns(Vec<RatingResponse>)]
     RatingLeaderboard {
         category_id: Uint128,
         start_after: Option<(Uint128, String)>,
