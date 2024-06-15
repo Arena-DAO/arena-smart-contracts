@@ -6,7 +6,7 @@ use arena_league_module::{
         ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueInstantiateExt, LeagueQueryExt,
         LeagueResponse, MatchResultMsg, MemberPoints, QueryMsg, RoundResponse,
     },
-    state::{Match, PointAdjustment, MatchResult},
+    state::{Match, MatchResult, PointAdjustment},
 };
 use cosmwasm_std::{
     coins, to_json_binary, Addr, Coin, Coins, Decimal, Empty, Int128, Uint128, Uint64, WasmMsg,
