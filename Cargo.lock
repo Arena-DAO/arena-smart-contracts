@@ -3196,20 +3196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "interface"
-version = "1.6.0"
-dependencies = [
- "abstract-cw4-group",
- "arena-core",
- "arena-core-interface",
- "arena-escrow",
- "arena-tournament-module",
- "cosmwasm-std",
- "cw-orch",
- "cw721-base 0.18.0 (git+https://github.com/AbstractSDK/cw-nfts?branch=main)",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3499,6 +3485,22 @@ name = "option-ext"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
+
+[[package]]
+name = "orch-interface"
+version = "1.6.0"
+dependencies = [
+ "abstract-cw4-group",
+ "arena-core",
+ "arena-core-interface",
+ "arena-escrow",
+ "arena-league-module",
+ "arena-tournament-module",
+ "arena-wager-module",
+ "cosmwasm-std",
+ "cw-orch",
+ "cw721-base 0.18.0 (git+https://github.com/AbstractSDK/cw-nfts?branch=main)",
+]
 
 [[package]]
 name = "osmosis-std"
@@ -4206,8 +4208,8 @@ dependencies = [
  "dao-proposal-sudo 2.4.2",
  "dao-voting 2.4.2",
  "dotenv",
- "interface",
  "itertools 0.13.0",
+ "orch-interface",
  "pretty_env_logger",
 ]
 

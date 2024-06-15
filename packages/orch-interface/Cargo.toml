@@ -1,5 +1,5 @@
 [package]
-name = "interface"
+name = "orch-interface"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -7,6 +7,8 @@ version.workspace = true
 
 [dependencies]
 cw-orch = { workspace = true }
+arena-wager-module = { workspace = true }
+arena-league-module = { workspace = true }
 arena-tournament-module = { workspace = true }
 arena-core = { workspace = true }
 arena-core-interface = { workspace = true }

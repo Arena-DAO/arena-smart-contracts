@@ -12,7 +12,7 @@ arena-core = { workspace = true }
 arena-core-interface = { workspace = true }
 arena-escrow = { workspace = true }
 cosmwasm-std = { workspace = true }
-interface = { workspace = true }
+orch-interface = { workspace = true }
 cw-utils = { workspace = true }
 cw-competition = { workspace = true }
 cw-balance = { workspace = true }

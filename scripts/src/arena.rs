@@ -1,6 +1,6 @@
 use cw_orch::prelude::*;
 
-use interface::{
+use orch_interface::{
     arena_core::ArenaCoreContract, arena_escrow::ArenaEscrowContract,
     arena_tournament_module::ArenaTournamentModuleContract,
 };

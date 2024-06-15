@@ -1,6 +1,6 @@
 use arena::Arena;
 use cw_orch::prelude::*;
-use interface::arena_tournament_module::ArenaTournamentModuleContract;
+use orch_interface::arena_tournament_module::ArenaTournamentModuleContract;
 use std::env;
 
 #[allow(clippy::collapsible_if)]

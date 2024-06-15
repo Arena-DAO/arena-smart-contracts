@@ -58,7 +58,7 @@ cw-balance = { path = "./packages/cw-balance", features = ["library"] }
 arena-testing = { path = "./packages/arena-testing" }
 cw-competition = { path = "./packages/cw-competition" }
 arena-core-interface = { path = "./packages/arena-core-interface" }
-interface = { path = "./packages/interface" }
+orch-interface = { path = "./packages/orch-interface" }
 glicko_2 = { path = "./packages/glicko_2" }
 
 arena-core = { path = "./contracts/arena-core" }
