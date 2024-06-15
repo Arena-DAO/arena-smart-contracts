@@ -1,10 +1,13 @@
 use crate::state::{
-    competition_categories, get_rulesets_category_and_is_enabled_idx, CompetitionModule,
+    competition_categories, get_rulesets_category_and_is_enabled_idx, ratings, CompetitionModule,
     ARENA_TAX_CONFIG, KEYS, TAX,
 };
-use arena_core_interface::msg::{
-    CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
-    Ruleset, TaxConfigurationResponse,
+use arena_core_interface::{
+    msg::{
+        CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
+        RatingResponse, Ruleset, TaxConfigurationResponse,
+    },
+    rating::Rating,
 };
 use cosmwasm_std::{Decimal, Deps, Empty, Env, StdResult, Uint128};
 use cw_paginate::paginate_indexed_map;
@@ -33,7 +36,8 @@ pub fn competition_modules(
     limit: Option<u32>,
     include_disabled: Option<bool>,
 ) -> StdResult<Vec<CompetitionModuleResponse<String>>> {
-    let start_after_bound = maybe_addr(deps.api, start_after)?.map(Bound::exclusive);
+    let maybe_addr = maybe_addr(deps.api, start_after)?;
+    let start_after_bound = maybe_addr.as_ref().map(Bound::exclusive);
     let limit = limit.unwrap_or(10).max(30);
     let include_disabled = include_disabled.unwrap_or(false);
 
@@ -181,7 +185,7 @@ pub fn competition_module(
 
             match maybe_addr {
                 Some(addr) => crate::state::competition_modules()
-                    .may_load(deps.storage, addr)?
+                    .may_load(deps.storage, &addr)?
                     .map(|x| x.to_response(deps))
                     .transpose(),
                 None => Ok(None),
@@ -191,7 +195,7 @@ pub fn competition_module(
             let addr = deps.api.addr_validate(&addr)?;
 
             crate::state::competition_modules()
-                .may_load(deps.storage, addr)?
+                .may_load(deps.storage, &addr)?
                 .map(|x| x.to_response(deps))
                 .transpose()
         }
@@ -242,4 +246,46 @@ pub fn arena_fee_config(deps: Deps, height: u64) -> StdResult<TaxConfigurationRe
         TAX.may_load_at_height(deps.storage, height)?
             .unwrap_or_default(),
     ))
+}
+
+pub fn rating(deps: Deps, category_id: Uint128, addr: String) -> StdResult<Option<Rating>> {
+    let addr = deps.api.addr_validate(&addr)?;
+    ratings().may_load(deps.storage, (category_id.u128(), &addr))
+}
+
+pub fn rating_leaderboard(
+    deps: Deps,
+    category_id: Uint128,
+    start_after: Option<(Uint128, String)>,
+    limit: Option<u32>,
+) -> StdResult<Vec<RatingResponse>> {
+    let start_after_addr = start_after
+        .as_ref()
+        .map(|x| deps.api.addr_validate(&x.1))
+        .transpose()?;
+    let start_after_bound = start_after.map(|(rating, _addr)| {
+        Bound::exclusive((
+            rating.u128(),
+            (category_id.u128(), start_after_addr.as_ref().unwrap()),
+        ))
+    });
+    let limit = limit.unwrap_or(10).max(30);
+
+    ratings()
+        .idx
+        .rating
+        .range(
+            deps.storage,
+            start_after_bound,
+            None,
+            cosmwasm_std::Order::Descending,
+        )
+        .map(|x| {
+            x.map(|y| RatingResponse {
+                addr: y.0 .1,
+                rating: y.1,
+            })
+        })
+        .take(limit as usize)
+        .collect()
 }

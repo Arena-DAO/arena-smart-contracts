@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-league-module",
-  "contract_version": "1.5.1",
+  "contract_version": "1.6.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -487,7 +487,7 @@
                   "match_results": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/MatchResult"
+                      "$ref": "#/definitions/MatchResultMsg"
                     }
                   },
                   "round_number": {
@@ -683,23 +683,25 @@
         "additionalProperties": false
       },
       "MatchResult": {
+        "type": "string",
+        "enum": [
+          "team1",
+          "team2",
+          "draw"
+        ]
+      },
+      "MatchResultMsg": {
         "type": "object",
         "required": [
-          "match_number"
+          "match_number",
+          "match_result"
         ],
         "properties": {
           "match_number": {
             "$ref": "#/definitions/Uint128"
           },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Result"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "match_result": {
+            "$ref": "#/definitions/MatchResult"
           }
         },
         "additionalProperties": false
@@ -862,14 +864,6 @@
           }
         },
         "additionalProperties": false
-      },
-      "Result": {
-        "type": "string",
-        "enum": [
-          "team1",
-          "team2",
-          "draw"
-        ]
       },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -1363,7 +1357,7 @@
           "result": {
             "anyOf": [
               {
-                "$ref": "#/definitions/Result"
+                "$ref": "#/definitions/MatchResult"
               },
               {
                 "type": "null"
@@ -1378,6 +1372,14 @@
           }
         },
         "additionalProperties": false
+      },
+      "MatchResult": {
+        "type": "string",
+        "enum": [
+          "team1",
+          "team2",
+          "draw"
+        ]
       },
       "MemberPoints": {
         "type": "object",
@@ -1398,14 +1400,6 @@
           }
         },
         "additionalProperties": false
-      },
-      "Result": {
-        "type": "string",
-        "enum": [
-          "team1",
-          "team2",
-          "draw"
-        ]
       },
       "RoundResponse": {
         "type": "object",

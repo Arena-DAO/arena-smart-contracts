@@ -10,6 +10,7 @@ use cw4::Member;
 use cw_multi_test::{
     next_block, App, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, MockApiBech32,
 };
+use cw_utils::Duration;
 use dao_interface::{
     query::GetItemResponse,
     state::{Admin, ModuleInstantiateInfo, ProposalModule},
@@ -179,6 +180,7 @@ pub fn setup_core_context(
                                                     cw20_msg: None,
                                                     cw721_msg: None,
                                                 },
+                                                rating_period: Duration::Height(10u64),
                                             },
                                         })
                                         .unwrap(),

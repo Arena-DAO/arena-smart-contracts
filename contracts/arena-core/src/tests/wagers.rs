@@ -3,7 +3,9 @@ use std::str::FromStr;
 use arena_core_interface::msg::{
     CompetitionModuleQuery, CompetitionModuleResponse, ProposeMessage, QueryExt,
 };
-use arena_wager_module::msg::{EmptyWrapper, ExecuteMsg, InstantiateMsg, QueryMsg, WagerResponse};
+use arena_wager_module::msg::{
+    ExecuteMsg, InstantiateMsg, QueryMsg, WagerInstantiateExt, WagerResponse,
+};
 use cosmwasm_std::{
     to_json_binary, Addr, Coin, Coins, CosmosMsg, Decimal, Empty, Uint128, WasmMsg,
 };
@@ -144,7 +146,9 @@ fn create_competition(
                 "Rule 3".to_string(),
             ],
             rulesets: vec![],
-            instantiate_extension: EmptyWrapper::new(),
+            instantiate_extension: WagerInstantiateExt {
+                registered_members: None,
+            },
         },
         &[],
     );
@@ -253,7 +257,9 @@ fn test_create_competition() {
                 "Rule 3".to_string(),
             ],
             rulesets: vec![Uint128::from(9999u128)],
-            instantiate_extension: EmptyWrapper::new(),
+            instantiate_extension: WagerInstantiateExt {
+                registered_members: None,
+            },
         },
         &[],
     );

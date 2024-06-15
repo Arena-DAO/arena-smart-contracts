@@ -3,12 +3,13 @@ use std::marker::PhantomData;
 use arena_core_interface::{
     fees::FeeInformation,
     msg::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
+    rating::MemberResult,
 };
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
     ensure, instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal,
     DecimalRangeExceeded, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError,
-    StdResult, SubMsg, Uint128, WasmMsg,
+    StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::Distribution;
 use cw_competition::{
@@ -29,6 +30,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::error::CompetitionError;
 
 pub const PROCESS_REPLY_ID: u64 = 1;
+pub const UPDATE_RATING_FAILED_REPLY_ID: u64 = 2;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
@@ -275,7 +277,7 @@ impl<
             ExecuteBase::ProcessCompetition {
                 competition_id,
                 distribution,
-            } => self.execute_process_competition(deps, info, competition_id, distribution),
+            } => self.execute_process_competition(deps, info, competition_id, distribution, None),
             ExecuteBase::UpdateOwnership(action) => {
                 let ownership =
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
@@ -709,13 +711,19 @@ impl<
             .add_messages(msgs))
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::type_complexity)]
     pub fn execute_process_competition(
         &self,
-        deps: DepsMut,
+        mut deps: DepsMut,
         info: MessageInfo,
         competition_id: Uint128,
         distribution: Option<Distribution<String>>,
+        post_processing: Option<
+            fn(
+                storage: &mut dyn Storage,
+                &Competition<CompetitionExt>,
+            ) -> Result<Option<SubMsg>, CompetitionError>,
+        >,
     ) -> Result<Response, CompetitionError> {
         // Load competition
         let competition = self
@@ -735,7 +743,17 @@ impl<
             .transpose()?;
 
         // Process the competition
-        self.inner_process(deps, competition, validated_distribution)
+        let mut response =
+            self.inner_process(deps.branch(), &competition, validated_distribution)?;
+
+        // Post-processing
+        if let Some(post_processing) = post_processing {
+            if let Some(sub_msg) = post_processing(deps.storage, &competition)? {
+                response = response.add_submessage(sub_msg);
+            }
+        }
+
+        Ok(response)
     }
 
     // Validate competition status and sender's authorization
@@ -769,7 +787,7 @@ impl<
     pub fn inner_process(
         &self,
         deps: DepsMut,
-        competition: Competition<CompetitionExt>,
+        competition: &Competition<CompetitionExt>,
         distribution: Option<Distribution<Addr>>,
     ) -> Result<Response, CompetitionError> {
         // Set the result
@@ -802,7 +820,7 @@ impl<
             .collect();
 
         // If there's an escrow, handle distribution, tax, and fees
-        if let Some(escrow) = competition.escrow {
+        if let Some(escrow) = &competition.escrow {
             // Get Arena Tax config
             let arena_tax_config =
                 self.query_arena_tax_config(deps.as_ref(), competition.start_height)?;
@@ -814,18 +832,18 @@ impl<
                 layered_fees.push(FeeInformation {
                     tax: arena_tax_config.tax,
                     receiver: competition.admin_dao.to_string(),
-                    cw20_msg: arena_tax_config.cw20_msg,
-                    cw721_msg: arena_tax_config.cw721_msg,
+                    cw20_msg: arena_tax_config.cw20_msg.clone(),
+                    cw721_msg: arena_tax_config.cw721_msg.clone(),
                 });
             }
 
             // Apply additional layered fees
-            if let Some(additional_layered_fees) = competition.fees {
-                layered_fees.extend(additional_layered_fees.into_iter().map(|x| FeeInformation {
+            if let Some(additional_layered_fees) = &competition.fees {
+                layered_fees.extend(additional_layered_fees.iter().map(|x| FeeInformation {
                     tax: x.tax,
                     receiver: x.receiver.to_string(),
-                    cw20_msg: x.cw20_msg,
-                    cw721_msg: x.cw721_msg,
+                    cw20_msg: x.cw20_msg.clone(),
+                    cw721_msg: x.cw721_msg.clone(),
                 }));
             }
 
@@ -848,7 +866,8 @@ impl<
                 .save(deps.storage, &competition.id.u128())?;
 
             // We don't expect another activation message from the escrow
-            self.escrows_to_competitions.remove(deps.storage, escrow);
+            self.escrows_to_competitions
+                .remove(deps.storage, escrow.clone());
 
             msgs.push(sub_msg);
         }
@@ -863,6 +882,39 @@ impl<
                     .unwrap_or("None".to_owned()),
             )
             .add_submessages(msgs))
+    }
+
+    // This method is meant to be called when the competition between 2 competitors is processed to trigger a rating adjustment on the arena core for the competition's category
+    pub fn trigger_rating_adjustment(
+        &self,
+        storage: &mut dyn Storage,
+        category_id: Uint128,
+        member_results: Vec<(MemberResult<Addr>, MemberResult<Addr>)>,
+    ) -> Result<SubMsg, CompetitionError> {
+        // Ensure Module has an owner
+        let ownership = get_ownership(storage)?;
+        let arena_core = ownership.owner.ok_or(CompetitionError::OwnershipError(
+            cw_ownable::OwnershipError::NoOwner,
+        ))?;
+
+        Ok(SubMsg::reply_on_error(
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: arena_core.to_string(),
+                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
+                    msg: arena_core_interface::msg::ExecuteExt::AdjustRatings {
+                        category_id,
+                        member_results: member_results
+                            .into_iter()
+                            .map(|(member_result_1, member_result_2)| {
+                                (member_result_1.into(), member_result_2.into())
+                            })
+                            .collect(),
+                    },
+                })?,
+                funds: vec![],
+            }),
+            UPDATE_RATING_FAILED_REPLY_ID,
+        ))
     }
 
     pub fn query(
@@ -1056,6 +1108,7 @@ impl<
     ) -> Result<Response, CompetitionError> {
         match msg.id {
             PROCESS_REPLY_ID => self.reply_process(deps, msg),
+            UPDATE_RATING_FAILED_REPLY_ID => self.reply_update_rating_failed(deps, msg),
             _ => Err(CompetitionError::UnknownReplyId { id: msg.id }),
         }
     }
@@ -1075,5 +1128,14 @@ impl<
             })?;
 
         Ok(Response::new().add_attribute("action", "reply_process"))
+    }
+
+    pub fn reply_update_rating_failed(
+        &self,
+        _deps: DepsMut,
+        _msg: Reply,
+    ) -> Result<Response, CompetitionError> {
+        // There should be an event if the rating update has failed, but it should not cause the overall message to fail
+        Ok(Response::new().add_attribute("action", "update_rating_failed"))
     }
 }

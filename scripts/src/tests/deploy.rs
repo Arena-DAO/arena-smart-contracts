@@ -4,6 +4,7 @@ use arena_core_interface::{
 };
 use cosmwasm_std::{to_json_binary, Decimal};
 use cw_orch::prelude::*;
+use cw_utils::Duration;
 use dao_interface::{
     state::{Admin, ModuleInstantiateInfo},
     CoreQueryMsgFns,
@@ -99,6 +100,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                     cw20_msg: None,
                                                     cw721_msg: None,
                                                 },
+                                                rating_period: Duration::Time(604800u64)
                                             },
                                         })?,
                                         admin: Some(Admin::CoreModule {}),

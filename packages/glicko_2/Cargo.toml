@@ -1,0 +1,17 @@
+[package]
+name = "glicko_2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-utils = { workspace = true }
+arena-core-interface = { workspace = true }
+rust_decimal = { workspace = true, features=["maths"] }
+rust_decimal_macros = { workspace = true }

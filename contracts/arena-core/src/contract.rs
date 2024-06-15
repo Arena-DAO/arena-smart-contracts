@@ -50,6 +50,7 @@ pub fn instantiate_extension(
     execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
     execute::update_categories(deps.branch(), dao.clone(), extension.categories, vec![])?;
     execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
+    execute::update_rating_period(deps.branch(), dao.clone(), extension.rating_period)?;
     ARENA_TAX_CONFIG.save(deps.storage, &extension.tax_configuration)?;
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
@@ -91,6 +92,13 @@ pub fn execute(
             ExecuteExt::UpdateCategories { to_add, to_edit } => {
                 execute::update_categories(deps, info.sender, to_add, to_edit)
             }
+            ExecuteExt::AdjustRatings {
+                category_id,
+                member_results,
+            } => execute::adjust_ratings(deps, env, info, category_id, member_results),
+            ExecuteExt::UpdateRatingPeriod { period } => {
+                execute::update_rating_period(deps, info.sender, period)
+            }
         },
         // Default pre-propose-base behavior for all other messages
         _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),
@@ -127,7 +135,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                 key: key.clone(),
             };
 
-            competition_modules().save(deps.storage, module_addr.clone(), &competition_module)?;
+            competition_modules().save(deps.storage, &module_addr, &competition_module)?;
             KEYS.save(deps.storage, key.clone(), &module_addr, env.block.height)?;
             COMPETITION_MODULES_COUNT.update(deps.storage, |x| -> StdResult<_> {
                 Ok(x.checked_add(Uint128::one())?)
@@ -204,6 +212,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             QueryExt::TaxConfig { height } => {
                 to_json_binary(&query::arena_fee_config(deps, height)?)
             }
+            QueryExt::Rating { category_id, addr } => {
+                to_json_binary(&query::rating(deps, category_id, addr)?)
+            }
+            QueryExt::RatingLeaderboard {
+                category_id,
+                start_after,
+                limit,
+            } => to_json_binary(&query::rating_leaderboard(
+                deps,
+                category_id,
+                start_after,
+                limit,
+            )?),
         },
         _ => PrePropose::default().query(deps, env, msg),
     };
@@ -215,8 +236,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    if version.major == 1 && version.minor == 3 {
-        migrate::from_v1_3_to_v_1_4(deps.branch())?;
+    if version.major == 1 && version.minor < 4 {
+        migrate::from_v1_3_to_v1_4(deps.branch())?;
+    }
+
+    if version.major == 1 && version.minor < 6 {
+        migrate::from_v1_4_to_v1_6(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

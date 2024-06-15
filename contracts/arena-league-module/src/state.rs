@@ -9,11 +9,11 @@ pub struct Match {
     pub match_number: Uint128,
     pub team_1: Addr,
     pub team_2: Addr,
-    pub result: Option<Result>,
+    pub result: Option<MatchResult>,
 }
 
 #[cw_serde]
-pub enum Result {
+pub enum MatchResult {
     Team1,
     Team2,
     Draw,

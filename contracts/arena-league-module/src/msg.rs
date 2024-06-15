@@ -1,4 +1,4 @@
-use crate::state::{LeagueExt, Match, PointAdjustment, Result};
+use crate::state::{LeagueExt, Match, MatchResult, PointAdjustment};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Empty, Int128, StdError, StdResult, Uint128, Uint64};
 use cw_competition::{
@@ -12,7 +12,7 @@ pub enum ExecuteExt {
     ProcessMatch {
         league_id: Uint128,
         round_number: Uint64,
-        match_results: Vec<MatchResult>,
+        match_results: Vec<MatchResultMsg>,
     },
     UpdateDistribution {
         league_id: Uint128,
@@ -26,9 +26,9 @@ pub enum ExecuteExt {
 }
 
 #[cw_serde]
-pub struct MatchResult {
+pub struct MatchResultMsg {
     pub match_number: Uint128,
-    pub result: Option<Result>,
+    pub match_result: MatchResult,
 }
 
 #[cw_serde]

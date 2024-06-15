@@ -1,3 +1,4 @@
+use arena_core_interface::rating::MemberResult;
 use cosmwasm_std::{
     Addr, Decimal, DepsMut, MessageInfo, Response, StdError, StdResult, Uint128, Uint64,
 };
@@ -6,7 +7,7 @@ use std::vec;
 
 use crate::{
     contract::CompetitionModule,
-    msg::MatchResult,
+    msg::MatchResultMsg,
     query,
     state::{Match, PointAdjustment, Round, MATCHES, POINT_ADJUSTMENTS, ROUNDS},
     ContractError,
@@ -98,7 +99,7 @@ pub fn process_matches(
     info: MessageInfo,
     league_id: Uint128,
     round_number: Uint64,
-    match_results: Vec<MatchResult>,
+    match_results: Vec<MatchResultMsg>,
 ) -> Result<Response, ContractError> {
     // Load the league data from storage
     let mut league = CompetitionModule::default()
@@ -109,6 +110,7 @@ pub fn process_matches(
     CompetitionModule::default().inner_validate_auth(&info.sender, &league)?;
 
     let mut processed_matches = league.extension.processed_matches;
+    let mut member_results = vec![];
     for match_result in match_results {
         let key = (
             league_id.u128(),
@@ -120,8 +122,35 @@ pub fn process_matches(
                 Some(mut m) => {
                     if m.result.is_none() {
                         processed_matches += Uint128::one();
+
+                        if league.category_id.is_some() {
+                            // Rating updates are only handled once
+                            let (member_result_1, member_result_2) = match match_result.match_result
+                            {
+                                crate::state::MatchResult::Team1 => {
+                                    (Decimal::one(), Decimal::zero())
+                                }
+                                crate::state::MatchResult::Team2 => {
+                                    (Decimal::zero(), Decimal::one())
+                                }
+                                crate::state::MatchResult::Draw => {
+                                    (Decimal::percent(50), Decimal::percent(50))
+                                }
+                            };
+
+                            member_results.push((
+                                MemberResult {
+                                    addr: m.team_1.clone(),
+                                    result: member_result_1,
+                                },
+                                MemberResult {
+                                    addr: m.team_2.clone(),
+                                    result: member_result_2,
+                                },
+                            ));
+                        }
                     }
-                    m.result = match_result.result;
+                    m.result = Some(match_result.match_result);
 
                     Ok(m)
                 }
@@ -130,6 +159,16 @@ pub fn process_matches(
                 })),
             }
         })?;
+    }
+
+    // Trigger rating adjustments
+    let mut sub_msgs = vec![];
+    if let Some(category_id) = league.category_id {
+        sub_msgs.push(CompetitionModule::default().trigger_rating_adjustment(
+            deps.storage,
+            category_id,
+            member_results,
+        )?);
     }
 
     // Check if the processed matches have changed and update the league data accordingly.
@@ -229,7 +268,7 @@ pub fn process_matches(
 
         response = CompetitionModule::default().inner_process(
             deps,
-            league,
+            &league,
             Some(Distribution::<Addr> {
                 member_percentages,
                 remainder_addr: leaderboard[0].member.clone(),
@@ -237,7 +276,9 @@ pub fn process_matches(
         )?;
     }
 
-    Ok(response.add_attribute("action", "process_matches"))
+    Ok(response
+        .add_attribute("action", "process_matches")
+        .add_submessages(sub_msgs))
 }
 
 pub fn update_distribution(

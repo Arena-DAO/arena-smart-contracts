@@ -2,7 +2,8 @@ use crate::contract::CompetitionModule;
 use crate::msg::{MatchResultMsg, Tournament};
 use crate::state::{EliminationType, Match, MatchResult, MATCHES};
 use crate::{ContractError, NestedArray};
-use cosmwasm_std::{Addr, MessageInfo, StdError, Storage};
+use arena_core_interface::rating::MemberResult;
+use cosmwasm_std::{Addr, Decimal, MessageInfo, StdError, Storage};
 use cosmwasm_std::{DepsMut, Response, StdResult, Uint128};
 use cw_balance::{Distribution, MemberPercentage};
 use itertools::Itertools;
@@ -434,6 +435,7 @@ pub fn process_matches(
     let mut newly_processed_matches = 0;
 
     // Process each match result
+    let mut member_results = vec![];
     for result in match_results {
         let mut match_ = MATCHES.update(
             deps.storage,
@@ -463,6 +465,25 @@ pub fn process_matches(
                     }
                 }
                 .flatten();
+
+                // Rating updates are only handled the first time
+                if tournament.category_id.is_some() && match_info.result.is_none() {
+                    let (member_result_1, member_result_2) = match result.match_result {
+                        MatchResult::Team1 => (Decimal::one(), Decimal::zero()),
+                        MatchResult::Team2 => (Decimal::zero(), Decimal::one()),
+                    };
+
+                    member_results.push((
+                        MemberResult {
+                            addr: match_info.team_1.clone().unwrap(),
+                            result: member_result_1,
+                        },
+                        MemberResult {
+                            addr: match_info.team_2.clone().unwrap(),
+                            result: member_result_2,
+                        },
+                    ));
+                }
 
                 match_info.result = Some(result.match_result.clone());
 
@@ -542,6 +563,16 @@ pub fn process_matches(
         }
     }
 
+    // Trigger rating adjustments
+    let mut sub_msgs = vec![];
+    if let Some(category_id) = tournament.category_id {
+        sub_msgs.push(CompetitionModule::default().trigger_rating_adjustment(
+            deps.storage,
+            category_id,
+            member_results,
+        )?);
+    }
+
     // Apply updates to the next matches
     let mut index = 0;
     while index < updates.len() {
@@ -597,7 +628,9 @@ pub fn process_matches(
         Response::new()
     };
 
-    Ok(response.add_attribute("action", "process_matches"))
+    Ok(response
+        .add_attribute("action", "process_matches")
+        .add_submessages(sub_msgs))
 }
 
 fn trigger_distribution(deps: DepsMut, tournament: Tournament) -> Result<Response, ContractError> {
@@ -709,5 +742,5 @@ fn trigger_distribution(deps: DepsMut, tournament: Tournament) -> Result<Respons
         remainder_addr,
     };
 
-    Ok(CompetitionModule::default().inner_process(deps, tournament, Some(distribution))?)
+    Ok(CompetitionModule::default().inner_process(deps, &tournament, Some(distribution))?)
 }

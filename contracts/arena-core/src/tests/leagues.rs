@@ -4,9 +4,9 @@ use arena_core_interface::fees::FeeInformation;
 use arena_league_module::{
     msg::{
         ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueInstantiateExt, LeagueQueryExt,
-        LeagueResponse, MatchResult, MemberPoints, QueryMsg, RoundResponse,
+        LeagueResponse, MatchResultMsg, MemberPoints, QueryMsg, RoundResponse,
     },
-    state::{Match, PointAdjustment, Result},
+    state::{Match, PointAdjustment, MatchResult},
 };
 use cosmwasm_std::{
     coins, to_json_binary, Addr, Coin, Coins, Decimal, Empty, Int128, Uint128, Uint64, WasmMsg,
@@ -459,13 +459,13 @@ fn test_leagues() {
                     league_id: competition_id,
                     round_number: Uint64::one(),
                     match_results: vec![
-                        MatchResult {
+                        MatchResultMsg {
                             match_number: Uint128::one(),
-                            result: Some(Result::Team1),
+                            match_result: MatchResult::Team1,
                         },
-                        MatchResult {
+                        MatchResultMsg {
                             match_number: Uint128::from(2u128),
-                            result: Some(Result::Draw),
+                            match_result: MatchResult::Draw,
                         },
                     ],
                 },
@@ -633,13 +633,13 @@ fn test_leagues() {
                         league_id: competition_id,
                         round_number: Uint64::from(2u64),
                         match_results: vec![
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(3u128),
-                                result: Some(Result::Team1),
+                                match_result: MatchResult::Team1,
                             },
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(4u128),
-                                result: Some(Result::Team1),
+                                match_result: MatchResult::Team1,
                             },
                         ],
                     },
@@ -721,13 +721,13 @@ fn test_leagues() {
                         league_id: competition_id,
                         round_number: Uint64::from(3u64),
                         match_results: vec![
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(5u128),
-                                result: Some(Result::Team1),
+                                match_result: MatchResult::Team1,
                             },
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(6u128),
-                                result: Some(Result::Team1),
+                                match_result: MatchResult::Team1,
                             },
                         ],
                     },
@@ -809,13 +809,13 @@ fn test_leagues() {
                         league_id: competition_id,
                         round_number: Uint64::from(4u64),
                         match_results: vec![
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(7u128),
-                                result: Some(Result::Team1),
+                                match_result: MatchResult::Team1,
                             },
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(8u128),
-                                result: Some(Result::Team1),
+                                match_result: MatchResult::Team1,
                             },
                         ],
                     },
@@ -897,13 +897,13 @@ fn test_leagues() {
                         league_id: competition_id,
                         round_number: Uint64::from(5u64),
                         match_results: vec![
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(9u128),
-                                result: Some(Result::Team1),
+                                match_result: MatchResult::Team1,
                             },
-                            MatchResult {
+                            MatchResultMsg {
                                 match_number: Uint128::from(10u128),
-                                result: Some(Result::Team2),
+                                match_result: MatchResult::Team2,
                             },
                         ],
                     },
@@ -1138,13 +1138,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(1u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(1u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(2u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1160,13 +1160,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(2u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(3u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(4u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1182,13 +1182,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(3u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(5u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(6u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1204,13 +1204,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(4u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(7u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(8u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1226,13 +1226,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(5u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(9u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(10u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1389,13 +1389,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(1u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(1u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(2u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
                             ],
                         },
@@ -1411,13 +1411,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(2u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(3u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(4u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1433,13 +1433,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(3u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(5u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(6u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1455,13 +1455,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(4u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(7u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(8u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1477,13 +1477,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(5u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(9u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(10u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1626,13 +1626,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(1u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(1u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(2u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
                             ],
                         },
@@ -1648,13 +1648,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(2u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(3u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(4u128),
-                                    result: Some(Result::Team2),
+                                    match_result: MatchResult::Team2,
                                 },
                             ],
                         },
@@ -1670,13 +1670,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(3u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(5u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(6u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -1826,13 +1826,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(1u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(1u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(2u128),
-                                    result: Some(Result::Team1),
+                                    match_result: MatchResult::Team1,
                                 },
                             ],
                         },
@@ -1848,13 +1848,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(2u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(3u128),
-                                    result: Some(Result::Team2),
+                                    match_result: MatchResult::Team2,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(4u128),
-                                    result: Some(Result::Team2),
+                                    match_result: MatchResult::Team2,
                                 },
                             ],
                         },
@@ -1870,13 +1870,13 @@ fn test_distributions() {
                             league_id: competition_id,
                             round_number: Uint64::from(3u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(5u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(6u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -2072,13 +2072,13 @@ fn test_additional_layered_fees() {
                             league_id: competition_id,
                             round_number: Uint64::from(1u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(1u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(2u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -2094,13 +2094,13 @@ fn test_additional_layered_fees() {
                             league_id: competition_id,
                             round_number: Uint64::from(2u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(3u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(4u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -2116,13 +2116,13 @@ fn test_additional_layered_fees() {
                             league_id: competition_id,
                             round_number: Uint64::from(3u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(5u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(6u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -2138,13 +2138,13 @@ fn test_additional_layered_fees() {
                             league_id: competition_id,
                             round_number: Uint64::from(4u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(7u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(8u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },
@@ -2160,13 +2160,13 @@ fn test_additional_layered_fees() {
                             league_id: competition_id,
                             round_number: Uint64::from(5u64),
                             match_results: vec![
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(9u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
-                                MatchResult {
+                                MatchResultMsg {
                                     match_number: Uint128::from(10u128),
-                                    result: Some(Result::Draw),
+                                    match_result: MatchResult::Draw,
                                 },
                             ],
                         },

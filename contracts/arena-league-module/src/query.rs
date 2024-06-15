@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::{
     contract::CompetitionModule,
     msg::{DumpStateResponse, MemberPoints, PointAdjustmentResponse, RoundResponse},
-    state::{Match, Result, Round, MATCHES, POINT_ADJUSTMENTS, ROUNDS},
+    state::{Match, MatchResult, Round, MATCHES, POINT_ADJUSTMENTS, ROUNDS},
 };
 use cosmwasm_std::{Addr, Deps, Int128, Order, StdResult, Uint128, Uint64};
 use cw_storage_plus::Bound;
@@ -44,12 +44,12 @@ pub fn leaderboard(
         for m in matches {
             if let Some(match_result) = m.result {
                 let (team_1, team_2) = match match_result {
-                    Result::Team1 => (m.team_1, m.team_2),
-                    Result::Team2 => (m.team_2, m.team_1),
-                    Result::Draw => (m.team_1, m.team_2),
+                    MatchResult::Team1 => (m.team_1, m.team_2),
+                    MatchResult::Team2 => (m.team_2, m.team_1),
+                    MatchResult::Draw => (m.team_1, m.team_2),
                 };
 
-                if match_result != Result::Draw {
+                if match_result != MatchResult::Draw {
                     let points_for_win = league.extension.match_win_points;
                     let points_for_loss = league.extension.match_lose_points;
 

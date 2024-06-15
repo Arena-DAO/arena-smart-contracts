@@ -1,7 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, Decimal, Uint128};
+use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
 use cw_address_like::AddressLike;
 use cw_balance::Distribution;
+use cw_utils::Duration;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
     msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
@@ -9,7 +10,10 @@ use dao_pre_propose_base::{
 };
 use dao_voting::proposal::SingleChoiceProposeMsg;
 
-use crate::fees::{FeeInformation, TaxConfiguration};
+use crate::{
+    fees::{FeeInformation, TaxConfiguration},
+    rating::{MemberResult, Rating},
+};
 
 #[cw_serde]
 pub struct InstantiateExt {
@@ -18,6 +22,7 @@ pub struct InstantiateExt {
     pub categories: Vec<NewCompetitionCategory>,
     pub tax: Decimal,
     pub tax_configuration: TaxConfiguration,
+    pub rating_period: Duration,
 }
 
 #[cw_serde]
@@ -38,6 +43,13 @@ pub enum ExecuteExt {
     UpdateCategories {
         to_add: Vec<NewCompetitionCategory>,
         to_edit: Vec<EditCompetitionCategory>,
+    },
+    AdjustRatings {
+        category_id: Uint128,
+        member_results: Vec<(MemberResult<String>, MemberResult<String>)>,
+    },
+    UpdateRatingPeriod {
+        period: Duration,
     },
 }
 
@@ -88,6 +100,14 @@ pub enum QueryExt {
     /// This query is used to get a competition's fee configuration for the Arena tax at its start height
     #[returns(TaxConfigurationResponse)]
     TaxConfig { height: u64 },
+    #[returns(Option<Rating>)]
+    Rating { category_id: Uint128, addr: String },
+    #[returns(Vec<Rating>)]
+    RatingLeaderboard {
+        category_id: Uint128,
+        start_after: Option<(Uint128, String)>,
+        limit: Option<u32>,
+    },
 }
 
 impl From<QueryExt> for QueryMsg {
@@ -108,6 +128,7 @@ pub struct SudoMsg {
     pub dump_state_response: DumpStateResponse,
     pub ruleset: Ruleset,
     pub competition_category: CompetitionCategory,
+    pub rating: Rating,
 }
 
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
@@ -188,4 +209,10 @@ pub enum ProposeMessages {
 pub enum CompetitionModuleQuery {
     Key(String, Option<u64>),
     Addr(String),
+}
+
+#[cw_serde]
+pub struct RatingResponse {
+    pub addr: Addr,
+    pub rating: Rating,
 }

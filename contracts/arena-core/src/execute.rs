@@ -1,19 +1,23 @@
-use arena_core_interface::msg::{
-    CompetitionCategory, EditCompetitionCategory, NewCompetitionCategory, NewRuleset, PrePropose,
-    ProposeMessage, ProposeMessages, Ruleset,
+use arena_core_interface::{
+    msg::{
+        CompetitionCategory, EditCompetitionCategory, NewCompetitionCategory, NewRuleset,
+        PrePropose, ProposeMessage, ProposeMessages, Ruleset,
+    },
+    rating::MemberResult,
 };
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
-    StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    ensure, ensure_eq, ensure_ne, to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty,
+    Env, MessageInfo, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
+use cw_utils::Duration;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::error::PreProposeError;
 use dao_voting::proposal::SingleChoiceProposeMsg;
 
 use crate::{
     state::{
-        competition_categories, competition_modules, rulesets, COMPETITION_CATEGORIES_COUNT,
-        RULESETS_COUNT, TAX,
+        competition_categories, competition_modules, ratings, rulesets,
+        COMPETITION_CATEGORIES_COUNT, RATING_PERIOD, RULESETS_COUNT, TAX,
     },
     ContractError,
 };
@@ -39,10 +43,10 @@ pub fn update_competition_modules(
         let addr = deps.api.addr_validate(module_addr)?;
         competition_modules().update(
             deps.storage,
-            addr.clone(),
+            &addr,
             |maybe_module| -> Result<_, ContractError> {
-                let mut module =
-                    maybe_module.ok_or(ContractError::CompetitionModuleDoesNotExist { addr })?;
+                let mut module = maybe_module
+                    .ok_or(ContractError::CompetitionModuleDoesNotExist { addr: addr.clone() })?;
                 module.is_enabled = false;
                 Ok(module)
             },
@@ -133,17 +137,23 @@ pub fn update_rulesets(
 
 pub fn check_can_submit(
     deps: Deps,
-    who: Addr,
+    who: &Addr,
     config: &dao_pre_propose_base::state::Config,
 ) -> Result<(), PreProposeError> {
     if !config.open_proposal_submission {
-        if !competition_modules().has(deps.storage, who.clone()) {
-            return Err(PreProposeError::Unauthorized {});
-        }
+        ensure_active_competition_module(deps, who)?;
+    }
 
-        if !competition_modules().load(deps.storage, who)?.is_enabled {
-            return Err(PreProposeError::Unauthorized {});
-        }
+    Ok(())
+}
+
+pub fn ensure_active_competition_module(deps: Deps, who: &Addr) -> Result<(), PreProposeError> {
+    if !competition_modules().has(deps.storage, who) {
+        return Err(PreProposeError::Unauthorized {});
+    }
+
+    if !competition_modules().load(deps.storage, who)?.is_enabled {
+        return Err(PreProposeError::Unauthorized {});
     }
 
     Ok(())
@@ -156,7 +166,7 @@ pub fn propose(
     msg: ProposeMessage,
 ) -> Result<Response, PreProposeError> {
     let config = PrePropose::default().config.load(deps.storage)?;
-    check_can_submit(deps.as_ref(), info.sender.clone(), &config)?;
+    check_can_submit(deps.as_ref(), &info.sender, &config)?;
 
     let deposit_messages = if let Some(ref deposit_info) = config.deposit_info {
         deposit_info.check_native_deposit_paid(&info)?;
@@ -291,4 +301,106 @@ pub fn update_categories(
     Ok(Response::new()
         .add_attribute("action", "update_categories")
         .add_attribute("category_count", current_id))
+}
+
+pub fn adjust_ratings(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    category_id: Uint128,
+    member_results: Vec<(MemberResult<String>, MemberResult<String>)>,
+) -> Result<Response, ContractError> {
+    // Validate authorization - this message should only be executed by the competition modules
+    ensure_active_competition_module(deps.as_ref(), &info.sender)?;
+
+    for (member_result_1, member_result_2) in member_results {
+        // Ensure different addresses
+        ensure_ne!(
+            member_result_1.addr,
+            member_result_2.addr,
+            ContractError::StdError(StdError::generic_err(
+                "Rating adjustment must be between different addresses"
+            ))
+        );
+        // Ensure results are between 0 and 1
+        ensure!(
+            member_result_1.result >= Decimal::zero() && member_result_1.result <= Decimal::one(),
+            ContractError::StdError(StdError::generic_err("Result 1 must be between 0 and 1"))
+        );
+        ensure!(
+            member_result_2.result >= Decimal::zero() && member_result_2.result <= Decimal::one(),
+            ContractError::StdError(StdError::generic_err("Result 2 must be between 0 and 1"))
+        );
+        // Ensure the sum of results is 1
+        ensure_eq!(
+            member_result_1.result + member_result_2.result,
+            Decimal::one(),
+            ContractError::StdError(StdError::generic_err("The sum of results must be 1"))
+        );
+
+        let addr_1 = deps.api.addr_validate(&member_result_1.addr)?;
+        let addr_2 = deps.api.addr_validate(&member_result_2.addr)?;
+
+        let key_1 = (category_id.u128(), &addr_1);
+        let key_2 = (category_id.u128(), &addr_2);
+
+        let maybe_rating_1 = ratings().may_load(deps.storage, key_1)?;
+        let maybe_rating_2 = ratings().may_load(deps.storage, key_2)?;
+
+        let mut rating_1 = maybe_rating_1.clone().unwrap_or_default();
+        let mut rating_2 = maybe_rating_2.clone().unwrap_or_default();
+
+        // Calculate changes
+        glicko_2::update_rating(
+            &env,
+            &mut rating_1,
+            &mut rating_2,
+            member_result_1.result,
+            member_result_2.result,
+            &RATING_PERIOD.load(deps.storage)?,
+        );
+
+        // Update values
+        ratings().replace(
+            deps.storage,
+            key_1,
+            Some(&rating_1),
+            maybe_rating_1.as_ref(),
+        )?;
+        ratings().replace(
+            deps.storage,
+            key_2,
+            Some(&rating_2),
+            maybe_rating_2.as_ref(),
+        )?;
+    }
+
+    Ok(Response::new().add_attribute("action", "adjust_ratings"))
+}
+
+pub fn update_rating_period(
+    deps: DepsMut,
+    sender: Addr,
+    period: Duration,
+) -> Result<Response, ContractError> {
+    if PrePropose::default().dao.load(deps.storage)? != sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let value = match &period {
+        Duration::Height(height) => height,
+        Duration::Time(seconds) => seconds,
+    };
+
+    if *value == 0 {
+        return Err(ContractError::StdError(StdError::generic_err(
+            "Cannot have a period of 0",
+        )));
+    }
+
+    RATING_PERIOD.save(deps.storage, &period)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_rating_period")
+        .add_attribute("period", period.to_string()))
 }
