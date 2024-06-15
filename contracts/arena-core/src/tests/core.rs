@@ -42,16 +42,13 @@ pub fn sudo_proposal_contract() -> Box<dyn Contract<Empty>> {
 
 pub struct CoreContext {
     pub dao_proposal_single_id: u64,
-    pub arena_core_id: u64,
     pub dao_core_id: u64,
-    pub dao_proposal_sudo_id: u64,
     pub cw4_id: u64,
     pub cw4_voting_module_id: u64,
     pub sudo_proposal_addr: Addr,
     pub dao_addr: Addr,
     pub arena_core_addr: Addr,
     pub proposal_module_addr: Addr,
-    pub category_id: Uint128,
 }
 
 pub fn setup_core_context(
@@ -229,16 +226,13 @@ pub fn setup_core_context(
 
     CoreContext {
         dao_proposal_single_id,
-        arena_core_id,
         dao_core_id,
-        dao_proposal_sudo_id,
         cw4_id,
         cw4_voting_module_id,
         dao_addr,
         arena_core_addr,
         sudo_proposal_addr: proposal_module.address.clone(),
         proposal_module_addr,
-        category_id: Uint128::one(),
     }
 }
 
