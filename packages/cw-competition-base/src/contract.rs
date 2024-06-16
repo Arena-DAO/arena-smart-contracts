@@ -346,7 +346,8 @@ impl<
 
         Ok(Response::new()
             .add_attribute("action", "submit_evidence")
-            .add_attribute("sender", info.sender.to_string()))
+            .add_attribute("sender", info.sender.to_string())
+            .add_attribute("evidence_count", evidence_id))
     }
 
     pub fn validate_execute_hook(

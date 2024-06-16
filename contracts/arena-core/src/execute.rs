@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use arena_core_interface::{
     msg::{
         CompetitionCategory, EditCompetitionCategory, NewCompetitionCategory, NewRuleset,
@@ -6,8 +8,8 @@ use arena_core_interface::{
     rating::MemberResult,
 };
 use cosmwasm_std::{
-    ensure, ensure_eq, ensure_ne, to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty,
-    Env, MessageInfo, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    ensure, ensure_eq, ensure_ne, to_json_binary, Addr, Attribute, CosmosMsg, Decimal, Deps,
+    DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw_utils::Duration;
 use dao_interface::state::ModuleInstantiateInfo;
@@ -313,6 +315,8 @@ pub fn adjust_ratings(
     // Validate authorization - this message should only be executed by the competition modules
     ensure_active_competition_module(deps.as_ref(), &info.sender)?;
 
+    // Create a map to store the new ratings for attribute creation
+    let mut new_ratings: HashMap<String, Decimal> = HashMap::new();
     for (member_result_1, member_result_2) in member_results {
         // Ensure different addresses
         ensure_ne!(
@@ -373,9 +377,20 @@ pub fn adjust_ratings(
             Some(&rating_2),
             maybe_rating_2.as_ref(),
         )?;
+
+        // Store the new ratings in the map
+        new_ratings.insert(addr_1.to_string(), rating_1.value);
+        new_ratings.insert(addr_2.to_string(), rating_2.value);
     }
 
-    Ok(Response::new().add_attribute("action", "adjust_ratings"))
+    let attrs = new_ratings.into_iter().map(|(addr, value)| Attribute {
+        key: addr,
+        value: value.to_string(),
+    });
+
+    Ok(Response::new()
+        .add_attribute("action", "adjust_ratings")
+        .add_attributes(attrs))
 }
 
 pub fn update_rating_period(
