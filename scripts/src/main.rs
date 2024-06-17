@@ -21,15 +21,27 @@ fn main() {
                 .unwrap();
 
             if args.contains(&"all".to_string()) {
-                deploy_testnet(daemon);
+                deploy_daemon(daemon);
             } else if args.contains(&"tournament".to_string()) {
                 deploy_tournament(daemon);
+            }
+        }
+        if args.contains(&"mainnet".to_string()) {
+            // We start by creating a daemon. This daemon will be used to interact with the chain.
+            let daemon = Daemon::builder()
+                // set the network to use
+                .chain(cw_orch::daemon::networks::NEUTRON_1) // chain parameter
+                .build()
+                .unwrap();
+
+            if args.contains(&"all".to_string()) {
+                deploy_daemon(daemon);
             }
         }
     }
 }
 
-fn deploy_testnet(daemon: Daemon) {
+fn deploy_daemon(daemon: Daemon) {
     let arena = Arena::new(daemon);
 
     let upload_res = arena.upload(false);

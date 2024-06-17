@@ -27,7 +27,6 @@ pub struct InstantiateExt {
 
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
-#[impl_into(ExecuteMsg)]
 pub enum ExecuteExt {
     UpdateCompetitionModules {
         to_add: Vec<ModuleInstantiateInfo>,
@@ -61,7 +60,6 @@ impl From<ExecuteExt> for ExecuteMsg {
 
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
-#[impl_into(QueryMsg)]
 pub enum QueryExt {
     #[returns(Vec<CompetitionModuleResponse<String>>)]
     CompetitionModules {

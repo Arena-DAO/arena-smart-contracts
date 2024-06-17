@@ -26,3 +26,6 @@ schema:
 
 deploy_testnet:
     cargo run --bin scripts -- deploy testnet all
+
+deploy_mainnet:
+    cargo run --bin scripts -- deploy mainnet all

@@ -1,9 +1,5 @@
 [workspace]
-members = [
-	"contracts/*",
-	"packages/*", 
-	"scripts"
-	]
+members = ["contracts/*", "packages/*", "scripts"]
 resolver = "2"
 
 [workspace.package]
@@ -31,7 +27,7 @@ cosmwasm-schema = "1.5.5"
 cw-utils = "1.0.3"
 thiserror = "1.0.60"
 cw-storage-plus = "1.2.0"
-cw-multi-test = { version = "1.1.0", features = ["cosmwasm_1_4"] } 
+cw-multi-test = { version = "1.1.0", features = ["cosmwasm_1_4"] }
 cw2 = "1.1.2"
 cw20 = "1.1.2"
 cw721 = "0.18.0"
@@ -41,19 +37,21 @@ anyhow = "1.0.83"
 cw4-group = "1.1.2"
 rand = "0.8.5"
 cw4 = "1.1.2"
-serde = { version = "1.0.202", default-features = false, features = ["derive"]}
+serde = { version = "1.0.202", default-features = false, features = ["derive"] }
 bnum = "0.11.0"
 cw-paginate = "0.2.1"
 cw-ownable = "0.5.1"
 cw-address-like = "1.0.4"
 itertools = "0.13.0"
-cw-orch = "0.22.2"
+cw-orch = "0.23.0"
 semver = "1.0.23"
 rust_decimal = "1.35.0"
 rust_decimal_macros = "1.34.2"
 
 #arena_dao dependencies
-cw-competition-base = { path = "./packages/cw-competition-base", features = ["library"] }
+cw-competition-base = { path = "./packages/cw-competition-base", features = [
+	"library",
+] }
 cw-balance = { path = "./packages/cw-balance", features = ["library"] }
 arena-testing = { path = "./packages/arena-testing" }
 cw-competition = { path = "./packages/cw-competition" }
@@ -69,11 +67,25 @@ arena-tournament-module = { path = "./contracts/arena-tournament-module" }
 
 #dao dependencies
 dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
-dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
-dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
-dao-pre-propose-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
+dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+	"library",
+] }
+dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+	"library",
+] }
+dao-pre-propose-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+	"library",
+] }
 dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
-dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
-dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"]}
-dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }
-dao-dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = ["library"] }
+dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+	"library",
+] }
+dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+	"library",
+] }
+dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+	"library",
+] }
+dao-dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+	"library",
+] }

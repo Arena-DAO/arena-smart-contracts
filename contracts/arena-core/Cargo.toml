@@ -36,7 +36,7 @@ cw-multi-test = { workspace = true }
 arena-testing = { workspace = true }
 dao-voting = { workspace = true }
 cw-utils = { workspace = true }
-cw-utils-v16 = { version = "0.16", package ="cw-utils" }
+cw-utils-v16 = { version = "0.16", package = "cw-utils" }
 cw20 = "0.16"
 dao-proposal-sudo = { workspace = true }
 dao-pre-propose-single = { workspace = true }

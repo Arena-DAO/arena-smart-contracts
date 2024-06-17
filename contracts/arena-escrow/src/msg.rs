@@ -27,7 +27,7 @@ pub enum ExecuteMsg {
     SetDistribution {
         distribution: Option<Distribution<String>>,
     },
-    #[payable]
+    #[cw_orch(payable)]
     ReceiveNative {},
     Receive(Cw20ReceiveMsg),
     ReceiveNft(Cw721ReceiveMsg),
