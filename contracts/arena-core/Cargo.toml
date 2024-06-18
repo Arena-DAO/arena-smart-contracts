@@ -22,12 +22,11 @@ cw2 = { workspace = true }
 cw-utils = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-cw-competition = { workspace = true }
 dao-interface = { workspace = true }
 dao-voting = { workspace = true }
 dao-pre-propose-base = { workspace = true }
 cw-paginate = { workspace = true }
-arena-core-interface = { workspace = true }
+arena-interface = { workspace = true }
 glicko_2 = { workspace = true }
 
 [dev-dependencies]

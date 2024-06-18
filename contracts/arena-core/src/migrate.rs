@@ -1,4 +1,4 @@
-use arena_core_interface::fees::TaxConfiguration;
+use arena_interface::fees::TaxConfiguration;
 use cosmwasm_std::{from_json, DepsMut, StdError, Uint128};
 use cw_utils::Duration;
 

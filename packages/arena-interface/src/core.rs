@@ -12,7 +12,7 @@ use dao_voting::proposal::SingleChoiceProposeMsg;
 
 use crate::{
     fees::{FeeInformation, TaxConfiguration},
-    rating::{MemberResult, Rating},
+    ratings::{MemberResult, Rating},
 };
 
 #[cw_serde]

@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
-use arena_core_interface::fees::FeeInformation;
+use arena_interface::competition::msg::{EscrowInstantiateInfo, ModuleInfo};
+use arena_interface::core::{CompetitionModuleQuery, CompetitionModuleResponse, QueryExt};
+use arena_interface::fees::FeeInformation;
 use arena_league_module::{
     msg::{
         ExecuteExt, ExecuteMsg, InstantiateMsg, LeagueInstantiateExt, LeagueQueryExt,
@@ -13,7 +15,6 @@ use cosmwasm_std::{
 };
 use cw4::Member;
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
-use cw_competition::msg::{EscrowInstantiateInfo, ModuleInfo};
 use cw_multi_test::{next_block, App, AppResponse, BankKeeper, Executor, MockApiBech32};
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
@@ -51,8 +52,8 @@ fn setup_league_context(
             msgs: vec![WasmMsg::Execute {
                 contract_addr: core_context.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::UpdateCompetitionModules {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::UpdateCompetitionModules {
                         to_add: vec![ModuleInstantiateInfo {
                             code_id: league_module_id,
                             msg: to_json_binary(&InstantiateMsg {
@@ -76,13 +77,21 @@ fn setup_league_context(
     assert!(result.is_ok());
     app.update_block(next_block);
 
-    // Get the league module addr from the response
-    let maybe_val = get_attr_value(result.as_ref().unwrap(), "competition_module_addr");
-    assert!(maybe_val.is_some());
-    let league_module_addr = Addr::unchecked(maybe_val.unwrap());
+    // Get the league module
+    let league_module = app
+        .wrap()
+        .query_wasm_smart::<CompetitionModuleResponse<Addr>>(
+            core_context.arena_core_addr.clone(),
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: QueryExt::CompetitionModule {
+                    query: CompetitionModuleQuery::Key("Leagues".to_string(), None),
+                },
+            },
+        )
+        .unwrap();
 
     LeagueContext {
-        league_module_addr,
+        league_module_addr: league_module.addr,
         escrow_id,
     }
 }
@@ -130,7 +139,11 @@ fn create_competition(
             },
             escrow: dues.map(|x| EscrowInstantiateInfo {
                 code_id: context.league.escrow_id,
-                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
+                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg {
+                    dues: x,
+                    should_activate_on_funded: None,
+                })
+                .unwrap(),
                 label: "Escrow".to_owned(),
                 additional_layered_fees,
             }),
@@ -143,6 +156,8 @@ fn create_competition(
                 "Rule 3".to_string(),
             ],
             rulesets: vec![],
+            banner: None,
+            should_activate_on_funded: None,
             instantiate_extension: LeagueInstantiateExt {
                 teams,
                 match_win_points: Uint64::from(3u64),
@@ -489,7 +504,7 @@ fn test_leagues() {
         .execute_contract(
             users[0].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -498,7 +513,7 @@ fn test_leagues() {
         .execute_contract(
             users[1].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -979,7 +994,7 @@ fn test_leagues() {
         .wrap()
         .query_wasm_smart(
             competition.escrow.as_ref().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },
@@ -1110,7 +1125,7 @@ fn test_distributions() {
         .execute_contract(
             users[0].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1119,7 +1134,7 @@ fn test_distributions() {
         .execute_contract(
             users[1].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1254,7 +1269,7 @@ fn test_distributions() {
         .wrap()
         .query_wasm_smart(
             competition.escrow.as_ref().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },
@@ -1361,7 +1376,7 @@ fn test_distributions() {
         .execute_contract(
             users[0].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1370,7 +1385,7 @@ fn test_distributions() {
         .execute_contract(
             users[1].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1507,7 +1522,7 @@ fn test_distributions() {
         .wrap()
         .query_wasm_smart(
             competition.escrow.as_ref().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },
@@ -1598,7 +1613,7 @@ fn test_distributions() {
         .execute_contract(
             users[0].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1607,7 +1622,7 @@ fn test_distributions() {
         .execute_contract(
             users[1].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1699,7 +1714,7 @@ fn test_distributions() {
         .wrap()
         .query_wasm_smart(
             competition.escrow.as_ref().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },
@@ -1798,7 +1813,7 @@ fn test_distributions() {
         .execute_contract(
             users[0].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1807,7 +1822,7 @@ fn test_distributions() {
         .execute_contract(
             users[1].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1899,7 +1914,7 @@ fn test_distributions() {
         .wrap()
         .query_wasm_smart(
             competition.escrow.as_ref().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },
@@ -2044,7 +2059,7 @@ fn test_additional_layered_fees() {
         .execute_contract(
             users[0].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -2053,7 +2068,7 @@ fn test_additional_layered_fees() {
         .execute_contract(
             users[1].clone(),
             competition.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -2189,7 +2204,7 @@ fn test_additional_layered_fees() {
         .wrap()
         .query_wasm_smart(
             competition.escrow.as_ref().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },

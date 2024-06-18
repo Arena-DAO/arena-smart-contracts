@@ -1,7 +1,7 @@
 [package]
 name = "cw-competition-base"
 authors = ["Gabe Lopez <ismellike@users.noreply.github.com>"]
-description = "A package designed for creating modular competitions in smart contracts."
+description = "A package for creating extendable competitions."
 edition = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
@@ -9,10 +9,6 @@ version = { workspace = true }
 
 [lib]
 doctest = false
-
-[features]
-# use library feature to disable all instantiate/execute/query exports
-library = []
 
 [dependencies]
 cosmwasm-schema = { workspace = true }
@@ -25,9 +21,8 @@ thiserror = { workspace = true }
 cw2 = { workspace = true }
 cw-balance = { workspace = true }
 cw-ownable = { workspace = true }
-cw-competition = { workspace = true }
 cw-paginate = { workspace = true }
-arena-core-interface = { workspace = true }
+arena-interface = { workspace = true }
 
 dao-interface = { workspace = true }
 dao-pre-propose-base = { workspace = true }

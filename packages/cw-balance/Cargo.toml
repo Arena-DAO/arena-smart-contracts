@@ -10,10 +10,6 @@ version = { workspace = true }
 [lib]
 doctest = false
 
-[features]
-# use library feature to disable all instantiate/execute/query exports
-library = []
-
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }

@@ -5,7 +5,8 @@ use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
 use crate::state::{
-    BALANCE, DEFERRED_FEES, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION, TOTAL_BALANCE,
+    BALANCE, DEFERRED_FEES, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION,
+    SHOULD_ACTIVATE_ON_FUNDED, TOTAL_BALANCE,
 };
 
 #[cw_serde]
@@ -142,4 +143,10 @@ pub fn dump_state(deps: Deps, addr: Option<String>) -> StdResult<DumpStateRespon
         total_balance: total_balance(deps)?,
         balance,
     })
+}
+
+pub fn should_activate_on_funded(deps: Deps) -> StdResult<bool> {
+    Ok(SHOULD_ACTIVATE_ON_FUNDED
+        .may_load(deps.storage)?
+        .unwrap_or(true))
 }

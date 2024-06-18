@@ -1,9 +1,19 @@
 use std::marker::PhantomData;
 
-use arena_core_interface::{
+use arena_interface::{
+    competition::{
+        msg::{
+            CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
+            ModuleInfo, QueryBase, ToCompetitionExt,
+        },
+        state::{
+            Competition, CompetitionListItemResponse, CompetitionResponse, CompetitionStatus,
+            Config, Evidence,
+        },
+    },
+    core::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
     fees::FeeInformation,
-    msg::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
-    rating::MemberResult,
+    ratings::MemberResult,
 };
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
@@ -12,17 +22,6 @@ use cosmwasm_std::{
     StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::Distribution;
-use cw_competition::{
-    escrow::CompetitionEscrowDistributeMsg,
-    msg::{
-        CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
-        ModuleInfo, QueryBase, ToCompetitionExt,
-    },
-    state::{
-        Competition, CompetitionListItemResponse, CompetitionResponse, CompetitionStatus, Config,
-        Evidence,
-    },
-};
 use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use serde::{de::DeserializeOwned, Serialize};
@@ -51,6 +50,7 @@ impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
 }
 
 pub struct CompetitionModuleContract<
+    'a,
     InstantiateExt,
     ExecuteExt,
     QueryExt,
@@ -69,9 +69,9 @@ pub struct CompetitionModuleContract<
     pub competition_evidence_count: Map<'static, u128, Uint128>,
     pub competition_result: Map<'static, u128, Option<Distribution<Addr>>>,
     pub competition_rules: Map<'static, u128, Vec<String>>,
-    pub escrows_to_competitions: Map<'static, Addr, u128>,
+    pub escrows_to_competitions: Map<'static, &'a Addr, u128>,
     pub temp_competition: Item<'static, u128>,
-    pub competition_hooks: Map<'static, (u128, Addr), HookDirection>,
+    pub competition_hooks: Map<'static, (u128, &'a Addr), HookDirection>,
 
     instantiate_type: PhantomData<InstantiateExt>,
     execute_type: PhantomData<ExecuteExt>,
@@ -80,6 +80,7 @@ pub struct CompetitionModuleContract<
 }
 
 impl<
+        'a,
         InstantiateExt: Serialize + DeserializeOwned + Clone,
         ExecuteExt,
         QueryExt: JsonSchema,
@@ -87,6 +88,7 @@ impl<
         CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
+        'a,
         InstantiateExt,
         ExecuteExt,
         QueryExt,
@@ -166,6 +168,7 @@ impl<
 }
 
 impl<
+        'a,
         InstantiateExt: Serialize + DeserializeOwned + Clone,
         ExecuteExt,
         QueryExt: JsonSchema,
@@ -173,6 +176,7 @@ impl<
         CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
     > Default
     for CompetitionModuleContract<
+        'a,
         InstantiateExt,
         ExecuteExt,
         QueryExt,
@@ -200,6 +204,7 @@ impl<
 }
 
 impl<
+        'a,
         InstantiateExt: Serialize + DeserializeOwned + Clone + std::fmt::Debug,
         ExecuteExt,
         QueryExt: JsonSchema,
@@ -207,6 +212,7 @@ impl<
         CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
+        'a,
         InstantiateExt,
         ExecuteExt,
         QueryExt,
@@ -217,7 +223,7 @@ impl<
     pub fn instantiate(
         &self,
         deps: DepsMut,
-        env: Env,
+        _env: Env,
         info: MessageInfo,
         msg: InstantiateBase<InstantiateExt>,
     ) -> StdResult<Response> {
@@ -236,7 +242,6 @@ impl<
         Ok(Response::new()
             .add_attribute("key", msg.key)
             .add_attribute("description", msg.description)
-            .add_attribute("competition_module_addr", env.contract.address)
             .add_attributes(ownership.into_attributes()))
     }
 
@@ -260,6 +265,8 @@ impl<
                 expiration,
                 rules,
                 rulesets,
+                banner,
+                should_activate_on_funded,
                 instantiate_extension,
             } => self.execute_create_competition(
                 &mut deps,
@@ -272,6 +279,8 @@ impl<
                 expiration,
                 rules,
                 rulesets,
+                banner,
+                should_activate_on_funded,
                 &instantiate_extension,
             ),
             ExecuteBase::ProcessCompetition {
@@ -283,7 +292,8 @@ impl<
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
-            ExecuteBase::Activate {} => self.execute_activate(deps, info),
+            ExecuteBase::Activate {} => self.execute_activate_from_escrow(deps, info),
+            ExecuteBase::ActivateManually { id } => self.execute_activate_by_host(deps, info, id),
             ExecuteBase::SubmitEvidence {
                 competition_id: id,
                 evidence,
@@ -360,7 +370,7 @@ impl<
         if HookDirection::Incoming
             != self
                 .competition_hooks
-                .load(deps.storage, (competition_id.u128(), info.sender.clone()))?
+                .load(deps.storage, (competition_id.u128(), &info.sender))?
         {
             return Err(CompetitionError::Unauthorized {});
         }
@@ -376,9 +386,7 @@ impl<
     ) -> Result<Response, CompetitionError> {
         // Load competition using the ID
         if !self.competitions.has(deps.storage, competition_id.u128()) {
-            return Err(CompetitionError::UnknownCompetitionId {
-                id: competition_id.u128(),
-            });
+            return Err(CompetitionError::UnknownCompetitionId { id: competition_id });
         };
 
         // Assert sender is a registered, active competition module
@@ -392,9 +400,9 @@ impl<
 
         let competition_module: CompetitionModuleResponse<String> = deps.querier.query_wasm_smart(
             ownership.owner.unwrap(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
-                msg: arena_core_interface::msg::QueryExt::CompetitionModule {
-                    query: arena_core_interface::msg::CompetitionModuleQuery::Addr(
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: arena_interface::core::QueryExt::CompetitionModule {
+                    query: arena_interface::core::CompetitionModuleQuery::Addr(
                         info.sender.to_string(),
                     ),
                 },
@@ -410,7 +418,7 @@ impl<
         // Add competition hook
         self.competition_hooks.save(
             deps.storage,
-            (competition_id.u128(), info.sender.clone()),
+            (competition_id.u128(), &info.sender),
             &HookDirection::Outgoing,
         )?;
 
@@ -428,14 +436,12 @@ impl<
     ) -> Result<Response, CompetitionError> {
         // Load competition using the ID
         if !self.competitions.has(deps.storage, competition_id.u128()) {
-            return Err(CompetitionError::UnknownCompetitionId {
-                id: competition_id.u128(),
-            });
+            return Err(CompetitionError::UnknownCompetitionId { id: competition_id });
         };
 
         // Remove competition hook
         self.competition_hooks
-            .remove(deps.storage, (competition_id.u128(), info.sender.clone()));
+            .remove(deps.storage, (competition_id.u128(), &info.sender));
 
         Ok(Response::new()
             .add_attribute("action", "add_competition_hook")
@@ -443,7 +449,7 @@ impl<
             .add_attribute("id", competition_id.to_string()))
     }
 
-    pub fn execute_activate(
+    pub fn execute_activate_from_escrow(
         &self,
         deps: DepsMut,
         info: MessageInfo,
@@ -451,25 +457,80 @@ impl<
         // Load competition ID associated with the escrow
         let id = self
             .escrows_to_competitions
-            .may_load(deps.storage, info.sender.clone())?
+            .may_load(deps.storage, &info.sender)?
             .ok_or(CompetitionError::UnknownEscrow {
                 addr: info.sender.to_string(),
             })?;
 
         // Load competition using the ID
-        let mut competition = self
-            .competitions
-            .may_load(deps.storage, id)?
-            .ok_or(CompetitionError::UnknownCompetitionId { id })?;
+        let mut competition = self.competitions.may_load(deps.storage, id)?.ok_or(
+            CompetitionError::UnknownCompetitionId {
+                id: Uint128::new(id),
+            },
+        )?;
 
         // Update competition status
         competition.status = CompetitionStatus::Active;
         self.competitions.save(deps.storage, id, &competition)?;
 
+        // Do not expect another activation message
+        self.escrows_to_competitions
+            .remove(deps.storage, &info.sender);
+
         Ok(Response::new()
             .add_attribute("id", id.to_string())
-            .add_attribute("action", "activate")
-            .add_attribute("escrow", info.sender))
+            .add_attribute("action", "activate"))
+    }
+
+    pub fn execute_activate_by_host(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        id: Uint128,
+    ) -> Result<Response, CompetitionError> {
+        let mut competition = self
+            .competitions
+            .may_load(deps.storage, id.u128())?
+            .ok_or(CompetitionError::UnknownCompetitionId { id })?;
+
+        ensure!(
+            competition.status == CompetitionStatus::Pending,
+            CompetitionError::InvalidCompetitionStatus {
+                current_status: competition.status
+            }
+        );
+        ensure!(
+            info.sender == competition.host || info.sender == competition.admin_dao,
+            CompetitionError::Unauthorized {}
+        );
+
+        // Only allow activation by host if the escrow should not activate on funded
+        let mut msgs = vec![];
+        if let Some(escrow) = &competition.escrow {
+            if deps.querier.query_wasm_smart::<bool>(
+                escrow.to_string(),
+                &arena_interface::escrow::QueryMsg::ShouldActivateOnFunded {},
+            )? {
+                return Err(CompetitionError::Unauthorized {});
+            }
+
+            // Trigger the activation on the escrow
+            msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: escrow.to_string(),
+                msg: to_json_binary(&arena_interface::escrow::ExecuteMsg::Activate {})?,
+                funds: vec![],
+            }));
+        } else {
+            // Update competition status
+            competition.status = CompetitionStatus::Active {};
+            self.competitions
+                .save(deps.storage, id.u128(), &competition)?;
+        }
+
+        Ok(Response::new()
+            .add_attribute("id", id.to_string())
+            .add_attribute("action", "activate_by_host")
+            .add_messages(msgs))
     }
 
     pub fn execute_jail_competition(
@@ -489,8 +550,7 @@ impl<
 
         // Update competition status
         self.competitions.update(deps.storage, id.u128(), |x| {
-            let mut competition =
-                x.ok_or(CompetitionError::UnknownCompetitionId { id: id.u128() })?;
+            let mut competition = x.ok_or(CompetitionError::UnknownCompetitionId { id })?;
 
             // Validate competition status
             if competition.status != CompetitionStatus::Jailed {
@@ -526,7 +586,7 @@ impl<
         // Construct message for the DAO owner
         let msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: arena_core.to_string(),
-            msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Propose {
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Propose {
                 msg: propose_message,
             })?,
             funds: vec![],
@@ -551,6 +611,8 @@ impl<
         expiration: cw_utils::Expiration,
         rules: Vec<String>,
         rulesets: Vec<Uint128>,
+        banner: Option<String>,
+        should_activate_on_funded: Option<bool>,
         extension: &CompetitionInstantiateExt,
     ) -> Result<Response, CompetitionError> {
         if expiration.is_expired(&env.block) {
@@ -643,16 +705,15 @@ impl<
 
                 let addr = deps.api.addr_humanize(&canonical_addr)?;
 
-                self.escrows_to_competitions.save(
-                    deps.storage,
-                    addr.clone(),
-                    &competition_id.u128(),
-                )?;
+                self.escrows_to_competitions
+                    .save(deps.storage, &addr, &competition_id.u128())?;
 
                 Some(addr)
             }
             None => {
-                initial_status = CompetitionStatus::Active;
+                if should_activate_on_funded.unwrap_or(true) {
+                    initial_status = CompetitionStatus::Active;
+                }
                 None
             }
         };
@@ -661,8 +722,8 @@ impl<
             // Validate that category and rulesets are valid
             let result: bool = deps.querier.query_wasm_smart(
                 arena_core,
-                &arena_core_interface::msg::QueryMsg::QueryExtension {
-                    msg: arena_core_interface::msg::QueryExt::IsValidCategoryAndRulesets {
+                &arena_interface::core::QueryMsg::QueryExtension {
+                    msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
                         category_id,
                         rulesets: rulesets.clone(),
                     },
@@ -691,6 +752,7 @@ impl<
             status: initial_status,
             extension: extension.to_competition_ext(deps.as_ref())?,
             fees,
+            banner,
         };
 
         self.competition_rules
@@ -730,9 +792,7 @@ impl<
         let competition = self
             .competitions
             .may_load(deps.storage, competition_id.u128())?
-            .ok_or(CompetitionError::UnknownCompetitionId {
-                id: competition_id.u128(),
-            })?;
+            .ok_or(CompetitionError::UnknownCompetitionId { id: competition_id })?;
 
         // Validate competition status and sender's authorization
         self.inner_validate_auth(&info.sender, &competition)?;
@@ -855,20 +915,19 @@ impl<
             };
 
             let sub_msg = SubMsg::reply_on_success(
-                CompetitionEscrowDistributeMsg {
-                    distribution: distribution_msg,
-                    layered_fees,
-                }
-                .into_cosmos_msg(escrow.clone())?,
+                CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: escrow.to_string(),
+                    msg: to_json_binary(&arena_interface::escrow::ExecuteMsg::Distribute {
+                        distribution: distribution_msg,
+                        layered_fees,
+                    })?,
+                    funds: vec![],
+                }),
                 PROCESS_REPLY_ID,
             );
 
             self.temp_competition
                 .save(deps.storage, &competition.id.u128())?;
-
-            // We don't expect another activation message from the escrow
-            self.escrows_to_competitions
-                .remove(deps.storage, escrow.clone());
 
             msgs.push(sub_msg);
         }
@@ -901,8 +960,8 @@ impl<
         Ok(SubMsg::reply_on_error(
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: arena_core.to_string(),
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::AdjustRatings {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::AdjustRatings {
                         category_id,
                         member_results: member_results
                             .into_iter()
@@ -1017,9 +1076,9 @@ impl<
         }
 
         Ok(deps.querier.query_wasm_smart(core.owner.unwrap(),
-        &dao_pre_propose_base::msg::QueryMsg::<arena_core_interface::msg::QueryExt>::QueryExtension
+        &dao_pre_propose_base::msg::QueryMsg::<arena_interface::core::QueryExt>::QueryExtension
                 {
-                    msg: arena_core_interface::msg::QueryExt::TaxConfig { height }
+                    msg: arena_interface::core::QueryExt::TaxConfig { height }
                 })?
        )
     }
@@ -1083,7 +1142,7 @@ impl<
                     .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
-                CompetitionsFilter::Host { addr } => self
+                CompetitionsFilter::Host(addr) => self
                     .competitions
                     .idx
                     .host
@@ -1124,7 +1183,9 @@ impl<
                         competition.status = CompetitionStatus::Inactive {};
                         Ok(competition)
                     }
-                    None => Err(CompetitionError::UnknownCompetitionId { id }),
+                    None => Err(CompetitionError::UnknownCompetitionId {
+                        id: Uint128::new(id),
+                    }),
                 }
             })?;
 

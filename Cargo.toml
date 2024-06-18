@@ -7,7 +7,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "1.6.0"
+version = "2.0.0"
 
 [profile.release]
 codegen-units = 1
@@ -49,13 +49,10 @@ rust_decimal = "1.35.0"
 rust_decimal_macros = "1.34.2"
 
 #arena_dao dependencies
-cw-competition-base = { path = "./packages/cw-competition-base", features = [
-	"library",
-] }
-cw-balance = { path = "./packages/cw-balance", features = ["library"] }
+cw-competition-base = { path = "./packages/cw-competition-base" }
+cw-balance = { path = "./packages/cw-balance" }
 arena-testing = { path = "./packages/arena-testing" }
-cw-competition = { path = "./packages/cw-competition" }
-arena-core-interface = { path = "./packages/arena-core-interface" }
+arena-interface = { path = "./packages/arena-interface" }
 orch-interface = { path = "./packages/orch-interface" }
 glicko_2 = { path = "./packages/glicko_2" }
 
@@ -64,6 +61,7 @@ arena-escrow = { path = "./contracts/arena-escrow" }
 arena-wager-module = { path = "./contracts/arena-wager-module" }
 arena-league-module = { path = "./contracts/arena-league-module" }
 arena-tournament-module = { path = "./contracts/arena-tournament-module" }
+arena-competition-enrollment = { path = "./contracts/arena-competition-enrollment" }
 
 #dao dependencies
 dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }

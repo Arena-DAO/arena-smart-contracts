@@ -1,6 +1,6 @@
-use arena_core_interface::{
+use arena_interface::{
+    core::{InstantiateExt, InstantiateMsg, NewCompetitionCategory, QueryExtFns},
     fees::TaxConfiguration,
-    msg::{InstantiateExt, InstantiateMsg, NewCompetitionCategory, QueryExtFns},
 };
 use cosmwasm_std::{to_json_binary, Decimal};
 use cw_orch::prelude::*;

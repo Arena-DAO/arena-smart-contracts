@@ -1,0 +1,34 @@
+[package]
+name = "arena-competition-enrollment"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[features]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw2 = { workspace = true }
+cw-utils = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+dao-interface = { workspace = true }
+dao-voting = { workspace = true }
+dao-pre-propose-base = { workspace = true }
+cw-paginate = { workspace = true }
+arena-interface = { workspace = true }
+arena-wager-module = { workspace = true, features = ["library"] }
+arena-league-module = { workspace = true, features = ["library"] }
+arena-tournament-module = { workspace = true, features = ["library"] }
+cw-ownable = { workspace = true }
+cw-orch = { workspace = true }
+cw-address-like = { workspace = true }

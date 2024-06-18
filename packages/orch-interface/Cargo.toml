@@ -11,7 +11,7 @@ arena-wager-module = { workspace = true }
 arena-league-module = { workspace = true }
 arena-tournament-module = { workspace = true }
 arena-core = { workspace = true }
-arena-core-interface = { workspace = true }
+arena-interface = { workspace = true }
 arena-escrow = { workspace = true }
 cosmwasm-std = { workspace = true }
 

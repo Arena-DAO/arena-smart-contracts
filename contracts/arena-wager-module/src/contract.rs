@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use arena_core_interface::rating::MemberResult;
+use arena_interface::ratings::MemberResult;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -16,8 +16,8 @@ use crate::msg::{
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-wager-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub type CompetitionModule =
-    CompetitionModuleContract<Empty, Empty, Empty, WagerExt, WagerInstantiateExt>;
+pub type CompetitionModule<'a> =
+    CompetitionModuleContract<'a, Empty, Empty, Empty, WagerExt, WagerInstantiateExt>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

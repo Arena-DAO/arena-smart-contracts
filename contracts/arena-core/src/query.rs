@@ -2,12 +2,12 @@ use crate::state::{
     competition_categories, get_rulesets_category_and_is_enabled_idx, ratings, CompetitionModule,
     ARENA_TAX_CONFIG, KEYS, TAX,
 };
-use arena_core_interface::{
-    msg::{
+use arena_interface::{
+    core::{
         CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
         RatingResponse, Ruleset, TaxConfigurationResponse,
     },
-    rating::Rating,
+    ratings::Rating,
 };
 use cosmwasm_std::{Decimal, Deps, Empty, Env, StdResult, Uint128};
 use cw_paginate::paginate_indexed_map;
@@ -18,7 +18,7 @@ impl CompetitionModule {
     pub fn to_response(&self, deps: Deps) -> StdResult<CompetitionModuleResponse<String>> {
         let competition_count: Uint128 = deps.querier.query_wasm_smart(
             self.addr.to_string(),
-            &cw_competition::msg::QueryBase::<Empty, Empty, Empty>::CompetitionCount {},
+            &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::CompetitionCount {},
         )?;
 
         Ok(CompetitionModuleResponse {

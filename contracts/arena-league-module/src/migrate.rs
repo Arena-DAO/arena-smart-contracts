@@ -1,5 +1,5 @@
+use arena_interface::competition::state::Config;
 use cosmwasm_std::{DepsMut, Empty};
-use cw_competition::state::Config;
 
 use crate::{contract::CompetitionModule, ContractError};
 

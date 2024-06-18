@@ -1,8 +1,8 @@
+use arena_interface::competition::state::CompetitionStatus;
 use cosmwasm_std::{
     CheckedFromRatioError, DecimalRangeExceeded, Instantiate2AddressError, OverflowError, StdError,
     Uint128,
 };
-use cw_competition::state::CompetitionStatus;
 use cw_ownable::OwnershipError;
 use cw_utils::ParseReplyError;
 use thiserror::Error;
@@ -34,7 +34,7 @@ pub enum CompetitionError {
     Unauthorized {},
 
     #[error("Unknown competition id")]
-    UnknownCompetitionId { id: u128 },
+    UnknownCompetitionId { id: Uint128 },
 
     #[error("Competition is not expired")]
     CompetitionNotExpired {},

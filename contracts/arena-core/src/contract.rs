@@ -7,7 +7,7 @@ use crate::{
     },
     ContractError,
 };
-use arena_core_interface::msg::{
+use arena_interface::core::{
     ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
     QueryMsg,
 };

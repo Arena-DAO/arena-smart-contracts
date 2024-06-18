@@ -1,7 +1,7 @@
-use arena_core_interface::{
+use arena_interface::{
+    core::{CompetitionCategory, Ruleset},
     fees::TaxConfiguration,
-    msg::{CompetitionCategory, Ruleset},
-    rating::Rating,
+    ratings::Rating,
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};

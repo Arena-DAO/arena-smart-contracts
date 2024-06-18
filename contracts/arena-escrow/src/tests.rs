@@ -1,3 +1,4 @@
+use arena_interface::escrow::{ExecuteMsg, QueryMsg};
 use cosmwasm_std::{Addr, Binary, Coin, Decimal, Empty, Uint128};
 use cw20::{Cw20Coin, Cw20CoinVerified};
 use cw_balance::{
@@ -6,10 +7,7 @@ use cw_balance::{
 };
 use cw_multi_test::{App, Executor};
 
-use crate::{
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    ContractError,
-};
+use crate::{msg::InstantiateMsg, ContractError};
 
 const CREATOR: &str = "creator";
 const ADDR1: &str = "addr1";
@@ -130,6 +128,7 @@ fn setup() -> Context {
             escrow_code_id,
             Addr::unchecked(CREATOR),
             &InstantiateMsg {
+                should_activate_on_funded: None,
                 dues: vec![
                     MemberBalanceUnchecked {
                         addr: ADDR1.to_string(),

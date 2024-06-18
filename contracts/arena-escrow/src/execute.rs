@@ -1,6 +1,7 @@
-use arena_core_interface::fees::FeeInformation;
+use arena_interface::fees::FeeInformation;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response, StdResult,
+    ensure, to_json_binary, Addr, Binary, CosmosMsg, DepsMut, Empty, Env, MessageInfo, Response,
+    StdResult,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
@@ -202,9 +203,10 @@ fn receive_balance(
             if let Some(owner) = get_ownership(deps.storage)?.owner {
                 msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
                     contract_addr: owner.to_string(),
-                    msg: to_json_binary(
-                        &cw_competition::msg::ExecuteBase::<Empty, Empty>::Activate {},
-                    )?,
+                    msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                        Empty,
+                        Empty,
+                    >::Activate {})?,
                     funds: vec![],
                 }));
             }
@@ -351,4 +353,31 @@ pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, C
     Ok(Response::new()
         .add_attribute("action", "handle_competition_state_changed")
         .add_attribute("is_locked", value.to_string()))
+}
+
+pub fn activate(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    if env.contract.address != info.sender {
+        assert_owner(deps.storage, &info.sender)?;
+    }
+    ensure!(
+        is_fully_funded(deps.as_ref()),
+        ContractError::NotFullyFunded {}
+    );
+
+    IS_LOCKED.save(deps.storage, &true)?;
+
+    let mut msgs = vec![];
+    if let Some(owner) = get_ownership(deps.storage)?.owner {
+        msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+            contract_addr: owner.to_string(),
+            msg: to_json_binary(
+                &arena_interface::competition::msg::ExecuteBase::<Empty, Empty>::Activate {},
+            )?,
+            funds: vec![],
+        }));
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "activate")
+        .add_messages(msgs))
 }

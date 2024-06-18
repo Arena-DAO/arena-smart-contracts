@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use arena_core_interface::{
-    msg::{
+use arena_interface::{
+    core::{
         CompetitionCategory, EditCompetitionCategory, NewCompetitionCategory, NewRuleset,
         PrePropose, ProposeMessage, ProposeMessages, Ruleset,
     },
-    rating::MemberResult,
+    ratings::MemberResult,
 };
 use cosmwasm_std::{
     ensure, ensure_eq, ensure_ne, to_json_binary, Addr, Attribute, CosmosMsg, Decimal, Deps,
@@ -197,21 +197,23 @@ pub fn propose(
     }
 
     // Construct message
-    let msg = ProposeMessages::Propose(SingleChoiceProposeMsg {
-        title: msg.title,
-        description: msg.description,
-        msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: info.sender.to_string(),
-            msg: to_json_binary(
-                &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+    let msg =
+        ProposeMessages::Propose(SingleChoiceProposeMsg {
+            title: msg.title,
+            description: msg.description,
+            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: info.sender.to_string(),
+                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                    Empty,
+                    Empty,
+                >::ProcessCompetition {
                     competition_id: msg.competition_id,
                     distribution: msg.distribution,
-                },
-            )?,
-            funds: vec![],
-        })],
-        proposer: Some(info.sender.to_string()),
-    });
+                })?,
+                funds: vec![],
+            })],
+            proposer: Some(info.sender.to_string()),
+        });
 
     let propose_message = WasmMsg::Execute {
         contract_addr: proposal_module.into_string(),

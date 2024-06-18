@@ -1,4 +1,4 @@
-use arena_core_interface::rating::MemberResult;
+use arena_interface::ratings::MemberResult;
 use cosmwasm_std::{
     Addr, Decimal, DepsMut, MessageInfo, Response, StdError, StdResult, Uint128, Uint64,
 };

@@ -1,12 +1,14 @@
-use arena_core_interface::msg::QueryExtFns as ArenaCoreQueryExtFns;
-use arena_escrow::msg::{ExecuteMsgFns, QueryMsgFns};
+use arena_interface::{
+    competition::msg::{EscrowInstantiateInfo, ModuleInfo},
+    core::QueryExtFns as ArenaCoreQueryExtFns,
+    escrow::{ExecuteMsgFns, QueryMsgFns},
+};
 use arena_tournament_module::{
     msg::{ExecuteExtFns, ExecuteMsg, MatchResultMsg, QueryExtFns, TournamentInstantiateExt},
     state::{EliminationType, MatchResult},
 };
 use cosmwasm_std::{coins, to_json_binary, Decimal, Uint128};
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
-use cw_competition::msg::{EscrowInstantiateInfo, ModuleInfo};
 use cw_orch::{environment::ChainState, prelude::*};
 use itertools::Itertools;
 
@@ -1476,6 +1478,7 @@ fn create_competition_msg<Chain: ChainState>(
                         },
                     })
                     .collect(),
+                should_activate_on_funded: None,
             })
             .unwrap(),
             label: "Arena Escrow".to_string(),
@@ -1486,6 +1489,8 @@ fn create_competition_msg<Chain: ChainState>(
         expiration: cw_utils::Expiration::Never {},
         rules: vec![],
         rulesets: vec![],
+        banner: None,
+        should_activate_on_funded: None,
         instantiate_extension: TournamentInstantiateExt {
             elimination_type,
             teams: teams.iter().map(|x| x.to_string()).collect(),

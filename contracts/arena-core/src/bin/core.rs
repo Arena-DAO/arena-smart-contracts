@@ -1,4 +1,4 @@
-use arena_core_interface::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg};
+use arena_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg};
 use cosmwasm_schema::write_api;
 
 fn main() {
