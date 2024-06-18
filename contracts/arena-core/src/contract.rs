@@ -244,6 +244,10 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrate::from_v1_4_to_v1_6(deps.branch())?;
     }
 
+    if version.major == 1 && version.minor < 7 {
+        migrate::from_v1_6_to_v1_7(deps.branch())?;
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }

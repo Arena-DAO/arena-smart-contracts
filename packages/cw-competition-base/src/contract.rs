@@ -33,7 +33,7 @@ pub const UPDATE_RATING_FAILED_REPLY_ID: u64 = 2;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
-    pub category: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
+    pub category: MultiIndex<'a, u128, Competition<CompetitionExt>, u128>,
     pub host: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
 }
 
@@ -153,7 +153,9 @@ impl<
                 competitions_status_key,
             ),
             category: MultiIndex::new(
-                |_x, d: &Competition<CompetitionExt>| format!("{:?}", d.category_id),
+                |_x, d: &Competition<CompetitionExt>| {
+                    d.category_id.unwrap_or(Uint128::zero()).u128()
+                },
                 competitions_key,
                 competitions_category_key,
             ),
@@ -1132,7 +1134,7 @@ impl<
                     .competitions
                     .idx
                     .category
-                    .prefix(format!("{:?}", id))
+                    .prefix(id.unwrap_or(Uint128::zero()).u128())
                     .range(
                         deps.storage,
                         start_after_bound,
@@ -1199,5 +1201,25 @@ impl<
     ) -> Result<Response, CompetitionError> {
         // There should be an event if the rating update has failed, but it should not cause the overall message to fail
         Ok(Response::new().add_attribute("action", "update_rating_failed"))
+    }
+
+    pub fn migrate_from_v1_6_to_v1_7(&self, deps: DepsMut) -> Result<(), CompetitionError> {
+        // Index for competition categories has changed, so we need to update the indexes here
+        // Not too many, so we can just do it in the migration
+        let competition_range = self
+            .competitions
+            .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
+            .collect::<StdResult<Vec<_>>>()?;
+
+        for (competition_id, competition) in competition_range {
+            self.competitions.replace(
+                deps.storage,
+                competition_id,
+                Some(&competition),
+                Some(&competition),
+            )?;
+        }
+
+        Ok(())
     }
 }

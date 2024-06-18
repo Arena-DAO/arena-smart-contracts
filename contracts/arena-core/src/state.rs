@@ -87,7 +87,7 @@ pub fn get_rulesets_category_and_is_enabled_idx(
     category_id: Option<Uint128>,
     is_enabled: bool,
 ) -> String {
-    format!("{:?}_{}", category_id, is_enabled)
+    format!("{}_{}", category_id.unwrap_or(Uint128::zero()), is_enabled)
 }
 
 pub struct RulesetIndexes<'a> {

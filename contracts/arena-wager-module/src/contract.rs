@@ -7,7 +7,7 @@ use cosmwasm_std::{
     Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult, Storage,
     SubMsg,
 };
-use cw2::set_contract_version;
+use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
 use crate::msg::{
@@ -137,8 +137,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, CompetitionError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+pub fn migrate(
+    mut deps: DepsMut,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> Result<Response, CompetitionError> {
+    let competition_module = CompetitionModule::default();
+    let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    if version.major == 1 && version.minor < 7 {
+        competition_module.migrate_from_v1_6_to_v1_7(deps.branch())?;
+    }
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
