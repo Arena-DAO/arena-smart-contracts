@@ -2,6 +2,7 @@ use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
 
 use crate::{
+    execute,
     msg::{ExecuteMsg, InstantiateMsg},
     ContractError,
 };
@@ -35,6 +36,23 @@ pub fn execute(
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
             Ok(Response::new().add_attributes(ownership.into_attributes()))
         }
-        ExecuteMsg::CreateCompetition {} => todo!(),
+        ExecuteMsg::CreateCompetition {
+            min_members,
+            max_members,
+            entry_fee,
+            expiration,
+            category_id,
+            competition_info,
+        } => execute::create_competition(
+            deps,
+            env,
+            info,
+            min_members,
+            max_members,
+            entry_fee,
+            expiration,
+            category_id,
+            competition_info,
+        ),
     }
 }

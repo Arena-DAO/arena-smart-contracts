@@ -1,4 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Coin, Uint128};
+use cw_utils::Expiration;
+
+use crate::state::CompetitionInfo;
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -7,7 +11,14 @@ pub struct InstantiateMsg {}
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
-    CreateCompetition {},
+    CreateCompetition {
+        min_members: Option<Uint128>,
+        max_members: Uint128,
+        entry_fee: Option<Coin>,
+        expiration: Expiration,
+        category_id: Option<Uint128>,
+        competition_info: CompetitionInfo<String>,
+    },
 }
 
 #[cw_ownable::cw_ownable_query]
