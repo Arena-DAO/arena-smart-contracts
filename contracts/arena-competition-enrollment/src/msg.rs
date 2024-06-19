@@ -12,12 +12,17 @@ pub struct InstantiateMsg {}
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
     CreateCompetition {
+        /// Override the minimum members for the competition
         min_members: Option<Uint128>,
         max_members: Uint128,
+        /// The entry fee of the competition
         entry_fee: Option<Coin>,
         expiration: Expiration,
         category_id: Option<Uint128>,
         competition_info: CompetitionInfo<String>,
+        /// Is the creator a member on creation
+        /// Defaults to false
+        is_creator_member: Option<bool>,
     },
 }
 

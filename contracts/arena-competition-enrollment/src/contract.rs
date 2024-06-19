@@ -43,6 +43,7 @@ pub fn execute(
             expiration,
             category_id,
             competition_info,
+            is_creator_member,
         } => execute::create_competition(
             deps,
             env,
@@ -53,6 +54,7 @@ pub fn execute(
             expiration,
             category_id,
             competition_info,
+            is_creator_member,
         ),
     }
 }
