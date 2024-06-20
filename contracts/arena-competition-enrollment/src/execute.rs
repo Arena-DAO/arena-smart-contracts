@@ -3,7 +3,8 @@ use arena_interface::{
     core::{CompetitionModuleQuery, CompetitionModuleResponse},
     fees::FeeInformation,
 };
-use arena_tournament_module::state::EliminationType;
+use arena_league_module::msg::LeagueInstantiateExt;
+use arena_tournament_module::{msg::TournamentInstantiateExt, state::EliminationType};
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
     ensure, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response,
@@ -104,8 +105,7 @@ pub fn create_enrollment(
 
     // Validate category
     let ownership = cw_ownable::get_ownership(deps.storage)?;
-    let mut competition_module = Addr::unchecked("default");
-    if let Some(owner) = ownership.owner {
+    let competition_module = if let Some(owner) = ownership.owner {
         ensure!(
             deps.querier.query_wasm_smart::<bool>(
                 &owner,
@@ -142,12 +142,12 @@ pub fn create_enrollment(
             ))
         );
 
-        competition_module = competition_module_response.addr;
+        Ok(competition_module_response.addr)
     } else {
-        return Err(ContractError::OwnershipError(
+        Err(ContractError::OwnershipError(
             cw_ownable::OwnershipError::NoOwner,
-        ));
-    }
+        ))
+    }?;
 
     // Validate additional layered fees before saving
     if let Some(additional_layered_fees) = &competition_info.additional_layered_fees {
@@ -200,6 +200,7 @@ pub fn trigger_creation(
 ) -> Result<Response, ContractError> {
     let entry = enrollment_entries().load(deps.storage, id.u128())?;
 
+    ensure!(entry.host == info.sender, ContractError::Unauthorized {});
     ensure!(
         !entry.has_triggered_expiration,
         ContractError::StdError(StdError::generic_err(
@@ -260,7 +261,7 @@ pub fn trigger_creation(
                 None
             };
 
-            match &entry.competition_type {
+            match entry.competition_type.clone() {
                 CompetitionType::Wager {} => {
                     let registered_members = if members.len() == 2 {
                         Some(members.iter().map(|x| x.to_string()).collect())
@@ -288,11 +289,51 @@ pub fn trigger_creation(
                     match_draw_points,
                     match_lose_points,
                     distribution,
-                } => todo!(),
+                } => to_json_binary(&arena_league_module::msg::ExecuteMsg::CreateCompetition {
+                    category_id: entry.category_id,
+                    host: arena_interface::competition::msg::ModuleInfo::Existing {
+                        addr: entry.host.to_string(),
+                    },
+                    escrow,
+                    name,
+                    description,
+                    expiration,
+                    rules,
+                    rulesets,
+                    banner,
+                    should_activate_on_funded: Some(false),
+                    instantiate_extension: LeagueInstantiateExt {
+                        match_win_points,
+                        match_draw_points,
+                        match_lose_points,
+                        teams: members.iter().map(|x| x.to_string()).collect(),
+                        distribution,
+                    },
+                })?,
                 CompetitionType::Tournament {
                     elimination_type,
                     distribution,
-                } => todo!(),
+                } => to_json_binary(
+                    &arena_tournament_module::msg::ExecuteMsg::CreateCompetition {
+                        category_id: entry.category_id,
+                        host: arena_interface::competition::msg::ModuleInfo::Existing {
+                            addr: entry.host.to_string(),
+                        },
+                        escrow,
+                        name,
+                        description,
+                        expiration,
+                        rules,
+                        rulesets,
+                        banner,
+                        should_activate_on_funded: Some(false),
+                        instantiate_extension: TournamentInstantiateExt {
+                            elimination_type,
+                            teams: members.iter().map(|x| x.to_string()).collect(),
+                            distribution,
+                        },
+                    },
+                )?,
             }
         }),
         _ => Err(ContractError::StdError(StdError::generic_err(
