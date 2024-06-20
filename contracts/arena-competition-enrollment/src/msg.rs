@@ -39,6 +39,12 @@ pub struct CompetitionInfoMsg {
     pub competition_type: CompetitionType,
 }
 
+#[cw_serde]
+pub enum EnrollmentFilter {
+    Expiration {},
+    Host(String),
+}
+
 #[cw_ownable::cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]

@@ -8,6 +8,18 @@ use cw_utils::Expiration;
 
 #[cw_serde]
 pub struct EnrollmentEntry {
+    pub min_members: Option<Uint128>,
+    pub max_members: Uint128,
+    pub entry_fee: Option<Coin>,
+    pub expiration: Expiration,
+    pub has_triggered_expiration: bool,
+    pub competition_info: CompetitionInfo,
+    pub host: Addr,
+}
+
+#[cw_serde]
+pub struct EnrollmentEntryResponse {
+    pub category_id: Option<Uint128>,
     pub id: Uint128,
     pub min_members: Option<Uint128>,
     pub max_members: Uint128,
@@ -16,6 +28,22 @@ pub struct EnrollmentEntry {
     pub has_triggered_expiration: bool,
     pub competition_info: CompetitionInfo,
     pub host: Addr,
+}
+
+impl EnrollmentEntry {
+    fn into_response(self, category_id: Option<Uint128>) -> EnrollmentEntryResponse {
+        EnrollmentEntryResponse {
+            category_id: todo!(),
+            id: todo!(),
+            min_members: todo!(),
+            max_members: todo!(),
+            entry_fee: todo!(),
+            expiration: todo!(),
+            has_triggered_expiration: todo!(),
+            competition_info: todo!(),
+            host: todo!(),
+        }
+    }
 }
 
 #[cw_serde]
