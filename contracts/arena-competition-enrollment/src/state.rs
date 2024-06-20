@@ -9,8 +9,8 @@ use cw_utils::Expiration;
 
 #[cw_serde]
 pub struct EnrollmentEntry {
-    pub min_members: Option<Uint128>,
-    pub max_members: Uint128,
+    pub min_members: Option<Uint64>,
+    pub max_members: Uint64,
     pub entry_fee: Option<Coin>,
     pub expiration: Expiration,
     pub has_triggered_expiration: bool,
@@ -25,8 +25,8 @@ pub struct EnrollmentEntry {
 pub struct EnrollmentEntryResponse {
     pub category_id: Option<Uint128>,
     pub id: Uint128,
-    pub min_members: Option<Uint128>,
-    pub max_members: Uint128,
+    pub min_members: Option<Uint64>,
+    pub max_members: Uint64,
     pub entry_fee: Option<Coin>,
     pub expiration: Expiration,
     pub has_triggered_expiration: bool,

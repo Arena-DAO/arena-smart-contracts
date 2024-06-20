@@ -1,6 +1,6 @@
 use arena_interface::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Uint128};
+use cosmwasm_std::{Coin, Uint128, Uint64};
 use cw_utils::Expiration;
 
 use crate::state::CompetitionType;
@@ -15,8 +15,8 @@ pub enum ExecuteMsg {
     #[cw_orch(payable)]
     CreateEnrollment {
         /// Override the minimum members for the competition
-        min_members: Option<Uint128>,
-        max_members: Uint128,
+        min_members: Option<Uint64>,
+        max_members: Uint64,
         /// The entry fee of the competition
         entry_fee: Option<Coin>,
         expiration: Expiration,

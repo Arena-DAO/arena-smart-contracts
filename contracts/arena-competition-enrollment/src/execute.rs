@@ -7,7 +7,7 @@ use arena_tournament_module::state::EliminationType;
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
     ensure, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response,
-    StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
 };
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_utils::{must_pay, Expiration};
@@ -16,7 +16,7 @@ use crate::{
     msg::CompetitionInfoMsg,
     state::{
         enrollment_entries, CompetitionInfo, CompetitionType, EnrollmentEntry, ENROLLMENT_COUNT,
-        ENROLLMENT_MEMBERS, TEMP_ENROLLMENT,
+        ENROLLMENT_MEMBERS, ENROLLMENT_MEMBERS_COUNT, TEMP_ENROLLMENT,
     },
     ContractError,
 };
@@ -28,8 +28,8 @@ pub fn create_enrollment(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    min_members: Option<Uint128>,
-    max_members: Uint128,
+    min_members: Option<Uint64>,
+    max_members: Uint64,
     entry_fee: Option<Coin>,
     expiration: Expiration,
     category_id: Option<Uint128>,
@@ -50,7 +50,7 @@ pub fn create_enrollment(
         ))
     );
 
-    let min_min_members = Uint128::new(match &competition_info.competition_type {
+    let min_min_members = Uint64::new(match &competition_info.competition_type {
         CompetitionType::Wager {} => 2,
         CompetitionType::League { distribution, .. } => std::cmp::max(distribution.len(), 2),
         CompetitionType::Tournament {
@@ -62,7 +62,7 @@ pub fn create_enrollment(
             } => std::cmp::max(4, distribution.len()),
             EliminationType::DoubleElimination => std::cmp::max(3, distribution.len()),
         },
-    } as u128);
+    } as u64);
     if let Some(min_members) = min_members {
         ensure!(
             min_members < max_members,
@@ -200,7 +200,23 @@ pub fn trigger_creation(
 ) -> Result<Response, ContractError> {
     let entry = enrollment_entries().load(deps.storage, id.u128())?;
 
-    // TODO: validate enrollment state
+    ensure!(
+        !entry.has_triggered_expiration,
+        ContractError::StdError(StdError::generic_err(
+            "Competition creation has already been triggered"
+        ))
+    );
+
+    let members_count = ENROLLMENT_MEMBERS_COUNT.load(deps.storage, id.u128())?;
+
+    ensure!(
+        entry.expiration.is_expired(&env.block) || entry.max_members == members_count,
+        ContractError::TriggerFailed {
+            max_members: entry.max_members,
+            current_members: members_count,
+            expiration: entry.expiration
+        }
+    );
 
     // TODO: optimize this to handle a huge amount
     let members = ENROLLMENT_MEMBERS
@@ -284,7 +300,7 @@ pub fn trigger_creation(
         ))),
     }?;
 
-    let submsg = SubMsg::reply_always(
+    let sub_msg = SubMsg::reply_always(
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: entry.competition_module.to_string(),
             msg: creation_msg,
@@ -297,7 +313,7 @@ pub fn trigger_creation(
 
     Ok(Response::new()
         .add_attribute("action", "trigger_creation")
-        .add_submessage(submsg))
+        .add_submessage(sub_msg))
 }
 
 pub fn enroll(

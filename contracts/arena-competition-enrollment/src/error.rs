@@ -1,6 +1,6 @@
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError, Uint64};
 use cw_ownable::OwnershipError;
-use cw_utils::{ParseReplyError, PaymentError};
+use cw_utils::{Expiration, ParseReplyError, PaymentError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -34,4 +34,11 @@ pub enum ContractError {
 
     #[error("Already enrolled")]
     AlreadyEnrolled {},
+
+    #[error("Cannot trigger creation")]
+    TriggerFailed {
+        max_members: Uint64,
+        current_members: Uint64,
+        expiration: Expiration,
+    },
 }
