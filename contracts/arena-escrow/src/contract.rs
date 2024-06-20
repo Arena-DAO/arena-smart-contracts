@@ -1,11 +1,11 @@
 use crate::{
     execute, migrate,
-    msg::{InstantiateMsg, MigrateMsg},
+    msg::MigrateMsg,
     query,
     state::{self, DUE, INITIAL_DUE, IS_LOCKED, SHOULD_ACTIVATE_ON_FUNDED},
     ContractError,
 };
-use arena_interface::escrow::{ExecuteMsg, QueryMsg};
+use arena_interface::escrow::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };

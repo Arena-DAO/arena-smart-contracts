@@ -141,7 +141,7 @@ fn create_competition(
             },
             escrow: dues.map(|x| EscrowInstantiateInfo {
                 code_id: context.wager.escrow_id,
-                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg {
+                msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
                     dues: x,
                     should_activate_on_funded: None,
                 })

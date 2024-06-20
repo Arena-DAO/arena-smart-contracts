@@ -82,7 +82,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                         code_id: arena.arena_tournament_module.code_id()?,
                                                         msg: to_json_binary(
                                                             &arena_tournament_module::msg::InstantiateMsg {
-                                                                key: "tournaments".to_string(),
+                                                                key: "Tournaments".to_string(),
                                                                 description: "Knockout competitions".to_string(),
                                                                 extension: Empty {},
                                                             },

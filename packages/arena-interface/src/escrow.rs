@@ -9,6 +9,14 @@ use cw_balance::{
 };
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub dues: Vec<MemberBalanceUnchecked>,
+    /// Determines if the competition is automatically activated if all dues are paid
+    /// Defaults to true
+    pub should_activate_on_funded: Option<bool>,
+}
+
 #[cw_ownable_execute]
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]

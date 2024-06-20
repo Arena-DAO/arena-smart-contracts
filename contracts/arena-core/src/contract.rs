@@ -24,6 +24,9 @@ use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::ModuleInstantia
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-core";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(crate) const ITEM_KEY: &str = "Arena";
+pub const WAGERS_KEY: &str = "Wagers";
+pub const LEAGUES_KEY: &str = "Leagues";
+pub const TOURNAMENTS_KEY: &str = "Tournaments";
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -150,6 +153,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             };
 
             Ok(Response::default()
+                .add_attribute("action", "reply_competition_module")
                 .add_attribute("key", key)
                 .add_attribute("competition_module".to_string(), res.contract_address)
                 .add_messages(callback_msgs))

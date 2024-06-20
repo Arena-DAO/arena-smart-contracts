@@ -1,4 +1,8 @@
-use cosmwasm_std::{Deps, Env, StdResult, Uint128};
+use std::collections::HashMap;
+
+use arena_interface::core::{CompetitionModuleResponse, QueryExt};
+use cosmwasm_std::{Addr, Deps, Order, StdError, StdResult, Uint128};
+use cw_ownable::get_ownership;
 use cw_storage_plus::Bound;
 
 use crate::{
@@ -6,16 +10,39 @@ use crate::{
     state::{enrollment_entries, EnrollmentEntryResponse},
 };
 
+pub fn module_map(deps: Deps) -> StdResult<HashMap<String, Addr>> {
+    let ownership = get_ownership(deps.storage)?;
+
+    if let Some(owner) = ownership.owner {
+        let competition_modules = deps
+            .querier
+            .query_wasm_smart::<Vec<CompetitionModuleResponse<Addr>>>(
+                &owner,
+                &arena_interface::core::QueryMsg::QueryExtension {
+                    msg: QueryExt::CompetitionModules {
+                        start_after: None,
+                        limit: None,
+                        include_disabled: None,
+                    },
+                },
+            )?;
+
+        Ok(competition_modules
+            .into_iter()
+            .map(|x| (x.key, x.addr))
+            .collect())
+    } else {
+        Err(StdError::generic_err("No owner"))
+    }
+}
+
 pub fn enrollments(
     deps: Deps,
-    env: Env,
-    start_after: Option<(Uint128, Uint128)>,
+    start_after: Option<Uint128>,
     limit: Option<u32>,
     filter: Option<EnrollmentFilter>,
 ) -> StdResult<Vec<EnrollmentEntryResponse>> {
-    let start_after_bound = start_after
-        .map(|(category_id, enrollment_id)| (category_id.u128(), enrollment_id.u128()))
-        .map(Bound::exclusive);
+    let start_after_bound = start_after.map(|x| x.u128()).map(Bound::exclusive);
     let limit = limit.unwrap_or(10).max(30);
 
     match filter {
@@ -24,32 +51,23 @@ pub fn enrollments(
             deps.storage,
             start_after_bound,
             Some(limit),
-            |_x, y| Ok(y.into_list_item_response(&env.block)),
+            |x, y| y.into_response(deps, Uint128::new(x)),
         ),
         Some(filter) => match filter {
-            EnrollmentFilter::Expiration {} => enrollment_entries()
+            EnrollmentFilter::Category { category_id } => enrollment_entries()
                 .idx
-                .expiration
-                .range(
-                    deps.storage,
-                    start_after_bound,
-                    None,
-                    cosmwasm_std::Order::Descending,
-                )
-                .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
+                .category
+                .prefix(category_id.unwrap_or(Uint128::zero()).u128())
+                .range(deps.storage, start_after_bound, None, Order::Descending)
+                .map(|x| x.map(|y| y.1.into_response(deps, Uint128::new(y.0)))?)
                 .take(limit as usize)
                 .collect::<StdResult<Vec<_>>>(),
             EnrollmentFilter::Host(addr) => enrollment_entries()
                 .idx
                 .host
                 .prefix(addr)
-                .range(
-                    deps.storage,
-                    start_after_bound,
-                    None,
-                    cosmwasm_std::Order::Descending,
-                )
-                .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
+                .range(deps.storage, start_after_bound, None, Order::Descending)
+                .map(|x| x.map(|y| y.1.into_response(deps, Uint128::new(y.0)))?)
                 .take(limit as usize)
                 .collect::<StdResult<Vec<_>>>(),
         },

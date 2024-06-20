@@ -1,3 +1,4 @@
+use arena_interface::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
 use cw_utils::Expiration;
@@ -11,7 +12,8 @@ pub struct InstantiateMsg {}
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
-    CreateCompetition {
+    #[cw_orch(payable)]
+    CreateEnrollment {
         /// Override the minimum members for the competition
         min_members: Option<Uint128>,
         max_members: Uint128,
@@ -20,11 +22,18 @@ pub enum ExecuteMsg {
         expiration: Expiration,
         category_id: Option<Uint128>,
         competition_info: CompetitionInfoMsg,
+        competition_type: CompetitionType,
         /// Is the creator a member on creation
         /// Defaults to false
         is_creator_member: Option<bool>,
-        rulesets: Vec<Uint128>,
-        rules: Vec<String>,
+    },
+    TriggerCreation {
+        id: Uint128,
+        escrow_id: u64,
+    },
+    #[cw_orch(payable)]
+    Enroll {
+        id: Uint128,
     },
 }
 
@@ -37,11 +46,12 @@ pub struct CompetitionInfoMsg {
     pub rulesets: Vec<Uint128>,
     pub banner: Option<String>,
     pub competition_type: CompetitionType,
+    pub additional_layered_fees: Option<Vec<FeeInformation<String>>>,
 }
 
 #[cw_serde]
 pub enum EnrollmentFilter {
-    Expiration {},
+    Category { category_id: Option<Uint128> },
     Host(String),
 }
 

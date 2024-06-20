@@ -1,4 +1,4 @@
-use arena_interface::escrow::{ExecuteMsg, QueryMsg};
+use arena_interface::escrow::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cosmwasm_std::{Addr, Binary, Coin, Decimal, Empty, Uint128};
 use cw20::{Cw20Coin, Cw20CoinVerified};
 use cw_balance::{
@@ -7,7 +7,7 @@ use cw_balance::{
 };
 use cw_multi_test::{App, Executor};
 
-use crate::{msg::InstantiateMsg, ContractError};
+use crate::ContractError;
 
 const CREATOR: &str = "creator";
 const ADDR1: &str = "addr1";

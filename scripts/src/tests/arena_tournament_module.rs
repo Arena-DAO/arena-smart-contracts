@@ -1466,7 +1466,7 @@ fn create_competition_msg<Chain: ChainState>(
         },
         escrow: Some(EscrowInstantiateInfo {
             code_id: arena.arena_escrow.code_id().unwrap(),
-            msg: to_json_binary(&arena_escrow::msg::InstantiateMsg {
+            msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
                 dues: teams
                     .iter()
                     .map(|x| MemberBalanceUnchecked {
