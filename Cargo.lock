@@ -136,7 +136,6 @@ dependencies = [
  "arena-wager-module",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-address-like",
  "cw-orch 0.23.0",
  "cw-ownable",
  "cw-paginate",

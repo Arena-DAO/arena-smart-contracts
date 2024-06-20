@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
 use cw_utils::Expiration;
 
-use crate::state::CompetitionInfo;
+use crate::state::CompetitionType;
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -19,11 +19,24 @@ pub enum ExecuteMsg {
         entry_fee: Option<Coin>,
         expiration: Expiration,
         category_id: Option<Uint128>,
-        competition_info: CompetitionInfo<String>,
+        competition_info: CompetitionInfoMsg,
         /// Is the creator a member on creation
         /// Defaults to false
         is_creator_member: Option<bool>,
+        rulesets: Vec<Uint128>,
+        rules: Vec<String>,
     },
+}
+
+#[cw_serde]
+pub struct CompetitionInfoMsg {
+    pub name: String,
+    pub description: String,
+    pub expiration: Expiration,
+    pub rules: Vec<String>,
+    pub rulesets: Vec<Uint128>,
+    pub banner: Option<String>,
+    pub competition_type: CompetitionType,
 }
 
 #[cw_ownable::cw_ownable_query]

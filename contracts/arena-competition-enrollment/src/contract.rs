@@ -44,6 +44,8 @@ pub fn execute(
             category_id,
             competition_info,
             is_creator_member,
+            rulesets,
+            rules,
         } => execute::create_competition(
             deps,
             env,
@@ -54,6 +56,8 @@ pub fn execute(
             expiration,
             category_id,
             competition_info,
+            rulesets,
+            rules,
             is_creator_member,
         ),
     }

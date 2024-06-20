@@ -31,4 +31,3 @@ arena-league-module = { workspace = true, features = ["library"] }
 arena-tournament-module = { workspace = true, features = ["library"] }
 cw-ownable = { workspace = true }
 cw-orch = { workspace = true }
-cw-address-like = { workspace = true }
