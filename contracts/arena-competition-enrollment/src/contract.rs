@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    entry_point, Attribute, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
-    SubMsgResult, Uint128,
+    entry_point, to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, Reply, Response, StdError,
+    StdResult, SubMsgResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 
@@ -68,69 +68,78 @@ pub fn execute(
             execute::trigger_expiration(deps, env, info, id, escrow_id)
         }
         ExecuteMsg::Enroll { id } => execute::enroll(deps, env, info, id),
-        ExecuteMsg::Withdraw { id } => todo!(),
+        ExecuteMsg::Withdraw { id } => execute::withdraw(deps, env, info, id),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         TRIGGER_COMPETITION_REPLY_ID => {
-            let (module_addr, enrollment_id) = TEMP_ENROLLMENT_INFO.load(deps.storage)?;
-            let attrs = match msg.result {
+            let enrollment_info = TEMP_ENROLLMENT_INFO.load(deps.storage)?;
+            match msg.result {
                 SubMsgResult::Ok(response) => {
-                    let competition_id = response
-                        .events
-                        .iter()
-                        .find(|x| {
-                            x.attributes
-                                .iter()
-                                .find(|y| y.key == "action" && y.value == "create_competition")
-                                .is_some()
-                        })
-                        .map(|x| {
-                            x.attributes
-                                .iter()
-                                .find(|y| y.key == "competition_id")
-                                .map(|y| y.value.clone())
-                        })
-                        .flatten();
+                    let event = response.events.iter().find(|x| {
+                        x.attributes
+                            .iter()
+                            .any(|y| y.key == "action" && y.value == "create_competition")
+                    });
+
+                    let competition_id = event.and_then(|x| {
+                        x.attributes
+                            .iter()
+                            .find(|y| y.key == "competition_id")
+                            .map(|y| y.value.clone())
+                    });
+
+                    let escrow_addr = event.and_then(|x| {
+                        x.attributes
+                            .iter()
+                            .find(|y| y.key == "escrow_addr")
+                            .map(|y| y.value.clone())
+                    });
 
                     if let Some(competition_id) = competition_id {
+                        let mut msgs = vec![];
                         enrollment_entries().update(
                             deps.storage,
-                            enrollment_id,
+                            enrollment_info.enrollment_id,
                             |x| -> StdResult<_> {
                                 match x {
                                     Some(mut enrollment_entry) => {
                                         enrollment_entry.has_triggered_expiration = true;
                                         enrollment_entry.competition_info =
                                             CompetitionInfo::Existing {
-                                                module_addr,
+                                                module_addr: enrollment_info.module_addr,
                                                 id: Uint128::from_str(&competition_id)?,
                                             };
+                                        if let Some(escrow_addr) = escrow_addr {
+                                            let escrow_addr = deps.api.addr_validate(&escrow_addr)?;
 
+                                            msgs.push(CosmosMsg::Wasm(WasmMsg::Execute { contract_addr: escrow_addr.to_string(), msg: to_json_binary(&arena_interface::escrow::ExecuteMsg::ReceiveNative {  })?, funds: vec![enrollment_info.amount.unwrap()] }));
+                                        }
                                         Ok(enrollment_entry)
                                     }
                                     None => Err(StdError::generic_err(format!(
                                         "Cannot find the enrollment entry {}",
-                                        enrollment_id
+                                        enrollment_info.enrollment_id
                                     ))),
                                 }
                             },
                         )?;
-
-                        vec![]
+                        Ok(Response::new()
+                            .add_attribute("reply", "reply_trigger_competition")
+                            .add_messages(msgs))
                     } else {
-                        return Err(ContractError::StdError(StdError::generic_err(
-                            "Cannot determine the competition id",
-                        )));
+                        Err(ContractError::StdError(StdError::generic_err(
+                            "Missing competition_id",
+                        )))
                     }
                 }
                 SubMsgResult::Err(error_message) => {
                     enrollment_entries().update(
                         deps.storage,
-                        enrollment_id,
+                        enrollment_info.enrollment_id,
                         |x| -> StdResult<_> {
                             match x {
                                 Some(mut enrollment_entry) => {
@@ -140,19 +149,17 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                                 }
                                 None => Err(StdError::generic_err(format!(
                                     "Cannot find the enrollment entry {}",
-                                    enrollment_id
+                                    enrollment_info.enrollment_id
                                 ))),
                             }
                         },
                     )?;
 
-                    vec![Attribute::new("error", error_message)]
+                    Ok(Response::new()
+                        .add_attribute("reply", "reply_trigger_competition")
+                        .add_attribute("error", error_message))
                 }
-            };
-
-            Ok(Response::new()
-                .add_attribute("reply", "reply_trigger_competition")
-                .add_attributes(attrs))
+            }
         }
         _ => Err(ContractError::UnknownReplyId { id: msg.id }),
     }

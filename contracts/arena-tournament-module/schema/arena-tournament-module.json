@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-tournament-module",
-  "contract_version": "1.6.0",
+  "contract_version": "1.7.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -159,6 +159,12 @@
               "rulesets"
             ],
             "properties": {
+              "banner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "category_id": {
                 "anyOf": [
                   {
@@ -205,6 +211,13 @@
                 "items": {
                   "$ref": "#/definitions/Uint128"
                 }
+              },
+              "should_activate_on_funded": {
+                "description": "Determines if the competition is automatically activated if all dues are paid Defaults to true",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               }
             },
             "additionalProperties": false
@@ -285,6 +298,27 @@
             "properties": {
               "msg": {
                 "$ref": "#/definitions/ExecuteExt"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "activate_manually"
+        ],
+        "properties": {
+          "activate_manually": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/Uint128"
               }
             },
             "additionalProperties": false
@@ -1089,16 +1123,7 @@
             ],
             "properties": {
               "host": {
-                "type": "object",
-                "required": [
-                  "addr"
-                ],
-                "properties": {
-                  "addr": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1302,7 +1327,7 @@
     "competition": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CompetitionResponse_for_TournamentExt",
-      "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
+      "description": "CompetitionResponse extends the Competition by also returning rules, is_expired, and",
       "type": "object",
       "required": [
         "description",
@@ -1318,6 +1343,12 @@
         "status"
       ],
       "properties": {
+        "banner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "category_id": {
           "anyOf": [
             {
@@ -1594,7 +1625,7 @@
           "type": "string"
         },
         "CompetitionResponse_for_TournamentExt": {
-          "description": "CompetitionResponse has all of the same fields as Competition is_expired is appended",
+          "description": "CompetitionResponse extends the Competition by also returning rules, is_expired, and",
           "type": "object",
           "required": [
             "description",
@@ -1610,6 +1641,12 @@
             "status"
           ],
           "properties": {
+            "banner": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "category_id": {
               "anyOf": [
                 {

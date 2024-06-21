@@ -15,8 +15,8 @@ use cw_utils::{must_pay, Expiration};
 use crate::{
     msg::CompetitionInfoMsg,
     state::{
-        enrollment_entries, CompetitionInfo, CompetitionType, EnrollmentEntry, ENROLLMENT_COUNT,
-        ENROLLMENT_MEMBERS, ENROLLMENT_MEMBERS_COUNT, TEMP_ENROLLMENT_INFO,
+        enrollment_entries, CompetitionInfo, CompetitionType, EnrollmentEntry, EnrollmentInfo,
+        ENROLLMENT_COUNT, ENROLLMENT_MEMBERS, ENROLLMENT_MEMBERS_COUNT, TEMP_ENROLLMENT_INFO,
     },
     ContractError,
 };
@@ -225,6 +225,12 @@ pub fn trigger_expiration(
         .map(|x| x.map(|y| y.0))
         .collect::<StdResult<Vec<_>>>()?;
 
+    let mut enrollment_info = EnrollmentInfo {
+        enrollment_id: id.u128(),
+        module_addr: entry.competition_module.clone(),
+        amount: None,
+    };
+
     let creation_msg = match entry.competition_info.clone() {
         CompetitionInfo::Pending {
             name,
@@ -239,6 +245,8 @@ pub fn trigger_expiration(
                 let total = deps
                     .querier
                     .query_balance(env.contract.address.to_string(), entry_fee.denom.clone())?;
+
+                enrollment_info.amount = Some(total.clone());
 
                 Some(EscrowInstantiateInfo {
                     code_id: escrow_id,
@@ -349,10 +357,19 @@ pub fn trigger_expiration(
         TRIGGER_COMPETITION_REPLY_ID,
     );
 
-    TEMP_ENROLLMENT_INFO.save(deps.storage, &(entry.competition_module, id.u128()))?;
+    TEMP_ENROLLMENT_INFO.save(deps.storage, &enrollment_info)?;
 
     Ok(Response::new()
-        .add_attribute("action", "trigger_creation")
+        .add_attribute("action", "trigger_expiration")
+        .add_attribute("competition_module", enrollment_info.module_addr)
+        .add_attribute("id", id.to_string())
+        .add_attribute(
+            "amount",
+            enrollment_info
+                .amount
+                .map(|x| x.to_string())
+                .unwrap_or("None".to_owned()),
+        )
         .add_submessage(sub_msg))
 }
 
@@ -404,4 +421,14 @@ pub fn enroll(
     Ok(Response::new()
         .add_attribute("action", "enroll")
         .add_attribute("members_count", members_count.to_string()))
+}
+
+#[allow(unused_variables)]
+pub fn withdraw(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    id: Uint128,
+) -> Result<Response, ContractError> {
+    todo!()
 }

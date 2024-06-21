@@ -8,6 +8,7 @@ use crate::state::CompetitionType;
 #[cw_serde]
 pub struct InstantiateMsg {}
 
+#[allow(clippy::large_enum_variant)]
 #[cw_ownable::cw_ownable_execute]
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]

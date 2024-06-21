@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-escrow",
-  "contract_version": "1.6.0",
+  "contract_version": "1.7.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -15,6 +15,13 @@
         "items": {
           "$ref": "#/definitions/MemberBalanceUnchecked"
         }
+      },
+      "should_activate_on_funded": {
+        "description": "Determines if the competition is automatically activated if all dues are paid Defaults to true",
+        "type": [
+          "boolean",
+          "null"
+        ]
       }
     },
     "additionalProperties": false,
@@ -187,6 +194,19 @@
       {
         "type": "object",
         "required": [
+          "activate"
+        ],
+        "properties": {
+          "activate": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
           "receive_native"
         ],
         "properties": {
@@ -228,7 +248,30 @@
         ],
         "properties": {
           "distribute": {
-            "$ref": "#/definitions/CompetitionEscrowDistributeMsg"
+            "type": "object",
+            "properties": {
+              "distribution": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Distribution_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "layered_fees": {
+                "description": "Layered fees is an ordered list of fees to be applied before the distribution. The term layered refers to the implementation: Arena Tax -> Host Fee? -> Other Fee? Each fee is calculated based off the available funds at its layer",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/definitions/FeeInformation_for_String"
+                }
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -323,32 +366,6 @@
       "Binary": {
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
-      },
-      "CompetitionEscrowDistributeMsg": {
-        "type": "object",
-        "properties": {
-          "distribution": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Distribution_for_String"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "layered_fees": {
-            "description": "Layered fees is an ordered list of fees to be applied before the distribution. The term layered refers to the implementation: Arena Tax -> Host Fee? -> Other Fee? Each fee is calculated based off the available funds at its layer",
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "$ref": "#/definitions/FeeInformation_for_String"
-            }
-          }
-        },
-        "additionalProperties": false
       },
       "Cw20ReceiveMsg": {
         "description": "Cw20ReceiveMsg should be de/serialized under `Receive()` variant in a ExecuteMsg",
@@ -762,6 +779,19 @@
                 ]
               }
             },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "should_activate_on_funded"
+        ],
+        "properties": {
+          "should_activate_on_funded": {
+            "type": "object",
             "additionalProperties": false
           }
         },
@@ -1640,6 +1670,11 @@
           "type": "string"
         }
       }
+    },
+    "should_activate_on_funded": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Boolean",
+      "type": "boolean"
     },
     "total_balance": {
       "$schema": "http://json-schema.org/draft-07/schema#",
