@@ -1,14 +1,13 @@
 use arena_interface::{
     competition::msg::EscrowInstantiateInfo,
     core::{CompetitionModuleQuery, CompetitionModuleResponse},
-    fees::FeeInformation,
 };
 use arena_league_module::msg::LeagueInstantiateExt;
 use arena_tournament_module::{msg::TournamentInstantiateExt, state::EliminationType};
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response,
-    StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
+    ensure, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, Order,
+    Response, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
 };
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_utils::{must_pay, Expiration};
@@ -96,9 +95,9 @@ pub fn create_enrollment(
 
             ensure!(
                 paid_amount == entry_fee.amount,
-                ContractError::StdError(StdError::generic_err(
-                    "You must send the entry fee if `is_creator_member` is true"
-                ))
+                ContractError::EntryFeeNotPaid {
+                    fee: entry_fee.amount
+                }
             );
         }
     }
@@ -191,7 +190,7 @@ pub fn create_enrollment(
         .add_attribute("id", competition_id))
 }
 
-pub fn trigger_creation(
+pub fn trigger_expiration(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -359,9 +358,50 @@ pub fn trigger_creation(
 
 pub fn enroll(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     id: Uint128,
 ) -> Result<Response, ContractError> {
-    todo!()
+    ensure!(
+        !ENROLLMENT_MEMBERS.has(deps.storage, (id.u128(), &info.sender)),
+        ContractError::AlreadyEnrolled {}
+    );
+    let entry = enrollment_entries().load(deps.storage, id.u128())?;
+
+    ensure!(
+        !entry.has_triggered_expiration,
+        ContractError::StdError(StdError::generic_err(
+            "Competition has already been generated"
+        ))
+    );
+    if let Some(entry_fee) = &entry.entry_fee {
+        let paid_amount = must_pay(&info, &entry_fee.denom)?;
+
+        ensure!(
+            paid_amount == entry_fee.amount,
+            ContractError::EntryFeeNotPaid {
+                fee: entry_fee.amount
+            }
+        );
+    }
+
+    let members_count = ENROLLMENT_MEMBERS_COUNT.update(
+        deps.storage,
+        id.u128(),
+        |x| -> Result<_, ContractError> {
+            let members_count = x.unwrap_or_default();
+
+            ensure!(
+                members_count < entry.max_members,
+                StdError::generic_err("Competition is at membership capacity")
+            );
+
+            Ok(members_count.checked_add(Uint64::one())?)
+        },
+    )?;
+    ENROLLMENT_MEMBERS.save(deps.storage, (id.u128(), &info.sender), &Empty {})?;
+
+    Ok(Response::new()
+        .add_attribute("action", "enroll")
+        .add_attribute("members_count", members_count.to_string()))
 }

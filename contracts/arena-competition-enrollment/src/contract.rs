@@ -1,4 +1,4 @@
-use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Reply, Response};
+use cosmwasm_std::{entry_point, Attribute, DepsMut, Env, MessageInfo, Reply, Response, SubMsgResult};
 use cw2::set_contract_version;
 
 use crate::{
@@ -58,8 +58,8 @@ pub fn execute(
             competition_type,
             is_creator_member,
         ),
-        ExecuteMsg::TriggerCreation { id, escrow_id } => {
-            execute::trigger_creation(deps, env, info, id, escrow_id)
+        ExecuteMsg::TriggerExpiration { id, escrow_id } => {
+            execute::trigger_expiration(deps, env, info, id, escrow_id)
         }
         ExecuteMsg::Enroll { id } => execute::enroll(deps, env, info, id),
     }
@@ -69,6 +69,11 @@ pub fn execute(
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         TRIGGER_COMPETITION_REPLY_ID => {
+            let attrs = match msg.result {
+                SubMsgResult::Ok(response) => todo!(),
+                SubMsgResult::Err(error_message) => vec![Attribute::new("error", error_message)],
+            }
+
             Ok(Response::new().add_attribute("reply", "reply_trigger_competition"))
         }
         _ => Err(ContractError::UnknownReplyId { id: msg.id }),

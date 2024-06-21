@@ -27,7 +27,7 @@ pub enum ExecuteMsg {
         /// Defaults to false
         is_creator_member: Option<bool>,
     },
-    TriggerCreation {
+    TriggerExpiration {
         id: Uint128,
         escrow_id: u64,
     },

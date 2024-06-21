@@ -1,4 +1,6 @@
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError, Uint64};
+use cosmwasm_std::{
+    CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError, Uint128, Uint64,
+};
 use cw_ownable::OwnershipError;
 use cw_utils::{Expiration, ParseReplyError, PaymentError};
 use thiserror::Error;
@@ -41,4 +43,7 @@ pub enum ContractError {
         current_members: Uint64,
         expiration: Expiration,
     },
+
+    #[error("Entry fee was not paid")]
+    EntryFeeNotPaid { fee: Uint128 },
 }
