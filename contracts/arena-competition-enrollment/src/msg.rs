@@ -35,6 +35,9 @@ pub enum ExecuteMsg {
     Enroll {
         id: Uint128,
     },
+    Withdraw {
+        id: Uint128,
+    },
 }
 
 #[cw_serde]

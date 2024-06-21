@@ -180,6 +180,7 @@ pub fn enrollment_entries<'a>() -> IndexedMap<'a, u128, EnrollmentEntry, Enrollm
 }
 
 pub const ENROLLMENT_COUNT: Item<Uint128> = Item::new("enrollment_count");
-pub const TEMP_ENROLLMENT: Item<EnrollmentEntry> = Item::new("temp_enrollment");
+/// Stores the module address and enrollment id to process in a reply
+pub const TEMP_ENROLLMENT_INFO: Item<(Addr, u128)> = Item::new("temp_enrollment_info");
 pub const ENROLLMENT_MEMBERS_COUNT: Map<u128, Uint64> = Map::new("enrollment_members_count");
 pub const ENROLLMENT_MEMBERS: Map<(u128, &Addr), Empty> = Map::new("enrollment_members");

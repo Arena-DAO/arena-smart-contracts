@@ -1,9 +1,15 @@
-use cosmwasm_std::{entry_point, Attribute, DepsMut, Env, MessageInfo, Reply, Response, SubMsgResult};
+use std::str::FromStr;
+
+use cosmwasm_std::{
+    entry_point, Attribute, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    SubMsgResult, Uint128,
+};
 use cw2::set_contract_version;
 
 use crate::{
     execute::{self, TRIGGER_COMPETITION_REPLY_ID},
     msg::{ExecuteMsg, InstantiateMsg},
+    state::{enrollment_entries, CompetitionInfo, TEMP_ENROLLMENT_INFO},
     ContractError,
 };
 
@@ -62,6 +68,7 @@ pub fn execute(
             execute::trigger_expiration(deps, env, info, id, escrow_id)
         }
         ExecuteMsg::Enroll { id } => execute::enroll(deps, env, info, id),
+        ExecuteMsg::Withdraw { id } => todo!(),
     }
 }
 
@@ -69,12 +76,83 @@ pub fn execute(
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         TRIGGER_COMPETITION_REPLY_ID => {
+            let (module_addr, enrollment_id) = TEMP_ENROLLMENT_INFO.load(deps.storage)?;
             let attrs = match msg.result {
-                SubMsgResult::Ok(response) => todo!(),
-                SubMsgResult::Err(error_message) => vec![Attribute::new("error", error_message)],
-            }
+                SubMsgResult::Ok(response) => {
+                    let competition_id = response
+                        .events
+                        .iter()
+                        .find(|x| {
+                            x.attributes
+                                .iter()
+                                .find(|y| y.key == "action" && y.value == "create_competition")
+                                .is_some()
+                        })
+                        .map(|x| {
+                            x.attributes
+                                .iter()
+                                .find(|y| y.key == "competition_id")
+                                .map(|y| y.value.clone())
+                        })
+                        .flatten();
 
-            Ok(Response::new().add_attribute("reply", "reply_trigger_competition"))
+                    if let Some(competition_id) = competition_id {
+                        enrollment_entries().update(
+                            deps.storage,
+                            enrollment_id,
+                            |x| -> StdResult<_> {
+                                match x {
+                                    Some(mut enrollment_entry) => {
+                                        enrollment_entry.has_triggered_expiration = true;
+                                        enrollment_entry.competition_info =
+                                            CompetitionInfo::Existing {
+                                                module_addr,
+                                                id: Uint128::from_str(&competition_id)?,
+                                            };
+
+                                        Ok(enrollment_entry)
+                                    }
+                                    None => Err(StdError::generic_err(format!(
+                                        "Cannot find the enrollment entry {}",
+                                        enrollment_id
+                                    ))),
+                                }
+                            },
+                        )?;
+
+                        vec![]
+                    } else {
+                        return Err(ContractError::StdError(StdError::generic_err(
+                            "Cannot determine the competition id",
+                        )));
+                    }
+                }
+                SubMsgResult::Err(error_message) => {
+                    enrollment_entries().update(
+                        deps.storage,
+                        enrollment_id,
+                        |x| -> StdResult<_> {
+                            match x {
+                                Some(mut enrollment_entry) => {
+                                    enrollment_entry.has_triggered_expiration = true;
+
+                                    Ok(enrollment_entry)
+                                }
+                                None => Err(StdError::generic_err(format!(
+                                    "Cannot find the enrollment entry {}",
+                                    enrollment_id
+                                ))),
+                            }
+                        },
+                    )?;
+
+                    vec![Attribute::new("error", error_message)]
+                }
+            };
+
+            Ok(Response::new()
+                .add_attribute("reply", "reply_trigger_competition")
+                .add_attributes(attrs))
         }
         _ => Err(ContractError::UnknownReplyId { id: msg.id }),
     }

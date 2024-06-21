@@ -16,7 +16,7 @@ use crate::{
     msg::CompetitionInfoMsg,
     state::{
         enrollment_entries, CompetitionInfo, CompetitionType, EnrollmentEntry, ENROLLMENT_COUNT,
-        ENROLLMENT_MEMBERS, ENROLLMENT_MEMBERS_COUNT, TEMP_ENROLLMENT,
+        ENROLLMENT_MEMBERS, ENROLLMENT_MEMBERS_COUNT, TEMP_ENROLLMENT_INFO,
     },
     ContractError,
 };
@@ -349,7 +349,7 @@ pub fn trigger_expiration(
         TRIGGER_COMPETITION_REPLY_ID,
     );
 
-    TEMP_ENROLLMENT.save(deps.storage, &entry)?;
+    TEMP_ENROLLMENT_INFO.save(deps.storage, &(entry.competition_module, id.u128()))?;
 
     Ok(Response::new()
         .add_attribute("action", "trigger_creation")
