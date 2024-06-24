@@ -1,32 +1,28 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Addr, BankMsg, Binary, CheckedMultiplyFractionError, Coin, CosmosMsg, Decimal,
-    Deps, OverflowError, OverflowOperation, StdError, StdResult, Uint128, WasmMsg,
+    to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, StdError, StdResult,
+    Uint128, WasmMsg,
 };
-use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
+use cw20::{Cw20Coin, Cw20ExecuteMsg};
 use cw721::Cw721ExecuteMsg;
-use itertools::Itertools;
-use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::ops::AddAssign;
 
-use crate::{is_contract, BalanceError, Cw721Collection, Cw721CollectionVerified, Distribution};
+use crate::{is_contract, BalanceError, Cw721Collection, Distribution};
 
-// Struct to hold the verified member balance
 #[cw_serde]
 pub struct MemberBalanceChecked {
     pub addr: Addr,
     pub balance: BalanceVerified,
 }
 
-// Struct to hold the member balance
 #[cw_serde]
 pub struct MemberBalanceUnchecked {
     pub addr: String,
     pub balance: BalanceUnchecked,
 }
 
-// Method to convert MemberBalance to MemberBalanceVerified
 impl MemberBalanceUnchecked {
     pub fn into_checked(self, deps: Deps) -> StdResult<MemberBalanceChecked> {
         Ok(MemberBalanceChecked {
@@ -36,399 +32,268 @@ impl MemberBalanceUnchecked {
     }
 }
 
-// Struct to hold the balance
 #[cw_serde]
 pub struct BalanceUnchecked {
-    pub native: Vec<Coin>,
-    pub cw20: Vec<Cw20Coin>,
-    pub cw721: Vec<Cw721Collection>,
+    pub native: Option<Vec<Coin>>,
+    pub cw20: Option<Vec<Cw20Coin>>,
+    pub cw721: Option<Vec<Cw721Collection>>,
 }
 
-// Method to convert Balance to BalanceVerified
 impl BalanceUnchecked {
     pub fn into_checked(self, deps: Deps) -> StdResult<BalanceVerified> {
-        if !self.native.iter().map(|x| x.denom.clone()).all_unique() {
-            return Err(StdError::generic_err("Native tokens are not unique"));
-        }
-        if !self.cw20.iter().map(|x| x.address.clone()).all_unique() {
-            return Err(StdError::generic_err("Cw20 tokens are not unique"));
-        }
-        if !self.cw721.iter().map(|x| x.address.clone()).all_unique() {
-            return Err(StdError::generic_err("Cw721 tokens are not unique"));
-        }
-        for collection in self.cw721.iter() {
-            if !collection.token_ids.iter().all_unique() {
-                return Err(StdError::generic_err("Cw721 token ids are not unique"));
-            }
-        }
+        let native = self.native.map(|coins| {
+            coins.into_iter().fold(BTreeMap::new(), |mut map, coin| {
+                map.entry(coin.denom)
+                    .or_insert(Uint128::zero())
+                    .add_assign(coin.amount);
+                map
+            })
+        });
+
+        let cw20 = self
+            .cw20
+            .map(|coins| {
+                coins
+                    .into_iter()
+                    .try_fold(BTreeMap::new(), |mut map, coin| -> StdResult<_> {
+                        let address = deps.api.addr_validate(&coin.address)?;
+                        map.entry(address)
+                            .or_insert(Uint128::zero())
+                            .add_assign(coin.amount);
+                        Ok(map)
+                    })
+            })
+            .transpose()?;
+
+        let cw721 = self
+            .cw721
+            .map(|collections| {
+                collections.into_iter().try_fold(
+                    BTreeMap::new(),
+                    |mut map, collection| -> StdResult<_> {
+                        let address = deps.api.addr_validate(&collection.address)?;
+                        let original_len = collection.token_ids.len();
+                        let token_ids: BTreeSet<String> =
+                            collection.token_ids.into_iter().collect();
+                        if token_ids.len() != original_len {
+                            return Err(StdError::generic_err("Duplicate CW721 token IDs"));
+                        }
+                        map.insert(address, token_ids);
+                        Ok(map)
+                    },
+                )
+            })
+            .transpose()?;
 
         Ok(BalanceVerified {
-            native: self.native,
-            cw20: self
-                .cw20
-                .iter()
-                .map(|x| {
-                    Ok(Cw20CoinVerified {
-                        address: deps.api.addr_validate(&x.address)?,
-                        amount: x.amount,
-                    })
-                })
-                .collect::<StdResult<Vec<Cw20CoinVerified>>>()?,
-            cw721: self
-                .cw721
-                .iter()
-                .map(|x| {
-                    Ok(Cw721CollectionVerified {
-                        address: deps.api.addr_validate(&x.address)?,
-                        token_ids: x.token_ids.clone(),
-                    })
-                })
-                .collect::<StdResult<Vec<Cw721CollectionVerified>>>()?,
+            native,
+            cw20,
+            cw721,
         })
     }
 }
 
-// Struct to hold the verified balance
-#[cw_serde]
 #[derive(Default)]
+#[cw_serde]
 pub struct BalanceVerified {
-    pub native: Vec<Coin>,
-    pub cw20: Vec<Cw20CoinVerified>,
-    pub cw721: Vec<Cw721CollectionVerified>,
+    pub native: Option<BTreeMap<String, Uint128>>,
+    pub cw20: Option<BTreeMap<Addr, Uint128>>,
+    pub cw721: Option<BTreeMap<Addr, BTreeSet<String>>>,
 }
 
-// Display implementation for BalanceVerified
 impl Display for BalanceVerified {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        writeln!(f, "Native: ")?;
-        for coin in &self.native {
-            writeln!(f, "  {}", coin)?;
+        let mut has_entries = false;
+
+        if let Some(native) = &self.native {
+            if !native.is_empty() {
+                has_entries = true;
+                writeln!(f, "Native Balances:")?;
+                for (denom, amount) in native {
+                    writeln!(f, "  {} {}", amount, denom)?;
+                }
+            }
         }
 
-        writeln!(f, "CW20:")?;
-        for cw20_coin in &self.cw20 {
-            writeln!(f, "  {}", cw20_coin)?;
+        if let Some(cw20) = &self.cw20 {
+            if !cw20.is_empty() {
+                if has_entries {
+                    writeln!(f)?;
+                }
+                has_entries = true;
+                writeln!(f, "CW20 Balances:")?;
+                for (addr, amount) in cw20 {
+                    writeln!(f, "  {} {}", amount, addr)?;
+                }
+            }
         }
 
-        writeln!(f, "CW721:")?;
-        for cw721_tokens in &self.cw721 {
-            writeln!(f, "  {}", cw721_tokens)?;
+        if let Some(cw721) = &self.cw721 {
+            if !cw721.is_empty() {
+                if has_entries {
+                    writeln!(f)?;
+                }
+                writeln!(f, "CW721 Balances:")?;
+                for (addr, token_ids) in cw721 {
+                    writeln!(f, "  {} ({} tokens)", addr, token_ids.len())?;
+                }
+            }
+        }
+
+        if !has_entries {
+            writeln!(f, "No balances available")?;
         }
 
         Ok(())
     }
 }
 
-// Methods for BalanceVerified
 impl BalanceVerified {
-    // Method to create a new BalanceVerified
     pub fn new() -> Self {
         Self::default()
     }
 
-    // Method to calculate the amounts needed to reach other balance
-    pub fn difference(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
-        let mut diff = BalanceVerified::new();
-
-        let native_map: HashMap<&String, Uint128> = self
-            .native
-            .iter()
-            .map(|coin| (&coin.denom, coin.amount))
-            .collect();
-
-        for coin in &other.native {
-            match native_map.get(&coin.denom) {
-                Some(&amount) if amount < coin.amount => {
-                    diff.native.push(Coin {
-                        denom: coin.denom.clone(),
-                        amount: coin.amount.checked_sub(amount)?,
-                    });
-                }
-                None => diff.native.push(coin.clone()),
-                _ => (),
-            }
-        }
-
-        let cw20_map: HashMap<&Addr, Uint128> = self
-            .cw20
-            .iter()
-            .map(|coin| (&coin.address, coin.amount))
-            .collect();
-
-        for coin in &other.cw20 {
-            match cw20_map.get(&coin.address) {
-                Some(&amount) if amount < coin.amount => {
-                    diff.cw20.push(Cw20CoinVerified {
-                        address: coin.address.clone(),
-                        amount: coin.amount.checked_sub(amount)?,
-                    });
-                }
-                None => diff.cw20.push(coin.clone()),
-                _ => (),
-            }
-        }
-
-        let cw721_map: HashMap<&Addr, BTreeSet<&String>> = self
-            .cw721
-            .iter()
-            .map(|token| (&token.address, token.token_ids.iter().collect()))
-            .collect();
-
-        for token in &other.cw721 {
-            let token_ids_set: BTreeSet<&String> = token.token_ids.iter().collect();
-            match cw721_map.get(&token.address) {
-                Some(token_ids)
-                    if token_ids_set.is_superset(token_ids)
-                        && token_ids_set.len() != token_ids.len() =>
-                {
-                    let diff_token_ids: Vec<String> = token_ids_set
-                        .difference(token_ids)
-                        .cloned()
-                        .map(|s| s.to_owned())
-                        .collect();
-                    diff.cw721.push(Cw721CollectionVerified {
-                        address: token.address.clone(),
-                        token_ids: diff_token_ids,
-                    });
-                }
-                None => diff.cw721.push(token.clone()),
-                _ => (),
-            }
-        }
-
-        Ok(diff)
-    }
-
-    // Method to check if BalanceVerified is empty
     pub fn is_empty(&self) -> bool {
-        self.native.is_empty() && self.cw20.is_empty() && self.cw721.is_empty()
+        self.native.as_ref().map_or(true, BTreeMap::is_empty)
+            && self.cw20.as_ref().map_or(true, BTreeMap::is_empty)
+            && self.cw721.as_ref().map_or(true, BTreeMap::is_empty)
     }
 
-    pub fn checked_mul_floor(
-        &self,
-        amount: Decimal,
-    ) -> Result<BalanceVerified, CheckedMultiplyFractionError> {
-        let mut native = vec![];
-        let mut cw20 = vec![];
+    pub fn checked_add(&self, other: &BalanceVerified) -> Result<Self, BalanceError> {
+        Ok(Self {
+            native: merge_btreemaps(&self.native, &other.native, |a, b| Ok(a.checked_add(*b)?))?,
+            cw20: merge_btreemaps(&self.cw20, &other.cw20, |a, b| Ok(a.checked_add(*b)?))?,
+            cw721: merge_btreemaps(&self.cw721, &other.cw721, |a, b| {
+                let mut combined = a.clone();
+                combined.extend(b.iter().cloned());
+                Ok(combined)
+            })?,
+        })
+    }
 
-        for coin in self.native.iter() {
-            native.push(Coin {
-                denom: coin.denom.clone(),
-                amount: coin.amount.checked_mul_floor(amount)?,
-            })
-        }
+    pub fn checked_sub(&self, other: &BalanceVerified) -> Result<Self, BalanceError> {
+        Ok(Self {
+            native: subtract_btreemaps(&self.native, &other.native)?,
+            cw20: subtract_btreemaps(&self.cw20, &other.cw20)?,
+            cw721: subtract_cw721_btreemaps(&self.cw721, &other.cw721)?,
+        })
+    }
 
-        for token in self.cw20.iter() {
-            cw20.push(Cw20CoinVerified {
-                address: token.address.clone(),
-                amount: token.amount.checked_mul_floor(amount)?,
-            })
-        }
+    pub fn checked_mul_floor(&self, percentage: Decimal) -> Result<Self, BalanceError> {
+        Ok(Self {
+            native: self
+                .native
+                .as_ref()
+                .map(|native| {
+                    native
+                        .iter()
+                        .filter_map(|(denom, amount)| {
+                            amount
+                                .checked_mul_floor(percentage)
+                                .map(|new_amount| {
+                                    (!new_amount.is_zero()).then(|| (denom.clone(), new_amount))
+                                })
+                                .transpose()
+                        })
+                        .collect::<Result<BTreeMap<_, _>, _>>()
+                })
+                .transpose()?
+                .filter(|m| !m.is_empty()),
+            cw20: self
+                .cw20
+                .as_ref()
+                .map(|cw20| {
+                    cw20.iter()
+                        .filter_map(|(addr, amount)| {
+                            amount
+                                .checked_mul_floor(percentage)
+                                .map(|new_amount| {
+                                    (!new_amount.is_zero()).then(|| (addr.clone(), new_amount))
+                                })
+                                .transpose()
+                        })
+                        .collect::<Result<BTreeMap<_, _>, _>>()
+                })
+                .transpose()?
+                .filter(|m| !m.is_empty()),
+            cw721: None, // CW721 tokens are not split
+        })
+    }
+
+    pub fn difference(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
+        let native = self.difference_map(&self.native, &other.native)?;
+        let cw20 = self.difference_map(&self.cw20, &other.cw20)?;
+        let cw721 = self.difference_cw721(&self.cw721, &other.cw721)?;
 
         Ok(BalanceVerified {
             native,
             cw20,
-            cw721: vec![],
+            cw721,
         })
     }
 
-    // Method to add two BalanceVerified together
-    pub fn checked_add(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
-        if self.is_empty() {
-            return Ok(other.clone());
-        }
-        if other.is_empty() {
-            return Ok(self.clone());
-        }
-
-        let mut native_map: BTreeMap<&String, Uint128> = self
-            .native
-            .iter()
-            .map(|coin| (&coin.denom, coin.amount))
-            .collect();
-        for coin in &other.native {
-            let entry = native_map.entry(&coin.denom).or_default();
-            *entry = entry.checked_add(coin.amount)?;
-        }
-
-        let mut cw20_map: BTreeMap<&Addr, Uint128> = self
-            .cw20
-            .iter()
-            .map(|coin| (&coin.address, coin.amount))
-            .collect();
-        for coin in &other.cw20 {
-            let entry = cw20_map.entry(&coin.address).or_insert(Uint128::zero());
-            *entry = entry.checked_add(coin.amount)?;
-        }
-
-        let mut cw721_map: BTreeMap<&Addr, BTreeSet<&String>> = self
-            .cw721
-            .iter()
-            .map(|token| (&token.address, token.token_ids.iter().collect()))
-            .collect();
-
-        for token in &other.cw721 {
-            let entry = cw721_map.entry(&token.address).or_default();
-
-            for token_id in &token.token_ids {
-                // If the token_id is already present, it's a duplicate and we return an error.
-                if !entry.insert(token_id) {
-                    return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
-                        OverflowOperation::Add,
-                        self,
-                        other,
-                    )));
-                }
-            }
-        }
-
-        Ok(BalanceVerified {
-            native: native_map
-                .into_iter()
-                .map(|(denom, amount)| Coin {
-                    denom: denom.to_string(),
-                    amount,
-                })
-                .collect(),
-            cw20: cw20_map
-                .into_iter()
-                .map(|(address, amount)| Cw20CoinVerified {
-                    address: address.clone(),
-                    amount,
-                })
-                .collect(),
-            cw721: cw721_map
-                .into_iter()
-                .map(|(addr, token_ids)| Cw721CollectionVerified {
-                    address: addr.clone(),
-                    token_ids: token_ids
-                        .into_iter()
-                        .map(|token| token.to_string())
-                        .collect(),
-                })
-                .collect(),
-        })
-    }
-
-    // Method to subtract one BalanceVerified from another
-    pub fn checked_sub(&self, other: &BalanceVerified) -> StdResult<BalanceVerified> {
-        if other.is_empty() {
-            return Ok(self.clone());
-        }
-
-        let mut native_map: BTreeMap<&String, Uint128> = self
-            .native
-            .iter()
-            .map(|coin| (&coin.denom, coin.amount))
-            .collect();
-        for coin in &other.native {
-            match native_map.entry(&coin.denom) {
-                Entry::Occupied(mut entry) => {
-                    let total_amount = entry.get_mut().checked_sub(coin.amount)?;
-                    if total_amount.is_zero() {
-                        entry.remove();
+    fn difference_map<K, V>(
+        &self,
+        a: &Option<BTreeMap<K, V>>,
+        b: &Option<BTreeMap<K, V>>,
+    ) -> StdResult<Option<BTreeMap<K, V>>>
+    where
+        K: Ord + Clone,
+        V: Copy + PartialOrd + std::ops::Sub<Output = V> + Default,
+    {
+        match (a, b) {
+            (Some(a), Some(b)) => {
+                let mut diff = BTreeMap::new();
+                for (key, &b_value) in b.iter() {
+                    if let Some(&a_value) = a.get(key) {
+                        if b_value > a_value {
+                            diff.insert(key.clone(), b_value - a_value);
+                        }
                     } else {
-                        *entry.get_mut() = total_amount;
+                        diff.insert(key.clone(), b_value);
                     }
                 }
-
-                Entry::Vacant(_) => {
-                    return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
-                        OverflowOperation::Sub,
-                        self,
-                        other,
-                    )));
+                if diff.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(diff))
                 }
             }
+            (None, Some(b)) => Ok(Some(b.clone())),
+            _ => Ok(None),
         }
-
-        let mut cw20_map: BTreeMap<&Addr, Uint128> = self
-            .cw20
-            .iter()
-            .map(|coin| (&coin.address, coin.amount))
-            .collect();
-        for coin in &other.cw20 {
-            match cw20_map.entry(&coin.address) {
-                Entry::Occupied(mut entry) => {
-                    let total_amount = entry.get_mut().checked_sub(coin.amount)?;
-                    if total_amount.is_zero() {
-                        entry.remove();
-                    } else {
-                        *entry.get_mut() = total_amount;
-                    }
-                }
-
-                Entry::Vacant(_) => {
-                    return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
-                        OverflowOperation::Sub,
-                        self,
-                        other,
-                    )));
-                }
-            }
-        }
-
-        let mut cw721_map: BTreeMap<&Addr, BTreeSet<&String>> = self
-            .cw721
-            .iter()
-            .map(|token| (&token.address, token.token_ids.iter().collect()))
-            .collect();
-        for token in &other.cw721 {
-            if let Some(entry_set) = cw721_map.get_mut(&token.address) {
-                for token_id in &token.token_ids {
-                    // Removes the token_id from the set if it exists; no-op if it doesn't
-                    if !entry_set.remove(token_id) {
-                        // Return error if a token_id is missing
-                        return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
-                            OverflowOperation::Sub,
-                            self,
-                            other,
-                        )));
-                    }
-                }
-
-                if entry_set.is_empty() {
-                    cw721_map.remove(&token.address);
-                }
-            } else {
-                // Return error if a corresponding addr is missing
-                return Err(cosmwasm_std::StdError::overflow(OverflowError::new(
-                    OverflowOperation::Sub,
-                    self,
-                    other,
-                )));
-            }
-        }
-
-        Ok(BalanceVerified {
-            native: native_map
-                .into_iter()
-                .map(|(denom, amount)| Coin {
-                    denom: denom.to_string(),
-                    amount,
-                })
-                .collect(),
-            cw20: cw20_map
-                .into_iter()
-                .map(|(address, amount)| Cw20CoinVerified {
-                    address: address.clone(),
-                    amount,
-                })
-                .collect(),
-            cw721: cw721_map
-                .into_iter()
-                .map(|(addr, tokens)| Cw721CollectionVerified {
-                    address: addr.clone(),
-                    token_ids: tokens
-                        .into_iter()
-                        .map(|token_id| token_id.to_string())
-                        .collect(),
-                })
-                .collect(),
-        })
     }
 
-    // Method to transmit all types of tokens (native, CW20, CW721) to a recipient
+    fn difference_cw721(
+        &self,
+        a: &Option<BTreeMap<Addr, BTreeSet<String>>>,
+        b: &Option<BTreeMap<Addr, BTreeSet<String>>>,
+    ) -> StdResult<Option<BTreeMap<Addr, BTreeSet<String>>>> {
+        match (a, b) {
+            (Some(a), Some(b)) => {
+                let mut diff = BTreeMap::new();
+                for (addr, b_tokens) in b.iter() {
+                    if let Some(a_tokens) = a.get(addr) {
+                        let token_diff: BTreeSet<_> =
+                            b_tokens.difference(a_tokens).cloned().collect();
+                        if !token_diff.is_empty() {
+                            diff.insert(addr.clone(), token_diff);
+                        }
+                    } else {
+                        diff.insert(addr.clone(), b_tokens.clone());
+                    }
+                }
+                if diff.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(diff))
+                }
+            }
+            (None, Some(b)) => Ok(Some(b.clone())),
+            _ => Ok(None),
+        }
+    }
+
     pub fn transmit_all(
         &self,
         deps: Deps,
@@ -436,240 +301,279 @@ impl BalanceVerified {
         cw20_msg: Option<Binary>,
         cw721_msg: Option<Binary>,
     ) -> StdResult<Vec<CosmosMsg>> {
-        match is_contract(deps, recipient.to_string()) {
-            false => self.transfer_all(recipient),
-            true => self.send_all(recipient, cw20_msg, cw721_msg),
+        if is_contract(deps, recipient.to_string()) {
+            self.send_all(recipient, cw20_msg, cw721_msg)
+        } else {
+            self.transfer_all(recipient)
         }
     }
 
-    // Method to transfer all types of tokens (native, CW20, CW721) to a recipient
     pub fn transfer_all(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
-        let mut messages: Vec<CosmosMsg> = Vec::new();
+        let mut messages = Vec::new();
 
-        // Transfer native tokens
         messages.extend(self.send_native(recipient));
-
-        // Transfer CW20 tokens
         messages.extend(self.transfer_cw20(recipient)?);
-
-        // Transfer CW721 tokens
         messages.extend(self.transfer_cw721(recipient)?);
 
         Ok(messages)
     }
 
-    // Method to send all types of tokens (native, CW20, CW721) to a contract
     pub fn send_all(
         &self,
         contract_addr: &Addr,
         cw20_msg: Option<Binary>,
         cw721_msg: Option<Binary>,
     ) -> StdResult<Vec<CosmosMsg>> {
-        let mut messages: Vec<CosmosMsg> = Vec::new();
+        let mut messages = Vec::new();
 
-        // Send native tokens to contract
         messages.extend(self.send_native(contract_addr));
-
-        // Send CW20 tokens to contract
         messages.extend(self.send_cw20(contract_addr, cw20_msg.unwrap_or_default())?);
-
-        // Send CW721 tokens to contract
         messages.extend(self.send_cw721(contract_addr, cw721_msg.unwrap_or_default())?);
 
         Ok(messages)
     }
 
-    // Method to send native tokens to an address
     pub fn send_native(&self, address: &Addr) -> Vec<CosmosMsg> {
-        if self.native.is_empty() {
-            vec![]
+        if let Some(native) = &self.native {
+            if !native.is_empty() {
+                vec![CosmosMsg::Bank(BankMsg::Send {
+                    to_address: address.to_string(),
+                    amount: native
+                        .iter()
+                        .map(|(denom, amount)| Coin {
+                            denom: denom.clone(),
+                            amount: *amount,
+                        })
+                        .collect(),
+                })]
+            } else {
+                vec![]
+            }
         } else {
-            vec![CosmosMsg::Bank(BankMsg::Send {
-                to_address: address.to_string(),
-                amount: self.native.clone(),
-            })]
+            vec![]
         }
     }
 
-    // Method to send CW20 tokens to a contract
     pub fn send_cw20(&self, contract: &Addr, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
-        self.cw20
-            .iter()
-            .map(|cw20_coin| {
-                let exec_msg = WasmMsg::Execute {
-                    contract_addr: cw20_coin.address.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                        contract: contract.to_string(),
-                        amount: cw20_coin.amount,
-                        msg: msg.clone(),
-                    })?,
-                    funds: vec![],
-                };
-                Ok(CosmosMsg::Wasm(exec_msg))
-            })
-            .collect()
-    }
-
-    // Method to send CW721 tokens to a contract
-    pub fn send_cw721(&self, contract: &Addr, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
-        self.cw721
-            .iter()
-            .flat_map(|cw721_collection| {
-                let contract = contract.clone();
-                let msg = msg.clone();
-                cw721_collection.token_ids.iter().map(move |token_id| {
+        if let Some(cw20) = &self.cw20 {
+            cw20.iter()
+                .map(|(token_addr, amount)| {
                     let exec_msg = WasmMsg::Execute {
-                        contract_addr: cw721_collection.address.to_string(),
-                        msg: to_json_binary(&Cw721ExecuteMsg::SendNft {
+                        contract_addr: token_addr.to_string(),
+                        msg: to_json_binary(&Cw20ExecuteMsg::Send {
                             contract: contract.to_string(),
-                            token_id: token_id.clone(),
+                            amount: *amount,
                             msg: msg.clone(),
                         })?,
                         funds: vec![],
                     };
                     Ok(CosmosMsg::Wasm(exec_msg))
                 })
-            })
-            .collect()
+                .collect()
+        } else {
+            Ok(vec![])
+        }
     }
 
-    // Method to transfer CW721 tokens to a recipient
+    pub fn send_cw721(&self, contract: &Addr, msg: Binary) -> StdResult<Vec<CosmosMsg>> {
+        if let Some(cw721) = &self.cw721 {
+            cw721
+                .iter()
+                .flat_map(|(nft_addr, token_ids)| {
+                    token_ids.iter().map(|token_id| {
+                        let exec_msg = WasmMsg::Execute {
+                            contract_addr: nft_addr.to_string(),
+                            msg: to_json_binary(&Cw721ExecuteMsg::SendNft {
+                                contract: contract.to_string(),
+                                token_id: token_id.clone(),
+                                msg: msg.clone(),
+                            })?,
+                            funds: vec![],
+                        };
+                        Ok(CosmosMsg::Wasm(exec_msg))
+                    })
+                })
+                .collect()
+        } else {
+            Ok(vec![])
+        }
+    }
+
     pub fn transfer_cw721(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
-        self.cw721
-            .iter()
-            .flat_map(|cw721_collection| {
-                cw721_collection.token_ids.iter().map(move |token_id| {
+        if let Some(cw721) = &self.cw721 {
+            cw721
+                .iter()
+                .flat_map(|(nft_addr, token_ids)| {
+                    token_ids.iter().map(|token_id| {
+                        let exec_msg = WasmMsg::Execute {
+                            contract_addr: nft_addr.to_string(),
+                            msg: to_json_binary(&Cw721ExecuteMsg::TransferNft {
+                                recipient: recipient.to_string(),
+                                token_id: token_id.clone(),
+                            })?,
+                            funds: vec![],
+                        };
+                        Ok(CosmosMsg::Wasm(exec_msg))
+                    })
+                })
+                .collect()
+        } else {
+            Ok(vec![])
+        }
+    }
+
+    pub fn transfer_cw20(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
+        if let Some(cw20) = &self.cw20 {
+            cw20.iter()
+                .map(|(token_addr, amount)| {
                     let exec_msg = WasmMsg::Execute {
-                        contract_addr: cw721_collection.address.to_string(),
-                        msg: to_json_binary(&Cw721ExecuteMsg::TransferNft {
+                        contract_addr: token_addr.to_string(),
+                        msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                             recipient: recipient.to_string(),
-                            token_id: token_id.clone(),
+                            amount: *amount,
                         })?,
                         funds: vec![],
                     };
                     Ok(CosmosMsg::Wasm(exec_msg))
                 })
-            })
-            .collect()
+                .collect()
+        } else {
+            Ok(vec![])
+        }
     }
 
-    // Method to transfer CW20 tokens to a recipient
-    pub fn transfer_cw20(&self, recipient: &Addr) -> StdResult<Vec<CosmosMsg>> {
-        self.cw20
-            .iter()
-            .map(|cw20_coin| {
-                let exec_msg = WasmMsg::Execute {
-                    contract_addr: cw20_coin.address.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
-                        recipient: recipient.to_string(),
-                        amount: cw20_coin.amount,
-                    })?,
-                    funds: vec![],
-                };
-                Ok(CosmosMsg::Wasm(exec_msg))
-            })
-            .collect()
-    }
-
-    // Method to split the balance among multiple users based on their assigned weights
-    // Ensure percentages equal to one before calling this method
     pub fn split(
         &self,
         distribution: &Distribution<Addr>,
     ) -> Result<Vec<MemberBalanceChecked>, BalanceError> {
         let mut split_balances: Vec<MemberBalanceChecked> = Vec::new();
 
-        let mut remainders_native: BTreeMap<String, Uint128> = self
-            .native
-            .iter()
-            .map(|x| (x.denom.clone(), x.amount))
-            .collect();
-        let mut remainders_cw20: BTreeMap<Addr, Uint128> = self
-            .cw20
-            .iter()
-            .map(|x| (x.address.clone(), x.amount))
-            .collect();
+        let mut remainders = self.clone();
 
         for member_percentage in &distribution.member_percentages {
-            let mut split_native = BTreeMap::new();
-            for coin in &self.native {
-                let decimal_amount = Decimal::from_atomics(coin.amount, 0u32)?;
-                let split_amount = member_percentage
-                    .percentage
-                    .checked_mul(decimal_amount)?
-                    .to_uint_floor();
+            let split_balance = self.checked_mul_floor(member_percentage.percentage)?;
+            remainders = remainders.checked_sub(&split_balance)?;
 
-                // Deduct the split amount from the remainder
-                if let Some(remainder) = remainders_native.get_mut(&coin.denom) {
-                    *remainder = remainder.checked_sub(split_amount)?;
-                }
-
-                split_native.insert(coin.denom.clone(), split_amount);
-            }
-
-            let mut split_cw20 = BTreeMap::new();
-            for cw20_coin in &self.cw20 {
-                let decimal_amount = Decimal::from_atomics(cw20_coin.amount, 0u32)?;
-                let split_amount = member_percentage
-                    .percentage
-                    .checked_mul(decimal_amount)?
-                    .to_uint_floor();
-
-                // Deduct the split amount from the remainder
-                if let Some(remainder) = remainders_cw20.get_mut(&cw20_coin.address) {
-                    *remainder = remainder.checked_sub(split_amount)?;
-                }
-
-                split_cw20.insert(cw20_coin.address.clone(), split_amount);
-            }
-
-            let split_balance = BalanceVerified {
-                native: split_native
-                    .into_iter()
-                    .map(|(denom, amount)| Coin { denom, amount })
-                    .collect(),
-                cw20: split_cw20
-                    .into_iter()
-                    .map(|(address, amount)| Cw20CoinVerified { address, amount })
-                    .collect(),
-                cw721: vec![],
-            };
-
-            let member_balance = MemberBalanceChecked {
+            split_balances.push(MemberBalanceChecked {
                 addr: member_percentage.addr.clone(),
                 balance: split_balance,
-            };
-
-            split_balances.push(member_balance);
+            });
         }
 
-        // Apply the remainder_balance to the corresponding split_balances entry
-        let remainder_balance = BalanceVerified {
-            native: remainders_native
-                .into_iter()
-                .map(|(denom, amount)| Coin { denom, amount })
-                .collect(),
-            cw20: remainders_cw20
-                .into_iter()
-                .map(|(address, amount)| Cw20CoinVerified { address, amount })
-                .collect(),
-            cw721: self.cw721.clone(),
-        };
-
-        if !remainder_balance.is_empty() {
+        if !remainders.is_empty() {
             if let Some(member_balance) = split_balances
                 .iter_mut()
                 .find(|mb| mb.addr == distribution.remainder_addr)
             {
-                member_balance.balance = member_balance.balance.checked_add(&remainder_balance)?;
+                member_balance.balance = member_balance.balance.checked_add(&remainders)?;
             } else {
                 split_balances.push(MemberBalanceChecked {
                     addr: distribution.remainder_addr.clone(),
-                    balance: remainder_balance,
+                    balance: remainders,
                 });
             }
         }
 
         Ok(split_balances)
+    }
+}
+
+fn merge_btreemaps<K, V, F>(
+    a: &Option<BTreeMap<K, V>>,
+    b: &Option<BTreeMap<K, V>>,
+    merge_fn: F,
+) -> Result<Option<BTreeMap<K, V>>, BalanceError>
+where
+    K: Ord + Clone,
+    V: Clone,
+    F: Fn(&V, &V) -> Result<V, BalanceError>,
+{
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            let mut result = a.clone();
+            for (k, v) in b {
+                match result.entry(k.clone()) {
+                    std::collections::btree_map::Entry::Vacant(entry) => {
+                        entry.insert(v.clone());
+                    }
+                    std::collections::btree_map::Entry::Occupied(mut entry) => {
+                        let merged_value = merge_fn(entry.get(), v)?;
+                        entry.insert(merged_value);
+                    }
+                }
+            }
+            Ok(Some(result))
+        }
+        (Some(a), None) => Ok(Some(a.clone())),
+        (None, Some(b)) => Ok(Some(b.clone())),
+        (None, None) => Ok(None),
+    }
+}
+
+fn subtract_btreemaps<K, V>(
+    a: &Option<BTreeMap<K, V>>,
+    b: &Option<BTreeMap<K, V>>,
+) -> Result<Option<BTreeMap<K, V>>, BalanceError>
+where
+    K: Ord + Clone,
+    V: Copy + PartialOrd + std::ops::Sub<Output = V> + Default,
+{
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            let mut result = a.clone();
+            for (k, v) in b {
+                if let Some(existing) = result.get_mut(k) {
+                    if *v > *existing {
+                        return Err(BalanceError::InsufficientBalance);
+                    }
+                    *existing = *existing - *v;
+                    if *existing == V::default() {
+                        result.remove(k);
+                    }
+                } else {
+                    return Err(BalanceError::InsufficientBalance);
+                }
+            }
+            if result.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(result))
+            }
+        }
+        (Some(a), None) => Ok(Some(a.clone())),
+        (None, Some(_)) => Err(BalanceError::InsufficientBalance),
+        (None, None) => Ok(None),
+    }
+}
+
+fn subtract_cw721_btreemaps(
+    a: &Option<BTreeMap<Addr, BTreeSet<String>>>,
+    b: &Option<BTreeMap<Addr, BTreeSet<String>>>,
+) -> Result<Option<BTreeMap<Addr, BTreeSet<String>>>, BalanceError> {
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            let mut result = a.clone();
+            for (addr, token_ids) in b {
+                if let Some(existing) = result.get_mut(addr) {
+                    if !token_ids.is_subset(existing) {
+                        return Err(BalanceError::InsufficientBalance);
+                    }
+                    *existing = existing.difference(token_ids).cloned().collect();
+                    if existing.is_empty() {
+                        result.remove(addr);
+                    }
+                } else {
+                    return Err(BalanceError::InsufficientBalance);
+                }
+            }
+            if result.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(result))
+            }
+        }
+        (Some(a), None) => Ok(Some(a.clone())),
+        (None, Some(_)) => Err(BalanceError::InsufficientBalance),
+        (None, None) => Ok(None),
     }
 }

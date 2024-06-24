@@ -1,10 +1,8 @@
-use std::fmt::Display;
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{to_json_string, Addr, Decimal, Deps, StdError, StdResult};
 use cw_address_like::AddressLike;
-use itertools::Itertools;
 use serde::Serialize;
+use std::fmt::Display;
 
 #[cw_serde]
 pub struct MemberPercentage<T: AddressLike> {
@@ -29,28 +27,25 @@ pub struct Distribution<T: AddressLike> {
 
 impl Distribution<String> {
     pub fn into_checked(&self, deps: Deps) -> StdResult<Distribution<Addr>> {
-        let total_weight = self
-            .member_percentages
-            .iter()
-            .try_fold(Decimal::zero(), |accumulator, x| {
-                accumulator.checked_add(x.percentage)
-            })?;
-
-        if total_weight != Decimal::one() {
-            return Err(StdError::generic_err("Total weight is not equal to 1"));
-        }
-
         if self.member_percentages.is_empty() {
             return Err(StdError::generic_err("Member percentages cannot be empty"));
         }
 
-        let unique_members = self
-            .member_percentages
-            .iter()
-            .unique_by(|x| &x.addr)
-            .count();
+        let (total_weight, unique_members) = self.member_percentages.iter().fold(
+            (Decimal::zero(), std::collections::HashSet::new()),
+            |(weight, mut set), x| {
+                (weight + x.percentage, {
+                    set.insert(&x.addr);
+                    set
+                })
+            },
+        );
 
-        if unique_members != self.member_percentages.len() {
+        if total_weight != Decimal::one() {
+            return Err(StdError::generic_err("Total weight must be equal to 1"));
+        }
+
+        if unique_members.len() != self.member_percentages.len() {
             return Err(StdError::generic_err("All members must be unique"));
         }
 
