@@ -4,11 +4,11 @@ use cosmwasm_std::{
     entry_point, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply,
     Response, StdError, StdResult, SubMsgResult, Uint128, WasmMsg,
 };
-use cw2::set_contract_version;
+use cw2::{ensure_from_older_version, set_contract_version};
 
 use crate::{
     execute::{self, TRIGGER_COMPETITION_REPLY_ID},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
     state::{enrollment_entries, CompetitionInfo, TEMP_ENROLLMENT_INFO},
     ContractError,
@@ -21,12 +21,13 @@ pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
-    _msg: InstantiateMsg,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    let ownership =
-        cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
+
+    let owner = deps.api.addr_validate(&msg.owner)?;
+    let ownership = cw_ownable::initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
 
     Ok(Response::new().add_attributes(ownership.into_attributes()))
 }
@@ -90,6 +91,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let _version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         TRIGGER_COMPETITION_REPLY_ID => {
@@ -127,7 +136,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                                         enrollment_entry.has_triggered_expiration = true;
                                         enrollment_entry.competition_info =
                                             CompetitionInfo::Existing {
-                                                module_addr: enrollment_info.module_addr,
                                                 id: Uint128::from_str(&competition_id)?,
                                             };
                                         if let Some(escrow_addr) = escrow_addr {

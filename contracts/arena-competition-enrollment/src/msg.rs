@@ -6,7 +6,9 @@ use cw_utils::Expiration;
 use crate::state::{CompetitionType, EnrollmentEntryResponse};
 
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    pub owner: String,
+}
 
 #[allow(clippy::large_enum_variant)]
 #[cw_ownable::cw_ownable_execute]

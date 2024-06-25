@@ -56,7 +56,9 @@ impl EnrollmentEntry {
             entry_fee: self.entry_fee,
             expiration: self.expiration,
             has_triggered_expiration: self.has_triggered_expiration,
-            competition_info: self.competition_info.into_response(deps)?,
+            competition_info: self
+                .competition_info
+                .into_response(deps, &self.competition_module)?,
             competition_type: self.competition_type,
             host: self.host,
         })
@@ -101,13 +103,16 @@ pub enum CompetitionInfo {
         additional_layered_fees: Option<Vec<FeeInformation<String>>>,
     },
     Existing {
-        module_addr: Addr,
         id: Uint128,
     },
 }
 
 impl CompetitionInfo {
-    pub fn into_response(self, deps: Deps) -> StdResult<CompetitionInfoResponse> {
+    pub fn into_response(
+        self,
+        deps: Deps,
+        module_addr: &Addr,
+    ) -> StdResult<CompetitionInfoResponse> {
         Ok(match self {
             CompetitionInfo::Pending {
                 name,
@@ -126,11 +131,11 @@ impl CompetitionInfo {
                 banner,
                 additional_layered_fees,
             },
-            CompetitionInfo::Existing { module_addr, id } => {
+            CompetitionInfo::Existing { id } => {
                 let competition = deps
                     .querier
                     .query_wasm_smart::<CompetitionResponse<Empty>>(
-                        module_addr,
+                        module_addr.to_string(),
                         &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::Competition {
                             competition_id: id,
                         },

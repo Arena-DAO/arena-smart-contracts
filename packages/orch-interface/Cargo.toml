@@ -13,6 +13,7 @@ cw-orch = { workspace = true }
 arena-wager-module = { workspace = true }
 arena-league-module = { workspace = true }
 arena-tournament-module = { workspace = true }
+arena-competition-enrollment = { workspace = true }
 arena-core = { workspace = true }
 arena-interface = { workspace = true }
 arena-escrow = { workspace = true }
