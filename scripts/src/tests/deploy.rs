@@ -163,7 +163,10 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             Box::new(&mut self.dao_dao.dao_proposal_sudo),
             Box::new(&mut self.arena_core),
             Box::new(&mut self.arena_tournament_module),
+            Box::new(&mut self.arena_wager_module),
+            Box::new(&mut self.arena_league_module),
             Box::new(&mut self.arena_escrow),
+            Box::new(&mut self.arena_competition_enrollment),
         ]
     }
 }

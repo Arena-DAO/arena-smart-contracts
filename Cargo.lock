@@ -295,7 +295,6 @@ dependencies = [
  "cosmwasm-std",
  "cw-competition-base",
  "cw2 1.1.2",
- "itertools 0.13.0",
 ]
 
 [[package]]
