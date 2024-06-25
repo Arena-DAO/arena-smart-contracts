@@ -11,6 +11,9 @@ download-deps:
     wget https://github.com/DA0-DA0/dao-contracts/releases/latest/download/dao_proposal_sudo.wasm -O artifacts/dao_proposal_sudo.wasm
     wget https://github.com/DA0-DA0/dao-contracts/releases/latest/download/dao_proposal_single.wasm -O artifacts/dao_proposal_single.wasm
 
+test:
+    cargo test
+
 udeps:
     cargo +nightly udeps
 

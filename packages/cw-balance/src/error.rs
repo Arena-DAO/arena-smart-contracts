@@ -20,7 +20,4 @@ pub enum BalanceError {
 
     #[error("{0}")]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
-
-    #[error("Insufficient balance")]
-    InsufficientBalance,
 }

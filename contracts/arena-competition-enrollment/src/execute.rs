@@ -6,8 +6,8 @@ use arena_league_module::msg::LeagueInstantiateExt;
 use arena_tournament_module::{msg::TournamentInstantiateExt, state::EliminationType};
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, Order,
-    Response, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
+    ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo,
+    Order, Response, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
 };
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_utils::{must_pay, Expiration};
@@ -254,9 +254,9 @@ pub fn trigger_expiration(
                         dues: vec![MemberBalanceUnchecked {
                             addr: env.contract.address.to_string(),
                             balance: BalanceUnchecked {
-                                native: vec![total],
-                                cw20: vec![],
-                                cw721: vec![],
+                                native: Some(vec![total]),
+                                cw20: None,
+                                cw721: None,
                             },
                         }],
                         should_activate_on_funded: Some(false),
@@ -423,12 +423,55 @@ pub fn enroll(
         .add_attribute("members_count", members_count.to_string()))
 }
 
-#[allow(unused_variables)]
 pub fn withdraw(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     id: Uint128,
 ) -> Result<Response, ContractError> {
-    todo!()
+    // Check if the user is enrolled
+    ensure!(
+        ENROLLMENT_MEMBERS.has(deps.storage, (id.u128(), &info.sender)),
+        ContractError::NotEnrolled {}
+    );
+
+    // Load the enrollment entry
+    let entry = enrollment_entries().load(deps.storage, id.u128())?;
+
+    // Check if the competition is still in Pending state
+    let is_pending = matches!(entry.competition_info, CompetitionInfo::Pending { .. });
+
+    // Ensure the competition hasn't been triggered yet and is still in Pending state
+    ensure!(
+        !entry.has_triggered_expiration && is_pending,
+        ContractError::StdError(StdError::generic_err(
+            "Enrollment has already been expired or competition has been created, withdrawal not possible"
+        ))
+    );
+
+    // Remove the member from the enrollment
+    ENROLLMENT_MEMBERS.remove(deps.storage, (id.u128(), &info.sender));
+
+    // Update the members count
+    let members_count =
+        ENROLLMENT_MEMBERS_COUNT.update(deps.storage, id.u128(), |count| -> StdResult<_> {
+            Ok(count.unwrap_or_default().checked_sub(Uint64::one())?)
+        })?;
+
+    // Prepare the refund if there was an entry fee
+    let refund_msg = if let Some(entry_fee) = &entry.entry_fee {
+        vec![CosmosMsg::Bank(BankMsg::Send {
+            to_address: info.sender.to_string(),
+            amount: vec![entry_fee.clone()],
+        })]
+    } else {
+        vec![]
+    };
+
+    Ok(Response::new()
+        .add_messages(refund_msg)
+        .add_attribute("action", "withdraw")
+        .add_attribute("id", id.to_string())
+        .add_attribute("withdrawing_member", info.sender)
+        .add_attribute("remaining_members", members_count.to_string()))
 }

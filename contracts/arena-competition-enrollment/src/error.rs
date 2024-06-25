@@ -46,4 +46,7 @@ pub enum ContractError {
 
     #[error("Entry fee was not paid")]
     EntryFeeNotPaid { fee: Uint128 },
+
+    #[error("Not enrolled")]
+    NotEnrolled {},
 }

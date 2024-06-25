@@ -1,40 +1,10 @@
-use std::collections::HashMap;
-
-use arena_interface::core::{CompetitionModuleResponse, QueryExt};
-use cosmwasm_std::{Addr, Deps, Order, StdError, StdResult, Uint128};
-use cw_ownable::get_ownership;
+use cosmwasm_std::{Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::{
     msg::EnrollmentFilter,
     state::{enrollment_entries, EnrollmentEntryResponse},
 };
-
-pub fn module_map(deps: Deps) -> StdResult<HashMap<String, Addr>> {
-    let ownership = get_ownership(deps.storage)?;
-
-    if let Some(owner) = ownership.owner {
-        let competition_modules = deps
-            .querier
-            .query_wasm_smart::<Vec<CompetitionModuleResponse<Addr>>>(
-                &owner,
-                &arena_interface::core::QueryMsg::QueryExtension {
-                    msg: QueryExt::CompetitionModules {
-                        start_after: None,
-                        limit: None,
-                        include_disabled: None,
-                    },
-                },
-            )?;
-
-        Ok(competition_modules
-            .into_iter()
-            .map(|x| (x.key, x.addr))
-            .collect())
-    } else {
-        Err(StdError::generic_err("No owner"))
-    }
-}
 
 pub fn enrollments(
     deps: Deps,

@@ -5,6 +5,9 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[lib]
+doctest = false
+
 [dependencies]
 cw-orch = { workspace = true }
 arena-wager-module = { workspace = true }

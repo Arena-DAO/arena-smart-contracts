@@ -357,17 +357,17 @@ fn test_leagues() {
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1006,25 +1006,25 @@ fn test_leagues() {
             MemberBalanceUnchecked {
                 addr: users[3].to_string(), // 3rd
                 balance: BalanceUnchecked {
-                    native: coins(1700, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(1700, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[0].to_string(), // 2nd
                 balance: BalanceUnchecked {
-                    native: coins(11900, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(11900, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[4].to_string(), // 1st 20000 (prize pool) * .85 (tax) * .7 (1st place earnings) = 11900
                 balance: BalanceUnchecked {
-                    native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3400, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             }
         ]
@@ -1085,17 +1085,17 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1281,41 +1281,41 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[3].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3400, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3400, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[4].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3400, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[2].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3400, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3400, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             }
         ]
@@ -1336,17 +1336,17 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1534,25 +1534,25 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(6375, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(6375, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[2].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(4250, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(4250, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(6375, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(6375, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             }
         ]
@@ -1573,17 +1573,17 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1726,33 +1726,33 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[3].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(850, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(850, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(11900, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(11900, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[2].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(850, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(850, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3400, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3400, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             }
         ]
@@ -1773,17 +1773,17 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1926,25 +1926,25 @@ fn test_distributions() {
             MemberBalanceUnchecked {
                 addr: users[3].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(2125, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(2125, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(2125, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(2125, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(12750, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(12750, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             }
         ]
@@ -2019,17 +2019,17 @@ fn test_additional_layered_fees() {
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -2216,41 +2216,41 @@ fn test_additional_layered_fees() {
             MemberBalanceUnchecked {
                 addr: users[3].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3071, "juno"), // This one had the remainders added to it 4 + 3068
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3071, "juno")), // This one had the remainders added to it 4 + 3068
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3068, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3068, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[4].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3068, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3068, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[2].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3068, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3068, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             },
             MemberBalanceUnchecked {
                 addr: users[1].to_string(),
                 balance: BalanceUnchecked {
-                    native: coins(3068, "juno"),
-                    cw20: vec![],
-                    cw721: vec![]
+                    native: Some(coins(3068, "juno")),
+                    cw20: None,
+                    cw721: None
                 }
             }
         ]

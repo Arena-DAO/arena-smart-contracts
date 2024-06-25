@@ -3,7 +3,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128, Uint64};
 use cw_utils::Expiration;
 
-use crate::state::CompetitionType;
+use crate::state::{CompetitionType, EnrollmentEntryResponse};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -62,9 +62,23 @@ pub enum EnrollmentFilter {
 #[cw_ownable::cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    #[returns(Vec<EnrollmentEntryResponse>)]
+    Enrollments {
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+        filter: Option<EnrollmentFilter>,
+    },
+    #[returns(EnrollmentEntryResponse)]
+    Enrollment { id: Uint128 },
+}
 
 #[cw_serde]
 pub enum MigrateMsg {
     FromCompatible {},
+}
+
+#[cw_serde]
+pub struct SudoMsg {
+    pub enrollment_entry_response: EnrollmentEntryResponse,
 }

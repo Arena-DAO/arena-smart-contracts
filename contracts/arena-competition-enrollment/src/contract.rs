@@ -1,14 +1,15 @@
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    entry_point, to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, Reply, Response, StdError,
-    StdResult, SubMsgResult, Uint128, WasmMsg,
+    entry_point, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply,
+    Response, StdError, StdResult, SubMsgResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 
 use crate::{
     execute::{self, TRIGGER_COMPETITION_REPLY_ID},
-    msg::{ExecuteMsg, InstantiateMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    query,
     state::{enrollment_entries, CompetitionInfo, TEMP_ENROLLMENT_INFO},
     ContractError,
 };
@@ -69,6 +70,22 @@ pub fn execute(
         }
         ExecuteMsg::Enroll { id } => execute::enroll(deps, env, info, id),
         ExecuteMsg::Withdraw { id } => execute::withdraw(deps, env, info, id),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Enrollments {
+            start_after,
+            limit,
+            filter,
+        } => to_json_binary(&query::enrollments(deps, start_after, limit, filter)?),
+        QueryMsg::Enrollment { id } => {
+            let entry = enrollment_entries().load(deps.storage, id.u128())?;
+            to_json_binary(&entry.into_response(deps, id)?)
+        }
+        QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
     }
 }
 

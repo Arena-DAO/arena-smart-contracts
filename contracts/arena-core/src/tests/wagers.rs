@@ -299,17 +299,17 @@ fn test_create_competition() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -577,17 +577,17 @@ fn test_create_competition_jailed() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -898,17 +898,17 @@ fn test_preset_distribution() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1108,11 +1108,11 @@ fn test_preset_distribution() {
         .unwrap();
 
     assert_eq!(
-        balances[0].balance.native[0].amount,
+        balances[0].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(7_438u128)
     );
     assert_eq!(
-        balances[1].balance.native[0].amount,
+        balances[1].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(9_562u128)
     );
 }
@@ -1167,17 +1167,17 @@ fn test_competition_draw() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1300,11 +1300,11 @@ fn test_competition_draw() {
         .unwrap();
 
     assert_eq!(
-        balances[0].balance.native[0].amount,
+        balances[0].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(8_500u128)
     );
     assert_eq!(
-        balances[1].balance.native[0].amount,
+        balances[1].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(8_500u128)
     );
 
@@ -1320,7 +1320,10 @@ fn test_competition_draw() {
         )
         .unwrap();
     assert!(balance.is_some());
-    assert_eq!(balance.unwrap().native[0].amount, Uint128::from(8_500u128));
+    assert_eq!(
+        balance.unwrap().native.as_ref().unwrap()[0].amount,
+        Uint128::from(8_500u128)
+    );
 
     // Claim balances
     let result = context.app.execute_contract(

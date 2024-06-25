@@ -1,6 +1,7 @@
+use crate::cw721::Cw721CollectionVerified;
 use crate::{BalanceVerified, Distribution, MemberPercentage};
-use cosmwasm_std::{Addr, Decimal, Uint128};
-use std::collections::{BTreeMap, BTreeSet};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
+use cw20::Cw20CoinVerified;
 
 #[test]
 fn test_split_balances() {
@@ -9,18 +10,30 @@ fn test_split_balances() {
     let addr_c = Addr::unchecked("addr_c");
 
     let balance = BalanceVerified {
-        native: Some(BTreeMap::from([
-            ("native1".to_string(), Uint128::new(200)),
-            ("native2".to_string(), Uint128::new(100)),
-        ])),
-        cw20: Some(BTreeMap::from([
-            (Addr::unchecked("cw20token1"), Uint128::new(150)),
-            (Addr::unchecked("cw20token2"), Uint128::new(50)),
-        ])),
-        cw721: Some(BTreeMap::from([(
-            Addr::unchecked("cw721token1"),
-            BTreeSet::from(["1".to_string(), "2".to_string()]),
-        )])),
+        native: Some(vec![
+            Coin {
+                denom: "native1".to_string(),
+                amount: Uint128::new(200),
+            },
+            Coin {
+                denom: "native2".to_string(),
+                amount: Uint128::new(100),
+            },
+        ]),
+        cw20: Some(vec![
+            Cw20CoinVerified {
+                address: Addr::unchecked("cw20token1"),
+                amount: Uint128::new(150),
+            },
+            Cw20CoinVerified {
+                address: Addr::unchecked("cw20token2"),
+                amount: Uint128::new(50),
+            },
+        ]),
+        cw721: Some(vec![Cw721CollectionVerified {
+            address: Addr::unchecked("cw721token1"),
+            token_ids: vec!["1".to_string(), "2".to_string()],
+        }]),
     };
 
     let distribution = Distribution {
@@ -61,54 +74,86 @@ fn test_split_balances() {
 
     // Check member A's balance (60%)
     assert_eq!(
-        member_a_balance.native.as_ref().unwrap().get("native1"),
-        Some(&Uint128::new(120))
+        member_a_balance
+            .native
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|c| c.denom == "native1")
+            .map(|c| c.amount),
+        Some(Uint128::new(120))
     );
     assert_eq!(
-        member_a_balance.native.as_ref().unwrap().get("native2"),
-        Some(&Uint128::new(60))
+        member_a_balance
+            .native
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|c| c.denom == "native2")
+            .map(|c| c.amount),
+        Some(Uint128::new(60))
     );
     assert_eq!(
         member_a_balance
             .cw20
             .as_ref()
             .unwrap()
-            .get(&Addr::unchecked("cw20token1")),
-        Some(&Uint128::new(90))
+            .iter()
+            .find(|c| c.address == Addr::unchecked("cw20token1"))
+            .map(|c| c.amount),
+        Some(Uint128::new(90))
     );
     assert_eq!(
         member_a_balance
             .cw20
             .as_ref()
             .unwrap()
-            .get(&Addr::unchecked("cw20token2")),
-        Some(&Uint128::new(30))
+            .iter()
+            .find(|c| c.address == Addr::unchecked("cw20token2"))
+            .map(|c| c.amount),
+        Some(Uint128::new(30))
     );
 
     // Check member B's balance (40%)
     assert_eq!(
-        member_b_balance.native.as_ref().unwrap().get("native1"),
-        Some(&Uint128::new(80))
+        member_b_balance
+            .native
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|c| c.denom == "native1")
+            .map(|c| c.amount),
+        Some(Uint128::new(80))
     );
     assert_eq!(
-        member_b_balance.native.as_ref().unwrap().get("native2"),
-        Some(&Uint128::new(40))
+        member_b_balance
+            .native
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|c| c.denom == "native2")
+            .map(|c| c.amount),
+        Some(Uint128::new(40))
     );
     assert_eq!(
         member_b_balance
             .cw20
             .as_ref()
             .unwrap()
-            .get(&Addr::unchecked("cw20token1")),
-        Some(&Uint128::new(60))
+            .iter()
+            .find(|c| c.address == Addr::unchecked("cw20token1"))
+            .map(|c| c.amount),
+        Some(Uint128::new(60))
     );
     assert_eq!(
         member_b_balance
             .cw20
             .as_ref()
             .unwrap()
-            .get(&Addr::unchecked("cw20token2")),
-        Some(&Uint128::new(20))
+            .iter()
+            .find(|c| c.address == Addr::unchecked("cw20token2"))
+            .map(|c| c.amount),
+        Some(Uint128::new(20))
     );
 
     // Check remainder balance (should be empty or have minimal remainders due to rounding)
@@ -123,12 +168,12 @@ fn test_split_balances() {
             .cw721
             .as_ref()
             .unwrap()
-            .get(&Addr::unchecked("cw721token1")),
-        Some(&BTreeSet::from(["1".to_string(), "2".to_string()]))
+            .first()
+            .map(|c| &c.token_ids),
+        Some(&vec!["1".to_string(), "2".to_string()])
     );
 }
 
-// Add a new test for invalid percentages
 #[test]
 fn test_split_balances_invalid_percentages() {
     let addr_a = Addr::unchecked("addr_a");
@@ -136,7 +181,10 @@ fn test_split_balances_invalid_percentages() {
     let addr_c = Addr::unchecked("addr_c");
 
     let balance = BalanceVerified {
-        native: Some(BTreeMap::from([("native1".to_string(), Uint128::new(100))])),
+        native: Some(vec![Coin {
+            denom: "native1".to_string(),
+            amount: Uint128::new(100),
+        }]),
         cw20: None,
         cw721: None,
     };
