@@ -7,7 +7,7 @@ use crate::{
     },
     ContractError,
 };
-use arena_core_interface::msg::{
+use arena_interface::core::{
     ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
     QueryMsg,
 };
@@ -24,6 +24,9 @@ use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::ModuleInstantia
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-core";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(crate) const ITEM_KEY: &str = "Arena";
+pub const WAGERS_KEY: &str = "Wagers";
+pub const LEAGUES_KEY: &str = "Leagues";
+pub const TOURNAMENTS_KEY: &str = "Tournaments";
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -150,6 +153,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             };
 
             Ok(Response::default()
+                .add_attribute("action", "reply_competition_module")
                 .add_attribute("key", key)
                 .add_attribute("competition_module".to_string(), res.contract_address)
                 .add_messages(callback_msgs))
@@ -242,6 +246,10 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
 
     if version.major == 1 && version.minor < 6 {
         migrate::from_v1_4_to_v1_6(deps.branch())?;
+    }
+
+    if version.major == 1 && version.minor < 7 {
+        migrate::from_v1_6_to_v1_7(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

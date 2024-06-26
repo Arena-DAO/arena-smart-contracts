@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use arena_core_interface::rating::Rating;
+use arena_interface::ratings::Rating;
 use cosmwasm_std::{testing::mock_env, Decimal};
 use cw_utils::Duration;
 use rust_decimal_macros::dec;

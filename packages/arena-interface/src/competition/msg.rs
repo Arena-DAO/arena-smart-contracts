@@ -1,11 +1,9 @@
 use std::marker::PhantomData;
 
 #[allow(unused_imports)]
-use crate::state::{CompetitionResponse, Config};
-#[allow(unused_imports)]
-use crate::state::{CompetitionStatus, Evidence};
-use arena_core_interface::fees::FeeInformation;
-use arena_core_interface::msg::ProposeMessage;
+use crate::competition::state::{CompetitionResponse, CompetitionStatus, Config, Evidence};
+use crate::core::ProposeMessage;
+use crate::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
 use cw_balance::Distribution;
@@ -50,6 +48,10 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         expiration: Expiration,
         rules: Vec<String>,
         rulesets: Vec<Uint128>,
+        banner: Option<String>,
+        /// Determines if the competition is automatically activated if all dues are paid
+        /// Defaults to true
+        should_activate_on_funded: Option<bool>,
         instantiate_extension: CompetitionInstantiateExt,
     },
     SubmitEvidence {
@@ -62,6 +64,16 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     Extension {
         msg: ExecuteExt,
+    },
+    ActivateManually {
+        id: Uint128,
+    },
+    MigrateEscrows {
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+        filter: Option<CompetitionsFilter>,
+        escrow_code_id: u64,
+        escrow_migrate_msg: crate::escrow::MigrateMsg,
     },
 }
 
@@ -119,7 +131,7 @@ pub struct EscrowInstantiateInfo {
 pub enum CompetitionsFilter {
     CompetitionStatus { status: CompetitionStatus },
     Category { id: Option<Uint128> },
-    Host { addr: String },
+    Host(String),
 }
 
 #[cw_serde]

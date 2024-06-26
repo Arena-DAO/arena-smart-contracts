@@ -1,10 +1,9 @@
 use crate::{
-    execute, migrate,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    query,
-    state::{self, DUE, INITIAL_DUE, IS_LOCKED},
+    execute, migrate, query,
+    state::{self, DUE, INITIAL_DUE, IS_LOCKED, SHOULD_ACTIVATE_ON_FUNDED},
     ContractError,
 };
+use arena_interface::escrow::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
@@ -18,21 +17,20 @@ pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.dues)?;
-    Ok(Response::new()
-        .add_attribute("action", "instantiate")
-        .add_attribute("addr", env.contract.address))
+    instantiate_contract(deps, info, msg.dues, msg.should_activate_on_funded)?;
+    Ok(Response::default())
 }
 
 pub fn instantiate_contract(
     deps: DepsMut,
     info: MessageInfo,
     due: Vec<MemberBalanceUnchecked>,
+    should_activate_on_funded: Option<bool>,
 ) -> Result<(), ContractError> {
     if due.is_empty() {
         return Err(ContractError::InvalidDue {
@@ -42,6 +40,9 @@ pub fn instantiate_contract(
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
+    if let Some(should_activate_on_funded) = should_activate_on_funded {
+        SHOULD_ACTIVATE_ON_FUNDED.save(deps.storage, &should_activate_on_funded)?;
+    }
     for member_balance in due {
         let member_balance = member_balance.into_checked(deps.as_ref())?;
 
@@ -82,12 +83,11 @@ pub fn execute(
         ExecuteMsg::ReceiveNft(cw721_receive_msg) => {
             execute::receive_cw721(deps, info, cw721_receive_msg)
         }
-        ExecuteMsg::Distribute(competition_escrow_distribute_msg) => execute::distribute(
-            deps,
-            info,
-            competition_escrow_distribute_msg.distribution,
-            competition_escrow_distribute_msg.layered_fees,
-        ),
+        ExecuteMsg::Activate {} => execute::activate(deps, env, info),
+        ExecuteMsg::Distribute {
+            distribution,
+            layered_fees,
+        } => execute::distribute(deps, info, distribution, layered_fees),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
         ExecuteMsg::UpdateOwnership(action) => {
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
@@ -117,6 +117,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::DumpState { addr } => to_json_binary(&query::dump_state(deps, addr)?),
+        QueryMsg::ShouldActivateOnFunded {} => {
+            to_json_binary(&query::should_activate_on_funded(deps)?)
+        }
     }
 }
 

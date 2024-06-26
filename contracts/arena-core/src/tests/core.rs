@@ -1,9 +1,9 @@
-use arena_core_interface::{
-    fees::TaxConfiguration,
-    msg::{
+use arena_interface::{
+    core::{
         CompetitionCategory, EditCompetitionCategory, InstantiateExt, InstantiateMsg,
         NewCompetitionCategory, NewRuleset, Ruleset,
     },
+    fees::TaxConfiguration,
 };
 use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
@@ -257,8 +257,8 @@ pub fn test_categories() {
             msgs: vec![WasmMsg::Execute {
                 contract_addr: context.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::UpdateCategories {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::UpdateCategories {
                         to_add: vec![NewCompetitionCategory {
                             name: "New Category".to_string(),
                         }],
@@ -280,8 +280,8 @@ pub fn test_categories() {
         .wrap()
         .query_wasm_smart(
             context.arena_core_addr.clone(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
-                msg: arena_core_interface::msg::QueryExt::Categories {
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: arena_interface::core::QueryExt::Categories {
                     start_after: None,
                     limit: None,
                     include_disabled: None,
@@ -298,8 +298,8 @@ pub fn test_categories() {
         .wrap()
         .query_wasm_smart(
             context.arena_core_addr.clone(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
-                msg: arena_core_interface::msg::QueryExt::Categories {
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: arena_interface::core::QueryExt::Categories {
                     start_after: None,
                     limit: None,
                     include_disabled: Some(true),
@@ -333,9 +333,9 @@ pub fn test_rulesets() {
             msgs: vec![WasmMsg::Execute {
                 contract_addr: context.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
-                        to_add: vec![arena_core_interface::msg::NewRuleset {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::UpdateRulesets {
+                        to_add: vec![arena_interface::core::NewRuleset {
                             category_id: Some(Uint128::one()),
                             rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
                             description: "Test Ruleset 3".to_string(),
@@ -356,8 +356,8 @@ pub fn test_rulesets() {
         .wrap()
         .query_wasm_smart(
             context.arena_core_addr.clone(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
-                msg: arena_core_interface::msg::QueryExt::Rulesets {
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: arena_interface::core::QueryExt::Rulesets {
                     category_id: Some(Uint128::one()),
                     start_after: None,
                     limit: None,
@@ -376,8 +376,8 @@ pub fn test_rulesets() {
             msgs: vec![WasmMsg::Execute {
                 contract_addr: context.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::UpdateRulesets {
                         to_add: vec![],
                         to_disable: vec![Uint128::one()],
                     },
@@ -395,8 +395,8 @@ pub fn test_rulesets() {
         .wrap()
         .query_wasm_smart(
             context.arena_core_addr.clone(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
-                msg: arena_core_interface::msg::QueryExt::Rulesets {
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: arena_interface::core::QueryExt::Rulesets {
                     category_id: Some(Uint128::one()),
                     start_after: None,
                     limit: None,
@@ -411,8 +411,8 @@ pub fn test_rulesets() {
         .wrap()
         .query_wasm_smart(
             context.arena_core_addr.clone(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
-                msg: arena_core_interface::msg::QueryExt::Rulesets {
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: arena_interface::core::QueryExt::Rulesets {
                     category_id: Some(Uint128::one()),
                     start_after: None,
                     limit: None,
@@ -431,9 +431,9 @@ pub fn test_rulesets() {
             msgs: vec![WasmMsg::Execute {
                 contract_addr: context.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::UpdateRulesets {
-                        to_add: vec![arena_core_interface::msg::NewRuleset {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::UpdateRulesets {
+                        to_add: vec![arena_interface::core::NewRuleset {
                             category_id: Some(Uint128::from(9999u128)), // Non-existent category
                             rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
                             description: "Test Ruleset 4".to_string(),

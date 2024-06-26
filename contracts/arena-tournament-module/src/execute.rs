@@ -2,7 +2,7 @@ use crate::contract::CompetitionModule;
 use crate::msg::{MatchResultMsg, Tournament};
 use crate::state::{EliminationType, Match, MatchResult, MATCHES};
 use crate::{ContractError, NestedArray};
-use arena_core_interface::rating::MemberResult;
+use arena_interface::ratings::MemberResult;
 use cosmwasm_std::{Addr, Decimal, MessageInfo, StdError, Storage};
 use cosmwasm_std::{DepsMut, Response, StdResult, Uint128};
 use cw_balance::{Distribution, MemberPercentage};

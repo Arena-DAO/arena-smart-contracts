@@ -7,7 +7,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "1.6.0"
+version = "1.7.0"
 
 [profile.release]
 codegen-units = 1
@@ -27,14 +27,15 @@ cosmwasm-schema = "1.5.5"
 cw-utils = "1.0.3"
 thiserror = "1.0.60"
 cw-storage-plus = "1.2.0"
-cw-multi-test = { version = "1.1.0", features = ["cosmwasm_1_4"] }
+cw-multi-test = { version = "1.2.0", features = ["cosmwasm_1_4"] }
 cw2 = "1.1.2"
 cw20 = "1.1.2"
 cw721 = "0.18.0"
-cw20-base = "1.1.2"
-cw721-base = "0.18"
+cw20-base = { version = "1.1.2", features = ["library"] }
+cw721-base = { version = "0.18", features = ["library"] }
 anyhow = "1.0.83"
-cw4-group = "1.1.2"
+cw4-group = { version = "1.1.2", features = ["library"] }
+rand = "0.8.5"
 cw4 = "1.1.2"
 serde = { version = "1.0.202", default-features = false, features = ["derive"] }
 cw-paginate = "0.2.1"
@@ -47,13 +48,10 @@ rust_decimal = "1.35.0"
 rust_decimal_macros = "1.34.2"
 
 #arena_dao dependencies
-cw-competition-base = { path = "./packages/cw-competition-base", features = [
-	"library",
-] }
-cw-balance = { path = "./packages/cw-balance", features = ["library"] }
+cw-competition-base = { path = "./packages/cw-competition-base" }
+cw-balance = { path = "./packages/cw-balance" }
 arena-testing = { path = "./packages/arena-testing" }
-cw-competition = { path = "./packages/cw-competition" }
-arena-core-interface = { path = "./packages/arena-core-interface" }
+arena-interface = { path = "./packages/arena-interface" }
 orch-interface = { path = "./packages/orch-interface" }
 glicko_2 = { path = "./packages/glicko_2" }
 
@@ -62,6 +60,7 @@ arena-escrow = { path = "./contracts/arena-escrow" }
 arena-wager-module = { path = "./contracts/arena-wager-module" }
 arena-league-module = { path = "./contracts/arena-league-module" }
 arena-tournament-module = { path = "./contracts/arena-tournament-module" }
+arena-competition-enrollment = { path = "./contracts/arena-competition-enrollment" }
 
 #dao dependencies
 dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }

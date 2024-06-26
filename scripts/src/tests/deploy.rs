@@ -1,6 +1,8 @@
-use arena_core_interface::{
+use std::collections::BTreeMap;
+
+use arena_interface::{
+    core::{InstantiateExt, InstantiateMsg, NewCompetitionCategory, QueryExtFns},
     fees::TaxConfiguration,
-    msg::{InstantiateExt, InstantiateMsg, NewCompetitionCategory, QueryExtFns},
 };
 use cosmwasm_std::{to_json_binary, Decimal};
 use cw_orch::prelude::*;
@@ -27,7 +29,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
         Ok(arena)
     }
 
-    fn deploy_on(chain: Chain, admin: Addr) -> Result<Self, CwOrchError> {
+    fn deploy_on(chain: Chain, admin: Addr) -> Result<Self, Self::Error> {
         // ########### Upload ##############
         let arena = Self::store_on(chain)?;
 
@@ -82,7 +84,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                         code_id: arena.arena_tournament_module.code_id()?,
                                                         msg: to_json_binary(
                                                             &arena_tournament_module::msg::InstantiateMsg {
-                                                                key: "tournaments".to_string(),
+                                                                key: "Tournaments".to_string(),
                                                                 description: "Knockout competitions".to_string(),
                                                                 extension: Empty {},
                                                             },
@@ -91,6 +93,34 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                             dao_interface_master::state::Admin::CoreModule {},
                                                         ),
                                                         label: "Tournament Module".to_string(),
+                                                    },
+                                                    dao_interface_master::state::ModuleInstantiateInfo {
+                                                        code_id: arena.arena_wager_module.code_id()?,
+                                                        msg: to_json_binary(
+                                                            &arena_wager_module::msg::InstantiateMsg {
+                                                                key: "Wagers".to_string(),
+                                                                description: "Skill-based wagers".to_string(),
+                                                                extension: Empty {},
+                                                            },
+                                                        )?,
+                                                        admin: Some(
+                                                            dao_interface_master::state::Admin::CoreModule {},
+                                                        ),
+                                                        label: "League Module".to_string(),
+                                                    },
+                                                    dao_interface_master::state::ModuleInstantiateInfo {
+                                                        code_id: arena.arena_league_module.code_id()?,
+                                                        msg: to_json_binary(
+                                                            &arena_league_module::msg::InstantiateMsg {
+                                                                key: "Leagues".to_string(),
+                                                                description: "Round-robin tournaments".to_string(),
+                                                                extension: Empty {},
+                                                            },
+                                                        )?,
+                                                        admin: Some(
+                                                            dao_interface_master::state::Admin::CoreModule {},
+                                                        ),
+                                                        label: "League Module".to_string(),
                                                     },
                                                 ],
                                                 rulesets: vec![],
@@ -137,10 +167,30 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             .arena_core
             .set_address(&Addr::unchecked(get_item_response.item.unwrap()));
 
+        // Set the competition modules
         let competition_modules = arena.arena_core.competition_modules(None, None, None)?;
+
+        let competition_module_map = competition_modules
+            .into_iter()
+            .map(|x| (x.key, x.addr))
+            .collect::<BTreeMap<String, Addr>>();
         arena
             .arena_tournament_module
-            .set_address(&Addr::unchecked(competition_modules[0].addr.clone()));
+            .set_address(competition_module_map.get("Tournaments").unwrap());
+        arena
+            .arena_wager_module
+            .set_address(competition_module_map.get("Wagers").unwrap());
+        arena
+            .arena_league_module
+            .set_address(competition_module_map.get("Leagues").unwrap());
+
+        arena.arena_competition_enrollment.instantiate(
+            &arena_competition_enrollment::msg::InstantiateMsg {
+                owner: arena.arena_core.addr_str()?,
+            },
+            Some(&arena.dao_dao.dao_core.address()?),
+            None,
+        )?;
 
         Ok(arena)
     }
@@ -163,7 +213,10 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             Box::new(&mut self.dao_dao.dao_proposal_sudo),
             Box::new(&mut self.arena_core),
             Box::new(&mut self.arena_tournament_module),
+            Box::new(&mut self.arena_wager_module),
+            Box::new(&mut self.arena_league_module),
             Box::new(&mut self.arena_escrow),
+            Box::new(&mut self.arena_competition_enrollment),
         ]
     }
 }

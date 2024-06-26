@@ -1,8 +1,7 @@
 use std::fmt;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, BlockInfo, Decimal};
-use cw_address_like::AddressLike;
+use cosmwasm_std::{BlockInfo, Decimal};
 
 #[cw_serde]
 pub struct Rating {
@@ -10,21 +9,6 @@ pub struct Rating {
     pub phi: Decimal,
     pub sigma: Decimal,
     pub last_block: Option<BlockInfo>,
-}
-
-#[cw_serde]
-pub struct MemberResult<T: AddressLike> {
-    pub addr: T,
-    pub result: Decimal,
-}
-
-impl From<MemberResult<Addr>> for MemberResult<String> {
-    fn from(member: MemberResult<Addr>) -> Self {
-        MemberResult {
-            addr: member.addr.to_string(),
-            result: member.result,
-        }
-    }
 }
 
 impl Rating {

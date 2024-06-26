@@ -1,10 +1,11 @@
-use arena_core_interface::fees::FeeInformation;
+use arena_interface::fees::FeeInformation;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, CosmosMsg, DepsMut, Empty, MessageInfo, Response, StdResult,
+    ensure, to_json_binary, Addr, Binary, CosmosMsg, Decimal, DepsMut, Empty, Env, MessageInfo,
+    Response, StdResult,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{BalanceVerified, Cw721CollectionVerified, Distribution};
+use cw_balance::{BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution};
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
@@ -40,7 +41,7 @@ pub fn withdraw(
         // If the total balance has already been taxed, then deduct at the individual level
         if let Some(fees) = DEFERRED_FEES.may_load(deps.storage)? {
             for fee in fees {
-                balance = balance.checked_sub(&balance.checked_mul_floor(fee)?)?;
+                balance = balance.checked_mul_floor(Decimal::one().checked_sub(fee)?)?;
             }
         }
 
@@ -115,9 +116,9 @@ pub fn set_distribution(
 // This function receives native tokens and updates the balance
 pub fn receive_native(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let balance = BalanceVerified {
-        native: info.funds,
-        cw20: vec![],
-        cw721: vec![],
+        native: Some(info.funds),
+        cw20: None,
+        cw721: None,
     };
 
     receive_balance(deps, info.sender, balance)
@@ -131,14 +132,14 @@ pub fn receive_cw20(
 ) -> Result<Response, ContractError> {
     let sender_addr = deps.api.addr_validate(&cw20_receive_msg.sender)?;
     let cw20_balance = vec![Cw20CoinVerified {
-        address: info.sender,
+        address: sender_addr.clone(),
         amount: cw20_receive_msg.amount,
     }];
 
     let balance = BalanceVerified {
-        native: info.funds,
-        cw20: cw20_balance,
-        cw721: vec![],
+        native: Some(info.funds),
+        cw20: Some(cw20_balance),
+        cw721: None,
     };
 
     receive_balance(deps, sender_addr, balance)
@@ -152,14 +153,14 @@ pub fn receive_cw721(
 ) -> Result<Response, ContractError> {
     let sender_addr = deps.api.addr_validate(&cw721_receive_msg.sender)?;
     let cw721_balance = vec![Cw721CollectionVerified {
-        address: info.sender,
+        address: sender_addr.clone(),
         token_ids: vec![cw721_receive_msg.token_id],
     }];
 
     let balance = BalanceVerified {
-        native: info.funds,
-        cw20: vec![],
-        cw721: cw721_balance,
+        native: Some(info.funds),
+        cw20: None,
+        cw721: Some(cw721_balance),
     };
 
     receive_balance(deps, sender_addr, balance)
@@ -187,7 +188,7 @@ fn receive_balance(
         })?;
 
     let due_balance = DUE.load(deps.storage, &addr)?;
-    let remaining_due = updated_balance.difference(&due_balance)?;
+    let remaining_due = updated_balance.difference_to(&due_balance)?;
 
     let mut msgs: Vec<CosmosMsg> = vec![];
 
@@ -202,9 +203,10 @@ fn receive_balance(
             if let Some(owner) = get_ownership(deps.storage)?.owner {
                 msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
                     contract_addr: owner.to_string(),
-                    msg: to_json_binary(
-                        &cw_competition::msg::ExecuteBase::<Empty, Empty>::Activate {},
-                    )?,
+                    msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                        Empty,
+                        Empty,
+                    >::Activate {})?,
                     funds: vec![],
                 }));
             }
@@ -263,7 +265,7 @@ pub fn distribute(
         for fee in layered_fees {
             let fee_amounts = total_balance.checked_mul_floor(fee.tax)?;
 
-            total_balance = TOTAL_BALANCE.update(deps.storage, |x| -> StdResult<_> {
+            total_balance = TOTAL_BALANCE.update(deps.storage, |x| -> Result<_, BalanceError> {
                 x.checked_sub(&fee_amounts)
             })?;
 
@@ -351,4 +353,31 @@ pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, C
     Ok(Response::new()
         .add_attribute("action", "handle_competition_state_changed")
         .add_attribute("is_locked", value.to_string()))
+}
+
+pub fn activate(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    if env.contract.address != info.sender {
+        assert_owner(deps.storage, &info.sender)?;
+    }
+    ensure!(
+        is_fully_funded(deps.as_ref()),
+        ContractError::NotFullyFunded {}
+    );
+
+    IS_LOCKED.save(deps.storage, &true)?;
+
+    let mut msgs = vec![];
+    if let Some(owner) = get_ownership(deps.storage)?.owner {
+        msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+            contract_addr: owner.to_string(),
+            msg: to_json_binary(
+                &arena_interface::competition::msg::ExecuteBase::<Empty, Empty>::Activate {},
+            )?,
+            funds: vec![],
+        }));
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "activate")
+        .add_messages(msgs))
 }

@@ -25,10 +25,9 @@ cw-utils = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 cw-balance = { workspace = true }
-cw-competition = { workspace = true }
 cw-paginate = { workspace = true }
 cw-ownable = { workspace = true }
-arena-core-interface = { workspace = true }
+arena-interface = { workspace = true }
 cw-orch = { workspace = true }
 
 [dev-dependencies]

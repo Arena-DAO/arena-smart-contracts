@@ -1,3 +1,4 @@
+pub mod arena_competition_enrollment;
 pub mod arena_core;
 pub mod arena_escrow;
 pub mod arena_league_module;

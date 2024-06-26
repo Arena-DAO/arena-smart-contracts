@@ -3,7 +3,7 @@ use cw_orch::interface;
 use cw_orch::prelude::*;
 
 #[allow(unused_imports)]
-use arena_escrow::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use arena_interface::escrow::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub const CONTRACT_ID: &str = "arena_escrow";
 

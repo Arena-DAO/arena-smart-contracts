@@ -1,10 +1,10 @@
+use arena_interface::competition::msg::{ExecuteBase, QueryBase};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
-use cw_competition::msg::{ExecuteBase, QueryBase};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
 use crate::{
@@ -20,8 +20,14 @@ use crate::{
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-tournament-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub type CompetitionModule =
-    CompetitionModuleContract<Empty, ExecuteExt, QueryExt, TournamentExt, TournamentInstantiateExt>;
+pub type CompetitionModule<'a> = CompetitionModuleContract<
+    'a,
+    Empty,
+    ExecuteExt,
+    QueryExt,
+    TournamentExt,
+    TournamentInstantiateExt,
+>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -52,6 +58,8 @@ pub fn execute(
             expiration,
             rules,
             rulesets,
+            banner,
+            should_activate_on_funded,
             instantiate_extension,
         } => {
             let response = CompetitionModule::default().execute_create_competition(
@@ -65,6 +73,8 @@ pub fn execute(
                 expiration,
                 rules,
                 rulesets,
+                banner,
+                should_activate_on_funded,
                 &instantiate_extension,
             )?;
 
@@ -112,8 +122,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    let _version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let competition_module = CompetitionModule::default();
+    let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    if version.major == 1 && version.minor < 7 {
+        competition_module.migrate_from_v1_6_to_v1_7(deps.branch())?;
+    }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())

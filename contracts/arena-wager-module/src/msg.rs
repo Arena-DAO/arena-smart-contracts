@@ -1,9 +1,9 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Empty, StdError, StdResult};
-use cw_competition::{
+use arena_interface::competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
 };
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, Empty, StdError, StdResult};
 
 #[cw_serde]
 pub enum MigrateMsg {

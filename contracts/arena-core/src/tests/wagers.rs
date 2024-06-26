@@ -1,6 +1,10 @@
 use std::str::FromStr;
 
-use arena_core_interface::msg::{
+use arena_interface::competition::{
+    msg::{EscrowInstantiateInfo, ModuleInfo},
+    state::{CompetitionListItemResponse, CompetitionStatus},
+};
+use arena_interface::core::{
     CompetitionModuleQuery, CompetitionModuleResponse, ProposeMessage, QueryExt,
 };
 use arena_wager_module::msg::{
@@ -12,10 +16,6 @@ use cosmwasm_std::{
 use cw4::Member;
 use cw_balance::{
     BalanceVerified, Distribution, MemberBalanceChecked, MemberBalanceUnchecked, MemberPercentage,
-};
-use cw_competition::{
-    msg::{EscrowInstantiateInfo, ModuleInfo},
-    state::{CompetitionListItemResponse, CompetitionStatus},
 };
 use cw_multi_test::{next_block, App, BankKeeper, Executor, MockApiBech32};
 use cw_utils::Expiration;
@@ -57,8 +57,8 @@ pub fn setup_wager_context(
             msgs: vec![WasmMsg::Execute {
                 contract_addr: core_context.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::UpdateCompetitionModules {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::UpdateCompetitionModules {
                         to_add: vec![ModuleInstantiateInfo {
                             code_id: wager_module_id,
                             msg: to_json_binary(&InstantiateMsg {
@@ -82,13 +82,21 @@ pub fn setup_wager_context(
     assert!(result.is_ok());
     app.update_block(next_block);
 
-    // Get the wager module addr from the response
-    let maybe_val = get_attr_value(result.as_ref().unwrap(), "competition_module_addr");
-    assert!(maybe_val.is_some());
-    let wager_module_addr = Addr::unchecked(maybe_val.unwrap());
+    // Get the wager module
+    let wager_module = app
+        .wrap()
+        .query_wasm_smart::<CompetitionModuleResponse<Addr>>(
+            core_context.arena_core_addr.clone(),
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: QueryExt::CompetitionModule {
+                    query: CompetitionModuleQuery::Key(wagers_key.clone(), None),
+                },
+            },
+        )
+        .unwrap();
 
     WagerContext {
-        wager_module_addr,
+        wager_module_addr: wager_module.addr,
         escrow_id,
         wagers_key,
     }
@@ -133,7 +141,11 @@ fn create_competition(
             },
             escrow: dues.map(|x| EscrowInstantiateInfo {
                 code_id: context.wager.escrow_id,
-                msg: to_json_binary(&arena_escrow::msg::InstantiateMsg { dues: x }).unwrap(),
+                msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
+                    dues: x,
+                    should_activate_on_funded: None,
+                })
+                .unwrap(),
                 label: "Escrow".to_owned(),
                 additional_layered_fees: None,
             }),
@@ -146,6 +158,8 @@ fn create_competition(
                 "Rule 3".to_string(),
             ],
             rulesets: vec![],
+            banner: None,
+            should_activate_on_funded: None,
             instantiate_extension: WagerInstantiateExt {
                 registered_members: None,
             },
@@ -257,6 +271,8 @@ fn test_create_competition() {
                 "Rule 3".to_string(),
             ],
             rulesets: vec![Uint128::from(9999u128)],
+            banner: None,
+            should_activate_on_funded: None,
             instantiate_extension: WagerInstantiateExt {
                 registered_members: None,
             },
@@ -283,17 +299,17 @@ fn test_create_competition() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -308,9 +324,11 @@ fn test_create_competition() {
             &QueryMsg::Competitions {
                 start_after: None,
                 limit: None,
-                filter: Some(cw_competition::msg::CompetitionsFilter::CompetitionStatus {
-                    status: CompetitionStatus::Pending,
-                }),
+                filter: Some(
+                    arena_interface::competition::msg::CompetitionsFilter::CompetitionStatus {
+                        status: CompetitionStatus::Pending,
+                    },
+                ),
             },
         )
         .unwrap();
@@ -325,9 +343,11 @@ fn test_create_competition() {
             &QueryMsg::Competitions {
                 start_after: None,
                 limit: None,
-                filter: Some(cw_competition::msg::CompetitionsFilter::Category {
-                    id: Some(Uint128::one()),
-                }),
+                filter: Some(
+                    arena_interface::competition::msg::CompetitionsFilter::Category {
+                        id: Some(Uint128::one()),
+                    },
+                ),
             },
         )
         .unwrap();
@@ -379,18 +399,19 @@ fn test_create_competition() {
             description: "Description".to_string(),
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: context.wager.wager_module_addr.to_string(),
-                msg: to_json_binary(
-                    &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
-                        competition_id: competition1_id,
-                        distribution: Some(Distribution::<String> {
-                            member_percentages: vec![MemberPercentage {
-                                addr: user1.to_string(),
-                                percentage: Decimal::one(),
-                            }],
-                            remainder_addr: context.core.dao_addr.to_string(),
-                        }),
-                    },
-                )
+                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                    Empty,
+                    Empty,
+                >::ProcessCompetition {
+                    competition_id: competition1_id,
+                    distribution: Some(Distribution::<String> {
+                        member_percentages: vec![MemberPercentage {
+                            addr: user1.to_string(),
+                            percentage: Decimal::one(),
+                        }],
+                        remainder_addr: context.core.dao_addr.to_string(),
+                    }),
+                })
                 .unwrap(),
                 funds: vec![],
             })],
@@ -406,7 +427,7 @@ fn test_create_competition() {
         .execute_contract(
             user1.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -415,7 +436,7 @@ fn test_create_competition() {
         .execute_contract(
             user2.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -470,7 +491,7 @@ fn test_create_competition() {
     let result = context.app.execute_contract(
         user1.clone(),
         competition1.escrow.clone().unwrap(),
-        &arena_escrow::msg::ExecuteMsg::Withdraw {
+        &arena_interface::escrow::ExecuteMsg::Withdraw {
             cw20_msg: None,
             cw721_msg: None,
         },
@@ -556,17 +577,17 @@ fn test_create_competition_jailed() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -631,7 +652,7 @@ fn test_create_competition_jailed() {
         .execute_contract(
             user1.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -640,7 +661,7 @@ fn test_create_competition_jailed() {
         .execute_contract(
             user2.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -729,7 +750,7 @@ fn test_create_competition_jailed() {
     let result = context.app.execute_contract(
         user1.clone(),
         competition1.escrow.clone().unwrap(),
-        &arena_escrow::msg::ExecuteMsg::Withdraw {
+        &arena_interface::escrow::ExecuteMsg::Withdraw {
             cw20_msg: None,
             cw721_msg: None,
         },
@@ -779,8 +800,8 @@ pub fn test_disabling_module() {
             msgs: vec![WasmMsg::Execute {
                 contract_addr: context.core.arena_core_addr.to_string(),
                 funds: vec![],
-                msg: to_json_binary(&arena_core_interface::msg::ExecuteMsg::Extension {
-                    msg: arena_core_interface::msg::ExecuteExt::UpdateCompetitionModules {
+                msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                    msg: arena_interface::core::ExecuteExt::UpdateCompetitionModules {
                         to_add: vec![],
                         to_disable: vec![context.wager.wager_module_addr.to_string()],
                     },
@@ -799,7 +820,7 @@ pub fn test_disabling_module() {
         .wrap()
         .query_wasm_smart(
             context.core.arena_core_addr.clone(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
+            &arena_interface::core::QueryMsg::QueryExtension {
                 msg: QueryExt::CompetitionModule {
                     query: CompetitionModuleQuery::Addr(
                         context.wager.wager_module_addr.to_string(),
@@ -816,7 +837,7 @@ pub fn test_disabling_module() {
         .wrap()
         .query_wasm_smart(
             context.core.arena_core_addr.clone(),
-            &arena_core_interface::msg::QueryMsg::QueryExtension {
+            &arena_interface::core::QueryMsg::QueryExtension {
                 msg: QueryExt::CompetitionModule {
                     query: CompetitionModuleQuery::Key(context.wager.wagers_key, None),
                 },
@@ -877,17 +898,17 @@ fn test_preset_distribution() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -927,24 +948,25 @@ fn test_preset_distribution() {
             description: "Description".to_string(),
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: context.wager.wager_module_addr.to_string(),
-                msg: to_json_binary(
-                    &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
-                        competition_id: competition1_id,
-                        distribution: Some(Distribution::<String> {
-                            member_percentages: vec![
-                                MemberPercentage::<String> {
-                                    addr: user1.to_string(),
-                                    percentage: Decimal::from_ratio(25u128, 100u128),
-                                },
-                                MemberPercentage::<String> {
-                                    addr: user2.to_string(),
-                                    percentage: Decimal::from_ratio(75u128, 100u128),
-                                },
-                            ],
-                            remainder_addr: user1.to_string(),
-                        }),
-                    },
-                )
+                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                    Empty,
+                    Empty,
+                >::ProcessCompetition {
+                    competition_id: competition1_id,
+                    distribution: Some(Distribution::<String> {
+                        member_percentages: vec![
+                            MemberPercentage::<String> {
+                                addr: user1.to_string(),
+                                percentage: Decimal::from_ratio(25u128, 100u128),
+                            },
+                            MemberPercentage::<String> {
+                                addr: user2.to_string(),
+                                percentage: Decimal::from_ratio(75u128, 100u128),
+                            },
+                        ],
+                        remainder_addr: user1.to_string(),
+                    }),
+                })
                 .unwrap(),
                 funds: vec![],
             })],
@@ -960,7 +982,7 @@ fn test_preset_distribution() {
         .execute_contract(
             user1.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::SetDistribution {
+            &arena_interface::escrow::ExecuteMsg::SetDistribution {
                 distribution: Some(Distribution::<String> {
                     member_percentages: vec![
                         MemberPercentage::<String> {
@@ -983,7 +1005,7 @@ fn test_preset_distribution() {
         .execute_contract(
             user2.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::SetDistribution {
+            &arena_interface::escrow::ExecuteMsg::SetDistribution {
                 distribution: Some(Distribution::<String> {
                     member_percentages: vec![
                         MemberPercentage::<String> {
@@ -1008,7 +1030,7 @@ fn test_preset_distribution() {
         .execute_contract(
             user1.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1017,7 +1039,7 @@ fn test_preset_distribution() {
         .execute_contract(
             user2.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1026,7 +1048,7 @@ fn test_preset_distribution() {
     let result = context.app.execute_contract(
         user1.clone(),
         competition1.escrow.as_ref().unwrap().clone(),
-        &arena_escrow::msg::ExecuteMsg::SetDistribution { distribution: None },
+        &arena_interface::escrow::ExecuteMsg::SetDistribution { distribution: None },
         &[],
     );
     assert!(result.is_err());
@@ -1078,7 +1100,7 @@ fn test_preset_distribution() {
         .wrap()
         .query_wasm_smart(
             competition1.escrow.clone().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },
@@ -1086,11 +1108,11 @@ fn test_preset_distribution() {
         .unwrap();
 
     assert_eq!(
-        balances[0].balance.native[0].amount,
+        balances[0].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(7_438u128)
     );
     assert_eq!(
-        balances[1].balance.native[0].amount,
+        balances[1].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(9_562u128)
     );
 }
@@ -1145,17 +1167,17 @@ fn test_competition_draw() {
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
             MemberBalanceUnchecked {
                 addr: user2.to_string(),
                 balance: cw_balance::BalanceUnchecked {
-                    native: vec![Coin::from_str(&wager_amount).unwrap()],
-                    cw20: vec![],
-                    cw721: vec![],
+                    native: Some(vec![Coin::from_str(&wager_amount).unwrap()]),
+                    cw20: None,
+                    cw721: None,
                 },
             },
         ]),
@@ -1195,12 +1217,13 @@ fn test_competition_draw() {
             description: "Description".to_string(),
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: context.wager.wager_module_addr.to_string(),
-                msg: to_json_binary(
-                    &cw_competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
-                        competition_id: competition1_id,
-                        distribution: None,
-                    },
-                )
+                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                    Empty,
+                    Empty,
+                >::ProcessCompetition {
+                    competition_id: competition1_id,
+                    distribution: None,
+                })
                 .unwrap(),
                 funds: vec![],
             })],
@@ -1216,7 +1239,7 @@ fn test_competition_draw() {
         .execute_contract(
             user1.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1225,7 +1248,7 @@ fn test_competition_draw() {
         .execute_contract(
             user2.clone(),
             competition1.escrow.as_ref().unwrap().clone(),
-            &arena_escrow::msg::ExecuteMsg::ReceiveNative {},
+            &arena_interface::escrow::ExecuteMsg::ReceiveNative {},
             &[Coin::from_str(&wager_amount).unwrap()],
         )
         .unwrap();
@@ -1269,7 +1292,7 @@ fn test_competition_draw() {
         .wrap()
         .query_wasm_smart(
             competition1.escrow.clone().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balances {
+            &arena_interface::escrow::QueryMsg::Balances {
                 start_after: None,
                 limit: None,
             },
@@ -1277,11 +1300,11 @@ fn test_competition_draw() {
         .unwrap();
 
     assert_eq!(
-        balances[0].balance.native[0].amount,
+        balances[0].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(8_500u128)
     );
     assert_eq!(
-        balances[1].balance.native[0].amount,
+        balances[1].balance.native.as_ref().unwrap()[0].amount,
         Uint128::from(8_500u128)
     );
 
@@ -1291,19 +1314,22 @@ fn test_competition_draw() {
         .wrap()
         .query_wasm_smart(
             competition1.escrow.clone().unwrap(),
-            &arena_escrow::msg::QueryMsg::Balance {
+            &arena_interface::escrow::QueryMsg::Balance {
                 addr: user1.to_string(),
             },
         )
         .unwrap();
     assert!(balance.is_some());
-    assert_eq!(balance.unwrap().native[0].amount, Uint128::from(8_500u128));
+    assert_eq!(
+        balance.unwrap().native.as_ref().unwrap()[0].amount,
+        Uint128::from(8_500u128)
+    );
 
     // Claim balances
     let result = context.app.execute_contract(
         user1.clone(),
         competition1.escrow.clone().unwrap(),
-        &arena_escrow::msg::ExecuteMsg::Withdraw {
+        &arena_interface::escrow::ExecuteMsg::Withdraw {
             cw20_msg: None,
             cw721_msg: None,
         },
@@ -1313,7 +1339,7 @@ fn test_competition_draw() {
     let result = context.app.execute_contract(
         user2.clone(),
         competition1.escrow.clone().unwrap(),
-        &arena_escrow::msg::ExecuteMsg::Withdraw {
+        &arena_interface::escrow::ExecuteMsg::Withdraw {
             cw20_msg: None,
             cw721_msg: None,
         },

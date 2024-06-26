@@ -1,10 +1,10 @@
 use crate::state::{EliminationType, MatchResult, TournamentExt};
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Empty, StdError, StdResult, Uint128};
-use cw_competition::{
+use arena_interface::competition::{
     msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
 };
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Decimal, Empty, StdError, StdResult, Uint128};
 use itertools::Itertools;
 
 #[cw_serde]

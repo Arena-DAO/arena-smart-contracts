@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use arena_core_interface::rating::Rating;
+use arena_interface::ratings::Rating;
 use cosmwasm_std::{BlockInfo, Decimal as StdDecimal, Env};
 use cw_utils::Duration;
 use rust_decimal::prelude::*;

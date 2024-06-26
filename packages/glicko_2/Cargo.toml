@@ -12,6 +12,6 @@ doctest = false
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cw-utils = { workspace = true }
-arena-core-interface = { workspace = true }
+arena-interface = { workspace = true }
 rust_decimal = { workspace = true, features = ["maths"] }
 rust_decimal_macros = { workspace = true }

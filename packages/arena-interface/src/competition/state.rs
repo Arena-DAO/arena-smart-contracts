@@ -1,4 +1,4 @@
-use arena_core_interface::fees::FeeInformation;
+use crate::fees::FeeInformation;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Timestamp, Uint128};
 use cw_utils::Expiration;
@@ -39,11 +39,13 @@ pub struct Competition<CompetitionExt> {
     pub rulesets: Vec<Uint128>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
+    /// Additional layered fees
     pub fees: Option<Vec<FeeInformation<Addr>>>,
+    /// A banner-image link for the competition
+    pub banner: Option<String>,
 }
 
-/// CompetitionResponse has all of the same fields as Competition
-/// is_expired is appended
+/// CompetitionResponse extends the Competition by also returning rules, is_expired, and
 #[cw_serde]
 pub struct CompetitionResponse<CompetitionExt> {
     pub id: Uint128,
@@ -60,8 +62,10 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub extension: CompetitionExt,
     pub expiration: Expiration,
     pub fees: Option<Vec<FeeInformation<Addr>>>,
+    pub banner: Option<String>,
 }
 
+/// CompetitionListItemResponse extends the CompetitionResponse with
 #[cw_serde]
 pub struct CompetitionListItemResponse<CompetitionExt> {
     pub id: Uint128,
@@ -76,6 +80,7 @@ pub struct CompetitionListItemResponse<CompetitionExt> {
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
     pub expiration: Expiration,
+    pub banner: Option<String>,
 }
 
 impl<CompetitionExt> Competition<CompetitionExt> {
@@ -101,6 +106,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             extension: self.extension,
             expiration: self.expiration,
             fees: self.fees,
+            banner: self.banner,
         }
     }
 
@@ -123,6 +129,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             status: self.status,
             extension: self.extension,
             expiration: self.expiration,
+            banner: self.banner,
         }
     }
 }
