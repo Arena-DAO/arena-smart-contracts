@@ -1,6 +1,6 @@
 # Arena DAO Smart Contracts
 
-[![Basic](https://github.com/Arena-DAO/arena-smart-contracts/actions/workflows/basic.yml/badge.svg)](https://github.com/Arena-DAO/arena-smart-contracts/actions/workflows/basic.yml)
+[![CI](https://github.com/Arena-DAO/arena-smart-contracts/actions/workflows/basic.yml/badge.svg)](https://github.com/Arena-DAO/arena-smart-contracts/actions/workflows/basic.yml)
 
 This project contains the smart contracts for the Arena DAO. The contracts are written in Rust and use the CosmWasm framework. The project also includes TypeScript code for generating TypeScript types from the contract schemas.
 
