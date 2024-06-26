@@ -10,7 +10,7 @@ use crate::{
     execute::{self, TRIGGER_COMPETITION_REPLY_ID},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{enrollment_entries, CompetitionInfo, TEMP_ENROLLMENT_INFO},
+    state::{enrollment_entries, CompetitionInfo, ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO},
     ContractError,
 };
 
@@ -26,6 +26,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    ENROLLMENT_COUNT.save(deps.storage, &Uint128::zero())?;
     let owner = deps.api.addr_validate(&msg.owner)?;
     let ownership = cw_ownable::initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
 
@@ -154,6 +155,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                         )?;
                         Ok(Response::new()
                             .add_attribute("reply", "reply_trigger_competition")
+                            .add_attribute("result", "competition_created")
                             .add_messages(msgs))
                     } else {
                         Err(ContractError::StdError(StdError::generic_err(

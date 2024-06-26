@@ -8,6 +8,8 @@ version.workspace = true
 [dependencies]
 cw-orch = { workspace = true, features = ["daemon"] }
 arena-tournament-module = { workspace = true }
+arena-wager-module = { workspace = true }
+arena-league-module = { workspace = true }
 arena-core = { workspace = true }
 arena-interface = { workspace = true }
 arena-escrow = { workspace = true }
@@ -17,6 +19,7 @@ cw-utils = { workspace = true }
 cw-balance = { workspace = true }
 dao-cw-orch = { git = "https://github.com/Kayanski/dao-contracts", branch = "development" }
 itertools = { workspace = true }
+arena-competition-enrollment = { workspace = true }
 
 # scripts specific
 dotenv = { version = "0.15.0" }

@@ -4241,10 +4241,13 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 name = "scripts"
 version = "1.7.0"
 dependencies = [
+ "arena-competition-enrollment",
  "arena-core",
  "arena-escrow",
  "arena-interface",
+ "arena-league-module",
  "arena-tournament-module",
+ "arena-wager-module",
  "cosmwasm-std",
  "cw-balance",
  "cw-orch 0.23.0",

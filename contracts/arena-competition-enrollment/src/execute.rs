@@ -50,28 +50,16 @@ pub fn create_enrollment(
         ))
     );
 
-    let min_min_members = Uint64::new(match &competition_info.competition_type {
-        CompetitionType::Wager {} => 2,
-        CompetitionType::League { distribution, .. } => std::cmp::max(distribution.len(), 2),
-        CompetitionType::Tournament {
-            elimination_type,
-            distribution,
-        } => match elimination_type {
-            EliminationType::SingleElimination {
-                play_third_place_match: _,
-            } => std::cmp::max(4, distribution.len()),
-            EliminationType::DoubleElimination => std::cmp::max(3, distribution.len()),
-        },
-    } as u64);
+    let min_min_members = get_min_min_members(&competition_type);
     if let Some(min_members) = min_members {
         ensure!(
-            min_members < max_members,
+            min_members <= max_members,
             ContractError::StdError(StdError::generic_err(
                 "Min members cannot be larger than max members"
             ))
         );
         ensure!(
-            min_members > min_min_members,
+            min_members >= min_min_members,
             ContractError::StdError(StdError::generic_err(format!(
                 "Min members cannot be less than the required minimum of {}",
                 min_min_members
@@ -122,26 +110,29 @@ pub fn create_enrollment(
 
         let competition_module_response = deps
             .querier
-            .query_wasm_smart::<CompetitionModuleResponse<Addr>>(
+            .query_wasm_smart::<Option<CompetitionModuleResponse<Addr>>>(
                 owner,
                 &arena_interface::core::QueryMsg::QueryExtension {
                     msg: arena_interface::core::QueryExt::CompetitionModule {
-                        query: CompetitionModuleQuery::Key(
-                            competition_info.competition_type.to_string(),
-                            None,
-                        ),
+                        query: CompetitionModuleQuery::Key(competition_type.to_string(), None),
                     },
                 },
             )?;
 
-        ensure!(
-            competition_module_response.is_enabled,
-            ContractError::StdError(StdError::generic_err(
-                "Cannot use a disabled competition module"
-            ))
-        );
+        if let Some(competition_module) = competition_module_response {
+            ensure!(
+                competition_module.is_enabled,
+                ContractError::StdError(StdError::generic_err(
+                    "Cannot use a disabled competition module"
+                ))
+            );
 
-        Ok(competition_module_response.addr)
+            Ok(competition_module.addr)
+        } else {
+            Err(ContractError::StdError(StdError::generic_err(
+                "Could not find the competition module",
+            )))
+        }
     } else {
         Err(ContractError::OwnershipError(
             cw_ownable::OwnershipError::NoOwner,
@@ -209,8 +200,30 @@ pub fn trigger_expiration(
 
     let members_count = ENROLLMENT_MEMBERS_COUNT.load(deps.storage, id.u128())?;
 
+    // Check if we have met the minimum number of members
+    let min_min_members = get_min_min_members(&entry.competition_type);
+    let min_members = entry.min_members.unwrap_or(min_min_members);
+    let is_expired = entry.expiration.is_expired(&env.block);
+
+    if members_count < min_members && is_expired {
+        // Set has_triggered_expiration to true and save the entry
+        let new_data = EnrollmentEntry {
+            has_triggered_expiration: true,
+            ..entry.clone()
+        };
+        enrollment_entries().replace(deps.storage, id.u128(), Some(&new_data), Some(&entry))?;
+
+        // Return a response indicating the enrollment was expired due to insufficient members
+        return Ok(Response::new()
+            .add_attribute("action", "trigger_expiration")
+            .add_attribute("result", "expired_insufficient_members")
+            .add_attribute("id", id.to_string())
+            .add_attribute("required_members", min_members.to_string())
+            .add_attribute("actual_members", members_count.to_string()));
+    }
+
     ensure!(
-        entry.expiration.is_expired(&env.block) || entry.max_members == members_count,
+        entry.max_members == members_count || is_expired,
         ContractError::TriggerFailed {
             max_members: entry.max_members,
             current_members: members_count,
@@ -443,7 +456,7 @@ pub fn withdraw(
 
     // Ensure the competition hasn't been triggered yet and is still in Pending state
     ensure!(
-        !entry.has_triggered_expiration && is_pending,
+        !entry.has_triggered_expiration || is_pending,
         ContractError::StdError(StdError::generic_err(
             "Enrollment has already been expired or competition has been created, withdrawal not possible"
         ))
@@ -474,4 +487,24 @@ pub fn withdraw(
         .add_attribute("id", id.to_string())
         .add_attribute("withdrawing_member", info.sender)
         .add_attribute("remaining_members", members_count.to_string()))
+}
+
+fn get_min_min_members(competition_type: &CompetitionType) -> Uint64 {
+    match competition_type {
+        CompetitionType::Wager {} => Uint64::new(2),
+        CompetitionType::League { distribution, .. } => {
+            Uint64::new(std::cmp::max(distribution.len(), 2) as u64)
+        }
+        CompetitionType::Tournament {
+            elimination_type,
+            distribution,
+        } => match elimination_type {
+            EliminationType::SingleElimination {
+                play_third_place_match: _,
+            } => Uint64::new(std::cmp::max(4, distribution.len()) as u64),
+            EliminationType::DoubleElimination => {
+                Uint64::new(std::cmp::max(3, distribution.len()) as u64)
+            }
+        },
+    }
 }

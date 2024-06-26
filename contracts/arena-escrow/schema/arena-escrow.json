@@ -28,26 +28,30 @@
     "definitions": {
       "BalanceUnchecked": {
         "type": "object",
-        "required": [
-          "cw20",
-          "cw721",
-          "native"
-        ],
         "properties": {
           "cw20": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Cw20Coin"
             }
           },
           "cw721": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Cw721Collection"
             }
           },
           "native": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Coin"
             }
@@ -852,26 +856,30 @@
         },
         "BalanceVerified": {
           "type": "object",
-          "required": [
-            "cw20",
-            "cw721",
-            "native"
-          ],
           "properties": {
             "cw20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw20CoinVerified"
               }
             },
             "cw721": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw721CollectionVerified"
               }
             },
             "native": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Coin"
               }
@@ -949,26 +957,30 @@
         },
         "BalanceVerified": {
           "type": "object",
-          "required": [
-            "cw20",
-            "cw721",
-            "native"
-          ],
           "properties": {
             "cw20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw20CoinVerified"
               }
             },
             "cw721": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw721CollectionVerified"
               }
             },
             "native": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Coin"
               }
@@ -1119,26 +1131,30 @@
         },
         "BalanceVerified": {
           "type": "object",
-          "required": [
-            "cw20",
-            "cw721",
-            "native"
-          ],
           "properties": {
             "cw20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw20CoinVerified"
               }
             },
             "cw721": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw721CollectionVerified"
               }
             },
             "native": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Coin"
               }
@@ -1216,26 +1232,30 @@
         },
         "BalanceVerified": {
           "type": "object",
-          "required": [
-            "cw20",
-            "cw721",
-            "native"
-          ],
           "properties": {
             "cw20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw20CoinVerified"
               }
             },
             "cw721": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw721CollectionVerified"
               }
             },
             "native": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Coin"
               }
@@ -1365,26 +1385,30 @@
         },
         "BalanceVerified": {
           "type": "object",
-          "required": [
-            "cw20",
-            "cw721",
-            "native"
-          ],
           "properties": {
             "cw20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw20CoinVerified"
               }
             },
             "cw721": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw721CollectionVerified"
               }
             },
             "native": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Coin"
               }
@@ -1462,26 +1486,30 @@
         },
         "BalanceVerified": {
           "type": "object",
-          "required": [
-            "cw20",
-            "cw721",
-            "native"
-          ],
           "properties": {
             "cw20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw20CoinVerified"
               }
             },
             "cw721": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw721CollectionVerified"
               }
             },
             "native": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Coin"
               }
@@ -1694,26 +1722,30 @@
         },
         "BalanceVerified": {
           "type": "object",
-          "required": [
-            "cw20",
-            "cw721",
-            "native"
-          ],
           "properties": {
             "cw20": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw20CoinVerified"
               }
             },
             "cw721": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Cw721CollectionVerified"
               }
             },
             "native": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Coin"
               }

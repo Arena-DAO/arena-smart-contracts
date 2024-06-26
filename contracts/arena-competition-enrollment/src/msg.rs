@@ -51,7 +51,6 @@ pub struct CompetitionInfoMsg {
     pub rules: Vec<String>,
     pub rulesets: Vec<Uint128>,
     pub banner: Option<String>,
-    pub competition_type: CompetitionType,
     pub additional_layered_fees: Option<Vec<FeeInformation<String>>>,
 }
 

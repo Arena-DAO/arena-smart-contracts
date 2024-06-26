@@ -1,3 +1,4 @@
+pub mod arena_competition_enrollment;
 pub mod arena_tournament_module;
 mod deploy;
 

@@ -61,7 +61,7 @@ impl From<ExecuteExt> for ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum QueryExt {
-    #[returns(Vec<CompetitionModuleResponse<String>>)]
+    #[returns(Vec<CompetitionModuleResponse<Addr>>)]
     CompetitionModules {
         start_after: Option<String>,
         limit: Option<u32>,
@@ -78,7 +78,7 @@ pub enum QueryExt {
     },
     #[returns(Decimal)]
     Tax { height: Option<u64> },
-    #[returns(CompetitionModuleResponse<String>)]
+    #[returns(Option<CompetitionModuleResponse<Addr>>)]
     CompetitionModule { query: CompetitionModuleQuery },
     #[returns(CompetitionCategory)]
     Category { id: Uint128 },
