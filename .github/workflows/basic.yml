@@ -39,14 +39,6 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      - name: Compile WASM contract
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target wasm32-unknown-unknown --locked
-        env:
-          RUSTFLAGS: "-C link-arg=-s"
-
   lints:
     name: Lints
     runs-on: ubuntu-latest
