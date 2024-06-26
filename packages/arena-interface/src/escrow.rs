@@ -91,3 +91,8 @@ pub struct DumpStateResponse {
     pub balance: Option<BalanceVerified>,
     pub due: Option<BalanceVerified>,
 }
+
+#[cw_serde]
+pub enum MigrateMsg {
+    FromCompatible {},
+}

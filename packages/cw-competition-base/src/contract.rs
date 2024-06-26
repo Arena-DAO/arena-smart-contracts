@@ -22,7 +22,7 @@ use cosmwasm_std::{
     StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::Distribution;
-use cw_ownable::{get_ownership, initialize_owner};
+use cw_ownable::{assert_owner, get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -306,12 +306,67 @@ impl<
             ExecuteBase::RemoveCompetitionHook { competition_id } => {
                 self.execute_remove_competition_hook(deps, info, competition_id)
             }
+            ExecuteBase::MigrateEscrows {
+                start_after,
+                limit,
+                filter,
+                escrow_code_id,
+                escrow_migrate_msg,
+            } => self.execute_migrate_escrows(
+                deps,
+                env,
+                info,
+                start_after,
+                limit,
+                filter,
+                escrow_code_id,
+                escrow_migrate_msg,
+            ),
             ExecuteBase::ExecuteCompetitionHook {
                 competition_id: _,
                 distribution: _,
             }
             | ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn execute_migrate_escrows(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+        filter: Option<CompetitionsFilter>,
+        escrow_code_id: u64,
+        escrow_migrate_msg: arena_interface::escrow::MigrateMsg,
+    ) -> Result<Response, CompetitionError> {
+        // Ensure only the contract owner can call this function
+        assert_owner(deps.storage, &info.sender)?;
+
+        let competitions =
+            self.query_competitions(deps.as_ref(), env, start_after, limit, filter)?;
+
+        let mut messages: Vec<SubMsg> = vec![];
+
+        for competition in competitions.iter() {
+            if let Some(escrow) = &competition.escrow {
+                let msg = WasmMsg::Migrate {
+                    contract_addr: escrow.to_string(),
+                    new_code_id: escrow_code_id,
+                    msg: to_json_binary(&escrow_migrate_msg)?,
+                };
+
+                messages.push(SubMsg::new(msg));
+            }
+        }
+
+        let length = messages.len();
+        Ok(Response::new()
+            .add_submessages(messages)
+            .add_attribute("action", "migrate_escrows")
+            .add_attribute("migrated_count", length.to_string()))
     }
 
     pub fn execute_submit_evidence(

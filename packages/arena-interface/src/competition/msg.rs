@@ -68,6 +68,13 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     ActivateManually {
         id: Uint128,
     },
+    MigrateEscrows {
+        start_after: Option<Uint128>,
+        limit: Option<u32>,
+        filter: Option<CompetitionsFilter>,
+        escrow_code_id: u64,
+        escrow_migrate_msg: crate::escrow::MigrateMsg,
+    },
 }
 
 #[cw_ownable_query]
