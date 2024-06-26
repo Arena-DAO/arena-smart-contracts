@@ -327,6 +327,61 @@
         "additionalProperties": false
       },
       {
+        "type": "object",
+        "required": [
+          "migrate_escrows"
+        ],
+        "properties": {
+          "migrate_escrows": {
+            "type": "object",
+            "required": [
+              "escrow_code_id",
+              "escrow_migrate_msg"
+            ],
+            "properties": {
+              "escrow_code_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "escrow_migrate_msg": {
+                "$ref": "#/definitions/MigrateMsg"
+              },
+              "filter": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/CompetitionsFilter"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.",
         "type": "object",
         "required": [
@@ -436,6 +491,77 @@
       "Binary": {
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
+      },
+      "CompetitionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "active",
+          "inactive",
+          "jailed"
+        ]
+      },
+      "CompetitionsFilter": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "competition_status"
+            ],
+            "properties": {
+              "competition_status": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "$ref": "#/definitions/CompetitionStatus"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "category"
+            ],
+            "properties": {
+              "category": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Uint128"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "host"
+            ],
+            "properties": {
+              "host": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
@@ -755,6 +881,23 @@
           }
         },
         "additionalProperties": false
+      },
+      "MigrateMsg": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "from_compatible"
+            ],
+            "properties": {
+              "from_compatible": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "ModuleInfo": {
         "oneOf": [
