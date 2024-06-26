@@ -1,16 +1,17 @@
-# Based on https://github.com/actions-rs/example/blob/master/.github/workflows/quickstart.yml
+name: CI
 
-on: [push, pull_request]
-
-name: Basic
+on:
+  push:
+    branches: [ master, development ]
+  pull_request:
+    branches: [ master, development ]
 
 jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -20,21 +21,29 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
 
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
-          toolchain: stable
-          command: unit-test
-          args: --locked
+          command: test
+          args: --locked --all-features
         env:
           RUST_BACKTRACE: 1
 
       - name: Compile WASM contract
         uses: actions-rs/cargo@v1
         with:
-          toolchain: stable
-          command: wasm
-          args: --locked
+          command: build
+          args: --release --target wasm32-unknown-unknown --locked
         env:
           RUSTFLAGS: "-C link-arg=-s"
 
@@ -42,8 +51,7 @@ jobs:
     name: Lints
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -53,16 +61,24 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
-          toolchain: stable
           command: fmt
           args: --all -- --check
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
         with:
-          toolchain: stable
           command: clippy
-          args: --all-targets -- -D warnings
+          args: --all-targets --all-features -- -D warnings
