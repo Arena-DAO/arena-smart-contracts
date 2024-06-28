@@ -1,6 +1,6 @@
 use crate::state::{
     competition_categories, get_rulesets_category_and_is_enabled_idx, ratings, CompetitionModule,
-    ARENA_TAX_CONFIG, KEYS, TAX,
+    ARENA_TAX_CONFIG, ENROLLMENT_MODULES, KEYS, TAX,
 };
 use arena_interface::{
     core::{
@@ -80,7 +80,7 @@ pub fn tax(deps: Deps, env: Env, height: Option<u64>) -> StdResult<Decimal> {
 
 pub fn rulesets(
     deps: Deps,
-    category_id: Option<Uint128>,
+    category_id: Uint128,
     start_after: Option<Uint128>,
     limit: Option<u32>,
     include_disabled: Option<bool>,
@@ -211,13 +211,11 @@ pub fn dump_state(deps: Deps, env: Env) -> StdResult<DumpStateResponse> {
 
 pub fn is_valid_category_and_rulesets(
     deps: Deps,
-    category_id: Option<Uint128>,
+    category_id: Uint128,
     rulesets: Vec<Uint128>,
 ) -> bool {
-    if let Some(category_id) = category_id {
-        if !competition_categories().has(deps.storage, category_id.u128()) {
-            return false;
-        }
+    if !competition_categories().has(deps.storage, category_id.u128()) {
+        return false;
     }
 
     for ruleset_id in rulesets {
@@ -288,4 +286,10 @@ pub fn rating_leaderboard(
         })
         .take(limit as usize)
         .collect()
+}
+
+pub fn is_valid_enrollment_module(deps: Deps, addr: String) -> StdResult<bool> {
+    let addr = deps.api.addr_validate(&addr)?;
+
+    Ok(ENROLLMENT_MODULES.has(deps.storage, &addr))
 }

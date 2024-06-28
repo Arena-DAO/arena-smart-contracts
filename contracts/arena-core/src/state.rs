@@ -4,8 +4,10 @@ use arena_interface::{
     ratings::Rating,
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex, SnapshotItem, SnapshotMap};
+use cosmwasm_std::{Addr, Decimal, Empty, Uint128};
+use cw_storage_plus::{
+    Index, IndexList, IndexedMap, Item, Map, MultiIndex, SnapshotItem, SnapshotMap,
+};
 use cw_utils::Duration;
 
 pub const ARENA_TAX_CONFIG: Item<TaxConfiguration> = Item::new("arena_tax_config");
@@ -25,8 +27,10 @@ pub const KEYS: SnapshotMap<String, Addr> = SnapshotMap::new(
     cw_storage_plus::Strategy::EveryBlock,
 );
 pub const RATING_PERIOD: Item<Duration> = Item::new("rating_period");
+pub const ENROLLMENT_MODULES: Map<&Addr, Empty> = Map::new("enrollment_modules");
 
 // Competition Modules
+
 #[cw_serde]
 pub struct CompetitionModule {
     pub key: String,
@@ -58,6 +62,7 @@ pub fn competition_modules<'a>(
 }
 
 // Competition Categories
+
 pub struct CompetitionCategoryIndexes<'a> {
     pub is_enabled: MultiIndex<'a, String, CompetitionCategory, u128>,
 }
@@ -83,11 +88,8 @@ pub fn competition_categories<'a>(
 
 // Rulesets
 
-pub fn get_rulesets_category_and_is_enabled_idx(
-    category_id: Option<Uint128>,
-    is_enabled: bool,
-) -> String {
-    format!("{}_{}", category_id.unwrap_or(Uint128::zero()), is_enabled)
+pub fn get_rulesets_category_and_is_enabled_idx(category_id: Uint128, is_enabled: bool) -> String {
+    format!("{}_{}", category_id, is_enabled)
 }
 
 pub struct RulesetIndexes<'a> {

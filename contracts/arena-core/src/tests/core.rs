@@ -41,14 +41,10 @@ pub fn sudo_proposal_contract() -> Box<dyn Contract<Empty>> {
 }
 
 pub struct CoreContext {
-    pub dao_proposal_single_id: u64,
-    pub dao_core_id: u64,
-    pub cw4_id: u64,
-    pub cw4_voting_module_id: u64,
-    pub sudo_proposal_addr: Addr,
     pub dao_addr: Addr,
     pub arena_core_addr: Addr,
     pub proposal_module_addr: Addr,
+    pub sudo_proposal_addr: Addr,
 }
 
 pub fn setup_core_context(
@@ -148,13 +144,13 @@ pub fn setup_core_context(
                                             deposit_info: None,
                                             open_proposal_submission: false,
                                             extension: InstantiateExt {
-                                                competition_modules_instantiate_info: vec![],
-                                                categories: vec![NewCompetitionCategory {
+                                                competition_modules_instantiate_info: None,
+                                                categories: Some(vec![NewCompetitionCategory {
                                                     name: "Test Category".to_string(),
-                                                }],
-                                                rulesets: vec![
+                                                }]),
+                                                rulesets: Some(vec![
                                                     NewRuleset {
-                                                        category_id: Some(Uint128::one()),
+                                                        category_id: Uint128::one(),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
@@ -162,14 +158,14 @@ pub fn setup_core_context(
                                                         description: "Test Ruleset 1".to_string(),
                                                     },
                                                     NewRuleset {
-                                                        category_id: Some(Uint128::one()),
+                                                        category_id: Uint128::one(),
                                                         rules: vec![
                                                             "This is a rule".to_string(),
                                                             "This is another rule".to_string(),
                                                         ],
                                                         description: "Test Ruleset 2".to_string(),
                                                     },
-                                                ],
+                                                ]),
                                                 tax: Decimal::new(Uint128::from(
                                                     150000000000000000u128,
                                                 )),
@@ -225,14 +221,10 @@ pub fn setup_core_context(
     app.update_block(next_block);
 
     CoreContext {
-        dao_proposal_single_id,
-        dao_core_id,
-        cw4_id,
-        cw4_voting_module_id,
         dao_addr,
         arena_core_addr,
-        sudo_proposal_addr: proposal_module.address.clone(),
         proposal_module_addr,
+        sudo_proposal_addr: proposal_module.address.clone(),
     }
 }
 
@@ -259,12 +251,12 @@ pub fn test_categories() {
                 funds: vec![],
                 msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
                     msg: arena_interface::core::ExecuteExt::UpdateCategories {
-                        to_add: vec![NewCompetitionCategory {
+                        to_add: Some(vec![NewCompetitionCategory {
                             name: "New Category".to_string(),
-                        }],
-                        to_edit: vec![EditCompetitionCategory::Disable {
+                        }]),
+                        to_edit: Some(vec![EditCompetitionCategory::Disable {
                             category_id: Uint128::one(),
-                        }],
+                        }]),
                     },
                 })
                 .unwrap(),
@@ -335,12 +327,12 @@ pub fn test_rulesets() {
                 funds: vec![],
                 msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
                     msg: arena_interface::core::ExecuteExt::UpdateRulesets {
-                        to_add: vec![arena_interface::core::NewRuleset {
-                            category_id: Some(Uint128::one()),
+                        to_add: Some(vec![arena_interface::core::NewRuleset {
+                            category_id: Uint128::one(),
                             rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
                             description: "Test Ruleset 3".to_string(),
-                        }],
-                        to_disable: vec![],
+                        }]),
+                        to_disable: None,
                     },
                 })
                 .unwrap(),
@@ -358,7 +350,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_interface::core::QueryMsg::QueryExtension {
                 msg: arena_interface::core::QueryExt::Rulesets {
-                    category_id: Some(Uint128::one()),
+                    category_id: Uint128::one(),
                     start_after: None,
                     limit: None,
                     include_disabled: None,
@@ -378,8 +370,8 @@ pub fn test_rulesets() {
                 funds: vec![],
                 msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
                     msg: arena_interface::core::ExecuteExt::UpdateRulesets {
-                        to_add: vec![],
-                        to_disable: vec![Uint128::one()],
+                        to_add: None,
+                        to_disable: Some(vec![Uint128::one()]),
                     },
                 })
                 .unwrap(),
@@ -397,7 +389,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_interface::core::QueryMsg::QueryExtension {
                 msg: arena_interface::core::QueryExt::Rulesets {
-                    category_id: Some(Uint128::one()),
+                    category_id: Uint128::one(),
                     start_after: None,
                     limit: None,
                     include_disabled: None,
@@ -413,7 +405,7 @@ pub fn test_rulesets() {
             context.arena_core_addr.clone(),
             &arena_interface::core::QueryMsg::QueryExtension {
                 msg: arena_interface::core::QueryExt::Rulesets {
-                    category_id: Some(Uint128::one()),
+                    category_id: Uint128::one(),
                     start_after: None,
                     limit: None,
                     include_disabled: Some(true),
@@ -433,12 +425,12 @@ pub fn test_rulesets() {
                 funds: vec![],
                 msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
                     msg: arena_interface::core::ExecuteExt::UpdateRulesets {
-                        to_add: vec![arena_interface::core::NewRuleset {
-                            category_id: Some(Uint128::from(9999u128)), // Non-existent category
+                        to_add: Some(vec![arena_interface::core::NewRuleset {
+                            category_id: Uint128::from(9999u128), // Non-existent category
                             rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
                             description: "Test Ruleset 4".to_string(),
-                        }],
-                        to_disable: vec![],
+                        }]),
+                        to_disable: None,
                     },
                 })
                 .unwrap(),

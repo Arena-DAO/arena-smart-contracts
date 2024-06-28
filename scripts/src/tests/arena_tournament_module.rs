@@ -1,5 +1,5 @@
 use arena_interface::{
-    competition::msg::{EscrowInstantiateInfo, ModuleInfo},
+    competition::msg::EscrowInstantiateInfo,
     core::QueryExtFns as ArenaCoreQueryExtFns,
     escrow::{ExecuteMsgFns, QueryMsgFns},
 };
@@ -32,7 +32,6 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
     let result = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::SingleElimination {
@@ -52,7 +51,6 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
     let result = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::SingleElimination {
@@ -74,7 +72,6 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
     let result = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::SingleElimination {
@@ -93,7 +90,6 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
     let result = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::DoubleElimination {},
@@ -130,7 +126,6 @@ pub fn test_single_elimination_tournament() -> Result<(), CwOrchError> {
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::SingleElimination {
@@ -292,7 +287,6 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             Some(Uint128::one()),
             &teams,
             EliminationType::SingleElimination {
@@ -332,7 +326,6 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             Some(Uint128::new(2u128)),
             &teams,
             EliminationType::SingleElimination {
@@ -519,7 +512,6 @@ pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(),
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::SingleElimination {
@@ -676,7 +668,6 @@ pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchEr
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::DoubleElimination {},
@@ -908,7 +899,6 @@ pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::DoubleElimination {},
@@ -1132,7 +1122,6 @@ pub fn test_single_elimination_6() -> Result<(), CwOrchError> {
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::SingleElimination {
@@ -1280,7 +1269,6 @@ pub fn test_double_elimination_many_teams() -> Result<(), CwOrchError> {
     arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::DoubleElimination {},
@@ -1315,7 +1303,6 @@ pub fn test_match_updates() -> Result<(), CwOrchError> {
     let response = arena.arena_tournament_module.execute(
         &create_competition_msg(
             &arena,
-            &admin,
             None,
             &teams,
             EliminationType::DoubleElimination {},
@@ -1453,7 +1440,6 @@ pub fn test_match_updates() -> Result<(), CwOrchError> {
 
 fn create_competition_msg<Chain: ChainState>(
     arena: &Arena<Chain>,
-    admin: &Addr,
     category_id: Option<Uint128>,
     teams: &[Addr],
     elimination_type: EliminationType,
@@ -1461,9 +1447,7 @@ fn create_competition_msg<Chain: ChainState>(
 ) -> ExecuteMsg {
     ExecuteMsg::CreateCompetition {
         category_id,
-        host: ModuleInfo::Existing {
-            addr: admin.to_string(),
-        },
+        host: None,
         escrow: Some(EscrowInstantiateInfo {
             code_id: arena.arena_escrow.code_id().unwrap(),
             msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {

@@ -19,7 +19,7 @@ use dao_voting::proposal::SingleChoiceProposeMsg;
 use crate::{
     state::{
         competition_categories, competition_modules, ratings, rulesets,
-        COMPETITION_CATEGORIES_COUNT, RATING_PERIOD, RULESETS_COUNT, TAX,
+        COMPETITION_CATEGORIES_COUNT, ENROLLMENT_MODULES, RATING_PERIOD, RULESETS_COUNT, TAX,
     },
     ContractError,
 };
@@ -32,53 +32,48 @@ pub const COMPETITION_REPLY_ID: u64 = 5;
 pub fn update_competition_modules(
     deps: DepsMut,
     sender: Addr,
-    to_add: Vec<ModuleInstantiateInfo>,
-    to_disable: Vec<String>,
+    to_add: Option<Vec<ModuleInstantiateInfo>>,
+    to_disable: Option<Vec<String>>,
 ) -> Result<Response, ContractError> {
-    // Ensure sender is authorized
-    if PrePropose::default().dao.load(deps.storage)? != sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
     // Disable specified competition modules
-    for module_addr in &to_disable {
-        let addr = deps.api.addr_validate(module_addr)?;
-        competition_modules().update(
-            deps.storage,
-            &addr,
-            |maybe_module| -> Result<_, ContractError> {
-                let mut module = maybe_module
-                    .ok_or(ContractError::CompetitionModuleDoesNotExist { addr: addr.clone() })?;
-                module.is_enabled = false;
-                Ok(module)
-            },
-        )?;
+    if let Some(to_disable) = to_disable {
+        for module_addr in &to_disable {
+            let addr = deps.api.addr_validate(module_addr)?;
+            competition_modules().update(
+                deps.storage,
+                &addr,
+                |maybe_module| -> Result<_, ContractError> {
+                    let mut module =
+                        maybe_module.ok_or(ContractError::CompetitionModuleDoesNotExist {
+                            addr: addr.clone(),
+                        })?;
+                    module.is_enabled = false;
+                    Ok(module)
+                },
+            )?;
+        }
     }
 
     // Convert new modules into wasm messages and prepare for instantiation
-    let competition_module_msgs: Vec<SubMsg> = to_add
-        .into_iter()
-        .map(|info| info.into_wasm_msg(sender.clone()))
-        .map(|wasm| SubMsg::reply_on_success(wasm, COMPETITION_MODULE_REPLY_ID))
-        .collect();
+    let competition_module_msgs: Vec<SubMsg> = if let Some(to_add) = to_add {
+        to_add
+            .into_iter()
+            .map(|info| info.into_wasm_msg(sender.clone()))
+            .map(|wasm| SubMsg::reply_on_success(wasm, COMPETITION_MODULE_REPLY_ID))
+            .collect()
+    } else {
+        vec![]
+    };
 
     Ok(Response::new()
         .add_attribute("action", "update_competition_modules")
         .add_submessages(competition_module_msgs))
 }
 
-pub fn update_tax(
-    deps: DepsMut,
-    env: &Env,
-    sender: Addr,
-    tax: Decimal,
-) -> Result<Response, ContractError> {
-    if PrePropose::default().dao.load(deps.storage)? != sender {
-        return Err(ContractError::Unauthorized {});
-    }
-    if tax > Decimal::one() {
+pub fn update_tax(deps: DepsMut, env: &Env, tax: Decimal) -> Result<Response, ContractError> {
+    if tax >= Decimal::one() {
         return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "The dao tax cannot be greater than 100%.".to_string(),
+            msg: "The dao tax must be less than 100%.".to_string(),
         }));
     }
 
@@ -91,50 +86,60 @@ pub fn update_tax(
 
 pub fn update_rulesets(
     deps: DepsMut,
-    sender: Addr,
-    to_add: Vec<NewRuleset>,
-    to_disable: Vec<Uint128>,
+    to_add: Option<Vec<NewRuleset>>,
+    to_disable: Option<Vec<Uint128>>,
 ) -> Result<Response, ContractError> {
-    // Ensure sender is authorized
-    if PrePropose::default().dao.load(deps.storage)? != sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
     // Disable specified rulesets
-    for id in to_disable {
-        rulesets().update(deps.storage, id.u128(), |maybe_ruleset| -> StdResult<_> {
-            let mut ruleset = maybe_ruleset.ok_or(StdError::GenericErr {
-                msg: format!("Could not find a ruleset with the id {}", id),
+    if let Some(to_disable) = to_disable {
+        for id in to_disable {
+            rulesets().update(deps.storage, id.u128(), |maybe_ruleset| -> StdResult<_> {
+                let mut ruleset = maybe_ruleset.ok_or(StdError::GenericErr {
+                    msg: format!("Could not find a ruleset with the id {}", id),
+                })?;
+                ruleset.is_enabled = false;
+                Ok(ruleset)
             })?;
-            ruleset.is_enabled = false;
-            Ok(ruleset)
-        })?;
+        }
     }
 
     // Add new rulesets
-    let mut current_id = RULESETS_COUNT.load(deps.storage)?;
-    for ruleset in to_add {
-        if let Some(category_id) = ruleset.category_id {
-            if !competition_categories().has(deps.storage, category_id.u128()) {
-                return Err(ContractError::CompetitionCategoryDoesNotExist { id: category_id });
+    let mut attrs = vec![];
+    if let Some(to_add) = to_add {
+        let mut current_id = RULESETS_COUNT.load(deps.storage)?;
+        for ruleset in to_add {
+            if !competition_categories().has(deps.storage, ruleset.category_id.u128()) {
+                return Err(ContractError::CompetitionCategoryDoesNotExist {
+                    id: ruleset.category_id,
+                });
             }
-        }
-        current_id = current_id.checked_add(Uint128::one())?;
 
-        let new_ruleset = Ruleset {
-            category_id: ruleset.category_id,
-            id: current_id,
-            rules: ruleset.rules,
-            description: ruleset.description,
-            is_enabled: true,
-        };
-        rulesets().save(deps.storage, current_id.u128(), &new_ruleset)?;
+            current_id = current_id.checked_add(Uint128::one())?;
+
+            let new_ruleset = Ruleset {
+                category_id: ruleset.category_id,
+                id: current_id,
+                rules: ruleset.rules,
+                description: ruleset.description,
+                is_enabled: true,
+            };
+            rulesets().save(deps.storage, current_id.u128(), &new_ruleset)?;
+
+            attrs.push(Attribute::new(
+                new_ruleset.id,
+                format!(
+                    "Category {} - {}",
+                    new_ruleset.category_id, new_ruleset.description
+                ),
+            ))
+        }
+
+        RULESETS_COUNT.save(deps.storage, &current_id)?;
+        attrs.push(Attribute::new("ruleset_count", current_id));
     }
-    RULESETS_COUNT.save(deps.storage, &current_id)?;
 
     Ok(Response::new()
         .add_attribute("action", "update_rulesets")
-        .add_attribute("ruleset_count", current_id))
+        .add_attributes(attrs))
 }
 
 pub fn check_can_submit(
@@ -169,10 +174,11 @@ pub fn propose(
 ) -> Result<Response, PreProposeError> {
     let config = PrePropose::default().config.load(deps.storage)?;
     check_can_submit(deps.as_ref(), &info.sender, &config)?;
+    let originator = deps.api.addr_validate(&msg.originator)?;
 
     let deposit_messages = if let Some(ref deposit_info) = config.deposit_info {
         deposit_info.check_native_deposit_paid(&info)?;
-        deposit_info.get_take_deposit_messages(&info.sender, &env.contract.address)?
+        deposit_info.get_take_deposit_messages(&originator, &env.contract.address)?
     } else {
         vec![]
     };
@@ -188,7 +194,7 @@ pub fn propose(
     PrePropose::default().deposits.save(
         deps.storage,
         next_id,
-        &(config.deposit_info, info.sender.clone()),
+        &(config.deposit_info, originator.clone()),
     )?;
 
     // Validate distribution
@@ -234,7 +240,7 @@ pub fn propose(
 
     Ok(Response::default()
         .add_attribute("method", "execute_propose")
-        .add_attribute("sender", info.sender)
+        .add_attribute("originator", originator)
         // It's important that the propose message is
         // first. Otherwise, a hook receiver could create a
         // proposal before us and invalidate our `NextProposalId
@@ -246,65 +252,68 @@ pub fn propose(
 
 pub fn update_categories(
     deps: DepsMut,
-    sender: Addr,
-    to_add: Vec<NewCompetitionCategory>,
-    to_edit: Vec<EditCompetitionCategory>,
+    to_add: Option<Vec<NewCompetitionCategory>>,
+    to_edit: Option<Vec<EditCompetitionCategory>>,
 ) -> Result<Response, ContractError> {
-    // Ensure sender is authorized
-    if PrePropose::default().dao.load(deps.storage)? != sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
     // Disable specified categories
-    for action in to_edit {
-        let id = match action {
-            EditCompetitionCategory::Disable { category_id } => category_id,
-            EditCompetitionCategory::Edit {
-                category_id,
-                name: _,
-            } => category_id,
-        };
-        competition_categories().update(
-            deps.storage,
-            id.u128(),
-            |maybe_category| -> Result<_, ContractError> {
-                let mut category =
-                    maybe_category.ok_or(ContractError::CompetitionCategoryDoesNotExist { id })?;
+    if let Some(to_edit) = to_edit {
+        for action in to_edit {
+            let id = match action {
+                EditCompetitionCategory::Disable { category_id } => category_id,
+                EditCompetitionCategory::Edit {
+                    category_id,
+                    name: _,
+                } => category_id,
+            };
+            competition_categories().update(
+                deps.storage,
+                id.u128(),
+                |maybe_category| -> Result<_, ContractError> {
+                    let mut category = maybe_category
+                        .ok_or(ContractError::CompetitionCategoryDoesNotExist { id })?;
 
-                match action {
-                    EditCompetitionCategory::Disable { category_id: _ } => {
-                        category.is_enabled = false
-                    }
-                    EditCompetitionCategory::Edit {
-                        category_id: _,
-                        name,
-                    } => {
-                        category.name = name;
-                    }
-                };
+                    match action {
+                        EditCompetitionCategory::Disable { category_id: _ } => {
+                            category.is_enabled = false
+                        }
+                        EditCompetitionCategory::Edit {
+                            category_id: _,
+                            name,
+                        } => {
+                            category.name = name;
+                        }
+                    };
 
-                Ok(category)
-            },
-        )?;
+                    Ok(category)
+                },
+            )?;
+        }
     }
 
     // Add new categories
-    let mut current_id = COMPETITION_CATEGORIES_COUNT.load(deps.storage)?;
-    for category in to_add {
-        current_id = current_id.checked_add(Uint128::one())?;
+    let mut attrs = vec![];
+    if let Some(to_add) = to_add {
+        let mut current_id = COMPETITION_CATEGORIES_COUNT.load(deps.storage)?;
+        for category in to_add {
+            current_id = current_id.checked_add(Uint128::one())?;
 
-        let new_category = CompetitionCategory {
-            id: current_id,
-            name: category.name,
-            is_enabled: true,
-        };
-        competition_categories().save(deps.storage, current_id.u128(), &new_category)?;
+            let new_category = CompetitionCategory {
+                id: current_id,
+                name: category.name,
+                is_enabled: true,
+            };
+            competition_categories().save(deps.storage, current_id.u128(), &new_category)?;
+
+            attrs.push(Attribute::new(new_category.id, new_category.name));
+        }
+
+        COMPETITION_CATEGORIES_COUNT.save(deps.storage, &current_id)?;
+        attrs.push(Attribute::new("category_count", current_id));
     }
-    COMPETITION_CATEGORIES_COUNT.save(deps.storage, &current_id)?;
 
     Ok(Response::new()
         .add_attribute("action", "update_categories")
-        .add_attribute("category_count", current_id))
+        .add_attributes(attrs))
 }
 
 pub fn adjust_ratings(
@@ -395,15 +404,7 @@ pub fn adjust_ratings(
         .add_attributes(attrs))
 }
 
-pub fn update_rating_period(
-    deps: DepsMut,
-    sender: Addr,
-    period: Duration,
-) -> Result<Response, ContractError> {
-    if PrePropose::default().dao.load(deps.storage)? != sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
+pub fn update_rating_period(deps: DepsMut, period: Duration) -> Result<Response, ContractError> {
     let value = match &period {
         Duration::Height(height) => height,
         Duration::Time(seconds) => seconds,
@@ -420,4 +421,35 @@ pub fn update_rating_period(
     Ok(Response::new()
         .add_attribute("action", "update_rating_period")
         .add_attribute("period", period.to_string()))
+}
+
+pub fn update_enrollment_modules(
+    deps: DepsMut,
+    to_add: Option<Vec<String>>,
+    to_remove: Option<Vec<String>>,
+) -> Result<Response, ContractError> {
+    // Add new modules
+    if let Some(addresses_to_add) = to_add {
+        for addr_str in addresses_to_add {
+            let addr = deps.api.addr_validate(&addr_str)?;
+            ENROLLMENT_MODULES.save(deps.storage, &addr, &Empty {})?;
+        }
+    }
+
+    // Remove modules
+    if let Some(addresses_to_remove) = to_remove {
+        for addr_str in addresses_to_remove {
+            let addr = deps.api.addr_validate(&addr_str)?;
+            if ENROLLMENT_MODULES.has(deps.storage, &addr) {
+                ENROLLMENT_MODULES.remove(deps.storage, &addr);
+            } else {
+                return Err(ContractError::StdError(StdError::generic_err(format!(
+                    "Enrollment module {} is not registered",
+                    addr
+                ))));
+            }
+        }
+    }
+
+    Ok(Response::new().add_attribute("action", "update_enrollment_modules"))
 }

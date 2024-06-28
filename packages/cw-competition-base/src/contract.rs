@@ -4,7 +4,7 @@ use arena_interface::{
     competition::{
         msg::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
-            ModuleInfo, QueryBase, ToCompetitionExt,
+            QueryBase, ToCompetitionExt,
         },
         state::{
             Competition, CompetitionListItemResponse, CompetitionResponse, CompetitionStatus,
@@ -17,9 +17,8 @@ use arena_interface::{
 };
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
-    ensure, instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Decimal,
-    DecimalRangeExceeded, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError,
-    StdResult, Storage, SubMsg, Uint128, WasmMsg,
+    ensure, instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty,
+    Env, MessageInfo, Reply, Response, StdError, StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
 use cw_balance::Distribution;
 use cw_ownable::{assert_owner, get_ownership, initialize_owner};
@@ -255,12 +254,25 @@ impl<
         msg: ExecuteBase<ExecuteExt, CompetitionInstantiateExt>,
     ) -> Result<Response, CompetitionError> {
         match msg {
-            ExecuteBase::JailCompetition { propose_message } => {
-                self.execute_jail_competition(deps, env, info, propose_message)
-            }
+            ExecuteBase::JailCompetition {
+                competition_id,
+                title,
+                description,
+                distribution,
+                additional_layered_fees,
+            } => self.execute_jail_competition(
+                deps,
+                env,
+                info,
+                competition_id,
+                title,
+                description,
+                distribution,
+                additional_layered_fees,
+            ),
             ExecuteBase::CreateCompetition {
-                category_id,
                 host,
+                category_id,
                 escrow,
                 name,
                 description,
@@ -273,8 +285,9 @@ impl<
             } => self.execute_create_competition(
                 &mut deps,
                 &env,
-                category_id,
+                &info,
                 host,
+                category_id,
                 escrow,
                 name,
                 description,
@@ -294,8 +307,10 @@ impl<
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
-            ExecuteBase::Activate {} => self.execute_activate_from_escrow(deps, info),
-            ExecuteBase::ActivateManually { id } => self.execute_activate_by_host(deps, info, id),
+            ExecuteBase::ActivateCompetition {} => self.execute_activate_from_escrow(deps, info),
+            ExecuteBase::ActivateCompetitionManually { id } => {
+                self.execute_activate_by_host(deps, info, id)
+            }
             ExecuteBase::SubmitEvidence {
                 competition_id: id,
                 evidence,
@@ -590,12 +605,17 @@ impl<
             .add_messages(msgs))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn execute_jail_competition(
         &self,
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        propose_message: ProposeMessage,
+        competition_id: Uint128,
+        title: String,
+        description: String,
+        distribution: Option<Distribution<String>>,
+        additional_layered_fees: Option<FeeInformation<String>>,
     ) -> Result<Response, CompetitionError> {
         // Ensure Module has an owner
         let ownership = get_ownership(deps.storage)?;
@@ -603,55 +623,48 @@ impl<
             cw_ownable::OwnershipError::NoOwner,
         ))?;
 
-        let id = propose_message.competition_id;
-
         // Update competition status
-        self.competitions.update(deps.storage, id.u128(), |x| {
-            let mut competition = x.ok_or(CompetitionError::UnknownCompetitionId { id })?;
+        self.competitions
+            .update(deps.storage, competition_id.u128(), |x| {
+                let mut competition =
+                    x.ok_or(CompetitionError::UnknownCompetitionId { id: competition_id })?;
 
-            // Validate competition status
-            if competition.status != CompetitionStatus::Jailed {
-                if competition.status != CompetitionStatus::Active {
-                    return Err(CompetitionError::InvalidCompetitionStatus {
-                        current_status: competition.status,
-                    });
+                // Validate competition status
+                if competition.status != CompetitionStatus::Jailed {
+                    if competition.status != CompetitionStatus::Active {
+                        return Err(CompetitionError::InvalidCompetitionStatus {
+                            current_status: competition.status,
+                        });
+                    }
+                    if !competition.expiration.is_expired(&env.block) {
+                        return Err(CompetitionError::CompetitionNotExpired {});
+                    }
                 }
-                if !competition.expiration.is_expired(&env.block) {
-                    return Err(CompetitionError::CompetitionNotExpired {});
-                }
-            }
 
-            // Check user membership in the competition DAO
-            if info.sender != competition.admin_dao {
-                let voting_power_response: dao_interface::voting::VotingPowerAtHeightResponse =
-                    deps.querier.query_wasm_smart(
-                        competition.host.clone(),
-                        &dao_interface::msg::QueryMsg::VotingPowerAtHeight {
-                            address: info.sender.to_string(),
-                            height: None,
-                        },
-                    )?;
-                if voting_power_response.power.is_zero() {
-                    return Err(CompetitionError::Unauthorized {});
-                }
-            }
+                competition.status = CompetitionStatus::Jailed;
+                Ok(competition)
+            })?;
 
-            competition.status = CompetitionStatus::Jailed;
-            Ok(competition)
-        })?;
-
-        // Construct message for the DAO owner
+        // Create the proposal
         let msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: arena_core.to_string(),
             msg: to_json_binary(&arena_interface::core::ExecuteMsg::Propose {
-                msg: propose_message,
+                msg: ProposeMessage {
+                    competition_id,
+                    title,
+                    description,
+                    distribution,
+                    additional_layered_fees,
+                    originator: info.sender.to_string(),
+                },
             })?,
-            funds: vec![],
+            funds: info.funds,
         });
 
         Ok(Response::new()
             .add_attribute("action", "jail_wager")
-            .add_attribute("id", id)
+            .add_attribute("competition_id", competition_id)
+            .add_attribute("originator", info.sender)
             .add_message(msg))
     }
 
@@ -660,8 +673,9 @@ impl<
         &self,
         deps: &mut DepsMut,
         env: &Env,
+        info: &MessageInfo,
+        host: Option<String>,
         category_id: Option<Uint128>,
-        host: ModuleInfo,
         escrow: Option<EscrowInstantiateInfo>,
         name: String,
         description: String,
@@ -672,6 +686,7 @@ impl<
         should_activate_on_funded: Option<bool>,
         extension: &CompetitionInstantiateExt,
     ) -> Result<Response, CompetitionError> {
+        // Validate expiration
         if expiration.is_expired(&env.block) {
             return Err(CompetitionError::StdError(StdError::generic_err(
                 "Cannot create an expired competition",
@@ -684,113 +699,99 @@ impl<
             cw_ownable::OwnershipError::NoOwner,
         ))?;
 
-        // Setup
+        // Determine host
+        let host = if let Some(host) = host {
+            let is_enrollment_module: bool = deps.querier.query_wasm_smart(
+                arena_core.to_string(),
+                &arena_interface::core::QueryMsg::QueryExtension {
+                    msg: arena_interface::core::QueryExt::IsValidEnrollmentModule {
+                        addr: info.sender.to_string(),
+                    },
+                },
+            )?;
+
+            ensure!(
+                is_enrollment_module,
+                CompetitionError::StdError(StdError::generic_err(
+                    "Only a valid enrollment module can specify a host."
+                ))
+            );
+
+            deps.api.addr_validate(&host)?
+        } else {
+            info.sender.clone()
+        };
+
+        // Increment competition count
         let competition_id = self
             .competition_count
             .update(deps.storage, |x| -> StdResult<_> {
                 Ok(x.checked_add(Uint128::one())?)
             })?;
+
         let admin_dao = self.query_dao(deps.as_ref())?;
         let mut msgs = vec![];
         let mut initial_status = CompetitionStatus::Pending;
 
-        // Declare instantiate2 vars
-        let salt = env.block.height.to_ne_bytes();
-        let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-        let host_addr = match host {
-            ModuleInfo::New { info } => {
-                let code_info = deps.querier.query_wasm_code_info(info.code_id)?;
-                let canonical_addr =
-                    instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
+        // Handle escrow setup
+        let (escrow_addr, fees) = if let Some(escrow_info) = escrow {
+            let salt = env.block.height.to_ne_bytes();
+            let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+            let code_info = deps.querier.query_wasm_code_info(escrow_info.code_id)?;
+            let canonical_addr =
+                instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
 
-                msgs.push(WasmMsg::Instantiate2 {
-                    admin: info.admin.map(|admin| match admin {
-                        dao_interface::state::Admin::Address { addr } => addr,
-                        dao_interface::state::Admin::CoreModule {} => admin_dao.to_string(),
-                    }),
-                    code_id: info.code_id,
-                    label: info.label,
-                    msg: info.msg,
-                    funds: vec![],
-                    salt: salt.into(),
-                });
+            msgs.push(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
+                admin: Some(env.contract.address.to_string()),
+                code_id: escrow_info.code_id,
+                label: escrow_info.label,
+                msg: escrow_info.msg,
+                funds: vec![],
+                salt: salt.into(),
+            }));
 
-                deps.api.addr_humanize(&canonical_addr)
-            }
-            ModuleInfo::Existing { addr } => deps.api.addr_validate(&addr),
-        }?;
+            let escrow_addr = deps.api.addr_humanize(&canonical_addr)?;
+            self.escrows_to_competitions.save(
+                deps.storage,
+                &escrow_addr,
+                &competition_id.u128(),
+            )?;
 
-        // Validate fees
-        let fees = escrow
-            .as_ref()
-            .and_then(|x| {
-                x.additional_layered_fees.as_ref().map(|y| {
-                    y.iter()
-                        .map(|z| z.into_checked(deps.as_ref()))
-                        .collect::<StdResult<Vec<FeeInformation<Addr>>>>()
+            let fees = escrow_info
+                .additional_layered_fees
+                .map(|fees| {
+                    fees.iter()
+                        .map(|fee| fee.into_checked(deps.as_ref()))
+                        .collect::<StdResult<Vec<_>>>()
                 })
-            })
-            .transpose()?;
+                .transpose()?;
 
-        if let Some(ref fees) = fees {
-            for fee in fees {
-                ensure!(
-                    fee.tax < Decimal::one(),
-                    CompetitionError::DecimalRangeExceeded(DecimalRangeExceeded {})
-                );
-                ensure!(
-                    !fee.tax.is_zero(),
-                    CompetitionError::StdError(StdError::generic_err("Fee cannot be 0"))
-                );
+            (Some(escrow_addr), fees)
+        } else {
+            if should_activate_on_funded.unwrap_or(true) {
+                initial_status = CompetitionStatus::Active;
             }
-        }
-        // instantiate2 escrow
-        let escrow_addr = match escrow {
-            Some(info) => {
-                let code_info = deps.querier.query_wasm_code_info(info.code_id)?;
-                let canonical_addr =
-                    instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
-
-                msgs.push(WasmMsg::Instantiate2 {
-                    admin: Some(host_addr.to_string()),
-                    code_id: info.code_id,
-                    label: info.label.clone(),
-                    msg: info.msg.clone(),
-                    funds: vec![],
-                    salt: salt.into(),
-                });
-
-                let addr = deps.api.addr_humanize(&canonical_addr)?;
-
-                self.escrows_to_competitions
-                    .save(deps.storage, &addr, &competition_id.u128())?;
-
-                Some(addr)
-            }
-            None => {
-                if should_activate_on_funded.unwrap_or(true) {
-                    initial_status = CompetitionStatus::Active;
-                }
-                None
-            }
+            (None, None)
         };
 
-        if category_id.is_some() || !rulesets.is_empty() {
-            // Validate that category and rulesets are valid
-            let result: bool = deps.querier.query_wasm_smart(
-                arena_core,
-                &arena_interface::core::QueryMsg::QueryExtension {
-                    msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
-                        category_id,
-                        rulesets: rulesets.clone(),
+        // Validate category and rulesets
+        if let Some(category_id) = category_id {
+            if !rulesets.is_empty() {
+                let is_valid: bool = deps.querier.query_wasm_smart(
+                    arena_core,
+                    &arena_interface::core::QueryMsg::QueryExtension {
+                        msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
+                            category_id,
+                            rulesets: rulesets.clone(),
+                        },
                     },
-                },
-            )?;
-            if !result {
-                return Err(CompetitionError::InvalidCategoryAndRulesets {
-                    category_id,
-                    rulesets,
-                });
+                )?;
+                if !is_valid {
+                    return Err(CompetitionError::InvalidCategoryAndRulesets {
+                        category_id,
+                        rulesets,
+                    });
+                }
             }
         }
 
@@ -798,8 +799,8 @@ impl<
         let competition = Competition {
             id: competition_id,
             category_id,
-            admin_dao: admin_dao.clone(),
-            host: host_addr,
+            admin_dao,
+            host,
             start_height: env.block.height,
             escrow: escrow_addr,
             name,
@@ -812,6 +813,7 @@ impl<
             banner,
         };
 
+        // Save competition data
         self.competition_rules
             .save(deps.storage, competition_id.u128(), &rules)?;
         self.competitions
@@ -824,8 +826,7 @@ impl<
                 "escrow_addr",
                 competition
                     .escrow
-                    .map(|x| x.to_string())
-                    .unwrap_or("None".to_string()),
+                    .map_or_else(|| "None".to_string(), |addr| addr.to_string()),
             )
             .add_attribute("host", competition.host)
             .add_messages(msgs))

@@ -1,21 +1,45 @@
-# Arena-Core
+# Arena Core
 
-Arena-Core is an extension contract for DAO's to enable Arena Protocol's decentralized competitions.
+Arena Core is the core component of the Arena DAO ecosystem, managing competition modules, rulesets, categories, and ratings. It serves as the central hub for coordinating various aspects of decentralized competitions.
 
-## Key Features
+## Contract Messages
 
-### Competition Modules:
+### InstantiateMsg
 
-- Arena-Core enables different types of competitions such as wagers, leagues, and tournaments. This flexibility allows for a wide range of competitive scenarios to be created and managed.
+Initializes the Arena Core contract with the following parameters:
 
-### Tax:
+- Competition module instantiation information
+- Initial rulesets
+- Initial categories
+- Tax rate and configuration
+- Rating period duration
 
-- Arena-Core has a built-in mechanism for earning a percentage of the competition's amount. This serves as a revenue stream for the DAO, incentivizing the creation and management of competitions.
+### ExecuteMsg
 
-### Rulesets:
+The contract supports the following execute messages:
 
-- Arena-Core stores standard rulesets for the competition modules to use. These rulesets provide a consistent framework for competitions, ensuring fairness and transparency.
+- `UpdateCompetitionModules`: Add or disable competition modules
+- `UpdateTax`: Modify the tax rate
+- `UpdateRulesets`: Add or disable rulesets
+- `UpdateCategories`: Add, edit, or disable competition categories
+- `AdjustRatings`: Update ratings for participants in a specific category
+- `UpdateRatingPeriod`: Modify the rating period duration
+- `UpdateEnrollmentModules`: Add or remove enrollment modules
 
-### Categories:
+### QueryMsg
 
-- Arena-Core allows competitions to be categorized for better organization and discovery. This helps users find the type of competition they are interested in participating.
+The contract supports various query messages:
+
+- `CompetitionModules`: List competition modules
+- `Ruleset`: Get details of a specific ruleset
+- `Rulesets`: List rulesets for a category
+- `Tax`: Get the current tax rate
+- `CompetitionModule`: Get details of a specific competition module
+- `Category`: Get details of a specific category
+- `Categories`: List categories
+- `IsValidCategoryAndRulesets`: Validate category and ruleset combinations
+- `IsValidEnrollmentModule`: Check if an enrollment module is valid
+- `DumpState`: Get the current state of the contract
+- `TaxConfig`: Get tax configuration for a specific height
+- `Rating`: Get rating for a participant in a category
+- `RatingLeaderboard`: Get the rating leaderboard for a category

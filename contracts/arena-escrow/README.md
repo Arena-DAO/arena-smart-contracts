@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Arena-Escrow smart contract is a key component of the Arena DAO ecosystem, managing the lifecycle of competitions and their associated funds. This contract handles dues collection, fund distribution, and competition state management.
+The Arena-Escrow smart contract is a crucial component of the Arena DAO ecosystem, designed to manage the lifecycle of competitions and their associated funds. This contract handles dues collection, fund distribution, competition state management, and supports various token types including native, CW20, and CW721 tokens.
 
 ## Competition and Escrow Lifecycle
 
@@ -79,9 +79,26 @@ The contract supports the following execute messages:
 - `ReceiveNative`: Receive native tokens
 - `Receive`: Receive CW20 tokens
 - `ReceiveNft`: Receive CW721 tokens
-- `Distribute`: Distribute funds according to the specified distribution and fees
+- `Distribute`: Distribute funds according to the specified distribution and layered fees
 - `Lock`: Lock or unlock the contract
+
+Additionally, the contract implements `cw_ownable_execute` for ownership management.
 
 ### QueryMsg
 
-The contract supports various query messages to check balances, dues, funding status, and other state information.
+The contract supports various query messages:
+
+- `Balances`: Retrieve balances of members
+- `Balance`: Get balance of a specific address
+- `Due`: Get due amount for a specific address
+- `Dues`: List all dues
+- `InitialDues`: List initial dues
+- `IsFunded`: Check if an address is funded
+- `IsFullyFunded`: Check if the contract is fully funded
+- `TotalBalance`: Get total balance of the contract
+- `IsLocked`: Check if the contract is locked
+- `Distribution`: Get distribution for a specific address
+- `DumpState`: Dump the entire state of the contract
+- `ShouldActivateOnFunded`: Check if the contract should activate when fully funded
+
+The contract also implements `cw_ownable_query` for ownership-related queries.

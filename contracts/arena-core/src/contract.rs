@@ -2,8 +2,8 @@ use crate::{
     execute::{self, COMPETITION_MODULE_REPLY_ID},
     migrate, query,
     state::{
-        competition_modules, CompetitionModule, ARENA_TAX_CONFIG, COMPETITION_CATEGORIES_COUNT,
-        COMPETITION_MODULES_COUNT, KEYS, RULESETS_COUNT,
+        competition_modules, rulesets, CompetitionModule, ARENA_TAX_CONFIG,
+        COMPETITION_CATEGORIES_COUNT, COMPETITION_MODULES_COUNT, KEYS, RULESETS_COUNT,
     },
     ContractError,
 };
@@ -50,16 +50,16 @@ pub fn instantiate_extension(
     COMPETITION_MODULES_COUNT.save(deps.storage, &Uint128::zero())?;
     RULESETS_COUNT.save(deps.storage, &Uint128::zero())?;
     COMPETITION_CATEGORIES_COUNT.save(deps.storage, &Uint128::zero())?;
-    execute::update_tax(deps.branch(), &env, dao.clone(), extension.tax)?;
-    execute::update_categories(deps.branch(), dao.clone(), extension.categories, vec![])?;
-    execute::update_rulesets(deps.branch(), dao.clone(), extension.rulesets, vec![])?;
-    execute::update_rating_period(deps.branch(), dao.clone(), extension.rating_period)?;
+    execute::update_tax(deps.branch(), &env, extension.tax)?;
+    execute::update_categories(deps.branch(), extension.categories, None)?;
+    execute::update_rulesets(deps.branch(), extension.rulesets, None)?;
+    execute::update_rating_period(deps.branch(), extension.rating_period)?;
     ARENA_TAX_CONFIG.save(deps.storage, &extension.tax_configuration)?;
     let competition_response = crate::execute::update_competition_modules(
         deps.branch(),
         dao.clone(),
         extension.competition_modules_instantiate_info,
-        vec![],
+        None,
     )?;
     Ok(prepropose_response
         .add_submessages(competition_response.messages)
@@ -84,25 +84,38 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Propose { msg } => Ok(execute::propose(deps, env, info, msg)?),
-        ExecuteMsg::Extension { msg } => match msg {
-            ExecuteExt::UpdateCompetitionModules { to_add, to_disable } => {
-                execute::update_competition_modules(deps, info.sender, to_add, to_disable)
+        ExecuteMsg::Extension { msg } => {
+            // Check authorization for all Extension messages except AdjustRatings
+            if !matches!(msg, ExecuteExt::AdjustRatings { .. }) {
+                let dao = PrePropose::default().dao.load(deps.storage)?;
+                if dao != info.sender {
+                    return Err(ContractError::Unauthorized {});
+                }
             }
-            ExecuteExt::UpdateRulesets { to_add, to_disable } => {
-                execute::update_rulesets(deps, info.sender, to_add, to_disable)
+
+            match msg {
+                ExecuteExt::UpdateCompetitionModules { to_add, to_disable } => {
+                    execute::update_competition_modules(deps, info.sender, to_add, to_disable)
+                }
+                ExecuteExt::UpdateRulesets { to_add, to_disable } => {
+                    execute::update_rulesets(deps, to_add, to_disable)
+                }
+                ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, tax),
+                ExecuteExt::UpdateCategories { to_add, to_edit } => {
+                    execute::update_categories(deps, to_add, to_edit)
+                }
+                ExecuteExt::AdjustRatings {
+                    category_id,
+                    member_results,
+                } => execute::adjust_ratings(deps, env, info, category_id, member_results),
+                ExecuteExt::UpdateRatingPeriod { period } => {
+                    execute::update_rating_period(deps, period)
+                }
+                ExecuteExt::UpdateEnrollmentModules { to_add, to_remove } => {
+                    execute::update_enrollment_modules(deps, to_add, to_remove)
+                }
             }
-            ExecuteExt::UpdateTax { tax } => execute::update_tax(deps, &env, info.sender, tax),
-            ExecuteExt::UpdateCategories { to_add, to_edit } => {
-                execute::update_categories(deps, info.sender, to_add, to_edit)
-            }
-            ExecuteExt::AdjustRatings {
-                category_id,
-                member_results,
-            } => execute::adjust_ratings(deps, env, info, category_id, member_results),
-            ExecuteExt::UpdateRatingPeriod { period } => {
-                execute::update_rating_period(deps, info.sender, period)
-            }
-        },
+        }
         // Default pre-propose-base behavior for all other messages
         _ => Ok(PrePropose::default().execute(deps, env, info, msg)?),
     }
@@ -229,6 +242,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
                 start_after,
                 limit,
             )?),
+            QueryExt::IsValidEnrollmentModule { addr } => {
+                to_json_binary(&query::is_valid_enrollment_module(deps, addr)?)
+            }
         },
         _ => PrePropose::default().query(deps, env, msg),
     };
@@ -248,8 +264,9 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrate::from_v1_4_to_v1_6(deps.branch())?;
     }
 
-    if version.major == 1 && version.minor < 7 {
-        migrate::from_v1_6_to_v1_7(deps.branch())?;
+    if version.major == 1 && version.minor < 8 {
+        // Rulesets state has changed. There's nothing important there atm, so we can just clear the state.
+        rulesets().clear(deps.storage);
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

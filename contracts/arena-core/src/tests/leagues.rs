@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use arena_interface::competition::msg::{EscrowInstantiateInfo, ModuleInfo};
+use arena_interface::competition::msg::EscrowInstantiateInfo;
 use arena_interface::core::{CompetitionModuleQuery, CompetitionModuleResponse, QueryExt};
 use arena_interface::fees::FeeInformation;
 use arena_league_module::{
@@ -54,7 +54,7 @@ fn setup_league_context(
                 funds: vec![],
                 msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
                     msg: arena_interface::core::ExecuteExt::UpdateCompetitionModules {
-                        to_add: vec![ModuleInstantiateInfo {
+                        to_add: Some(vec![ModuleInstantiateInfo {
                             code_id: league_module_id,
                             msg: to_json_binary(&InstantiateMsg {
                                 key: "Leagues".to_string(),
@@ -64,8 +64,8 @@ fn setup_league_context(
                             .unwrap(),
                             admin: None,
                             label: "arena-league-module".to_string(),
-                        }],
-                        to_disable: vec![],
+                        }]),
+                        to_disable: None,
                     },
                 })
                 .unwrap(),
@@ -99,44 +99,17 @@ fn setup_league_context(
 fn create_competition(
     context: &mut Context,
     expiration: Expiration,
-    members: Vec<cw4::Member>,
+    teams: Vec<String>,
     dues: Option<Vec<MemberBalanceUnchecked>>,
     distribution: Vec<Decimal>,
     additional_layered_fees: Option<Vec<FeeInformation<String>>>,
 ) -> cw_multi_test::error::AnyResult<AppResponse> {
-    let teams: Vec<String> = members.iter().map(|x| x.addr.to_string()).collect();
-
     context.app.execute_contract(
         context.app.api().addr_make(ADMIN),
         context.league.league_module_addr.clone(),
         &ExecuteMsg::CreateCompetition {
             category_id: Some(Uint128::one()),
-            host: ModuleInfo::New {
-                info: ModuleInstantiateInfo {
-                    code_id: context.core.dao_core_id,
-                    msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
-                        context.core.cw4_id,
-                        context.core.cw4_voting_module_id,
-                        context.core.dao_proposal_single_id,
-                        dao_proposal_single::msg::InstantiateMsg {
-                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
-                                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
-                            },
-                            min_voting_period: None,
-                            max_voting_period: cw_utils_v16::Duration::Height(10u64),
-                            only_members_execute: false,
-                            allow_revoting: false,
-                            pre_propose_info:
-                                dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
-                            close_proposal_on_execution_failure: true,
-                        },
-                        members,
-                    ))
-                    .unwrap(),
-                    admin: None,
-                    label: "DAO".to_owned(),
-                },
-            },
+            host: None,
             escrow: dues.map(|x| EscrowInstantiateInfo {
                 code_id: context.league.escrow_id,
                 msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
@@ -208,19 +181,13 @@ fn test_league_validation() {
         league: league_context,
     };
 
-    let members: Vec<_> = users
-        .iter()
-        .map(|x| Member {
-            addr: x.to_string(),
-            weight: 1u64,
-        })
-        .collect();
+    let teams: Vec<_> = users.iter().map(|x| x.to_string()).collect();
 
     // First show a successful distribution
     let result = create_competition(
         &mut context,
         Expiration::Never {},
-        members.clone(),
+        teams.clone(),
         None,
         vec![
             Decimal::from_ratio(70u128, 100u128),
@@ -235,7 +202,7 @@ fn test_league_validation() {
     let result = create_competition(
         &mut context,
         Expiration::Never {},
-        members.clone(),
+        teams.clone(),
         None,
         vec![
             Decimal::from_ratio(70u128, 100u128),
@@ -250,7 +217,7 @@ fn test_league_validation() {
     let result = create_competition(
         &mut context,
         Expiration::Never {},
-        members.clone(),
+        teams.clone(),
         None,
         vec![
             Decimal::from_ratio(15u128, 100u128),
@@ -269,7 +236,7 @@ fn test_league_validation() {
     let result = create_competition(
         &mut context,
         Expiration::Never {},
-        vec![members[0].clone()],
+        vec![teams[0].clone()],
         None,
         vec![Decimal::one()],
         None,
@@ -280,7 +247,7 @@ fn test_league_validation() {
     let result = create_competition(
         &mut context,
         Expiration::Never {},
-        vec![members[0].clone(), members[0].clone()],
+        vec![teams[0].clone(), teams[0].clone()],
         None,
         vec![Decimal::one()],
         None,
@@ -292,7 +259,7 @@ fn test_league_validation() {
     let result = create_competition(
         &mut context,
         Expiration::Never {},
-        members[0..members.len() - 1].to_vec(),
+        teams[0..teams.len() - 1].to_vec(),
         None,
         vec![Decimal::one()],
         None,
@@ -346,13 +313,7 @@ fn test_leagues() {
     let result = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 100),
-        users
-            .iter()
-            .map(|x| Member {
-                addr: x.to_string(),
-                weight: 1u64,
-            })
-            .collect(),
+        users.iter().map(|x| x.to_string()).collect(),
         Some(vec![
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
@@ -1074,13 +1035,7 @@ fn test_distributions() {
     let result = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 100),
-        users
-            .iter()
-            .map(|x| Member {
-                addr: x.to_string(),
-                weight: 1u64,
-            })
-            .collect(),
+        users.iter().map(|x| x.to_string()).collect(),
         Some(vec![
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
@@ -1325,13 +1280,7 @@ fn test_distributions() {
     let result = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 100),
-        users
-            .iter()
-            .map(|x| Member {
-                addr: x.to_string(),
-                weight: 1u64,
-            })
-            .collect(),
+        users.iter().map(|x| x.to_string()).collect(),
         Some(vec![
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),
@@ -1564,10 +1513,7 @@ fn test_distributions() {
         Expiration::AtHeight(starting_height + 100),
         users[0..4] // Only 4 members this time
             .iter()
-            .map(|x| Member {
-                addr: x.to_string(),
-                weight: 1u64,
-            })
+            .map(|x| x.to_string())
             .collect(),
         Some(vec![
             MemberBalanceUnchecked {
@@ -1764,10 +1710,7 @@ fn test_distributions() {
         Expiration::AtHeight(starting_height + 100),
         users[0..4] // Only 4 members this time
             .iter()
-            .map(|x| Member {
-                addr: x.to_string(),
-                weight: 1u64,
-            })
+            .map(|x| x.to_string())
             .collect(),
         Some(vec![
             MemberBalanceUnchecked {
@@ -2008,13 +1951,7 @@ fn test_additional_layered_fees() {
     let result = create_competition(
         &mut context,
         Expiration::AtHeight(starting_height + 100),
-        users
-            .iter()
-            .map(|x| Member {
-                addr: x.to_string(),
-                weight: 1u64,
-            })
-            .collect(),
+        users.iter().map(|x| x.to_string()).collect(),
         Some(vec![
             MemberBalanceUnchecked {
                 addr: users[0].to_string(),

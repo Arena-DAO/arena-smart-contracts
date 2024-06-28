@@ -11,7 +11,6 @@ use dao_interface::{
     state::{Admin, ModuleInstantiateInfo},
     CoreQueryMsgFns,
 };
-
 use dao_voting::threshold::Threshold;
 
 use crate::arena::Arena;
@@ -79,7 +78,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                             deposit_info: None,
                                             open_proposal_submission: false,
                                             extension: InstantiateExt {
-                                                competition_modules_instantiate_info: vec![
+                                                competition_modules_instantiate_info: Some(vec![
                                                     dao_interface_master::state::ModuleInstantiateInfo {
                                                         code_id: arena.arena_tournament_module.code_id()?,
                                                         msg: to_json_binary(
@@ -122,9 +121,9 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                         ),
                                                         label: "League Module".to_string(),
                                                     },
-                                                ],
-                                                rulesets: vec![],
-                                                categories: vec![NewCompetitionCategory { name: "Category".to_string() }, NewCompetitionCategory{ name: "Other Category".to_string() }],
+                                                ]),
+                                                rulesets: None,
+                                                categories: Some(vec![NewCompetitionCategory { name: "Category".to_string() }, NewCompetitionCategory{ name: "Other Category".to_string() }]),
                                                 tax: Decimal::from_ratio(5u128, 100u128),
                                                 tax_configuration: TaxConfiguration {
                                                     cw20_msg: None,
@@ -152,6 +151,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             None,
         )?;
 
+        // ########### Configuration ##############
         let proposal_modules = arena.dao_dao.dao_core.proposal_modules(None, None)?;
         arena
             .dao_dao
@@ -184,6 +184,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             .arena_league_module
             .set_address(competition_module_map.get("Leagues").unwrap());
 
+        // Instantiate the enrollment module
         arena.arena_competition_enrollment.instantiate(
             &arena_competition_enrollment::msg::InstantiateMsg {
                 owner: arena.arena_core.addr_str()?,

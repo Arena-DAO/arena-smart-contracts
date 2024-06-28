@@ -1,9 +1,10 @@
 use arena_competition_enrollment::msg::{CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns};
 use arena_competition_enrollment::state::CompetitionType;
 use arena_tournament_module::state::EliminationType;
-use cosmwasm_std::{coins, Decimal, Uint128, Uint64};
+use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
+use dao_proposal_sudo::msg::ExecuteMsgFns as DaoProposalExecuteMsgFns;
 
 use crate::Arena;
 
@@ -21,6 +22,22 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
     for i in 0..10 {
         teams.push(mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?);
     }
+
+    // Register the enrollment module
+    arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
+    arena
+        .dao_dao
+        .dao_proposal_sudo
+        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: arena.arena_core.addr_str()?,
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                msg: arena_interface::core::ExecuteExt::UpdateEnrollmentModules {
+                    to_add: Some(vec![arena.arena_competition_enrollment.addr_str()?]),
+                    to_remove: None,
+                },
+            })?,
+            funds: vec![],
+        })])?;
 
     // Create an enrollment
     arena.arena_competition_enrollment.set_sender(&admin);
@@ -169,6 +186,22 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
         teams.push(mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?);
     }
 
+    // Register the enrollment module
+    arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
+    arena
+        .dao_dao
+        .dao_proposal_sudo
+        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: arena.arena_core.addr_str()?,
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                msg: arena_interface::core::ExecuteExt::UpdateEnrollmentModules {
+                    to_add: Some(vec![arena.arena_competition_enrollment.addr_str()?]),
+                    to_remove: None,
+                },
+            })?,
+            funds: vec![],
+        })])?;
+
     arena.arena_competition_enrollment.set_sender(&admin);
 
     // Create an enrollment with max_members = 4
@@ -231,6 +264,22 @@ fn test_successful_tournament_creation() -> anyhow::Result<()> {
     for i in 0..8 {
         teams.push(mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?);
     }
+
+    // Register the enrollment module
+    arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
+    arena
+        .dao_dao
+        .dao_proposal_sudo
+        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: arena.arena_core.addr_str()?,
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                msg: arena_interface::core::ExecuteExt::UpdateEnrollmentModules {
+                    to_add: Some(vec![arena.arena_competition_enrollment.addr_str()?]),
+                    to_remove: None,
+                },
+            })?,
+            funds: vec![],
+        })])?;
 
     // Create a tournament enrollment
     arena.arena_competition_enrollment.set_sender(&admin);
@@ -300,6 +349,22 @@ fn test_successful_wager_creation() -> anyhow::Result<()> {
     let team1 = mock.addr_make_with_balance("team 1", coins(100_000u128, DENOM))?;
     let team2 = mock.addr_make_with_balance("team 2", coins(100_000u128, DENOM))?;
 
+    // Register the enrollment module
+    arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
+    arena
+        .dao_dao
+        .dao_proposal_sudo
+        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: arena.arena_core.addr_str()?,
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                msg: arena_interface::core::ExecuteExt::UpdateEnrollmentModules {
+                    to_add: Some(vec![arena.arena_competition_enrollment.addr_str()?]),
+                    to_remove: None,
+                },
+            })?,
+            funds: vec![],
+        })])?;
+
     // Create a wager enrollment
     arena.arena_competition_enrollment.set_sender(&admin);
     let create_enrollment_msg = ExecuteMsg::CreateEnrollment {
@@ -366,6 +431,22 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
     for i in 0..6 {
         teams.push(mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?);
     }
+
+    // Register the enrollment module
+    arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
+    arena
+        .dao_dao
+        .dao_proposal_sudo
+        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: arena.arena_core.addr_str()?,
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                msg: arena_interface::core::ExecuteExt::UpdateEnrollmentModules {
+                    to_add: Some(vec![arena.arena_competition_enrollment.addr_str()?]),
+                    to_remove: None,
+                },
+            })?,
+            funds: vec![],
+        })])?;
 
     // Create a league enrollment
     arena.arena_competition_enrollment.set_sender(&admin);
@@ -435,6 +516,22 @@ fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
     let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
     mock.next_block()?;
 
+    // Register the enrollment module
+    arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
+    arena
+        .dao_dao
+        .dao_proposal_sudo
+        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: arena.arena_core.addr_str()?,
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                msg: arena_interface::core::ExecuteExt::UpdateEnrollmentModules {
+                    to_add: Some(vec![arena.arena_competition_enrollment.addr_str()?]),
+                    to_remove: None,
+                },
+            })?,
+            funds: vec![],
+        })])?;
+
     // Create an enrollment with min_members = 4
     arena.arena_competition_enrollment.set_sender(&admin);
     let create_enrollment_msg = ExecuteMsg::CreateEnrollment {
@@ -489,6 +586,85 @@ fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
         && e.attributes
             .iter()
             .any(|attr| attr.key == "result" && attr.value == "expired_insufficient_members")));
+
+    // Attempt to withdraw for each enrolled team
+    for team in teams {
+        arena.arena_competition_enrollment.set_sender(&team);
+        let withdraw_res = arena
+            .arena_competition_enrollment
+            .withdraw(Uint128::one())?;
+
+        // Check that the withdrawal was successful
+        assert!(withdraw_res.events.iter().any(|e| e.ty == "wasm"
+            && e.attributes
+                .iter()
+                .any(|attr| attr.key == "action" && attr.value == "withdraw")));
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let admin = mock.addr_make(ADMIN);
+    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
+    mock.next_block()?;
+
+    // Create an enrollment with min_members = 4
+    arena.arena_competition_enrollment.set_sender(&admin);
+    let create_enrollment_msg = ExecuteMsg::CreateEnrollment {
+        min_members: Some(Uint64::new(4)),
+        max_members: Uint64::new(10),
+        entry_fee: Some(coins(1000, DENOM)[0].clone()),
+        expiration: Expiration::AtHeight(1000000),
+        category_id: Some(Uint128::new(1)),
+        competition_info: CompetitionInfoMsg {
+            name: "Test Competition".to_string(),
+            description: "A test competition".to_string(),
+            expiration: Expiration::AtHeight(2000000),
+            rules: vec!["Rule 1".to_string()],
+            rulesets: vec![],
+            banner: None,
+            additional_layered_fees: None,
+        },
+        competition_type: CompetitionType::Tournament {
+            elimination_type: EliminationType::SingleElimination {
+                play_third_place_match: false,
+            },
+            distribution: vec![Decimal::percent(60), Decimal::percent(40)],
+        },
+        is_creator_member: Some(false),
+    };
+
+    arena
+        .arena_competition_enrollment
+        .execute(&create_enrollment_msg, None)?;
+
+    // Enroll only minimum number of members
+    let mut teams = vec![];
+    for i in 0..4 {
+        let team = mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?;
+        teams.push(team.clone());
+        arena.arena_competition_enrollment.set_sender(&team);
+        arena
+            .arena_competition_enrollment
+            .enroll(Uint128::one(), &coins(1000, DENOM))?;
+    }
+
+    // Trigger expiration
+    arena.arena_competition_enrollment.set_sender(&admin);
+    mock.wait_blocks(1000000)?; // Move to expiration block
+
+    let res = arena
+        .arena_competition_enrollment
+        .trigger_expiration(arena.arena_escrow.code_id()?, Uint128::one())?;
+
+    // Check that the competition was not created due to reply on error
+    assert!(res
+        .events
+        .iter()
+        .any(|e| e.ty == "wasm" && e.attributes.iter().any(|attr| attr.key == "error")));
 
     // Attempt to withdraw for each enrolled team
     for team in teams {

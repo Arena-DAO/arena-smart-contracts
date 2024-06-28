@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-wager-module",
-  "contract_version": "1.7.0",
+  "contract_version": "1.8.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -43,11 +43,39 @@
           "jail_competition": {
             "type": "object",
             "required": [
-              "propose_message"
+              "competition_id",
+              "description",
+              "title"
             ],
             "properties": {
-              "propose_message": {
-                "$ref": "#/definitions/ProposeMessage"
+              "additional_layered_fees": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/FeeInformation_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              },
+              "description": {
+                "type": "string"
+              },
+              "distribution": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Distribution_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "title": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -58,10 +86,10 @@
       {
         "type": "object",
         "required": [
-          "activate"
+          "activate_competition"
         ],
         "properties": {
-          "activate": {
+          "activate_competition": {
             "type": "object",
             "additionalProperties": false
           }
@@ -152,7 +180,6 @@
             "required": [
               "description",
               "expiration",
-              "host",
               "instantiate_extension",
               "name",
               "rules",
@@ -192,7 +219,11 @@
                 "$ref": "#/definitions/Expiration"
               },
               "host": {
-                "$ref": "#/definitions/ModuleInfo"
+                "description": "The competition's host Defaults to info.sender This can only be overridden by valid competition enrollment modules",
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "instantiate_extension": {
                 "$ref": "#/definitions/WagerInstantiateExt"
@@ -308,10 +339,10 @@
       {
         "type": "object",
         "required": [
-          "activate_manually"
+          "activate_competition_manually"
         ],
         "properties": {
-          "activate_manually": {
+          "activate_competition_manually": {
             "type": "object",
             "required": [
               "id"
@@ -444,47 +475,6 @@
             "enum": [
               "renounce_ownership"
             ]
-          }
-        ]
-      },
-      "Admin": {
-        "description": "Information about the CosmWasm level admin of a contract. Used in conjunction with `ModuleInstantiateInfo` to instantiate modules.",
-        "oneOf": [
-          {
-            "description": "Set the admin to a specified address.",
-            "type": "object",
-            "required": [
-              "address"
-            ],
-            "properties": {
-              "address": {
-                "type": "object",
-                "required": [
-                  "addr"
-                ],
-                "properties": {
-                  "addr": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Sets the admin as the core module address.",
-            "type": "object",
-            "required": [
-              "core_module"
-            ],
-            "properties": {
-              "core_module": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
           }
         ]
       },
@@ -744,133 +734,6 @@
             "additionalProperties": false
           }
         ]
-      },
-      "ModuleInfo": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "new"
-            ],
-            "properties": {
-              "new": {
-                "type": "object",
-                "required": [
-                  "info"
-                ],
-                "properties": {
-                  "info": {
-                    "$ref": "#/definitions/ModuleInstantiateInfo"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "existing"
-            ],
-            "properties": {
-              "existing": {
-                "type": "object",
-                "required": [
-                  "addr"
-                ],
-                "properties": {
-                  "addr": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "ModuleInstantiateInfo": {
-        "description": "Information needed to instantiate a module.",
-        "type": "object",
-        "required": [
-          "code_id",
-          "label",
-          "msg"
-        ],
-        "properties": {
-          "admin": {
-            "description": "CosmWasm level admin of the instantiated contract. See: <https://docs.cosmwasm.com/docs/1.0/smart-contracts/migration>",
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Admin"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "code_id": {
-            "description": "Code ID of the contract to be instantiated.",
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          "label": {
-            "description": "Label for the instantiated contract.",
-            "type": "string"
-          },
-          "msg": {
-            "description": "Instantiate message to be used to create the contract.",
-            "allOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "ProposeMessage": {
-        "type": "object",
-        "required": [
-          "competition_id",
-          "description",
-          "title"
-        ],
-        "properties": {
-          "additional_layered_fees": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/FeeInformation_for_String"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "competition_id": {
-            "$ref": "#/definitions/Uint128"
-          },
-          "description": {
-            "type": "string"
-          },
-          "distribution": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Distribution_for_String"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "title": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
       },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",

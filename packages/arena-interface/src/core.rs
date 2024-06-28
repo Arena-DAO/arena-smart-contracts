@@ -17,9 +17,9 @@ use crate::{
 
 #[cw_serde]
 pub struct InstantiateExt {
-    pub competition_modules_instantiate_info: Vec<ModuleInstantiateInfo>,
-    pub rulesets: Vec<NewRuleset>,
-    pub categories: Vec<NewCompetitionCategory>,
+    pub competition_modules_instantiate_info: Option<Vec<ModuleInstantiateInfo>>,
+    pub rulesets: Option<Vec<NewRuleset>>,
+    pub categories: Option<Vec<NewCompetitionCategory>>,
     pub tax: Decimal,
     pub tax_configuration: TaxConfiguration,
     pub rating_period: Duration,
@@ -29,19 +29,19 @@ pub struct InstantiateExt {
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteExt {
     UpdateCompetitionModules {
-        to_add: Vec<ModuleInstantiateInfo>,
-        to_disable: Vec<String>,
+        to_add: Option<Vec<ModuleInstantiateInfo>>,
+        to_disable: Option<Vec<String>>,
     },
     UpdateTax {
         tax: Decimal,
     },
     UpdateRulesets {
-        to_add: Vec<NewRuleset>,
-        to_disable: Vec<Uint128>,
+        to_add: Option<Vec<NewRuleset>>,
+        to_disable: Option<Vec<Uint128>>,
     },
     UpdateCategories {
-        to_add: Vec<NewCompetitionCategory>,
-        to_edit: Vec<EditCompetitionCategory>,
+        to_add: Option<Vec<NewCompetitionCategory>>,
+        to_edit: Option<Vec<EditCompetitionCategory>>,
     },
     AdjustRatings {
         category_id: Uint128,
@@ -49,6 +49,10 @@ pub enum ExecuteExt {
     },
     UpdateRatingPeriod {
         period: Duration,
+    },
+    UpdateEnrollmentModules {
+        to_add: Option<Vec<String>>,
+        to_remove: Option<Vec<String>>,
     },
 }
 
@@ -71,7 +75,7 @@ pub enum QueryExt {
     Ruleset { id: Uint128 },
     #[returns(Vec<Ruleset>)]
     Rulesets {
-        category_id: Option<Uint128>,
+        category_id: Uint128,
         start_after: Option<Uint128>,
         limit: Option<u32>,
         include_disabled: Option<bool>,
@@ -90,9 +94,11 @@ pub enum QueryExt {
     },
     #[returns(bool)]
     IsValidCategoryAndRulesets {
-        category_id: Option<Uint128>,
+        category_id: Uint128,
         rulesets: Vec<Uint128>,
     },
+    #[returns(bool)]
+    IsValidEnrollmentModule { addr: String },
     #[returns(DumpStateResponse)]
     DumpState {},
     /// This query is used to get a competition's fee configuration for the Arena tax at its start height
@@ -150,7 +156,7 @@ pub struct CompetitionModuleResponse<T: AddressLike> {
 
 #[cw_serde]
 pub struct NewRuleset {
-    pub category_id: Option<Uint128>,
+    pub category_id: Uint128,
     pub rules: Vec<String>,
     pub description: String,
 }
@@ -169,7 +175,7 @@ pub enum EditCompetitionCategory {
 #[cw_serde]
 pub struct Ruleset {
     pub id: Uint128,
-    pub category_id: Option<Uint128>,
+    pub category_id: Uint128,
     pub rules: Vec<String>,
     pub description: String,
     pub is_enabled: bool,
@@ -189,6 +195,7 @@ pub struct ProposeMessage {
     pub description: String,
     pub distribution: Option<Distribution<String>>,
     pub additional_layered_fees: Option<FeeInformation<String>>,
+    pub originator: String,
 }
 
 #[cw_serde]

@@ -2,12 +2,12 @@
   "neutron": {
     "pion-1": {
       "code_ids": {
-        "arena_competition_enrollment": 5280,
-        "arena_core": 5276,
-        "arena_escrow": 5275,
-        "arena_league_module": 5278,
-        "arena_tournament_module": 5279,
-        "arena_wager_module": 5277
+        "arena_competition_enrollment": 5292,
+        "arena_core": 5288,
+        "arena_escrow": 5287,
+        "arena_league_module": 5290,
+        "arena_tournament_module": 5291,
+        "arena_wager_module": 5289
       },
       "default": {}
     }

@@ -206,7 +206,7 @@ fn receive_balance(
                     msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
                         Empty,
                         Empty,
-                    >::Activate {})?,
+                    >::ActivateCompetition {})?,
                     funds: vec![],
                 }));
             }
@@ -368,13 +368,16 @@ pub fn activate(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
 
     let mut msgs = vec![];
     if let Some(owner) = get_ownership(deps.storage)?.owner {
-        msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
-            contract_addr: owner.to_string(),
-            msg: to_json_binary(
-                &arena_interface::competition::msg::ExecuteBase::<Empty, Empty>::Activate {},
-            )?,
-            funds: vec![],
-        }));
+        msgs.push(CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: owner.to_string(),
+                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                    Empty,
+                    Empty,
+                >::ActivateCompetition {})?,
+                funds: vec![],
+            },
+        ));
     }
 
     Ok(Response::new()

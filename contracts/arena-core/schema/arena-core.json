@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-core",
-  "contract_version": "1.7.0",
+  "contract_version": "1.8.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -189,22 +189,25 @@
       "InstantiateExt": {
         "type": "object",
         "required": [
-          "categories",
-          "competition_modules_instantiate_info",
           "rating_period",
-          "rulesets",
           "tax",
           "tax_configuration"
         ],
         "properties": {
           "categories": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/NewCompetitionCategory"
             }
           },
           "competition_modules_instantiate_info": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/ModuleInstantiateInfo"
             }
@@ -213,7 +216,10 @@
             "$ref": "#/definitions/Duration"
           },
           "rulesets": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/NewRuleset"
             }
@@ -283,19 +289,13 @@
       "NewRuleset": {
         "type": "object",
         "required": [
+          "category_id",
           "description",
           "rules"
         ],
         "properties": {
           "category_id": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/definitions/Uint128"
           },
           "description": {
             "type": "string"
@@ -817,19 +817,21 @@
             "properties": {
               "update_competition_modules": {
                 "type": "object",
-                "required": [
-                  "to_add",
-                  "to_disable"
-                ],
                 "properties": {
                   "to_add": {
-                    "type": "array",
+                    "type": [
+                      "array",
+                      "null"
+                    ],
                     "items": {
                       "$ref": "#/definitions/ModuleInstantiateInfo"
                     }
                   },
                   "to_disable": {
-                    "type": "array",
+                    "type": [
+                      "array",
+                      "null"
+                    ],
                     "items": {
                       "type": "string"
                     }
@@ -869,19 +871,21 @@
             "properties": {
               "update_rulesets": {
                 "type": "object",
-                "required": [
-                  "to_add",
-                  "to_disable"
-                ],
                 "properties": {
                   "to_add": {
-                    "type": "array",
+                    "type": [
+                      "array",
+                      "null"
+                    ],
                     "items": {
                       "$ref": "#/definitions/NewRuleset"
                     }
                   },
                   "to_disable": {
-                    "type": "array",
+                    "type": [
+                      "array",
+                      "null"
+                    ],
                     "items": {
                       "$ref": "#/definitions/Uint128"
                     }
@@ -900,19 +904,21 @@
             "properties": {
               "update_categories": {
                 "type": "object",
-                "required": [
-                  "to_add",
-                  "to_edit"
-                ],
                 "properties": {
                   "to_add": {
-                    "type": "array",
+                    "type": [
+                      "array",
+                      "null"
+                    ],
                     "items": {
                       "$ref": "#/definitions/NewCompetitionCategory"
                     }
                   },
                   "to_edit": {
-                    "type": "array",
+                    "type": [
+                      "array",
+                      "null"
+                    ],
                     "items": {
                       "$ref": "#/definitions/EditCompetitionCategory"
                     }
@@ -975,6 +981,39 @@
                 "properties": {
                   "period": {
                     "$ref": "#/definitions/Duration"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "update_enrollment_modules"
+            ],
+            "properties": {
+              "update_enrollment_modules": {
+                "type": "object",
+                "properties": {
+                  "to_add": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "to_remove": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -1108,19 +1147,13 @@
       "NewRuleset": {
         "type": "object",
         "required": [
+          "category_id",
           "description",
           "rules"
         ],
         "properties": {
           "category_id": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/definitions/Uint128"
           },
           "description": {
             "type": "string"
@@ -1139,6 +1172,7 @@
         "required": [
           "competition_id",
           "description",
+          "originator",
           "title"
         ],
         "properties": {
@@ -1167,6 +1201,9 @@
                 "type": "null"
               }
             ]
+          },
+          "originator": {
+            "type": "string"
           },
           "title": {
             "type": "string"
@@ -1510,16 +1547,12 @@
             "properties": {
               "rulesets": {
                 "type": "object",
+                "required": [
+                  "category_id"
+                ],
                 "properties": {
                   "category_id": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/definitions/Uint128"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "$ref": "#/definitions/Uint128"
                   },
                   "include_disabled": {
                     "type": [
@@ -1664,24 +1697,39 @@
               "is_valid_category_and_rulesets": {
                 "type": "object",
                 "required": [
+                  "category_id",
                   "rulesets"
                 ],
                 "properties": {
                   "category_id": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/definitions/Uint128"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "$ref": "#/definitions/Uint128"
                   },
                   "rulesets": {
                     "type": "array",
                     "items": {
                       "$ref": "#/definitions/Uint128"
                     }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "is_valid_enrollment_module"
+            ],
+            "properties": {
+              "is_valid_enrollment_module": {
+                "type": "object",
+                "required": [
+                  "addr"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
                   }
                 },
                 "additionalProperties": false
@@ -1977,6 +2025,7 @@
       "Ruleset": {
         "type": "object",
         "required": [
+          "category_id",
           "description",
           "id",
           "is_enabled",
@@ -1984,14 +2033,7 @@
         ],
         "properties": {
           "category_id": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/definitions/Uint128"
           },
           "description": {
             "type": "string"

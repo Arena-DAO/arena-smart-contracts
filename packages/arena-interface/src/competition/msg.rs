@@ -2,14 +2,12 @@ use std::marker::PhantomData;
 
 #[allow(unused_imports)]
 use crate::competition::state::{CompetitionResponse, CompetitionStatus, Config, Evidence};
-use crate::core::ProposeMessage;
 use crate::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
 use cw_balance::Distribution;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
-use dao_interface::state::ModuleInstantiateInfo;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -25,10 +23,15 @@ pub struct InstantiateBase<InstantiateExt> {
 #[allow(clippy::large_enum_variant)]
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
+    #[cw_orch(payable)]
     JailCompetition {
-        propose_message: ProposeMessage,
+        competition_id: Uint128,
+        title: String,
+        description: String,
+        distribution: Option<Distribution<String>>,
+        additional_layered_fees: Option<FeeInformation<String>>,
     },
-    Activate {},
+    ActivateCompetition {},
     AddCompetitionHook {
         competition_id: Uint128,
     },
@@ -40,8 +43,11 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         distribution: Option<Distribution<String>>,
     },
     CreateCompetition {
+        /// The competition's host
+        /// Defaults to info.sender
+        /// This can only be overridden by valid competition enrollment modules
+        host: Option<String>,
         category_id: Option<Uint128>,
-        host: ModuleInfo,
         escrow: Option<EscrowInstantiateInfo>,
         name: String,
         description: String,
@@ -65,7 +71,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     Extension {
         msg: ExecuteExt,
     },
-    ActivateManually {
+    ActivateCompetitionManually {
         id: Uint128,
     },
     MigrateEscrows {
@@ -139,13 +145,6 @@ pub enum HookDirection {
     Incoming,
     Outgoing,
 }
-
-#[cw_serde]
-pub enum ModuleInfo {
-    New { info: ModuleInstantiateInfo },
-    Existing { addr: String },
-}
-
 pub trait ToCompetitionExt<T> {
     fn to_competition_ext(&self, deps: Deps) -> StdResult<T>;
 }

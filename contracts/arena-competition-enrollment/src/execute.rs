@@ -93,20 +93,22 @@ pub fn create_enrollment(
     // Validate category
     let ownership = cw_ownable::get_ownership(deps.storage)?;
     let competition_module = if let Some(owner) = ownership.owner {
-        ensure!(
-            deps.querier.query_wasm_smart::<bool>(
-                &owner,
-                &arena_interface::core::QueryMsg::QueryExtension {
-                    msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
-                        category_id,
-                        rulesets: competition_info.rulesets.clone(),
+        if let Some(category_id) = category_id {
+            ensure!(
+                deps.querier.query_wasm_smart::<bool>(
+                    &owner,
+                    &arena_interface::core::QueryMsg::QueryExtension {
+                        msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
+                            category_id,
+                            rulesets: competition_info.rulesets.clone(),
+                        },
                     },
-                },
-            )?,
-            ContractError::StdError(StdError::generic_err(
-                "Invalid category and rulesets combination"
-            ))
-        );
+                )?,
+                ContractError::StdError(StdError::generic_err(
+                    "Invalid category and rulesets combination"
+                ))
+            );
+        }
 
         let competition_module_response = deps
             .querier
@@ -289,10 +291,8 @@ pub fn trigger_expiration(
                         None
                     };
                     to_json_binary(&arena_wager_module::msg::ExecuteMsg::CreateCompetition {
+                        host: Some(entry.host.to_string()),
                         category_id: entry.category_id,
-                        host: arena_interface::competition::msg::ModuleInfo::Existing {
-                            addr: entry.host.to_string(),
-                        },
                         escrow,
                         name,
                         description,
@@ -310,10 +310,8 @@ pub fn trigger_expiration(
                     match_lose_points,
                     distribution,
                 } => to_json_binary(&arena_league_module::msg::ExecuteMsg::CreateCompetition {
+                    host: Some(entry.host.to_string()),
                     category_id: entry.category_id,
-                    host: arena_interface::competition::msg::ModuleInfo::Existing {
-                        addr: entry.host.to_string(),
-                    },
                     escrow,
                     name,
                     description,
@@ -335,10 +333,8 @@ pub fn trigger_expiration(
                     distribution,
                 } => to_json_binary(
                     &arena_tournament_module::msg::ExecuteMsg::CreateCompetition {
+                        host: Some(entry.host.to_string()),
                         category_id: entry.category_id,
-                        host: arena_interface::competition::msg::ModuleInfo::Existing {
-                            addr: entry.host.to_string(),
-                        },
                         escrow,
                         name,
                         description,

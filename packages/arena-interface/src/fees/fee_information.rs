@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Binary, Decimal, Deps, StdResult};
+use cosmwasm_std::{ensure, Addr, Binary, Decimal, Deps, StdError, StdResult};
 use cw_address_like::AddressLike;
 
 #[cw_serde]
@@ -12,6 +12,11 @@ pub struct FeeInformation<T: AddressLike> {
 
 impl FeeInformation<String> {
     pub fn into_checked(&self, deps: Deps) -> StdResult<FeeInformation<Addr>> {
+        ensure!(
+            self.tax < Decimal::one(),
+            StdError::generic_err("Tax must be less than 100%")
+        );
+
         Ok(FeeInformation {
             receiver: deps.api.addr_validate(&self.receiver)?,
             tax: self.tax,

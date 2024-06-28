@@ -1,26 +1,21 @@
 use std::str::FromStr;
 
 use arena_interface::competition::{
-    msg::{EscrowInstantiateInfo, ModuleInfo},
+    msg::EscrowInstantiateInfo,
     state::{CompetitionListItemResponse, CompetitionStatus},
 };
-use arena_interface::core::{
-    CompetitionModuleQuery, CompetitionModuleResponse, ProposeMessage, QueryExt,
-};
+use arena_interface::core::{CompetitionModuleQuery, CompetitionModuleResponse, QueryExt};
 use arena_wager_module::msg::{
     ExecuteMsg, InstantiateMsg, QueryMsg, WagerInstantiateExt, WagerResponse,
 };
-use cosmwasm_std::{
-    to_json_binary, Addr, Coin, Coins, CosmosMsg, Decimal, Empty, Uint128, WasmMsg,
-};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Coins, Decimal, Empty, Uint128, WasmMsg};
 use cw4::Member;
 use cw_balance::{
     BalanceVerified, Distribution, MemberBalanceChecked, MemberBalanceUnchecked, MemberPercentage,
 };
 use cw_multi_test::{next_block, App, BankKeeper, Executor, MockApiBech32};
 use cw_utils::Expiration;
-use dao_interface::state::{ModuleInstantiateInfo, ProposalModule};
-use dao_voting::proposal::SingleChoiceProposeMsg;
+use dao_interface::state::ModuleInstantiateInfo;
 
 use crate::tests::{
     app::{get_app, set_balances},
@@ -59,7 +54,7 @@ pub fn setup_wager_context(
                 funds: vec![],
                 msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
                     msg: arena_interface::core::ExecuteExt::UpdateCompetitionModules {
-                        to_add: vec![ModuleInstantiateInfo {
+                        to_add: Some(vec![ModuleInstantiateInfo {
                             code_id: wager_module_id,
                             msg: to_json_binary(&InstantiateMsg {
                                 key: wagers_key.clone(),
@@ -69,8 +64,8 @@ pub fn setup_wager_context(
                             .unwrap(),
                             admin: None,
                             label: "arena-wager-module".to_string(),
-                        }],
-                        to_disable: vec![],
+                        }]),
+                        to_disable: None,
                     },
                 })
                 .unwrap(),
@@ -103,42 +98,17 @@ pub fn setup_wager_context(
 }
 
 fn create_competition(
+    admin: Addr,
     context: &mut Context,
     expiration: Expiration,
-    members: Vec<cw4::Member>,
     dues: Option<Vec<MemberBalanceUnchecked>>,
 ) -> Uint128 {
     let result = context.app.execute_contract(
-        context.app.api().addr_make(ADMIN),
+        admin,
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Some(Uint128::one()),
-            host: ModuleInfo::New {
-                info: ModuleInstantiateInfo {
-                    code_id: context.core.dao_core_id,
-                    msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
-                        context.core.cw4_id,
-                        context.core.cw4_voting_module_id,
-                        context.core.dao_proposal_single_id,
-                        dao_proposal_single::msg::InstantiateMsg {
-                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
-                                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
-                            },
-                            min_voting_period: None,
-                            max_voting_period: cw_utils_v16::Duration::Height(10u64),
-                            only_members_execute: false,
-                            allow_revoting: false,
-                            pre_propose_info:
-                                dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
-                            close_proposal_on_execution_failure: true,
-                        },
-                        members,
-                    ))
-                    .unwrap(),
-                    admin: None,
-                    label: "DAO".to_owned(),
-                },
-            },
+            host: None,
             escrow: dues.map(|x| EscrowInstantiateInfo {
                 code_id: context.wager.escrow_id,
                 msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
@@ -226,41 +196,7 @@ fn test_create_competition() {
         context.wager.wager_module_addr.clone(), // errors out bc dao not set
         &ExecuteMsg::CreateCompetition {
             category_id: Some(Uint128::one()),
-            host: ModuleInfo::New {
-                info: ModuleInstantiateInfo {
-                    code_id: context.core.dao_core_id,
-                    msg: to_json_binary(&super::helpers::get_competition_dao_instantiate_msg(
-                        context.core.cw4_id,
-                        context.core.cw4_voting_module_id,
-                        context.core.dao_proposal_single_id,
-                        dao_proposal_single::msg::InstantiateMsg {
-                            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
-                                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
-                            },
-                            min_voting_period: None,
-                            max_voting_period: cw_utils_v16::Duration::Height(10u64),
-                            only_members_execute: false,
-                            allow_revoting: false,
-                            pre_propose_info:
-                                dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
-                            close_proposal_on_execution_failure: true,
-                        },
-                        vec![
-                            cw4::Member {
-                                addr: user1.to_string(),
-                                weight: 1u64,
-                            },
-                            cw4::Member {
-                                addr: user2.to_string(),
-                                weight: 1u64,
-                            },
-                        ],
-                    ))
-                    .unwrap(),
-                    admin: None,
-                    label: "DAO".to_owned(),
-                },
-            },
+            host: None,
             escrow: None,
             name: "This is a competition name".to_string(),
             description: "This is a description".to_string(),
@@ -283,18 +219,9 @@ fn test_create_competition() {
 
     // Create competition
     let competition1_id = create_competition(
+        admin.clone(),
         &mut context,
         Expiration::AtHeight(starting_height + 10),
-        vec![
-            cw4::Member {
-                addr: user1.to_string(),
-                weight: 1u64,
-            },
-            cw4::Member {
-                addr: user2.to_string(),
-                weight: 1u64,
-            },
-        ],
         Some(vec![
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
@@ -377,50 +304,6 @@ fn test_create_competition() {
         )
         .unwrap();
 
-    // Get competition1 proposal module
-    let result = context.app.wrap().query_wasm_smart::<Vec<ProposalModule>>(
-        competition1.host,
-        &dao_interface::msg::QueryMsg::ProposalModules {
-            start_after: None,
-            limit: None,
-        },
-    );
-    assert!(result.is_ok());
-    assert!(!result.as_ref().unwrap().is_empty());
-    let competition1_proposal_module = result.as_ref().unwrap().first().unwrap();
-
-    // Generate proposals
-    context.app.update_block(next_block);
-    let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Propose(SingleChoiceProposeMsg {
-            title: "Title".to_string(),
-            description: "Description".to_string(),
-            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: context.wager.wager_module_addr.to_string(),
-                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
-                    Empty,
-                    Empty,
-                >::ProcessCompetition {
-                    competition_id: competition1_id,
-                    distribution: Some(Distribution::<String> {
-                        member_percentages: vec![MemberPercentage {
-                            addr: user1.to_string(),
-                            percentage: Decimal::one(),
-                        }],
-                        remainder_addr: context.core.dao_addr.to_string(),
-                    }),
-                })
-                .unwrap(),
-                funds: vec![],
-            })],
-            proposer: None,
-        }),
-        &[],
-    );
-    assert!(result.is_ok());
-
     // Fund escrow
     context
         .app
@@ -454,35 +337,21 @@ fn test_create_competition() {
         .unwrap();
     assert_eq!(competition1.status, CompetitionStatus::Active);
 
-    // Vote and execute
+    // Process competition
+    context.app.update_block(next_block);
     let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Vote {
-            proposal_id: 1u64,
-            rationale: None,
-            vote: dao_voting::voting::Vote::Yes,
+        admin.clone(),
+        context.wager.wager_module_addr.clone(),
+        &arena_interface::competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+            competition_id: competition1_id,
+            distribution: Some(Distribution::<String> {
+                member_percentages: vec![MemberPercentage {
+                    addr: user1.to_string(),
+                    percentage: Decimal::one(),
+                }],
+                remainder_addr: context.core.dao_addr.to_string(),
+            }),
         },
-        &[],
-    );
-    assert!(result.is_ok());
-
-    let result = context.app.execute_contract(
-        user2.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Vote {
-            proposal_id: 1u64,
-            vote: dao_voting::voting::Vote::Yes,
-            rationale: None,
-        },
-        &[],
-    );
-    assert!(result.is_ok());
-
-    let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
         &[],
     );
     assert!(result.is_ok());
@@ -561,18 +430,9 @@ fn test_create_competition_jailed() {
     // Create competition
     let starting_height = context.app.block_info().height;
     let competition1_id = create_competition(
+        admin.clone(),
         &mut context,
         Expiration::AtHeight(starting_height + 1),
-        vec![
-            cw4::Member {
-                addr: user1.to_string(),
-                weight: 1u64,
-            },
-            cw4::Member {
-                addr: user2.to_string(),
-                weight: 1u64,
-            },
-        ],
         Some(vec![
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
@@ -622,25 +482,21 @@ fn test_create_competition_jailed() {
     assert!(competition1.is_expired);
 
     // Cannot jail - not active
-    let propose_message = ProposeMessage {
-        competition_id: competition1_id,
-        title: "Title".to_string(),
-        description: "Description".to_string(),
-        distribution: Some(Distribution::<String> {
-            member_percentages: vec![MemberPercentage {
-                addr: user1.to_string(),
-                percentage: Decimal::one(),
-            }],
-            remainder_addr: context.core.dao_addr.to_string(),
-        }),
-        additional_layered_fees: None,
-    };
-
     let result = context.app.execute_contract(
         user1.clone(),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
-            propose_message: propose_message.clone(),
+            competition_id: competition1_id,
+            title: "Title".to_string(),
+            description: "Description".to_string(),
+            distribution: Some(Distribution::<String> {
+                member_percentages: vec![MemberPercentage {
+                    addr: user1.to_string(),
+                    percentage: Decimal::one(),
+                }],
+                remainder_addr: context.core.dao_addr.to_string(),
+            }),
+            additional_layered_fees: None,
         },
         &[],
     );
@@ -679,23 +535,22 @@ fn test_create_competition_jailed() {
         .unwrap();
     assert_eq!(competition1.status, CompetitionStatus::Active);
 
-    // Cannot jail wager - unauthorized
-    let result = context.app.execute_contract(
-        context.app.api().addr_make("random"),
-        context.wager.wager_module_addr.clone(),
-        &ExecuteMsg::JailCompetition {
-            propose_message: propose_message.clone(),
-        },
-        &[],
-    );
-    assert!(result.is_err());
-
     // Can jail wager
     let result = context.app.execute_contract(
         user1.clone(),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
-            propose_message: propose_message.clone(),
+            competition_id: competition1_id,
+            title: "Title".to_string(),
+            description: "Description".to_string(),
+            distribution: Some(Distribution::<String> {
+                member_percentages: vec![MemberPercentage {
+                    addr: user1.to_string(),
+                    percentage: Decimal::one(),
+                }],
+                remainder_addr: context.core.dao_addr.to_string(),
+            }),
+            additional_layered_fees: None,
         },
         &[],
     );
@@ -719,7 +574,17 @@ fn test_create_competition_jailed() {
         user1.clone(),
         context.wager.wager_module_addr.clone(),
         &ExecuteMsg::JailCompetition {
-            propose_message: propose_message.clone(),
+            competition_id: competition1_id,
+            title: "Title".to_string(),
+            description: "Description".to_string(),
+            distribution: Some(Distribution::<String> {
+                member_percentages: vec![MemberPercentage {
+                    addr: user1.to_string(),
+                    percentage: Decimal::one(),
+                }],
+                remainder_addr: context.core.dao_addr.to_string(),
+            }),
+            additional_layered_fees: None,
         },
         &[],
     );
@@ -802,8 +667,8 @@ pub fn test_disabling_module() {
                 funds: vec![],
                 msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
                     msg: arena_interface::core::ExecuteExt::UpdateCompetitionModules {
-                        to_add: vec![],
-                        to_disable: vec![context.wager.wager_module_addr.to_string()],
+                        to_add: None,
+                        to_disable: Some(vec![context.wager.wager_module_addr.to_string()]),
                     },
                 })
                 .unwrap(),
@@ -882,18 +747,9 @@ fn test_preset_distribution() {
 
     // Create competition
     let competition1_id = create_competition(
+        admin.clone(),
         &mut context,
         Expiration::AtHeight(starting_height + 10),
-        vec![
-            cw4::Member {
-                addr: user1.to_string(),
-                weight: 1u64,
-            },
-            cw4::Member {
-                addr: user2.to_string(),
-                weight: 1u64,
-            },
-        ],
         Some(vec![
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
@@ -925,56 +781,6 @@ fn test_preset_distribution() {
             },
         )
         .unwrap();
-
-    // Get competition1 proposal module
-    let result = context.app.wrap().query_wasm_smart::<Vec<ProposalModule>>(
-        competition1.host,
-        &dao_interface::msg::QueryMsg::ProposalModules {
-            start_after: None,
-            limit: None,
-        },
-    );
-    assert!(result.is_ok());
-    assert!(!result.as_ref().unwrap().is_empty());
-    let competition1_proposal_module = result.as_ref().unwrap().first().unwrap();
-
-    // Generate proposals
-    context.app.update_block(next_block);
-    let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Propose(SingleChoiceProposeMsg {
-            title: "Title".to_string(),
-            description: "Description".to_string(),
-            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: context.wager.wager_module_addr.to_string(),
-                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
-                    Empty,
-                    Empty,
-                >::ProcessCompetition {
-                    competition_id: competition1_id,
-                    distribution: Some(Distribution::<String> {
-                        member_percentages: vec![
-                            MemberPercentage::<String> {
-                                addr: user1.to_string(),
-                                percentage: Decimal::from_ratio(25u128, 100u128),
-                            },
-                            MemberPercentage::<String> {
-                                addr: user2.to_string(),
-                                percentage: Decimal::from_ratio(75u128, 100u128),
-                            },
-                        ],
-                        remainder_addr: user1.to_string(),
-                    }),
-                })
-                .unwrap(),
-                funds: vec![],
-            })],
-            proposer: None,
-        }),
-        &[],
-    );
-    assert!(result.is_ok());
 
     // Set distributions .25 to user1 and .75 to user2 in both cases
     context
@@ -1053,35 +859,27 @@ fn test_preset_distribution() {
     );
     assert!(result.is_err());
 
-    // Vote and execute
+    // Process competition
+    context.app.update_block(next_block);
     let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Vote {
-            proposal_id: 1u64,
-            rationale: None,
-            vote: dao_voting::voting::Vote::Yes,
+        admin.clone(),
+        context.wager.wager_module_addr.clone(),
+        &arena_interface::competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+            competition_id: competition1_id,
+            distribution: Some(Distribution::<String> {
+                member_percentages: vec![
+                    MemberPercentage::<String> {
+                        addr: user1.to_string(),
+                        percentage: Decimal::from_ratio(25u128, 100u128),
+                    },
+                    MemberPercentage::<String> {
+                        addr: user2.to_string(),
+                        percentage: Decimal::from_ratio(75u128, 100u128),
+                    },
+                ],
+                remainder_addr: user1.to_string(),
+            }),
         },
-        &[],
-    );
-    assert!(result.is_ok());
-
-    let result = context.app.execute_contract(
-        user2.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Vote {
-            proposal_id: 1u64,
-            vote: dao_voting::voting::Vote::Yes,
-            rationale: None,
-        },
-        &[],
-    );
-    assert!(result.is_ok());
-
-    let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
         &[],
     );
     assert!(result.is_ok());
@@ -1151,18 +949,9 @@ fn test_competition_draw() {
 
     // Create competition
     let competition1_id = create_competition(
+        admin.clone(),
         &mut context,
         Expiration::AtHeight(starting_height + 10),
-        vec![
-            cw4::Member {
-                addr: user1.to_string(),
-                weight: 1u64,
-            },
-            cw4::Member {
-                addr: user2.to_string(),
-                weight: 1u64,
-            },
-        ],
         Some(vec![
             MemberBalanceUnchecked {
                 addr: user1.to_string(),
@@ -1195,44 +984,6 @@ fn test_competition_draw() {
         )
         .unwrap();
 
-    // Get competition1 proposal module
-    let result = context.app.wrap().query_wasm_smart::<Vec<ProposalModule>>(
-        competition1.host,
-        &dao_interface::msg::QueryMsg::ProposalModules {
-            start_after: None,
-            limit: None,
-        },
-    );
-    assert!(result.is_ok());
-    assert!(!result.as_ref().unwrap().is_empty());
-    let competition1_proposal_module = result.as_ref().unwrap().first().unwrap();
-
-    // Generate proposals
-    context.app.update_block(next_block);
-    let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Propose(SingleChoiceProposeMsg {
-            title: "Title".to_string(),
-            description: "Description".to_string(),
-            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: context.wager.wager_module_addr.to_string(),
-                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
-                    Empty,
-                    Empty,
-                >::ProcessCompetition {
-                    competition_id: competition1_id,
-                    distribution: None,
-                })
-                .unwrap(),
-                funds: vec![],
-            })],
-            proposer: None,
-        }),
-        &[],
-    );
-    assert!(result.is_ok());
-
     // Fund escrow
     context
         .app
@@ -1253,35 +1004,15 @@ fn test_competition_draw() {
         )
         .unwrap();
 
-    // Vote and execute
+    // Process competition
+    context.app.update_block(next_block);
     let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Vote {
-            proposal_id: 1u64,
-            rationale: None,
-            vote: dao_voting::voting::Vote::Yes,
+        admin.clone(),
+        context.wager.wager_module_addr.clone(),
+        &arena_interface::competition::msg::ExecuteBase::<Empty, Empty>::ProcessCompetition {
+            competition_id: competition1_id,
+            distribution: None,
         },
-        &[],
-    );
-    assert!(result.is_ok());
-
-    let result = context.app.execute_contract(
-        user2.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Vote {
-            proposal_id: 1u64,
-            vote: dao_voting::voting::Vote::Yes,
-            rationale: None,
-        },
-        &[],
-    );
-    assert!(result.is_ok());
-
-    let result = context.app.execute_contract(
-        user1.clone(),
-        competition1_proposal_module.address.clone(),
-        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1u64 },
         &[],
     );
     assert!(result.is_ok());
