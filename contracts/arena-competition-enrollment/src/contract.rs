@@ -88,6 +88,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&entry.into_response(deps, id)?)
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
+        QueryMsg::EnrollmentCount {} => to_json_binary(&query::enrollment_count(deps)?),
     }
 }
 

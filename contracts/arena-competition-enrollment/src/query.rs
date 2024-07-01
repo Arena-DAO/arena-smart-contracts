@@ -3,7 +3,7 @@ use cw_storage_plus::Bound;
 
 use crate::{
     msg::EnrollmentFilter,
-    state::{enrollment_entries, EnrollmentEntryResponse},
+    state::{enrollment_entries, EnrollmentEntryResponse, ENROLLMENT_COUNT},
 };
 
 pub fn enrollments(
@@ -42,4 +42,8 @@ pub fn enrollments(
                 .collect::<StdResult<Vec<_>>>(),
         },
     }
+}
+
+pub fn enrollment_count(deps: Deps) -> StdResult<Uint128> {
+    Ok(ENROLLMENT_COUNT.may_load(deps.storage)?.unwrap_or_default())
 }

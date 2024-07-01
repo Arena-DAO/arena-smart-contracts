@@ -72,6 +72,8 @@ pub enum QueryMsg {
     },
     #[returns(EnrollmentEntryResponse)]
     Enrollment { id: Uint128 },
+    #[returns(Uint128)]
+    EnrollmentCount {},
 }
 
 #[cw_serde]
