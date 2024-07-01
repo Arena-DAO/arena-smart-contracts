@@ -1,6 +1,9 @@
 use arena::Arena;
 use cw_orch::prelude::*;
-use orch_interface::arena_tournament_module::ArenaTournamentModuleContract;
+use orch_interface::{
+    arena_competition_enrollment::ArenaCompetitionEnrollmentContract,
+    arena_tournament_module::ArenaTournamentModuleContract,
+};
 use std::env;
 
 #[allow(clippy::collapsible_if)]
@@ -24,6 +27,8 @@ fn main() {
                 deploy_daemon(daemon);
             } else if args.contains(&"tournament".to_string()) {
                 deploy_tournament(daemon);
+            } else if args.contains(&"enrollment".to_string()) {
+                deploy_enrollment(daemon);
             }
         }
         if args.contains(&"mainnet".to_string()) {
@@ -52,6 +57,12 @@ fn deploy_tournament(daemon: Daemon) {
     let tournament = ArenaTournamentModuleContract::new(daemon);
 
     tournament.upload().ok();
+}
+
+fn deploy_enrollment(daemon: Daemon) {
+    let enrollment = ArenaCompetitionEnrollmentContract::new(daemon);
+
+    enrollment.upload().ok();
 }
 
 mod arena;
