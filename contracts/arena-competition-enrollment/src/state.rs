@@ -49,7 +49,7 @@ pub struct CompetitionInfoResponse {
 
 impl EnrollmentEntry {
     pub fn into_response(self, deps: Deps, id: Uint128) -> StdResult<EnrollmentEntryResponse> {
-        let current_members = ENROLLMENT_MEMBERS_COUNT.load(deps.storage, id.u128())?;
+        let current_members = ENROLLMENT_MEMBERS_COUNT.may_load(deps.storage, id.u128())?.unwrap_or_default();
 
         Ok(EnrollmentEntryResponse {
             category_id: self.category_id,
