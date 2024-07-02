@@ -25,6 +25,7 @@ pub struct EnrollmentEntry {
 pub struct EnrollmentEntryResponse {
     pub category_id: Option<Uint128>,
     pub id: Uint128,
+    pub current_members: Uint64,
     pub min_members: Option<Uint64>,
     pub max_members: Uint64,
     pub entry_fee: Option<Coin>,
@@ -48,9 +49,12 @@ pub struct CompetitionInfoResponse {
 
 impl EnrollmentEntry {
     pub fn into_response(self, deps: Deps, id: Uint128) -> StdResult<EnrollmentEntryResponse> {
+        let current_members = ENROLLMENT_MEMBERS_COUNT.load(deps.storage, id.u128())?;
+
         Ok(EnrollmentEntryResponse {
             category_id: self.category_id,
             id,
+            current_members,
             min_members: self.min_members,
             max_members: self.max_members,
             entry_fee: self.entry_fee,

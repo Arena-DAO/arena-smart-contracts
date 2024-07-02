@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-competition-enrollment",
-  "contract_version": "1.8.1",
+  "contract_version": "1.8.2",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -882,6 +882,7 @@
         "required": [
           "competition_info",
           "competition_type",
+          "current_members",
           "expiration",
           "has_triggered_expiration",
           "host",
@@ -904,6 +905,9 @@
           },
           "competition_type": {
             "$ref": "#/definitions/CompetitionType"
+          },
+          "current_members": {
+            "$ref": "#/definitions/Uint64"
           },
           "entry_fee": {
             "anyOf": [
@@ -1052,6 +1056,7 @@
       "required": [
         "competition_info",
         "competition_type",
+        "current_members",
         "expiration",
         "has_triggered_expiration",
         "host",
@@ -1074,6 +1079,9 @@
         },
         "competition_type": {
           "$ref": "#/definitions/CompetitionType"
+        },
+        "current_members": {
+          "$ref": "#/definitions/Uint64"
         },
         "entry_fee": {
           "anyOf": [
@@ -1609,6 +1617,7 @@
           "required": [
             "competition_info",
             "competition_type",
+            "current_members",
             "expiration",
             "has_triggered_expiration",
             "host",
@@ -1631,6 +1640,9 @@
             },
             "competition_type": {
               "$ref": "#/definitions/CompetitionType"
+            },
+            "current_members": {
+              "$ref": "#/definitions/Uint64"
             },
             "entry_fee": {
               "anyOf": [
