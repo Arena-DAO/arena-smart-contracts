@@ -89,6 +89,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::EnrollmentCount {} => to_json_binary(&query::enrollment_count(deps)?),
+        QueryMsg::EnrollmentMembers {
+            enrollment_id,
+            start_after,
+            limit,
+        } => to_json_binary(&query::enrollment_members(
+            deps,
+            enrollment_id,
+            start_after,
+            limit,
+        )?),
     }
 }
 

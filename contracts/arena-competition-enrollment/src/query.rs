@@ -1,9 +1,9 @@
-use cosmwasm_std::{Deps, Order, StdResult, Uint128};
+use cosmwasm_std::{Addr, Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::{
     msg::EnrollmentFilter,
-    state::{enrollment_entries, EnrollmentEntryResponse, ENROLLMENT_COUNT},
+    state::{enrollment_entries, EnrollmentEntryResponse, ENROLLMENT_COUNT, ENROLLMENT_MEMBERS},
 };
 
 pub fn enrollments(
@@ -46,4 +46,24 @@ pub fn enrollments(
 
 pub fn enrollment_count(deps: Deps) -> StdResult<Uint128> {
     Ok(ENROLLMENT_COUNT.may_load(deps.storage)?.unwrap_or_default())
+}
+
+pub fn enrollment_members(
+    deps: Deps,
+    enrollment_id: Uint128,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<Addr>> {
+    let binding = start_after
+        .map(|x| deps.api.addr_validate(&x))
+        .transpose()?;
+    let start_after_bound = binding.as_ref().map(Bound::exclusive);
+    let limit = limit.unwrap_or(30).max(30);
+
+    ENROLLMENT_MEMBERS
+        .prefix(enrollment_id.u128())
+        .range(deps.storage, start_after_bound, None, Order::Descending)
+        .map(|x| x.map(|y| y.0))
+        .take(limit as usize)
+        .collect::<StdResult<Vec<_>>>()
 }

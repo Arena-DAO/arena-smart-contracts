@@ -74,6 +74,12 @@ pub enum QueryMsg {
     Enrollment { id: Uint128 },
     #[returns(Uint128)]
     EnrollmentCount {},
+    #[returns(Vec<cosmwasm_std::Addr>)]
+    EnrollmentMembers {
+        enrollment_id: Uint128,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 }
 
 #[cw_serde]
