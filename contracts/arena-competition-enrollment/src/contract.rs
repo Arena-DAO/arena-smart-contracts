@@ -83,9 +83,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
             filter,
         } => to_json_binary(&query::enrollments(deps, start_after, limit, filter)?),
-        QueryMsg::Enrollment { id } => {
-            let entry = enrollment_entries().load(deps.storage, id.u128())?;
-            to_json_binary(&entry.into_response(deps, id)?)
+        QueryMsg::Enrollment { enrollment_id } => {
+            let entry = enrollment_entries().load(deps.storage, enrollment_id.u128())?;
+            to_json_binary(&entry.into_response(deps, enrollment_id)?)
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::EnrollmentCount {} => to_json_binary(&query::enrollment_count(deps)?),
@@ -99,6 +99,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
+        QueryMsg::IsMember {
+            enrollment_id,
+            addr,
+        } => to_json_binary(&query::is_member(deps, enrollment_id, addr)?),
     }
 }
 

@@ -67,3 +67,9 @@ pub fn enrollment_members(
         .take(limit as usize)
         .collect::<StdResult<Vec<_>>>()
 }
+
+pub fn is_member(deps: Deps, enrollment_id: Uint128, addr: String) -> StdResult<bool> {
+    let addr = deps.api.addr_validate(&addr)?;
+
+    Ok(ENROLLMENT_MEMBERS.has(deps.storage, (enrollment_id.u128(), &addr)))
+}

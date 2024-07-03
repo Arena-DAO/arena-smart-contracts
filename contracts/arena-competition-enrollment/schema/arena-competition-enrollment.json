@@ -568,10 +568,10 @@
           "enrollment": {
             "type": "object",
             "required": [
-              "id"
+              "enrollment_id"
             ],
             "properties": {
-              "id": {
+              "enrollment_id": {
                 "$ref": "#/definitions/Uint128"
               }
             },
@@ -621,6 +621,31 @@
                   "string",
                   "null"
                 ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "is_member"
+        ],
+        "properties": {
+          "is_member": {
+            "type": "object",
+            "required": [
+              "addr",
+              "enrollment_id"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              },
+              "enrollment_id": {
+                "$ref": "#/definitions/Uint128"
               }
             },
             "additionalProperties": false
@@ -1831,6 +1856,11 @@
           "type": "string"
         }
       }
+    },
+    "is_member": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Boolean",
+      "type": "boolean"
     },
     "ownership": {
       "$schema": "http://json-schema.org/draft-07/schema#",

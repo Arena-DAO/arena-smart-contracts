@@ -71,7 +71,7 @@ pub enum QueryMsg {
         filter: Option<EnrollmentFilter>,
     },
     #[returns(EnrollmentEntryResponse)]
-    Enrollment { id: Uint128 },
+    Enrollment { enrollment_id: Uint128 },
     #[returns(Uint128)]
     EnrollmentCount {},
     #[returns(Vec<cosmwasm_std::Addr>)]
@@ -79,6 +79,11 @@ pub enum QueryMsg {
         enrollment_id: Uint128,
         start_after: Option<String>,
         limit: Option<u32>,
+    },
+    #[returns(bool)]
+    IsMember {
+        enrollment_id: Uint128,
+        addr: String,
     },
 }
 
