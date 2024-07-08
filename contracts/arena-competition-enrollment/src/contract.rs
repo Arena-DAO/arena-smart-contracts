@@ -53,7 +53,6 @@ pub fn execute(
             category_id,
             competition_info,
             competition_type,
-            is_creator_member,
         } => execute::create_enrollment(
             deps,
             env,
@@ -65,7 +64,6 @@ pub fn execute(
             category_id,
             competition_info,
             competition_type,
-            is_creator_member,
         ),
         ExecuteMsg::TriggerExpiration { id, escrow_id } => {
             execute::trigger_expiration(deps, env, info, id, escrow_id)

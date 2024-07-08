@@ -65,13 +65,6 @@
               "expiration": {
                 "$ref": "#/definitions/Expiration"
               },
-              "is_creator_member": {
-                "description": "Is the creator a member on creation Defaults to false",
-                "type": [
-                  "boolean",
-                  "null"
-                ]
-              },
               "max_members": {
                 "$ref": "#/definitions/Uint64"
               },

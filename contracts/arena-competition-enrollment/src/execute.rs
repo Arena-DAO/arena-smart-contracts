@@ -35,7 +35,6 @@ pub fn create_enrollment(
     category_id: Option<Uint128>,
     competition_info: CompetitionInfoMsg,
     competition_type: CompetitionType,
-    is_creator_member: Option<bool>,
 ) -> Result<Response, ContractError> {
     ensure!(
         !expiration.is_expired(&env.block),
@@ -72,22 +71,6 @@ pub fn create_enrollment(
                 "Max members must be at least the required minimum number of members"
             ))
         );
-    }
-
-    // Defaults to false
-    let is_creator_member = is_creator_member.unwrap_or(false);
-
-    if let Some(entry_fee) = &entry_fee {
-        if is_creator_member {
-            let paid_amount = must_pay(&info, &entry_fee.denom)?;
-
-            ensure!(
-                paid_amount == entry_fee.amount,
-                ContractError::EntryFeeNotPaid {
-                    fee: entry_fee.amount
-                }
-            );
-        }
     }
 
     // Validate category

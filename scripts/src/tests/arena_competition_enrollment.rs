@@ -64,7 +64,6 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
-        is_creator_member: Some(false),
     };
 
     let res = arena
@@ -177,7 +176,6 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
-        is_creator_member: Some(false),
     };
 
     let result = arena
@@ -241,7 +239,6 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
-        is_creator_member: Some(false),
     };
 
     arena
@@ -319,7 +316,6 @@ fn test_successful_tournament_creation() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
-        is_creator_member: Some(false),
     };
 
     arena
@@ -398,7 +394,6 @@ fn test_successful_wager_creation() -> anyhow::Result<()> {
             additional_layered_fees: None,
         },
         competition_type: CompetitionType::Wager {},
-        is_creator_member: Some(false),
     };
 
     arena
@@ -490,7 +485,6 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
                 Decimal::percent(20),
             ],
         },
-        is_creator_member: Some(false),
     };
 
     arena
@@ -570,7 +564,6 @@ fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
-        is_creator_member: Some(false),
     };
 
     arena
@@ -649,7 +642,6 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
-        is_creator_member: Some(false),
     };
 
     arena
@@ -750,7 +742,6 @@ fn test_huge_tournament() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
-        is_creator_member: Some(false),
     };
 
     arena

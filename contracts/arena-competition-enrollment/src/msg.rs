@@ -26,9 +26,6 @@ pub enum ExecuteMsg {
         category_id: Option<Uint128>,
         competition_info: CompetitionInfoMsg,
         competition_type: CompetitionType,
-        /// Is the creator a member on creation
-        /// Defaults to false
-        is_creator_member: Option<bool>,
     },
     TriggerExpiration {
         id: Uint128,
