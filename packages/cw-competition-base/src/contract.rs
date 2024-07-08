@@ -841,7 +841,7 @@ impl<
         distribution: Option<Distribution<String>>,
         post_processing: Option<
             fn(
-                storage: &mut dyn Storage,
+                deps: DepsMut,
                 &Competition<CompetitionExt>,
             ) -> Result<Option<SubMsg>, CompetitionError>,
         >,
@@ -867,7 +867,7 @@ impl<
 
         // Post-processing
         if let Some(post_processing) = post_processing {
-            if let Some(sub_msg) = post_processing(deps.storage, &competition)? {
+            if let Some(sub_msg) = post_processing(deps.branch(), &competition)? {
                 response = response.add_submessage(sub_msg);
             }
         }
@@ -1071,6 +1071,28 @@ impl<
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
         }
+    }
+
+    pub fn query_is_dao_member(&self, deps: Deps, addr: &Addr, height: u64) -> bool {
+        let result = self.query_dao(deps);
+
+        if let Ok(dao) = result {
+            let result = deps
+                .querier
+                .query_wasm_smart::<dao_interface::voting::VotingPowerAtHeightResponse>(
+                    &dao,
+                    &dao_interface::msg::QueryMsg::VotingPowerAtHeight {
+                        address: addr.to_string(),
+                        height: Some(height),
+                    },
+                );
+
+            if let Ok(voting_power) = result {
+                return !voting_power.power.is_zero();
+            }
+        }
+
+        false
     }
 
     pub fn query_result(

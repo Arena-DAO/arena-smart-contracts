@@ -566,11 +566,17 @@ pub fn process_matches(
     // Trigger rating adjustments
     let mut sub_msgs = vec![];
     if let Some(category_id) = tournament.category_id {
-        sub_msgs.push(CompetitionModule::default().trigger_rating_adjustment(
-            deps.storage,
-            category_id,
-            member_results,
-        )?);
+        if CompetitionModule::default().query_is_dao_member(
+            deps.as_ref(),
+            &tournament.host,
+            tournament.start_height,
+        ) {
+            sub_msgs.push(CompetitionModule::default().trigger_rating_adjustment(
+                deps.storage,
+                category_id,
+                member_results,
+            )?);
+        }
     }
 
     // Apply updates to the next matches

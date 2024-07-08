@@ -164,11 +164,17 @@ pub fn process_matches(
     // Trigger rating adjustments
     let mut sub_msgs = vec![];
     if let Some(category_id) = league.category_id {
-        sub_msgs.push(CompetitionModule::default().trigger_rating_adjustment(
-            deps.storage,
-            category_id,
-            member_results,
-        )?);
+        if CompetitionModule::default().query_is_dao_member(
+            deps.as_ref(),
+            &league.host,
+            league.start_height,
+        ) {
+            sub_msgs.push(CompetitionModule::default().trigger_rating_adjustment(
+                deps.storage,
+                category_id,
+                member_results,
+            )?);
+        }
     }
 
     // Check if the processed matches have changed and update the league data accordingly.

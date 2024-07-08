@@ -4,8 +4,7 @@ use arena_interface::ratings::MemberResult;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult, Storage,
-    SubMsg,
+    Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult, SubMsg,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
@@ -53,16 +52,21 @@ pub fn execute(
     }
 }
 
-fn post_processing(
-    storage: &mut dyn Storage,
-    competition: &Wager,
-) -> Result<Option<SubMsg>, CompetitionError> {
+fn post_processing(deps: DepsMut, competition: &Wager) -> Result<Option<SubMsg>, CompetitionError> {
+    if !CompetitionModule::default().query_is_dao_member(
+        deps.as_ref(),
+        &competition.host,
+        competition.start_height,
+    ) {
+        return Ok(None);
+    }
+
     if let Some(category_id) = competition.category_id {
         if let Some(registered_members) = &competition.extension.registered_members {
             // This will be in state
             let result = CompetitionModule::default()
                 .competition_result
-                .load(storage, competition.id.u128())?;
+                .load(deps.storage, competition.id.u128())?;
 
             return Ok(match result {
                 Some(result) => {
@@ -96,7 +100,7 @@ fn post_processing(
                         };
 
                         Some(CompetitionModule::default().trigger_rating_adjustment(
-                            storage,
+                            deps.storage,
                             category_id,
                             vec![(member_result1, member_result2)],
                         )?)
@@ -106,7 +110,7 @@ fn post_processing(
                 }
                 // This is a Draw
                 None => Some(CompetitionModule::default().trigger_rating_adjustment(
-                    storage,
+                    deps.storage,
                     category_id,
                     vec![(
                         MemberResult {
