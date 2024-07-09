@@ -3,7 +3,7 @@ use std::fmt;
 use arena_interface::{competition::state::CompetitionResponse, fees::FeeInformation};
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Deps, Empty, StdResult, Uint128, Uint64};
+use cosmwasm_std::{Addr, BlockInfo, Coin, Decimal, Deps, Empty, StdResult, Uint128, Uint64};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use cw_utils::Expiration;
 
@@ -34,6 +34,7 @@ pub struct EnrollmentEntryResponse {
     pub competition_info: CompetitionInfoResponse,
     pub competition_type: CompetitionType,
     pub host: Addr,
+    pub is_expired: bool,
 }
 
 #[cw_serde]
@@ -48,10 +49,16 @@ pub struct CompetitionInfoResponse {
 }
 
 impl EnrollmentEntry {
-    pub fn into_response(self, deps: Deps, id: Uint128) -> StdResult<EnrollmentEntryResponse> {
+    pub fn into_response(
+        self,
+        deps: Deps,
+        block: &BlockInfo,
+        id: Uint128,
+    ) -> StdResult<EnrollmentEntryResponse> {
         let current_members = ENROLLMENT_MEMBERS_COUNT
             .may_load(deps.storage, id.u128())?
             .unwrap_or_default();
+        let is_expired = self.expiration.is_expired(block);
 
         Ok(EnrollmentEntryResponse {
             category_id: self.category_id,
@@ -67,6 +74,7 @@ impl EnrollmentEntry {
                 .into_response(deps, &self.competition_module)?,
             competition_type: self.competition_type,
             host: self.host,
+            is_expired,
         })
     }
 }
@@ -154,7 +162,7 @@ impl CompetitionInfo {
                     rulesets: competition.rulesets,
                     banner: competition.banner,
                     expiration: competition.expiration,
-                    additional_layered_fees: None, // We don't need to know this information here
+                    additional_layered_fees: None, // We don't need to know this information here, because it will be on the escrow
                 }
             }
         })

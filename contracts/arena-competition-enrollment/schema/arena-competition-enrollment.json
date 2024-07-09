@@ -940,6 +940,7 @@
           "has_triggered_expiration",
           "host",
           "id",
+          "is_expired",
           "max_members"
         ],
         "properties": {
@@ -983,6 +984,9 @@
           },
           "id": {
             "$ref": "#/definitions/Uint128"
+          },
+          "is_expired": {
+            "type": "boolean"
           },
           "max_members": {
             "$ref": "#/definitions/Uint64"
@@ -1114,6 +1118,7 @@
         "has_triggered_expiration",
         "host",
         "id",
+        "is_expired",
         "max_members"
       ],
       "properties": {
@@ -1157,6 +1162,9 @@
         },
         "id": {
           "$ref": "#/definitions/Uint128"
+        },
+        "is_expired": {
+          "type": "boolean"
         },
         "max_members": {
           "$ref": "#/definitions/Uint64"
@@ -1689,6 +1697,7 @@
             "has_triggered_expiration",
             "host",
             "id",
+            "is_expired",
             "max_members"
           ],
           "properties": {
@@ -1732,6 +1741,9 @@
             },
             "id": {
               "$ref": "#/definitions/Uint128"
+            },
+            "is_expired": {
+              "type": "boolean"
             },
             "max_members": {
               "$ref": "#/definitions/Uint64"

@@ -74,16 +74,16 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Enrollments {
             start_after,
             limit,
             filter,
-        } => to_json_binary(&query::enrollments(deps, start_after, limit, filter)?),
+        } => to_json_binary(&query::enrollments(deps, env, start_after, limit, filter)?),
         QueryMsg::Enrollment { enrollment_id } => {
             let entry = enrollment_entries().load(deps.storage, enrollment_id.u128())?;
-            to_json_binary(&entry.into_response(deps, enrollment_id)?)
+            to_json_binary(&entry.into_response(deps, &env.block, enrollment_id)?)
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::EnrollmentCount {} => to_json_binary(&query::enrollment_count(deps)?),

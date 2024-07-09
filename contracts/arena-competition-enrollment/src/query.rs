@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Deps, Order, StdResult, Uint128};
+use cosmwasm_std::{Addr, Deps, Env, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::{
@@ -8,6 +8,7 @@ use crate::{
 
 pub fn enrollments(
     deps: Deps,
+    env: Env,
     start_after: Option<Uint128>,
     limit: Option<u32>,
     filter: Option<EnrollmentFilter>,
@@ -21,7 +22,7 @@ pub fn enrollments(
             deps.storage,
             start_after_bound,
             Some(limit),
-            |x, y| y.into_response(deps, Uint128::new(x)),
+            |x, y| y.into_response(deps, &env.block, Uint128::new(x)),
         ),
         Some(filter) => match filter {
             EnrollmentFilter::Category { category_id } => enrollment_entries()
@@ -29,7 +30,7 @@ pub fn enrollments(
                 .category
                 .prefix(category_id.unwrap_or(Uint128::zero()).u128())
                 .range(deps.storage, start_after_bound, None, Order::Descending)
-                .map(|x| x.map(|y| y.1.into_response(deps, Uint128::new(y.0)))?)
+                .map(|x| x.map(|y| y.1.into_response(deps, &env.block, Uint128::new(y.0)))?)
                 .take(limit as usize)
                 .collect::<StdResult<Vec<_>>>(),
             EnrollmentFilter::Host(addr) => enrollment_entries()
@@ -37,7 +38,7 @@ pub fn enrollments(
                 .host
                 .prefix(addr)
                 .range(deps.storage, start_after_bound, None, Order::Descending)
-                .map(|x| x.map(|y| y.1.into_response(deps, Uint128::new(y.0)))?)
+                .map(|x| x.map(|y| y.1.into_response(deps, &env.block, Uint128::new(y.0)))?)
                 .take(limit as usize)
                 .collect::<StdResult<Vec<_>>>(),
         },
