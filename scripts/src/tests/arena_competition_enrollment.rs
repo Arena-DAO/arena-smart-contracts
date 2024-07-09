@@ -519,6 +519,86 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_trigger_expiration_without_escrow() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let admin = mock.addr_make(ADMIN);
+    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
+    mock.next_block()?;
+
+    // Register the enrollment module
+    arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
+    arena
+        .dao_dao
+        .dao_proposal_sudo
+        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: arena.arena_core.addr_str()?,
+            msg: to_json_binary(&arena_interface::core::ExecuteMsg::Extension {
+                msg: arena_interface::core::ExecuteExt::UpdateEnrollmentModules {
+                    to_add: Some(vec![arena.arena_competition_enrollment.addr_str()?]),
+                    to_remove: None,
+                },
+            })?,
+            funds: vec![],
+        })])?;
+
+    // Create an enrollment
+    arena.arena_competition_enrollment.set_sender(&admin);
+    let create_enrollment_msg = ExecuteMsg::CreateEnrollment {
+        min_members: None,
+        max_members: Uint64::new(10),
+        entry_fee: None,
+        expiration: Expiration::AtHeight(1000000),
+        category_id: Some(Uint128::new(1)),
+        competition_info: CompetitionInfoMsg {
+            name: "Test Competition".to_string(),
+            description: "A test competition".to_string(),
+            expiration: Expiration::AtHeight(2000000),
+            rules: vec!["Rule 1".to_string()],
+            rulesets: vec![],
+            banner: None,
+            additional_layered_fees: None,
+        },
+        competition_type: CompetitionType::Wager {
+        },
+    };
+
+    arena
+        .arena_competition_enrollment
+        .execute(&create_enrollment_msg, None)?;
+
+    // Enroll 3 members
+    let mut teams = vec![];
+    for i in 0..3 {
+        let team = mock.addr_make(format!("team {}", i));
+        teams.push(team.clone());
+        arena.arena_competition_enrollment.set_sender(&team);
+        arena
+            .arena_competition_enrollment
+            .enroll(Uint128::one(), &[])?;
+    }
+
+    // Trigger expiration
+    arena.arena_competition_enrollment.set_sender(&admin);
+    mock.wait_blocks(1000000)?; // Move to expiration block
+
+    let res = arena
+        .arena_competition_enrollment
+        .trigger_expiration(arena.arena_escrow.code_id()?, Uint128::one())?;
+
+    // Check that the competition was created
+    assert!(res.events.iter().any(|e| e.ty == "wasm"
+        && e.attributes
+            .iter()
+            .any(|attr| attr.key == "action" && attr.value == "trigger_expiration")));
+    assert!(res.events.iter().any(|e| e.ty == "wasm"
+        && e.attributes
+            .iter()
+            .any(|attr| attr.key == "result" && attr.value == "competition_created")));
+
+    Ok(())
+}
+
+#[test]
 fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let admin = mock.addr_make(ADMIN);

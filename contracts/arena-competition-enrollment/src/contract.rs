@@ -153,9 +153,13 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                                                 id: Uint128::from_str(&competition_id)?,
                                             };
                                         if let Some(escrow_addr) = escrow_addr {
-                                            let escrow_addr = deps.api.addr_validate(&escrow_addr)?;
-
-                                            msgs.push(CosmosMsg::Wasm(WasmMsg::Execute { contract_addr: escrow_addr.to_string(), msg: to_json_binary(&arena_interface::escrow::ExecuteMsg::ReceiveNative {  })?, funds: vec![enrollment_info.amount.unwrap()] }));
+                                            if let Ok(escrow_addr) =  deps.api.addr_validate(&escrow_addr){
+                                                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                                                    contract_addr: escrow_addr.to_string(),
+                                                    msg: to_json_binary(&arena_interface::escrow::ExecuteMsg::ReceiveNative {
+                                                 })?,
+                                                 funds: vec![enrollment_info.amount.unwrap()] }));
+                                            }
                                         }
                                         Ok(enrollment_entry)
                                     }
