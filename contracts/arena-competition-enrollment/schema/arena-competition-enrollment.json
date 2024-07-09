@@ -790,6 +790,16 @@
               "null"
             ]
           },
+          "competition_id": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Uint128"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "description": {
             "type": "string"
           },
@@ -934,6 +944,7 @@
         "type": "object",
         "required": [
           "competition_info",
+          "competition_module",
           "competition_type",
           "current_members",
           "expiration",
@@ -956,6 +967,9 @@
           },
           "competition_info": {
             "$ref": "#/definitions/CompetitionInfoResponse"
+          },
+          "competition_module": {
+            "$ref": "#/definitions/Addr"
           },
           "competition_type": {
             "$ref": "#/definitions/CompetitionType"
@@ -1112,6 +1126,7 @@
       "type": "object",
       "required": [
         "competition_info",
+        "competition_module",
         "competition_type",
         "current_members",
         "expiration",
@@ -1134,6 +1149,9 @@
         },
         "competition_info": {
           "$ref": "#/definitions/CompetitionInfoResponse"
+        },
+        "competition_module": {
+          "$ref": "#/definitions/Addr"
         },
         "competition_type": {
           "$ref": "#/definitions/CompetitionType"
@@ -1228,6 +1246,16 @@
               "type": [
                 "string",
                 "null"
+              ]
+            },
+            "competition_id": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "description": {
@@ -1547,6 +1575,16 @@
                 "null"
               ]
             },
+            "competition_id": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "description": {
               "type": "string"
             },
@@ -1691,6 +1729,7 @@
           "type": "object",
           "required": [
             "competition_info",
+            "competition_module",
             "competition_type",
             "current_members",
             "expiration",
@@ -1713,6 +1752,9 @@
             },
             "competition_info": {
               "$ref": "#/definitions/CompetitionInfoResponse"
+            },
+            "competition_module": {
+              "$ref": "#/definitions/Addr"
             },
             "competition_type": {
               "$ref": "#/definitions/CompetitionType"

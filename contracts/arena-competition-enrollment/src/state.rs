@@ -35,6 +35,7 @@ pub struct EnrollmentEntryResponse {
     pub competition_type: CompetitionType,
     pub host: Addr,
     pub is_expired: bool,
+    pub competition_module: Addr,
 }
 
 #[cw_serde]
@@ -46,6 +47,7 @@ pub struct CompetitionInfoResponse {
     rulesets: Vec<Uint128>,
     banner: Option<String>,
     additional_layered_fees: Option<Vec<FeeInformation<String>>>,
+    competition_id: Option<Uint128>,
 }
 
 impl EnrollmentEntry {
@@ -75,6 +77,7 @@ impl EnrollmentEntry {
             competition_type: self.competition_type,
             host: self.host,
             is_expired,
+            competition_module: self.competition_module,
         })
     }
 }
@@ -144,6 +147,7 @@ impl CompetitionInfo {
                 rulesets,
                 banner,
                 additional_layered_fees,
+                competition_id: None,
             },
             CompetitionInfo::Existing { id } => {
                 let competition = deps
@@ -163,6 +167,7 @@ impl CompetitionInfo {
                     banner: competition.banner,
                     expiration: competition.expiration,
                     additional_layered_fees: None, // We don't need to know this information here, because it will be on the escrow
+                    competition_id: Some(id),
                 }
             }
         })
