@@ -558,8 +558,7 @@ fn test_trigger_expiration_without_escrow() -> anyhow::Result<()> {
             banner: None,
             additional_layered_fees: None,
         },
-        competition_type: CompetitionType::Wager {
-        },
+        competition_type: CompetitionType::Wager {},
     };
 
     arena
