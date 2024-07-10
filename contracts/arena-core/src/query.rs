@@ -38,7 +38,7 @@ pub fn competition_modules(
 ) -> StdResult<Vec<CompetitionModuleResponse<String>>> {
     let maybe_addr = maybe_addr(deps.api, start_after)?;
     let start_after_bound = maybe_addr.as_ref().map(Bound::exclusive);
-    let limit = limit.unwrap_or(10).max(30);
+    let limit = limit.unwrap_or(30).max(30);
     let include_disabled = include_disabled.unwrap_or(false);
 
     let competition_modules_map = crate::state::competition_modules();
@@ -86,7 +86,7 @@ pub fn rulesets(
     include_disabled: Option<bool>,
 ) -> StdResult<Vec<Ruleset>> {
     let start_after_bound = start_after.map(Bound::exclusive);
-    let limit = limit.unwrap_or(10).max(30);
+    let limit = limit.unwrap_or(30).max(30);
     let include_disabled = include_disabled.unwrap_or(false);
 
     let rulesets_map = crate::state::rulesets();
@@ -138,7 +138,7 @@ pub fn categories(
     include_disabled: Option<bool>,
 ) -> StdResult<Vec<CompetitionCategory>> {
     let start_after_bound = start_after.map(Bound::exclusive);
-    let limit = limit.unwrap_or(10).max(30);
+    let limit = limit.unwrap_or(30).max(30);
     let include_disabled = include_disabled.unwrap_or(false);
 
     let category_map = crate::state::competition_categories();
@@ -267,7 +267,7 @@ pub fn rating_leaderboard(
             (category_id.u128(), start_after_addr.as_ref().unwrap()),
         ))
     });
-    let limit = limit.unwrap_or(10).max(30);
+    let limit = limit.unwrap_or(30).max(30);
 
     ratings()
         .idx

@@ -16,7 +16,4 @@ pub enum ContractError {
 
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
-
-    #[error("InvalidExecute")]
-    InvalidExecute,
 }

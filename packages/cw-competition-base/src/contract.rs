@@ -6,10 +6,7 @@ use arena_interface::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
             QueryBase, ToCompetitionExt,
         },
-        state::{
-            Competition, CompetitionListItemResponse, CompetitionResponse, CompetitionStatus,
-            Config, Evidence,
-        },
+        state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
     },
     core::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
     fees::FeeInformation,
@@ -680,8 +677,8 @@ impl<
         name: String,
         description: String,
         expiration: cw_utils::Expiration,
-        rules: Vec<String>,
-        rulesets: Vec<Uint128>,
+        rules: Option<Vec<String>>,
+        rulesets: Option<Vec<Uint128>>,
         banner: Option<String>,
         should_activate_on_funded: Option<bool>,
         extension: &CompetitionInstantiateExt,
@@ -776,21 +773,23 @@ impl<
 
         // Validate category and rulesets
         if let Some(category_id) = category_id {
-            if !rulesets.is_empty() {
-                let is_valid: bool = deps.querier.query_wasm_smart(
-                    arena_core,
-                    &arena_interface::core::QueryMsg::QueryExtension {
-                        msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
-                            category_id,
-                            rulesets: rulesets.clone(),
+            if let Some(rulesets) = rulesets.as_ref() {
+                if !rulesets.is_empty() {
+                    let is_valid: bool = deps.querier.query_wasm_smart(
+                        arena_core,
+                        &arena_interface::core::QueryMsg::QueryExtension {
+                            msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
+                                category_id,
+                                rulesets: rulesets.clone(),
+                            },
                         },
-                    },
-                )?;
-                if !is_valid {
-                    return Err(CompetitionError::InvalidCategoryAndRulesets {
-                        category_id,
-                        rulesets,
-                    });
+                    )?;
+                    if !is_valid {
+                        return Err(CompetitionError::InvalidCategoryAndRulesets {
+                            category_id,
+                            rulesets: rulesets.to_vec(),
+                        });
+                    }
                 }
             }
         }
@@ -814,8 +813,10 @@ impl<
         };
 
         // Save competition data
-        self.competition_rules
-            .save(deps.storage, competition_id.u128(), &rules)?;
+        if let Some(rules) = rules {
+            self.competition_rules
+                .save(deps.storage, competition_id.u128(), &rules)?;
+        }
         self.competitions
             .save(deps.storage, competition_id.u128(), &competition)?;
 
@@ -1112,7 +1113,7 @@ impl<
         limit: Option<u32>,
     ) -> StdResult<Vec<Evidence>> {
         let start_after_bound = start_after.map(Bound::exclusive);
-        let limit = limit.unwrap_or(10).max(30);
+        let limit = limit.unwrap_or(30).max(30);
 
         self.competition_evidence
             .prefix(competition_id.u128())
@@ -1135,7 +1136,7 @@ impl<
     ) -> StdResult<CompetitionResponse<CompetitionExt>> {
         let rules = self
             .competition_rules
-            .load(deps.storage, competition_id.u128())?;
+            .may_load(deps.storage, competition_id.u128())?;
 
         Ok(self
             .competitions
@@ -1181,9 +1182,9 @@ impl<
         start_after: Option<Uint128>,
         limit: Option<u32>,
         filter: Option<CompetitionsFilter>,
-    ) -> StdResult<Vec<CompetitionListItemResponse<CompetitionExt>>> {
+    ) -> StdResult<Vec<CompetitionResponse<CompetitionExt>>> {
         let start_after_bound = start_after.map(Bound::exclusive);
-        let limit = limit.unwrap_or(10).max(30);
+        let limit = limit.unwrap_or(30).max(30);
 
         match filter {
             None => cw_paginate::paginate_indexed_map(
@@ -1191,7 +1192,10 @@ impl<
                 deps.storage,
                 start_after_bound,
                 Some(limit),
-                |_x, y| Ok(y.into_list_item_response(&env.block)),
+                |x, y| {
+                    let rules = self.competition_rules.may_load(deps.storage, x)?;
+                    Ok(y.into_response(rules, &env.block))
+                },
             ),
             Some(filter) => match filter {
                 CompetitionsFilter::CompetitionStatus { status } => self
@@ -1205,7 +1209,12 @@ impl<
                         None,
                         cosmwasm_std::Order::Descending,
                     )
-                    .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
+                    .flat_map(|x| {
+                        x.map(|y| {
+                            let rules = self.competition_rules.may_load(deps.storage, y.0)?;
+                            Ok(y.1.into_response(rules, &env.block))
+                        })
+                    })
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
                 CompetitionsFilter::Category { id } => self
@@ -1219,7 +1228,12 @@ impl<
                         None,
                         cosmwasm_std::Order::Descending,
                     )
-                    .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
+                    .flat_map(|x| {
+                        x.map(|y| {
+                            let rules = self.competition_rules.may_load(deps.storage, y.0)?;
+                            Ok(y.1.into_response(rules, &env.block))
+                        })
+                    })
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
                 CompetitionsFilter::Host(addr) => self
@@ -1233,7 +1247,12 @@ impl<
                         None,
                         cosmwasm_std::Order::Descending,
                     )
-                    .map(|x| x.map(|y| y.1.into_list_item_response(&env.block)))
+                    .flat_map(|x| {
+                        x.map(|y| {
+                            let rules = self.competition_rules.may_load(deps.storage, y.0)?;
+                            Ok(y.1.into_response(rules, &env.block))
+                        })
+                    })
                     .take(limit as usize)
                     .collect::<StdResult<Vec<_>>>(),
             },

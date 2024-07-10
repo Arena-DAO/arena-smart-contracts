@@ -14,7 +14,7 @@ pub fn enrollments(
     filter: Option<EnrollmentFilter>,
 ) -> StdResult<Vec<EnrollmentEntryResponse>> {
     let start_after_bound = start_after.map(|x| x.u128()).map(Bound::exclusive);
-    let limit = limit.unwrap_or(10).max(30);
+    let limit = limit.unwrap_or(30).max(30);
 
     match filter {
         None => cw_paginate::paginate_indexed_map(

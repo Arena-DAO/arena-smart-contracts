@@ -45,8 +45,8 @@ pub struct CompetitionInfoMsg {
     pub name: String,
     pub description: String,
     pub expiration: Expiration,
-    pub rules: Vec<String>,
-    pub rulesets: Vec<Uint128>,
+    pub rules: Option<Vec<String>>,
+    pub rulesets: Option<Vec<Uint128>>,
     pub banner: Option<String>,
     pub additional_layered_fees: Option<Vec<FeeInformation<String>>>,
 }

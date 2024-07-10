@@ -181,9 +181,7 @@
               "description",
               "expiration",
               "instantiate_extension",
-              "name",
-              "rules",
-              "rulesets"
+              "name"
             ],
             "properties": {
               "banner": {
@@ -232,13 +230,19 @@
                 "type": "string"
               },
               "rules": {
-                "type": "array",
+                "type": [
+                  "array",
+                  "null"
+                ],
                 "items": {
                   "type": "string"
                 }
               },
               "rulesets": {
-                "type": "array",
+                "type": [
+                  "array",
+                  "null"
+                ],
                 "items": {
                   "$ref": "#/definitions/Uint128"
                 }
@@ -1343,8 +1347,6 @@
         "id",
         "is_expired",
         "name",
-        "rules",
-        "rulesets",
         "start_height",
         "status"
       ],
@@ -1406,13 +1408,19 @@
           "type": "string"
         },
         "rules": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "string"
           }
         },
         "rulesets": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/definitions/Uint128"
           }
@@ -1641,8 +1649,6 @@
             "id",
             "is_expired",
             "name",
-            "rules",
-            "rulesets",
             "start_height",
             "status"
           ],
@@ -1704,13 +1710,19 @@
               "type": "string"
             },
             "rules": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "type": "string"
               }
             },
             "rulesets": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Uint128"
               }

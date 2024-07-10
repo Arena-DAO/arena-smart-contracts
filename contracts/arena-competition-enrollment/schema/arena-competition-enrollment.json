@@ -244,9 +244,7 @@
         "required": [
           "description",
           "expiration",
-          "name",
-          "rules",
-          "rulesets"
+          "name"
         ],
         "properties": {
           "additional_layered_fees": {
@@ -274,13 +272,19 @@
             "type": "string"
           },
           "rules": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "type": "string"
             }
           },
           "rulesets": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Uint128"
             }
@@ -770,9 +774,7 @@
         "required": [
           "description",
           "expiration",
-          "name",
-          "rules",
-          "rulesets"
+          "name"
         ],
         "properties": {
           "additional_layered_fees": {
@@ -810,13 +812,19 @@
             "type": "string"
           },
           "rules": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "type": "string"
             }
           },
           "rulesets": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Uint128"
             }
@@ -1228,9 +1236,7 @@
           "required": [
             "description",
             "expiration",
-            "name",
-            "rules",
-            "rulesets"
+            "name"
           ],
           "properties": {
             "additional_layered_fees": {
@@ -1268,13 +1274,19 @@
               "type": "string"
             },
             "rules": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "type": "string"
               }
             },
             "rulesets": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Uint128"
               }
@@ -1555,9 +1567,7 @@
           "required": [
             "description",
             "expiration",
-            "name",
-            "rules",
-            "rulesets"
+            "name"
           ],
           "properties": {
             "additional_layered_fees": {
@@ -1595,13 +1605,19 @@
               "type": "string"
             },
             "rules": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "type": "string"
               }
             },
             "rulesets": {
-              "type": "array",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/Uint128"
               }

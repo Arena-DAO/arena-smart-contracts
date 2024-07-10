@@ -123,12 +123,12 @@ fn create_competition(
             name: "This is a competition name".to_string(),
             description: "This is a description".to_string(),
             expiration,
-            rules: vec![
+            rules: Some(vec![
                 "Rule 1".to_string(),
                 "Rule 2".to_string(),
                 "Rule 3".to_string(),
-            ],
-            rulesets: vec![],
+            ]),
+            rulesets: None,
             banner: None,
             should_activate_on_funded: None,
             instantiate_extension: LeagueInstantiateExt {

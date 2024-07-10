@@ -2,7 +2,8 @@ use arena_interface::competition::msg::{ExecuteBase, QueryBase};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
+    ensure_eq, to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response,
+    StdResult,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
@@ -98,9 +99,26 @@ pub fn execute(
             } => execute::add_point_adjustments(deps, info, league_id, addr, point_adjustments),
         },
         ExecuteBase::ProcessCompetition {
-            competition_id: _,
-            distribution: _,
-        } => Err(ContractError::InvalidExecute),
+            competition_id,
+            distribution,
+        } => {
+            let competition = CompetitionModule::default()
+                .competitions
+                .load(deps.storage, competition_id.u128())?;
+            ensure_eq!(
+                info.sender.clone(),
+                competition.admin_dao,
+                ContractError::CompetitionError(CompetitionError::Unauthorized {})
+            );
+
+            Ok(CompetitionModule::default().execute_process_competition(
+                deps,
+                info,
+                competition_id,
+                distribution,
+                None,
+            )?)
+        }
         _ => Ok(CompetitionModule::default().execute(deps, env, info, msg)?),
     }
 }

@@ -9,7 +9,7 @@ use cw_balance::{BalanceError, BalanceVerified, Cw721CollectionVerified, Distrib
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
-    query::is_locked,
+    query::{is_locked, should_activate_on_funded},
     state::{
         is_fully_funded, BALANCE, DEFERRED_FEES, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED,
         PRESET_DISTRIBUTION, TOTAL_BALANCE,
@@ -52,8 +52,9 @@ pub fn withdraw(
         let has_distributed = HAS_DISTRIBUTED.may_load(deps.storage)?.unwrap_or_default();
         if !has_distributed {
             // Set due to the initial due
-            let initial_due = &INITIAL_DUE.load(deps.storage, &info.sender)?;
-            DUE.save(deps.storage, &info.sender, initial_due)?;
+            if let Some(initial_due) = &INITIAL_DUE.may_load(deps.storage, &info.sender)? {
+                DUE.save(deps.storage, &info.sender, initial_due)?;
+            }
         }
 
         // Update or remove total balance
@@ -171,11 +172,6 @@ fn receive_balance(
     addr: Addr,
     balance: BalanceVerified,
 ) -> Result<Response, ContractError> {
-    if !INITIAL_DUE.has(deps.storage, &addr) {
-        return Err(ContractError::InvalidDue {
-            msg: "User is not a participant".to_string(),
-        });
-    }
     if HAS_DISTRIBUTED.exists(deps.storage) {
         return Err(ContractError::AlreadyDistributed {});
     }
@@ -187,32 +183,34 @@ fn receive_balance(
             None => Ok(balance),
         })?;
 
-    let due_balance = DUE.load(deps.storage, &addr)?;
-    let remaining_due = updated_balance.difference_to(&due_balance)?;
-
     let mut msgs: Vec<CosmosMsg> = vec![];
 
-    // Handle the case where the due balance is fully paid
-    if remaining_due.is_empty() {
-        DUE.remove(deps.storage, &addr);
+    // Check if the address has a due balance
+    if let Some(due_balance) = DUE.may_load(deps.storage, &addr)? {
+        let remaining_due = updated_balance.difference_to(&due_balance)?;
 
-        // Lock if fully funded and send activation message if needed
-        if is_fully_funded(deps.as_ref()) {
-            IS_LOCKED.save(deps.storage, &true)?;
+        // Handle the case where the due balance is fully paid
+        if remaining_due.is_empty() {
+            DUE.remove(deps.storage, &addr);
 
-            if let Some(owner) = get_ownership(deps.storage)?.owner {
-                msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: owner.to_string(),
-                    msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
-                        Empty,
-                        Empty,
-                    >::ActivateCompetition {})?,
-                    funds: vec![],
-                }));
+            // Lock if fully funded and send activation message if needed
+            if is_fully_funded(deps.as_ref()) && should_activate_on_funded(deps.as_ref())? {
+                IS_LOCKED.save(deps.storage, &true)?;
+
+                if let Some(owner) = get_ownership(deps.storage)?.owner {
+                    msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+                        contract_addr: owner.to_string(),
+                        msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
+                            Empty,
+                            Empty,
+                        >::ActivateCompetition {})?,
+                        funds: vec![],
+                    }));
+                }
             }
+        } else {
+            DUE.save(deps.storage, &addr, &remaining_due)?;
         }
-    } else {
-        DUE.save(deps.storage, &addr, &remaining_due)?;
     }
 
     // Update the total balance in storage

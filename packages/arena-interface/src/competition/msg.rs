@@ -52,8 +52,8 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         name: String,
         description: String,
         expiration: Expiration,
-        rules: Vec<String>,
-        rulesets: Vec<Uint128>,
+        rules: Option<Vec<String>>,
+        rulesets: Option<Vec<Uint128>>,
         banner: Option<String>,
         /// Determines if the competition is automatically activated if all dues are paid
         /// Defaults to true

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use arena_interface::competition::{
     msg::EscrowInstantiateInfo,
-    state::{CompetitionListItemResponse, CompetitionStatus},
+    state::{CompetitionResponse, CompetitionStatus},
 };
 use arena_interface::core::{CompetitionModuleQuery, CompetitionModuleResponse, QueryExt};
 use arena_wager_module::msg::{
@@ -122,12 +122,12 @@ fn create_competition(
             name: "This is a competition name".to_string(),
             description: "This is a description".to_string(),
             expiration,
-            rules: vec![
+            rules: Some(vec![
                 "Rule 1".to_string(),
                 "Rule 2".to_string(),
                 "Rule 3".to_string(),
-            ],
-            rulesets: vec![],
+            ]),
+            rulesets: None,
             banner: None,
             should_activate_on_funded: None,
             instantiate_extension: WagerInstantiateExt {
@@ -201,12 +201,12 @@ fn test_create_competition() {
             name: "This is a competition name".to_string(),
             description: "This is a description".to_string(),
             expiration: Expiration::AtHeight(starting_height + 10),
-            rules: vec![
+            rules: Some(vec![
                 "Rule 1".to_string(),
                 "Rule 2".to_string(),
                 "Rule 3".to_string(),
-            ],
-            rulesets: vec![Uint128::from(9999u128)],
+            ]),
+            rulesets: Some(vec![Uint128::from(9999u128)]),
             banner: None,
             should_activate_on_funded: None,
             instantiate_extension: WagerInstantiateExt {
@@ -243,7 +243,7 @@ fn test_create_competition() {
     );
 
     // Ensure query by competition status works
-    let competitions: Vec<CompetitionListItemResponse<Empty>> = context
+    let competitions: Vec<CompetitionResponse<Empty>> = context
         .app
         .wrap()
         .query_wasm_smart(
@@ -262,7 +262,7 @@ fn test_create_competition() {
     assert_eq!(competitions.len(), 1);
 
     // Ensure query by competition category works
-    let competitions: Vec<CompetitionListItemResponse<Empty>> = context
+    let competitions: Vec<CompetitionResponse<Empty>> = context
         .app
         .wrap()
         .query_wasm_smart(

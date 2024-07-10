@@ -2,6 +2,8 @@ use arena_competition_enrollment::msg::{
     CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns, QueryMsgFns,
 };
 use arena_competition_enrollment::state::CompetitionType;
+use arena_interface::competition::msg::{ExecuteBaseFns, QueryBaseFns};
+use arena_interface::escrow::ExecuteMsgFns as ArenaCoreExecuteMsgFns;
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_orch::{anyhow, prelude::*};
@@ -53,8 +55,8 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
             name: "Test Competition".to_string(),
             description: "A test competition".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["Rule 1".to_string(), "Rule 2".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["Rule 1".to_string(), "Rule 2".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -165,8 +167,8 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
             name: "Invalid Competition".to_string(),
             description: "An invalid competition".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec![],
-            rulesets: vec![],
+            rules: None,
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -228,8 +230,8 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
             name: "Capacity Test".to_string(),
             description: "Testing enrollment capacity".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec![],
-            rulesets: vec![],
+            rules: None,
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -305,8 +307,8 @@ fn test_successful_tournament_creation() -> anyhow::Result<()> {
             name: "Test Tournament".to_string(),
             description: "A test tournament".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["Tournament Rule".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["Tournament Rule".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -388,8 +390,8 @@ fn test_successful_wager_creation() -> anyhow::Result<()> {
             name: "Test Wager".to_string(),
             description: "A test wager".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["Wager Rule".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["Wager Rule".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -470,8 +472,8 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
             name: "Test League".to_string(),
             description: "A test league".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["League Rule".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["League Rule".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -553,8 +555,8 @@ fn test_trigger_expiration_without_escrow() -> anyhow::Result<()> {
             name: "Test Competition".to_string(),
             description: "A test competition".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["Rule 1".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["Rule 1".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -632,8 +634,8 @@ fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
             name: "Test Competition".to_string(),
             description: "A test competition".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["Rule 1".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["Rule 1".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -710,8 +712,8 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
             name: "Test Competition".to_string(),
             description: "A test competition".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["Rule 1".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["Rule 1".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -810,8 +812,8 @@ fn test_huge_tournament() -> anyhow::Result<()> {
             name: "Test Tournament".to_string(),
             description: "A test tournament".to_string(),
             expiration: Expiration::AtHeight(2000000),
-            rules: vec!["Tournament Rule".to_string()],
-            rulesets: vec![],
+            rules: Some(vec!["Tournament Rule".to_string()]),
+            rulesets: None,
             banner: None,
             additional_layered_fees: None,
         },
@@ -850,6 +852,34 @@ fn test_huge_tournament() -> anyhow::Result<()> {
         && e.attributes
             .iter()
             .any(|attr| attr.key == "result" && attr.value == "competition_created")));
+
+    // Test tipping
+    let competition = arena.arena_tournament_module.competition(Uint128::one())?;
+    arena.arena_escrow.set_sender(&teams[0]);
+    arena
+        .arena_escrow
+        .set_address(competition.escrow.as_ref().unwrap());
+    arena
+        .arena_escrow
+        .receive_native(coins(5000u128, DENOM).as_slice())?;
+
+    // Test withdraw - not activated yet
+    arena.arena_escrow.withdraw(None, None)?;
+
+    // Tip again
+    arena
+        .arena_escrow
+        .receive_native(coins(5000u128, DENOM).as_slice())?;
+
+    // Activate competition
+    arena.arena_tournament_module.set_sender(&admin);
+    arena
+        .arena_tournament_module
+        .activate_competition_manually(Uint128::one())?;
+
+    // Test withdraw is error
+    let result = arena.arena_escrow.withdraw(None, None);
+    assert!(result.is_err());
 
     Ok(())
 }

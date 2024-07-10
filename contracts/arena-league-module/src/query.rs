@@ -130,7 +130,7 @@ pub fn point_adjustments(
         .map(|x| deps.api.addr_validate(&x))
         .transpose()?;
     let start_after = start_after.as_ref().map(Bound::exclusive);
-    let limit = limit.unwrap_or(10).max(30);
+    let limit = limit.unwrap_or(30).max(30);
 
     POINT_ADJUSTMENTS
         .prefix(league_id.u128())

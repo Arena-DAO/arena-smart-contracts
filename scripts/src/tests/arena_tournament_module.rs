@@ -1471,8 +1471,8 @@ fn create_competition_msg<Chain: ChainState>(
         name: "Competition".to_string(),
         description: "Competition description".to_string(),
         expiration: cw_utils::Expiration::Never {},
-        rules: vec![],
-        rulesets: vec![],
+        rules: None,
+        rulesets: None,
         banner: None,
         should_activate_on_funded: None,
         instantiate_extension: TournamentInstantiateExt {

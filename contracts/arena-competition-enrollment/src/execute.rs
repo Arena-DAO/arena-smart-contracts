@@ -77,20 +77,22 @@ pub fn create_enrollment(
     let ownership = cw_ownable::get_ownership(deps.storage)?;
     let competition_module = if let Some(owner) = ownership.owner {
         if let Some(category_id) = category_id {
-            ensure!(
-                deps.querier.query_wasm_smart::<bool>(
-                    &owner,
-                    &arena_interface::core::QueryMsg::QueryExtension {
-                        msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
-                            category_id,
-                            rulesets: competition_info.rulesets.clone(),
+            if let Some(rulesets) = &competition_info.rulesets {
+                ensure!(
+                    deps.querier.query_wasm_smart::<bool>(
+                        &owner,
+                        &arena_interface::core::QueryMsg::QueryExtension {
+                            msg: arena_interface::core::QueryExt::IsValidCategoryAndRulesets {
+                                category_id,
+                                rulesets: rulesets.clone(),
+                            },
                         },
-                    },
-                )?,
-                ContractError::StdError(StdError::generic_err(
-                    "Invalid category and rulesets combination"
-                ))
-            );
+                    )?,
+                    ContractError::StdError(StdError::generic_err(
+                        "Invalid category and rulesets combination"
+                    ))
+                );
+            }
         }
 
         let competition_module_response = deps

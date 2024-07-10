@@ -36,7 +36,7 @@ pub struct Competition<CompetitionExt> {
     pub description: String,
     pub start_height: u64,
     pub expiration: Expiration,
-    pub rulesets: Vec<Uint128>,
+    pub rulesets: Option<Vec<Uint128>>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
     /// Additional layered fees
@@ -56,8 +56,8 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub description: String,
     pub start_height: u64,
     pub is_expired: bool,
-    pub rules: Vec<String>,
-    pub rulesets: Vec<Uint128>,
+    pub rules: Option<Vec<String>>,
+    pub rulesets: Option<Vec<Uint128>>,
     pub status: CompetitionStatus,
     pub extension: CompetitionExt,
     pub expiration: Expiration,
@@ -65,28 +65,10 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub banner: Option<String>,
 }
 
-/// CompetitionListItemResponse extends the CompetitionResponse with
-#[cw_serde]
-pub struct CompetitionListItemResponse<CompetitionExt> {
-    pub id: Uint128,
-    pub category_id: Option<Uint128>,
-    pub host: Addr,
-    pub escrow: Option<Addr>,
-    pub name: String,
-    pub description: String,
-    pub start_height: u64,
-    pub is_expired: bool,
-    pub rulesets: Vec<Uint128>,
-    pub status: CompetitionStatus,
-    pub extension: CompetitionExt,
-    pub expiration: Expiration,
-    pub banner: Option<String>,
-}
-
 impl<CompetitionExt> Competition<CompetitionExt> {
     pub fn into_response(
         self,
-        rules: Vec<String>,
+        rules: Option<Vec<String>>,
         block: &BlockInfo,
     ) -> CompetitionResponse<CompetitionExt> {
         let is_expired = self.expiration.is_expired(block);
@@ -106,29 +88,6 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             extension: self.extension,
             expiration: self.expiration,
             fees: self.fees,
-            banner: self.banner,
-        }
-    }
-
-    pub fn into_list_item_response(
-        self,
-        block: &BlockInfo,
-    ) -> CompetitionListItemResponse<CompetitionExt> {
-        let is_expired = self.expiration.is_expired(block);
-
-        CompetitionListItemResponse {
-            id: self.id,
-            category_id: self.category_id,
-            host: self.host,
-            escrow: self.escrow,
-            name: self.name,
-            description: self.description,
-            start_height: self.start_height,
-            is_expired,
-            rulesets: self.rulesets,
-            status: self.status,
-            extension: self.extension,
-            expiration: self.expiration,
             banner: self.banner,
         }
     }
