@@ -240,9 +240,11 @@ pub fn trigger_expiration(
             additional_layered_fees,
         } => Ok({
             let escrow = if let Some(entry_fee) = &entry.entry_fee {
-                let total = deps
-                    .querier
-                    .query_balance(env.contract.address.to_string(), entry_fee.denom.clone())?;
+                let members_count = ENROLLMENT_MEMBERS_COUNT.load(deps.storage, id.u128())?;
+                let total = Coin {
+                    denom: entry_fee.denom.clone(),
+                    amount: entry_fee.amount.checked_mul(members_count.into())?,
+                };
 
                 enrollment_info.amount = Some(total.clone());
 
