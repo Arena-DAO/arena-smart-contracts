@@ -12,7 +12,6 @@ use cw_utils::Duration;
 
 pub const ARENA_TAX_CONFIG: Item<TaxConfiguration> = Item::new("arena_tax_config");
 pub const COMPETITION_CATEGORIES_COUNT: Item<Uint128> = Item::new("competition_categories_count");
-pub const COMPETITION_MODULES_COUNT: Item<Uint128> = Item::new("competition_modules_count");
 pub const TAX: SnapshotItem<Decimal> = SnapshotItem::new(
     "tax",
     "tax__check",

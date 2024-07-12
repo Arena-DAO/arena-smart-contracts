@@ -123,6 +123,7 @@ impl From<QueryExt> for QueryMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     FromCompatible {},
+    Patch(String),
 }
 
 /// This is used to completely generate schema types

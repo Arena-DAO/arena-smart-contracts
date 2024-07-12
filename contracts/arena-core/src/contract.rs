@@ -3,7 +3,7 @@ use crate::{
     migrate, query,
     state::{
         competition_modules, rulesets, CompetitionModule, ARENA_TAX_CONFIG,
-        COMPETITION_CATEGORIES_COUNT, COMPETITION_MODULES_COUNT, KEYS, RULESETS_COUNT,
+        COMPETITION_CATEGORIES_COUNT, KEYS, RULESETS_COUNT,
     },
     ContractError,
 };
@@ -15,7 +15,7 @@ use arena_interface::core::{
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_json, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-    StdError, StdResult, Uint128, WasmMsg,
+    StdError, Uint128, WasmMsg,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_utils::parse_reply_instantiate_data;
@@ -47,7 +47,6 @@ pub fn instantiate_extension(
     extension: InstantiateExt,
 ) -> Result<Response, ContractError> {
     let dao = PrePropose::default().dao.load(deps.storage)?;
-    COMPETITION_MODULES_COUNT.save(deps.storage, &Uint128::zero())?;
     RULESETS_COUNT.save(deps.storage, &Uint128::zero())?;
     COMPETITION_CATEGORIES_COUNT.save(deps.storage, &Uint128::zero())?;
     execute::update_tax(deps.branch(), &env, extension.tax)?;
@@ -153,9 +152,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
             competition_modules().save(deps.storage, &module_addr, &competition_module)?;
             KEYS.save(deps.storage, key.clone(), &module_addr, env.block.height)?;
-            COMPETITION_MODULES_COUNT.update(deps.storage, |x| -> StdResult<_> {
-                Ok(x.checked_add(Uint128::one())?)
-            })?;
 
             // Check for module instantiation callbacks
             let callback_msgs = match res.data {
@@ -253,21 +249,30 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    if version.major == 1 && version.minor < 4 {
-        migrate::from_v1_3_to_v1_4(deps.branch())?;
-    }
+    match msg {
+        MigrateMsg::FromCompatible {} => {
+            if version.major == 1 && version.minor <= 4 {
+                migrate::from_v1_3_to_v1_4(deps.branch())?;
+            }
 
-    if version.major == 1 && version.minor < 6 {
-        migrate::from_v1_4_to_v1_6(deps.branch())?;
-    }
+            if version.major == 1 && version.minor < 6 {
+                migrate::from_v1_4_to_v1_6(deps.branch())?;
+            }
 
-    if version.major == 1 && version.minor < 8 {
-        // Rulesets state has changed. There's nothing important there atm, so we can just clear the state.
-        rulesets().clear(deps.storage);
-    }
+            if version.major == 1 && version.minor < 8 {
+                // Rulesets state has changed. There's nothing important there atm, so we can just clear the state.
+                rulesets().clear(deps.storage);
+            }
+        }
+        MigrateMsg::Patch(patch) => {
+            if patch.as_str() == "v1.4" {
+                migrate::from_v1_3_to_v1_4(deps.branch())?;
+            }
+        }
+    };
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())

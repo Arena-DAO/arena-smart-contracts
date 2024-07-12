@@ -3,7 +3,7 @@
     "neutron-1": {
       "code_ids": {
         "arena_competition_enrollment": 1560,
-        "arena_core": 1556,
+        "arena_core": 1563,
         "arena_escrow": 1555,
         "arena_league_module": 1558,
         "arena_tournament_module": 1559,

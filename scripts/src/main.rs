@@ -2,7 +2,7 @@ use arena::Arena;
 use cw_orch::prelude::*;
 use orch_interface::{
     arena_competition_enrollment::ArenaCompetitionEnrollmentContract,
-    arena_tournament_module::ArenaTournamentModuleContract,
+    arena_core::ArenaCoreContract, arena_tournament_module::ArenaTournamentModuleContract,
 };
 use std::env;
 
@@ -41,6 +41,8 @@ fn main() {
 
             if args.contains(&"all".to_string()) {
                 deploy_daemon(daemon);
+            } else if args.contains(&"core".to_string()) {
+                deploy_core(daemon);
             }
         }
     }
@@ -51,6 +53,12 @@ fn deploy_daemon(daemon: Daemon) {
 
     let upload_res = arena.upload(false);
     assert!(upload_res.is_ok());
+}
+
+fn deploy_core(daemon: Daemon) {
+    let core = ArenaCoreContract::new(daemon);
+
+    core.upload().ok();
 }
 
 fn deploy_tournament(daemon: Daemon) {
