@@ -1868,6 +1868,18 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "patch"
+        ],
+        "properties": {
+          "patch": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       }
     ]
   },
