@@ -44,6 +44,9 @@ pub enum ContractError {
         expiration: Expiration,
     },
 
+    #[error("Competition has already been generated or expired")]
+    AlreadyExpired {},
+
     #[error("Entry fee was not paid")]
     EntryFeeNotPaid { fee: Uint128 },
 
