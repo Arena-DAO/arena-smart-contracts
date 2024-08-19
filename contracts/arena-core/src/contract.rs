@@ -8,8 +8,8 @@ use crate::{
     ContractError,
 };
 use arena_interface::core::{
-    ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
-    QueryMsg,
+    ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateExt, MigrateMsg, PrePropose,
+    QueryExt, QueryMsg,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -253,24 +253,30 @@ pub fn migrate(mut deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     match msg {
-        MigrateMsg::FromCompatible {} => {
-            if version.major == 1 && version.minor <= 4 {
-                migrate::from_v1_3_to_v1_4(deps.branch())?;
-            }
+        MigrateMsg::Extension { msg } => match msg {
+            MigrateExt::FromCompatible {} => {
+                if version.major == 1 && version.minor <= 4 {
+                    migrate::from_v1_3_to_v1_4(deps.branch())?;
+                }
 
-            if version.major == 1 && version.minor < 6 {
-                migrate::from_v1_4_to_v1_6(deps.branch())?;
-            }
+                if version.major == 1 && version.minor < 6 {
+                    migrate::from_v1_4_to_v1_6(deps.branch())?;
+                }
 
-            if version.major == 1 && version.minor < 8 {
-                // Rulesets state has changed. There's nothing important there atm, so we can just clear the state.
-                rulesets().clear(deps.storage);
+                if version.major == 1 && version.minor < 8 {
+                    // Rulesets state has changed. There's nothing important there atm, so we can just clear the state.
+                    rulesets().clear(deps.storage);
+                }
             }
-        }
-        MigrateMsg::Patch(patch) => {
-            if patch.as_str() == "v1.4" {
-                migrate::from_v1_3_to_v1_4(deps.branch())?;
+            MigrateExt::Patch(patch) => {
+                if patch.as_str() == "v1.4" {
+                    migrate::from_v1_3_to_v1_4(deps.branch())?;
+                }
             }
+        },
+        MigrateMsg::FromUnderV250 { policy: _ } => {
+            PrePropose::default().migrate(deps.branch(), msg)?;
+            ()
         }
     };
 

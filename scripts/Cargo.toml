@@ -17,9 +17,10 @@ cosmwasm-std = { workspace = true }
 orch-interface = { workspace = true }
 cw-utils = { workspace = true }
 cw-balance = { workspace = true }
-dao-cw-orch = { git = "https://github.com/Kayanski/dao-contracts", branch = "development" }
+dao-cw-orch = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
 itertools = { workspace = true }
 arena-competition-enrollment = { workspace = true }
+prost = "=0.12.3"
 
 # scripts specific
 dotenv = { version = "0.15.0" }
@@ -27,12 +28,14 @@ pretty_env_logger = { version = "0.5.0" }
 
 # cw-orch enabled DAO DAO deps
 [dev-dependencies]
-dao-interface-master = { package = "dao-interface", git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
-dao-interface = { git = "https://github.com/Kayanski/dao-contracts", branch = "development" }
-dao-proposal-sudo = { git = "https://github.com/Kayanski/dao-contracts", branch = "development", features = [
+prost_0_12_3 = { package = "prost", version = "=0.12.3" }
+prost = "0.12.6"
+dao-interface-master = { package = "dao-interface", git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
+dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
+dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface", features = [
     "library",
 ] }
-dao-proposal-single = { git = "https://github.com/Kayanski/dao-contracts", branch = "development", features = [
+dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface", features = [
     "library",
 ] }
-dao-voting = { git = "https://github.com/Kayanski/dao-contracts", branch = "development" }
+dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }

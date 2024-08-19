@@ -76,18 +76,22 @@ pub fn setup_core_context(
         voting_module_instantiate_info: ModuleInstantiateInfo {
             code_id: cw4_voting_module_id,
             msg: to_json_binary(&dao_voting_cw4::msg::InstantiateMsg {
-                cw4_group_code_id: cw4_id,
-                initial_members: members,
+                group_contract: dao_voting_cw4::msg::GroupContract::New {
+                    cw4_group_code_id: cw4_id,
+                    initial_members: members,
+                },
             })
             .unwrap(),
             admin: None,
             label: "voting module".to_string(),
+            funds: vec![],
         },
         proposal_modules_instantiate_info: vec![ModuleInstantiateInfo {
             code_id: dao_proposal_sudo_id,
             msg: to_json_binary(&sudo_instantiate).unwrap(),
             admin: None,
             label: "voting module".to_string(),
+            funds: vec![],
         }],
         initial_items: None,
     };
@@ -133,16 +137,17 @@ pub fn setup_core_context(
                                 percentage: dao_voting::threshold::PercentageThreshold::Majority {},
                             },
                             min_voting_period: None,
-                            max_voting_period: cw_utils_v16::Duration::Time(1209600u64),
+                            max_voting_period: Duration::Time(1209600u64),
                             only_members_execute: false,
                             allow_revoting: false,
+                            veto: None,
                             pre_propose_info:
                                 dao_voting::pre_propose::PreProposeInfo::ModuleMayPropose {
                                     info: ModuleInstantiateInfo {
                                         code_id: arena_core_id,
                                         msg: to_json_binary(&InstantiateMsg {
                                             deposit_info: None,
-                                            open_proposal_submission: false,
+                                            submission_policy: dao_voting::pre_propose::PreProposeSubmissionPolicy::Specific { dao_members: true, allowlist: vec![], denylist: vec![] },
                                             extension: InstantiateExt {
                                                 competition_modules_instantiate_info: None,
                                                 categories: Some(vec![NewCompetitionCategory {
@@ -179,6 +184,7 @@ pub fn setup_core_context(
                                         .unwrap(),
                                         admin: None,
                                         label: "Arena Core".to_string(),
+                                        funds: vec![],
                                     },
                                 },
                             close_proposal_on_execution_failure: true,
@@ -188,6 +194,7 @@ pub fn setup_core_context(
                             addr: dao_addr.to_string(),
                         }),
                         label: "Proposal Multiple".to_string(),
+                        funds: vec![],
                     }],
                     to_disable: vec![],
                 })

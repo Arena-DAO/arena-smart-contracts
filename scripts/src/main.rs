@@ -17,9 +17,7 @@ fn main() {
     if args.contains(&"deploy".to_string()) {
         if args.contains(&"testnet".to_string()) {
             // We start by creating a daemon. This daemon will be used to interact with the chain.
-            let daemon = Daemon::builder()
-                // set the network to use
-                .chain(cw_orch::daemon::networks::PION_1) // chain parameter
+            let daemon = Daemon::builder(cw_orch::daemon::networks::PION_1)
                 .build()
                 .unwrap();
 
@@ -33,9 +31,7 @@ fn main() {
         }
         if args.contains(&"mainnet".to_string()) {
             // We start by creating a daemon. This daemon will be used to interact with the chain.
-            let daemon = Daemon::builder()
-                // set the network to use
-                .chain(cw_orch::daemon::networks::NEUTRON_1) // chain parameter
+            let daemon = Daemon::builder(cw_orch::daemon::networks::NEUTRON_1)
                 .build()
                 .unwrap();
 

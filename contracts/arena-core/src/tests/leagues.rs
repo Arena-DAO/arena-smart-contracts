@@ -64,6 +64,7 @@ fn setup_league_context(
                             .unwrap(),
                             admin: None,
                             label: "arena-league-module".to_string(),
+                            funds: vec![],
                         }]),
                         to_disable: None,
                     },

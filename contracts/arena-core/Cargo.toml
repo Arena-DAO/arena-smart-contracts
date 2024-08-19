@@ -35,7 +35,6 @@ cw-multi-test = { workspace = true }
 arena-testing = { workspace = true }
 dao-voting = { workspace = true }
 cw-utils = { workspace = true }
-cw-utils-v16 = { version = "0.16", package = "cw-utils" }
 cw20 = "0.16"
 dao-proposal-sudo = { workspace = true }
 dao-pre-propose-single = { workspace = true }
@@ -43,6 +42,6 @@ arena-wager-module = { workspace = true }
 arena-escrow = { workspace = true }
 cw4-group = { workspace = true }
 cw-balance = { workspace = true }
-cw4 = "0.16"
+cw4 = "1.1.2"
 dao-voting-cw4 = { workspace = true }
 arena-league-module = { workspace = true }

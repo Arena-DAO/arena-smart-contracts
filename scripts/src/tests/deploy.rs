@@ -76,7 +76,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                         code_id: arena.arena_core.code_id()?,
                                         msg: to_json_binary(&InstantiateMsg {
                                             deposit_info: None,
-                                            open_proposal_submission: false,
+                                            submission_policy: dao_voting::pre_propose::PreProposeSubmissionPolicy::Specific { dao_members: true },
                                             extension: InstantiateExt {
                                                 competition_modules_instantiate_info: Some(vec![
                                                     dao_interface_master::state::ModuleInstantiateInfo {

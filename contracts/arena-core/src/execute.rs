@@ -14,7 +14,11 @@ use cosmwasm_std::{
 use cw_utils::Duration;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::error::PreProposeError;
-use dao_voting::proposal::SingleChoiceProposeMsg;
+use dao_voting::{
+    pre_propose::PreProposeSubmissionPolicy,
+    proposal::SingleChoiceProposeMsg,
+    voting::{SingleChoiceAutoVote, Vote},
+};
 
 use crate::{
     state::{
@@ -147,8 +151,30 @@ pub fn check_can_submit(
     who: &Addr,
     config: &dao_pre_propose_base::state::Config,
 ) -> Result<(), PreProposeError> {
-    if !config.open_proposal_submission {
-        ensure_active_competition_module(deps, who)?;
+    match &config.submission_policy {
+        PreProposeSubmissionPolicy::Anyone { denylist } => {
+            if !denylist.contains(&who) {
+                return Ok(());
+            }
+        }
+        PreProposeSubmissionPolicy::Specific {
+            dao_members,
+            allowlist,
+            denylist,
+        } => {
+            // denylist overrides all other settings
+            if !denylist.contains(&who) {
+                // if on the allowlist, return early
+                if allowlist.contains(&who) {
+                    return Ok(());
+                }
+
+                // check DAO membership only if not on the allowlist
+                if *dao_members {
+                    ensure_active_competition_module(deps, who)?;
+                }
+            }
+        }
     }
 
     Ok(())
@@ -207,6 +233,10 @@ pub fn propose(
         ProposeMessages::Propose(SingleChoiceProposeMsg {
             title: msg.title,
             description: msg.description,
+            vote: Some(SingleChoiceAutoVote {
+                vote: Vote::Yes,
+                rationale: None,
+            }),
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: info.sender.to_string(),
                 msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<

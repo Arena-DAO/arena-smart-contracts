@@ -5,7 +5,10 @@ use cw_balance::Distribution;
 use cw_utils::Duration;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_pre_propose_base::{
-    msg::{ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, QueryMsg as QueryBase},
+    msg::{
+        ExecuteMsg as ExecuteBase, InstantiateMsg as InstantiateBase, MigrateMsg as MigrateBase,
+        QueryMsg as QueryBase,
+    },
     state::PreProposeContract,
 };
 use dao_voting::proposal::SingleChoiceProposeMsg;
@@ -121,7 +124,7 @@ impl From<QueryExt> for QueryMsg {
 }
 
 #[cw_serde]
-pub enum MigrateMsg {
+pub enum MigrateExt {
     FromCompatible {},
     Patch(String),
 }
@@ -139,7 +142,9 @@ pub struct SudoMsg {
 pub type InstantiateMsg = InstantiateBase<InstantiateExt>;
 pub type ExecuteMsg = ExecuteBase<ProposeMessage, ExecuteExt>;
 pub type QueryMsg = QueryBase<QueryExt>;
-pub type PrePropose = PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, ProposeMessage>;
+pub type MigrateMsg = MigrateBase<MigrateExt>;
+pub type PrePropose =
+    PreProposeContract<InstantiateExt, ExecuteExt, QueryExt, MigrateExt, ProposeMessage>;
 
 #[cw_serde]
 pub struct DumpStateResponse {

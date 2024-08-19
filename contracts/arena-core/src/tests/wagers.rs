@@ -64,6 +64,7 @@ pub fn setup_wager_context(
                             .unwrap(),
                             admin: None,
                             label: "arena-wager-module".to_string(),
+                            funds: vec![],
                         }]),
                         to_disable: None,
                     },
