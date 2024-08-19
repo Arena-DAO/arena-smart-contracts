@@ -9,6 +9,8 @@ use cw2::set_contract_version;
 use crate::{
     execute,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    query,
+    state::VESTING_CONFIGURATION,
     ContractError,
 };
 
@@ -48,9 +50,11 @@ pub fn execute(
         }
         ExecuteMsg::UpdateOwnership(action) => {
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
-
             Ok(Response::default().add_attributes(ownership.into_attributes()))
         }
+        ExecuteMsg::Apply(msg) => execute::apply(deps, env, info, msg),
+        ExecuteMsg::AcceptApplication { applicant } => todo!(),
+        ExecuteMsg::RejectApplication { applicant, reason } => todo!(),
     }
 }
 
@@ -58,5 +62,16 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
+        QueryMsg::Application { applicant } => {
+            to_json_binary(&query::application(deps, applicant)?)
+        }
+        QueryMsg::Applications {
+            start_after,
+            limit,
+            status,
+        } => to_json_binary(&query::list_applications(deps, start_after, limit, status)?),
+        QueryMsg::VestingConfiguration {} => {
+            to_json_binary(&VESTING_CONFIGURATION.load(deps.storage)?)
+        }
     }
 }

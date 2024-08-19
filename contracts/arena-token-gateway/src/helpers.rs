@@ -1,6 +1,8 @@
+use std::fmt;
+
 use cosmwasm_std::{Attribute, Decimal, StdError, StdResult};
 
-use crate::state::VestingConfiguration;
+use crate::state::{ApplicationStatus, VestingConfiguration};
 
 impl VestingConfiguration {
     pub fn into_checked(&self) -> StdResult<()> {
@@ -26,5 +28,15 @@ impl VestingConfiguration {
             Attribute::new("vesting_time", self.vesting_time.to_string()),
             Attribute::new("denom", self.denom.clone()),
         ]
+    }
+}
+
+impl fmt::Display for ApplicationStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ApplicationStatus::Pending {} => write!(f, "pending"),
+            ApplicationStatus::Accepted {} => write!(f, "accepted"),
+            ApplicationStatus::Rejected { .. } => write!(f, "rejected"),
+        }
     }
 }

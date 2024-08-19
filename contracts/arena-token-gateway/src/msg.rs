@@ -1,7 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Uint128;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
-use crate::state::VestingConfiguration;
+use crate::state::{ApplicationInfo, ApplicationStatus, ProjectLink, VestingConfiguration};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -14,11 +15,11 @@ pub struct InstantiateMsg {
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
     Apply(ApplyMsg),
-    Accept {
-        application_id: u64,
+    AcceptApplication {
+        applicant: String,
     },
-    Reject {
-        application_id: u64,
+    RejectApplication {
+        applicant: String,
         reason: Option<String>,
     },
     UpdateVestingConfiguration {
@@ -32,13 +33,26 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(VestingConfiguration)]
     VestingConfiguration {},
+    #[returns(ApplicationResponse)]
+    Application { applicant: String },
+    #[returns(Vec<ApplicationResponse>)]
+    Applications {
+        start_after: Option<String>,
+        limit: Option<u32>,
+        status: Option<ApplicationStatus>,
+    },
+}
+
+#[cw_serde]
+pub struct ApplicationResponse {
+    pub applicant: String,
+    pub application: ApplicationInfo,
 }
 
 #[cw_serde]
 pub struct ApplyMsg {
-    pub applicant: String,
     pub title: String,
-    pub description: Option<String>,
-    pub project_info: Option<String>,
-    pub team_info: Option<String>,
+    pub description: String,
+    pub requested_amount: Uint128,
+    pub project_links: Vec<ProjectLink>,
 }

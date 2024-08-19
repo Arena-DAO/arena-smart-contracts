@@ -22,4 +22,10 @@ pub enum ContractError {
 
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
+
+    #[error("Application already exists for this applicant")]
+    ApplicationAlreadyExists {},
+
+    #[error("Invalid application status")]
+    InvalidApplicationStatus {},
 }

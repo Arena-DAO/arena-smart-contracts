@@ -26,3 +26,4 @@ dao-interface = { workspace = true }
 cw-orch = { workspace = true }
 cw-ownable = { workspace = true }
 cw-address-like = { workspace = true }
+cw-vesting = { workspace = true }
