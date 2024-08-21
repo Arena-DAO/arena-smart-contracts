@@ -8,6 +8,7 @@ use cosmwasm_std::{Addr, Decimal, Empty, Int128, StdError, StdResult, Uint128, U
 use itertools::Itertools;
 
 #[cw_serde]
+#[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteExt {
     ProcessMatch {
         league_id: Uint128,
@@ -25,6 +26,12 @@ pub enum ExecuteExt {
     },
 }
 
+impl From<ExecuteExt> for ExecuteMsg {
+    fn from(msg: ExecuteExt) -> Self {
+        ExecuteMsg::Extension { msg }
+    }
+}
+
 #[cw_serde]
 pub struct MatchResultMsg {
     pub match_number: Uint128,
@@ -32,7 +39,7 @@ pub struct MatchResultMsg {
 }
 
 #[cw_serde]
-#[derive(QueryResponses)]
+#[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum LeagueQueryExt {
     #[returns(Vec<MemberPoints>)]
     Leaderboard {
@@ -55,6 +62,12 @@ pub enum LeagueQueryExt {
         league_id: Uint128,
         round_number: Uint64,
     },
+}
+
+impl From<LeagueQueryExt> for QueryMsg {
+    fn from(msg: LeagueQueryExt) -> Self {
+        QueryMsg::QueryExtension { msg }
+    }
 }
 
 #[cw_serde]

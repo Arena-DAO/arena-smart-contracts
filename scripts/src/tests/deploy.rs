@@ -76,7 +76,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                         code_id: arena.arena_core.code_id()?,
                                         msg: to_json_binary(&InstantiateMsg {
                                             deposit_info: None,
-                                            submission_policy: dao_voting::pre_propose::PreProposeSubmissionPolicy::Specific { dao_members: true },
+                                            submission_policy: dao_voting_master::pre_propose::PreProposeSubmissionPolicy::Specific { dao_members: true, allowlist: vec![], denylist: vec![] },
                                             extension: InstantiateExt {
                                                 competition_modules_instantiate_info: Some(vec![
                                                     dao_interface_master::state::ModuleInstantiateInfo {
@@ -92,6 +92,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                             dao_interface_master::state::Admin::CoreModule {},
                                                         ),
                                                         label: "Tournament Module".to_string(),
+                                                        funds: vec![]
                                                     },
                                                     dao_interface_master::state::ModuleInstantiateInfo {
                                                         code_id: arena.arena_wager_module.code_id()?,
@@ -105,7 +106,8 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                         admin: Some(
                                                             dao_interface_master::state::Admin::CoreModule {},
                                                         ),
-                                                        label: "League Module".to_string(),
+                                                        label: "Wager Module".to_string(),
+                                                        funds: vec![]
                                                     },
                                                     dao_interface_master::state::ModuleInstantiateInfo {
                                                         code_id: arena.arena_league_module.code_id()?,
@@ -120,6 +122,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                                             dao_interface_master::state::Admin::CoreModule {},
                                                         ),
                                                         label: "League Module".to_string(),
+                                                        funds: vec![]
                                                     },
                                                 ]),
                                                 rulesets: None,

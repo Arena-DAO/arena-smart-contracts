@@ -276,7 +276,6 @@ pub fn migrate(mut deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response
         },
         MigrateMsg::FromUnderV250 { policy: _ } => {
             PrePropose::default().migrate(deps.branch(), msg)?;
-            ()
         }
     };
 

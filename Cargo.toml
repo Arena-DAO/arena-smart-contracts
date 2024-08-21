@@ -7,7 +7,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "1.8.2"
+version = "1.9.0"
 
 [profile.release]
 codegen-units = 1
@@ -50,7 +50,6 @@ rust_decimal_macros = "1.35.0"
 #arena_dao dependencies
 cw-competition-base = { path = "./packages/cw-competition-base" }
 cw-balance = { path = "./packages/cw-balance" }
-arena-testing = { path = "./packages/arena-testing" }
 arena-interface = { path = "./packages/arena-interface" }
 orch-interface = { path = "./packages/orch-interface" }
 glicko_2 = { path = "./packages/glicko_2" }

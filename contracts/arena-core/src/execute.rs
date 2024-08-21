@@ -153,7 +153,7 @@ pub fn check_can_submit(
 ) -> Result<(), PreProposeError> {
     match &config.submission_policy {
         PreProposeSubmissionPolicy::Anyone { denylist } => {
-            if !denylist.contains(&who) {
+            if !denylist.contains(who) {
                 return Ok(());
             }
         }
@@ -163,9 +163,9 @@ pub fn check_can_submit(
             denylist,
         } => {
             // denylist overrides all other settings
-            if !denylist.contains(&who) {
+            if !denylist.contains(who) {
                 // if on the allowlist, return early
-                if allowlist.contains(&who) {
+                if allowlist.contains(who) {
                     return Ok(());
                 }
 
