@@ -115,6 +115,8 @@ pub enum QueryExt {
         start_after: Option<(Uint128, String)>,
         limit: Option<u32>,
     },
+    #[returns(Option<Duration>)]
+    RatingPeriod {},
 }
 
 impl From<QueryExt> for QueryMsg {

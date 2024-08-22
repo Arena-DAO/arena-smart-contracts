@@ -3,7 +3,7 @@ use crate::{
     migrate, query,
     state::{
         competition_modules, rulesets, CompetitionModule, ARENA_TAX_CONFIG,
-        COMPETITION_CATEGORIES_COUNT, KEYS, RULESETS_COUNT,
+        COMPETITION_CATEGORIES_COUNT, KEYS, RATING_PERIOD, RULESETS_COUNT,
     },
     ContractError,
 };
@@ -241,6 +241,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             QueryExt::IsValidEnrollmentModule { addr } => {
                 to_json_binary(&query::is_valid_enrollment_module(deps, addr)?)
             }
+            QueryExt::RatingPeriod {} => to_json_binary(&RATING_PERIOD.may_load(deps.storage)?),
         },
         _ => PrePropose::default().query(deps, env, msg),
     };
