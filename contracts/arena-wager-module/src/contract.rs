@@ -10,13 +10,14 @@ use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Wager, WagerExt, WagerInstantiateExt,
+    ExecuteExt, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryExt, QueryMsg, Wager, WagerExt,
+    WagerInstantiateExt,
 };
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-wager-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub type CompetitionModule<'a> =
-    CompetitionModuleContract<'a, Empty, Empty, Empty, WagerExt, WagerInstantiateExt>;
+    CompetitionModuleContract<'a, Empty, ExecuteExt, QueryExt, WagerExt, WagerInstantiateExt>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
