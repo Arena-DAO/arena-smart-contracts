@@ -8,16 +8,14 @@ use cw_balance::{BalanceUnchecked, Distribution, MemberBalanceUnchecked, MemberP
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
 
-use crate::Arena;
+use crate::tests::helpers::setup_arena;
 
-use super::{ADMIN, DENOM, PREFIX};
+use super::{DENOM, PREFIX};
 
 #[test]
 fn test_create_wager() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     let user1 = mock.addr_make("user1");
     let user2 = mock.addr_make("user2");
@@ -81,9 +79,7 @@ fn test_create_wager() -> anyhow::Result<()> {
 #[test]
 fn test_process_wager() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
     let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
@@ -185,9 +181,7 @@ fn test_process_wager() -> anyhow::Result<()> {
 #[test]
 fn test_wager_with_additional_fees() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
     let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;

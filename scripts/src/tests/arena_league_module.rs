@@ -11,16 +11,14 @@ use cw_balance::{BalanceUnchecked, BalanceVerified, MemberBalanceUnchecked};
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
 
-use crate::Arena;
+use crate::tests::helpers::setup_arena;
 
-use super::{ADMIN, DENOM, PREFIX};
+use super::{DENOM, PREFIX};
 
 #[test]
 fn test_create_league() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     let teams: Vec<_> = (0..4)
         .map(|i| mock.addr_make_with_balance(format!("team{}", i), coins(10000, DENOM)))
@@ -86,9 +84,7 @@ fn test_create_league() -> anyhow::Result<()> {
 #[test]
 fn test_process_league_matches() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     let teams: Vec<_> = (0..4)
         .map(|i| mock.addr_make_with_balance(format!("team{}", i), coins(10000, DENOM)))
@@ -250,9 +246,7 @@ fn test_process_league_matches() -> anyhow::Result<()> {
 #[test]
 fn test_add_point_adjustments() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     let teams: Vec<_> = (0..4)
         .map(|i| mock.addr_make_with_balance(format!("team{}", i), coins(10000, DENOM)))

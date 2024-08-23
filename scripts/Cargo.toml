@@ -29,6 +29,7 @@ pretty_env_logger = { version = "0.5.0" }
 [dev-dependencies]
 dao-interface-master = { package = "dao-interface", git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
 dao-voting-master = { package = "dao-voting", git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
+dao-voting-cw4-master = { package = "dao-voting-cw4", git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
 dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
 dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface", features = [
     "library",

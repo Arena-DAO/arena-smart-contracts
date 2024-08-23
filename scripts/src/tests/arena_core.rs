@@ -6,16 +6,9 @@ use cw_orch::{anyhow, prelude::*};
 use cw_utils::Duration;
 use dao_proposal_sudo::msg::ExecuteMsgFns as _;
 
-use crate::Arena;
+use crate::tests::helpers::setup_arena;
 
-use super::{ADMIN, PREFIX};
-
-fn setup_arena(mock: &MockBech32) -> anyhow::Result<(Arena<MockBech32>, Addr)> {
-    let admin = mock.addr_make(ADMIN);
-    let arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
-    Ok((arena, admin))
-}
+use super::PREFIX;
 
 #[test]
 fn test_create_category() -> anyhow::Result<()> {

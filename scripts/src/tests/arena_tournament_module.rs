@@ -1,10 +1,12 @@
 use arena_interface::{
     competition::msg::EscrowInstantiateInfo,
-    core::QueryExtFns as ArenaCoreQueryExtFns,
-    escrow::{ExecuteMsgFns, QueryMsgFns},
+    core::QueryExtFns as _,
+    escrow::{ExecuteMsgFns as _, QueryMsgFns as _},
 };
 use arena_tournament_module::{
-    msg::{ExecuteExtFns, ExecuteMsg, MatchResultMsg, QueryExtFns, TournamentInstantiateExt},
+    msg::{
+        ExecuteExtFns as _, ExecuteMsg, MatchResultMsg, QueryExtFns as _, TournamentInstantiateExt,
+    },
     state::{EliminationType, MatchResult},
 };
 use cosmwasm_std::{coins, to_json_binary, Decimal, Uint128};
@@ -12,15 +14,14 @@ use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_orch::{environment::ChainState, prelude::*};
 use itertools::Itertools;
 
-use crate::Arena;
+use crate::{tests::helpers::setup_arena, Arena};
 
-use super::{ADMIN, DENOM, PREFIX};
+use super::{DENOM, PREFIX};
 
 #[test]
 pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let arena = Arena::deploy_on(mock.clone(), admin.clone())?;
+    let (arena, _admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -110,9 +111,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
 #[test]
 pub fn test_single_elimination_tournament() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -271,9 +270,7 @@ pub fn test_single_elimination_tournament() -> Result<(), CwOrchError> {
 #[test]
 pub fn test_ratings() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -496,9 +493,7 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
 #[test]
 pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -653,9 +648,7 @@ pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(),
 #[test]
 pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -884,9 +877,7 @@ pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchEr
 #[test]
 pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -1107,9 +1098,7 @@ pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
 #[test]
 pub fn test_single_elimination_6() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -1249,9 +1238,7 @@ pub fn test_single_elimination_6() -> Result<(), CwOrchError> {
 #[test]
 pub fn test_double_elimination_many_teams() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -1288,9 +1275,7 @@ pub fn test_double_elimination_many_teams() -> Result<(), CwOrchError> {
 #[test]
 pub fn test_match_updates() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?; // Ensure tax is available for competition
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
