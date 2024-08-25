@@ -59,6 +59,8 @@ pub fn execute(
         ExecuteMsg::RejectApplication { applicant, reason } => {
             execute::reject_application(deps, env, info, applicant, reason)
         }
+        ExecuteMsg::Update(msg) => execute::update(deps, env, info, msg),
+        ExecuteMsg::Withdraw {} => execute::withdraw(deps, env, info),
     }
 }
 

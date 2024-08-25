@@ -15,6 +15,8 @@ pub struct InstantiateMsg {
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
     Apply(ApplyMsg),
+    Update(ApplyMsg),
+    Withdraw {},
     AcceptApplication {
         applicant: String,
     },

@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, Response, WasmMsg};
+use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, Response, StdError, WasmMsg};
 use cw_ownable::assert_owner;
 use cw_vesting::vesting::Schedule;
 
@@ -154,4 +154,60 @@ pub fn reject_application(
             "reason",
             reason.unwrap_or_else(|| "No reason provided".to_string()),
         ))
+}
+
+pub fn update(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    msg: ApplyMsg,
+) -> Result<Response, ContractError> {
+    let applicant = info.sender;
+
+    // Load the application
+    let application = applications().load(deps.storage, &applicant)?;
+
+    // Check if the application is in the Pending state
+    if !matches!(application.status, ApplicationStatus::Pending {}) {
+        return Err(ContractError::InvalidApplicationStatus {});
+    }
+
+    // Update the application fields
+    let new_application = ApplicationInfo {
+        title: msg.title,
+        description: msg.description,
+        requested_amount: msg.requested_amount,
+        project_links: msg.project_links,
+        status: ApplicationStatus::Pending {},
+    };
+
+    // Save the updated application
+    applications().replace(
+        deps.storage,
+        &applicant,
+        Some(&new_application),
+        Some(&application),
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_application")
+        .add_attribute("applicant", applicant))
+}
+
+pub fn withdraw(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    let applicant = info.sender;
+
+    // Check if the application exists
+    if !applications().has(deps.storage, &applicant) {
+        return Err(ContractError::StdError(StdError::generic_err(
+            "Application does not exist",
+        )));
+    }
+
+    // Remove the application
+    applications().remove(deps.storage, &applicant)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "withdraw_application")
+        .add_attribute("applicant", applicant))
 }
