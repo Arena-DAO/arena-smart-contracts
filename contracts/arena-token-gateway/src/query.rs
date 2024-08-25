@@ -55,5 +55,5 @@ pub fn list_applications(
             .collect(),
     };
 
-    Ok(applications?)
+    applications
 }

@@ -119,3 +119,39 @@ pub fn accept_application(
         .add_attribute("upfront_amount", upfront_amount.to_string())
         .add_attribute("vesting_amount", vesting_amount.to_string()))
 }
+
+pub fn reject_application(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    applicant: String,
+    reason: Option<String>,
+) -> Result<Response, ContractError> {
+    // Assert that the sender is the contract owner
+    assert_owner(deps.storage, &info.sender)?;
+
+    // Validate and convert the applicant address
+    let applicant_addr = deps.api.addr_validate(&applicant)?;
+
+    // Load the application
+    let mut application = applications().load(deps.storage, &applicant_addr)?;
+
+    // Check if the application is in the Pending state
+    if !matches!(application.status, ApplicationStatus::Pending {}) {
+        return Err(ContractError::InvalidApplicationStatus {});
+    }
+
+    // Update the application status to Rejected
+    application.status = ApplicationStatus::Rejected {
+        reason: reason.clone(),
+    };
+    applications().save(deps.storage, &applicant_addr, &application)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "reject_application")
+        .add_attribute("applicant", applicant)
+        .add_attribute(
+            "reason",
+            reason.unwrap_or_else(|| "No reason provided".to_string()),
+        ))
+}

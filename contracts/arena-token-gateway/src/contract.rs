@@ -53,13 +53,17 @@ pub fn execute(
             Ok(Response::default().add_attributes(ownership.into_attributes()))
         }
         ExecuteMsg::Apply(msg) => execute::apply(deps, env, info, msg),
-        ExecuteMsg::AcceptApplication { applicant } => todo!(),
-        ExecuteMsg::RejectApplication { applicant, reason } => todo!(),
+        ExecuteMsg::AcceptApplication { applicant } => {
+            execute::accept_application(deps, env, info, applicant)
+        }
+        ExecuteMsg::RejectApplication { applicant, reason } => {
+            execute::reject_application(deps, env, info, applicant, reason)
+        }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::Application { applicant } => {
