@@ -22,7 +22,6 @@ cw2 = { workspace = true }
 cw-utils = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-dao-interface = { workspace = true }
 cw-orch = { workspace = true }
 cw-ownable = { workspace = true }
 cw-address-like = { workspace = true }

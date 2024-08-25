@@ -247,7 +247,6 @@ dependencies = [
  "cw-utils 1.0.3",
  "cw-vesting 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
  "cw2 1.1.2",
- "dao-interface 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
  "serde",
  "thiserror",
 ]
