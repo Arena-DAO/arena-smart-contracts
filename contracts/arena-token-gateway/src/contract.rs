@@ -28,6 +28,8 @@ pub fn instantiate(
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(&msg.owner))?;
 
+    // TODO: connect a cw-payroll-factory here for instantiating the vesting contracts
+
     Ok(
         Response::default().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
