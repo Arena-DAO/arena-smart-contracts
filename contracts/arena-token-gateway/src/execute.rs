@@ -1,5 +1,8 @@
-use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, Response, StdError, WasmMsg};
+use cosmwasm_std::{
+    ensure_eq, to_json_binary, Coin, DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
+};
 use cw_ownable::assert_owner;
+use cw_utils::one_coin;
 use cw_vesting::vesting::Schedule;
 
 use crate::{
@@ -88,6 +91,19 @@ pub fn accept_application(
     // Load the vesting configuration
     let vesting_config = VESTING_CONFIGURATION.load(deps.storage)?;
 
+    // Ensure the requested amount is being received
+    let payment = one_coin(&info)?;
+    ensure_eq!(
+        payment,
+        Coin {
+            amount: application.requested_amount,
+            denom: vesting_config.denom.clone()
+        },
+        ContractError::StdError(StdError::generic_err(
+            "Requested amount was not send in funds"
+        ))
+    );
+
     // Calculate the vesting amount (total requested amount minus the upfront amount)
     let upfront_amount = application.requested_amount * vesting_config.upfront_ratio;
     let vesting_amount = application.requested_amount - upfront_amount;
@@ -106,7 +122,7 @@ pub fn accept_application(
             schedule: Schedule::SaturatingLinear,
             start_time: Some(env.block.time),
             vesting_duration_seconds: 31_536_000, // 365 days * 24 hours * 60 minutes * 60 seconds
-            unbonding_duration_seconds: 31_536_000,
+            unbonding_duration_seconds: 1_209_600,
         })?,
         funds: vec![],
         label: CONTRACT_NAME.to_string(),
@@ -167,8 +183,11 @@ pub fn update(
     // Load the application
     let application = applications().load(deps.storage, &applicant)?;
 
-    // Check if the application is in the Pending state
-    if !matches!(application.status, ApplicationStatus::Pending {}) {
+    // Check if the application is in the Pending or Rejected state
+    if !matches!(
+        application.status,
+        ApplicationStatus::Pending {} | ApplicationStatus::Rejected { .. }
+    ) {
         return Err(ContractError::InvalidApplicationStatus {});
     }
 

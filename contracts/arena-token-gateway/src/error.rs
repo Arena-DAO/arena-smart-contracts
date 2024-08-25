@@ -1,6 +1,6 @@
 use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
 use cw_ownable::OwnershipError;
-use cw_utils::ParseReplyError;
+use cw_utils::{ParseReplyError, PaymentError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -22,6 +22,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
+
+    #[error("{0}")]
+    PaymentError(#[from] PaymentError),
 
     #[error("Application already exists for this applicant")]
     ApplicationAlreadyExists {},
