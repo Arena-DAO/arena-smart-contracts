@@ -1,4 +1,7 @@
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cosmwasm_std::{
+    CheckedFromRatioError, CheckedMultiplyFractionError, DecimalRangeExceeded, OverflowError,
+    StdError,
+};
 use cw_ownable::OwnershipError;
 use cw_utils::{ParseReplyError, PaymentError};
 use thiserror::Error;
@@ -25,6 +28,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error("{0}")]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
     #[error("Application already exists for this applicant")]
     ApplicationAlreadyExists {},

@@ -20,6 +20,7 @@ cw-balance = { workspace = true }
 dao-cw-orch = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
 itertools = { workspace = true }
 arena-competition-enrollment = { workspace = true }
+arena-token-gateway = { workspace = true }
 
 # scripts specific
 dotenv = { version = "0.15.0" }
@@ -38,3 +39,4 @@ dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch
     "library",
 ] }
 dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
+cw-vesting  = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }

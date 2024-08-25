@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    ensure_eq, to_json_binary, Coin, DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
+    coins, ensure_eq, to_json_binary, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+    StdError, WasmMsg,
 };
 use cw_ownable::assert_owner;
 use cw_utils::one_coin;
@@ -105,8 +106,10 @@ pub fn accept_application(
     );
 
     // Calculate the vesting amount (total requested amount minus the upfront amount)
-    let upfront_amount = application.requested_amount * vesting_config.upfront_ratio;
-    let vesting_amount = application.requested_amount - upfront_amount;
+    let upfront_amount = application
+        .requested_amount
+        .checked_mul_floor(vesting_config.upfront_ratio)?;
+    let vesting_amount = application.requested_amount.checked_sub(upfront_amount)?;
 
     // Prepare the instantiate message for the vesting contract
     let vesting_msg = WasmMsg::Instantiate {
@@ -124,12 +127,19 @@ pub fn accept_application(
             vesting_duration_seconds: 31_536_000, // 365 days * 24 hours * 60 minutes * 60 seconds
             unbonding_duration_seconds: 1_209_600,
         })?,
-        funds: vec![],
+        funds: coins(vesting_amount.u128(), vesting_config.denom.clone()),
         label: CONTRACT_NAME.to_string(),
     };
 
+    // Prepare the send messsage for the upfront amount
+    let send_msg = CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
+        to_address: applicant.to_string(),
+        amount: coins(upfront_amount.u128(), vesting_config.denom),
+    });
+
     Ok(Response::new()
         .add_message(vesting_msg)
+        .add_message(send_msg)
         .add_attribute("action", "accept_application")
         .add_attribute("applicant", applicant)
         .add_attribute("upfront_amount", upfront_amount.to_string())
