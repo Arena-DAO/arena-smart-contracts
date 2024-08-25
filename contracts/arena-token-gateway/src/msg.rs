@@ -17,6 +17,7 @@ pub enum ExecuteMsg {
     Apply(ApplyMsg),
     Update(ApplyMsg),
     Withdraw {},
+    #[cw_orch(payable)]
     AcceptApplication {
         applicant: String,
     },
@@ -57,4 +58,9 @@ pub struct ApplyMsg {
     pub description: String,
     pub requested_amount: Uint128,
     pub project_links: Vec<ProjectLink>,
+}
+
+#[cw_serde]
+pub enum MigrateMsg {
+    FromCompatible {},
 }
