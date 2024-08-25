@@ -7,7 +7,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "1.8.2"
+version = "1.9.0"
 
 [profile.release]
 codegen-units = 1
@@ -21,11 +21,11 @@ incremental = false
 overflow-checks = true
 
 [workspace.dependencies]
-cosmwasm-std = { version = "1.5.5", features = ["cosmwasm_1_4"] }
+cosmwasm-std = { version = "1.5.7", features = ["cosmwasm_1_4"] }
 cosmwasm-storage = "1.5.2"
-cosmwasm-schema = "1.5.5"
+cosmwasm-schema = "1.5.7"
 cw-utils = "1.0.3"
-thiserror = "1.0.60"
+thiserror = "1.0.63"
 cw-storage-plus = "1.2.0"
 cw-multi-test = { version = "1.2.0", features = ["cosmwasm_1_4"] }
 cw2 = "1.1.2"
@@ -33,24 +33,23 @@ cw20 = "1.1.2"
 cw721 = "0.18.0"
 cw20-base = { version = "1.1.2", features = ["library"] }
 cw721-base = { version = "0.18", features = ["library"] }
-anyhow = "1.0.83"
+anyhow = "1.0.86"
 cw4-group = { version = "1.1.2", features = ["library"] }
 rand = "0.8.5"
 cw4 = "1.1.2"
-serde = { version = "1.0.202", default-features = false, features = ["derive"] }
+serde = { version = "1.0.208", default-features = false, features = ["derive"] }
 cw-paginate = "0.2.1"
 cw-ownable = "0.5.1"
 cw-address-like = "1.0.4"
 itertools = "0.13.0"
-cw-orch = "0.23.0"
+cw-orch = "0.24.1"
 semver = "1.0.23"
 rust_decimal = "1.35.0"
-rust_decimal_macros = "1.34.2"
+rust_decimal_macros = "1.35.0"
 
 #arena_dao dependencies
 cw-competition-base = { path = "./packages/cw-competition-base" }
 cw-balance = { path = "./packages/cw-balance" }
-arena-testing = { path = "./packages/arena-testing" }
 arena-interface = { path = "./packages/arena-interface" }
 orch-interface = { path = "./packages/orch-interface" }
 glicko_2 = { path = "./packages/glicko_2" }
@@ -63,26 +62,29 @@ arena-tournament-module = { path = "./contracts/arena-tournament-module" }
 arena-competition-enrollment = { path = "./contracts/arena-competition-enrollment" }
 
 #dao dependencies
-dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
-dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
+cw-vesting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }
-dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }
-dao-pre-propose-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }
-dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main" }
-dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+dao-pre-propose-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }
-dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
+dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }
-dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }
-dao-dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "main", features = [
+dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+	"library",
+] }
+dao-dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }

@@ -3,13 +3,13 @@ use crate::{
     migrate, query,
     state::{
         competition_modules, rulesets, CompetitionModule, ARENA_TAX_CONFIG,
-        COMPETITION_CATEGORIES_COUNT, KEYS, RULESETS_COUNT,
+        COMPETITION_CATEGORIES_COUNT, KEYS, RATING_PERIOD, RULESETS_COUNT,
     },
     ContractError,
 };
 use arena_interface::core::{
-    ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateMsg, PrePropose, QueryExt,
-    QueryMsg,
+    ExecuteExt, ExecuteMsg, InstantiateExt, InstantiateMsg, MigrateExt, MigrateMsg, PrePropose,
+    QueryExt, QueryMsg,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -241,6 +241,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             QueryExt::IsValidEnrollmentModule { addr } => {
                 to_json_binary(&query::is_valid_enrollment_module(deps, addr)?)
             }
+            QueryExt::RatingPeriod {} => to_json_binary(&RATING_PERIOD.may_load(deps.storage)?),
         },
         _ => PrePropose::default().query(deps, env, msg),
     };
@@ -253,24 +254,29 @@ pub fn migrate(mut deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     match msg {
-        MigrateMsg::FromCompatible {} => {
-            if version.major == 1 && version.minor <= 4 {
-                migrate::from_v1_3_to_v1_4(deps.branch())?;
-            }
+        MigrateMsg::Extension { msg } => match msg {
+            MigrateExt::FromCompatible {} => {
+                if version.major == 1 && version.minor <= 4 {
+                    migrate::from_v1_3_to_v1_4(deps.branch())?;
+                }
 
-            if version.major == 1 && version.minor < 6 {
-                migrate::from_v1_4_to_v1_6(deps.branch())?;
-            }
+                if version.major == 1 && version.minor < 6 {
+                    migrate::from_v1_4_to_v1_6(deps.branch())?;
+                }
 
-            if version.major == 1 && version.minor < 8 {
-                // Rulesets state has changed. There's nothing important there atm, so we can just clear the state.
-                rulesets().clear(deps.storage);
+                if version.major == 1 && version.minor < 8 {
+                    // Rulesets state has changed. There's nothing important there atm, so we can just clear the state.
+                    rulesets().clear(deps.storage);
+                }
             }
-        }
-        MigrateMsg::Patch(patch) => {
-            if patch.as_str() == "v1.4" {
-                migrate::from_v1_3_to_v1_4(deps.branch())?;
+            MigrateExt::Patch(patch) => {
+                if patch.as_str() == "v1.4" {
+                    migrate::from_v1_3_to_v1_4(deps.branch())?;
+                }
             }
+        },
+        MigrateMsg::FromUnderV250 { policy: _ } => {
+            PrePropose::default().migrate(deps.branch(), msg)?;
         }
     };
 

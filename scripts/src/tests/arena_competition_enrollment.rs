@@ -1,25 +1,23 @@
 use arena_competition_enrollment::msg::{
-    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns, QueryMsgFns,
+    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, QueryMsgFns as _,
 };
 use arena_competition_enrollment::state::CompetitionType;
-use arena_interface::competition::msg::{ExecuteBaseFns, QueryBaseFns};
-use arena_interface::escrow::ExecuteMsgFns as ArenaCoreExecuteMsgFns;
+use arena_interface::competition::msg::{ExecuteBaseFns as _, QueryBaseFns as _};
+use arena_interface::escrow::ExecuteMsgFns as _;
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
-use dao_proposal_sudo::msg::ExecuteMsgFns as DaoProposalExecuteMsgFns;
+use dao_proposal_sudo::msg::ExecuteMsgFns as _;
 
-use crate::Arena;
+use crate::tests::helpers::setup_arena;
 
-use super::{ADMIN, DENOM, PREFIX};
+use super::{DENOM, PREFIX};
 
 #[test]
 fn test_competition_enrollment() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -144,9 +142,7 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
 #[test]
 fn test_invalid_enrollment() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -191,9 +187,7 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
 #[test]
 fn test_enrollment_capacity() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -269,9 +263,7 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
 #[test]
 fn test_successful_tournament_creation() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -354,9 +346,7 @@ fn test_successful_tournament_creation() -> anyhow::Result<()> {
 #[test]
 fn test_successful_wager_creation() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let team1 = mock.addr_make_with_balance("team 1", coins(100_000u128, DENOM))?;
@@ -434,9 +424,7 @@ fn test_successful_wager_creation() -> anyhow::Result<()> {
 #[test]
 fn test_successful_league_creation() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];
@@ -523,9 +511,7 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
 #[test]
 fn test_trigger_expiration_without_escrow() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Register the enrollment module
     arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
@@ -602,9 +588,7 @@ fn test_trigger_expiration_without_escrow() -> anyhow::Result<()> {
 #[test]
 fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Register the enrollment module
     arena.dao_dao.dao_proposal_sudo.set_sender(&admin);
@@ -696,9 +680,7 @@ fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
 #[test]
 fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Create an enrollment with min_members = 4
     arena.arena_competition_enrollment.set_sender(&admin);
@@ -774,9 +756,7 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
 #[test]
 fn test_huge_tournament() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
-    let admin = mock.addr_make(ADMIN);
-    let mut arena = Arena::deploy_on(mock.clone(), admin.clone())?;
-    mock.next_block()?;
+    let (mut arena, admin) = setup_arena(&mock)?;
 
     // Set teams
     let mut teams = vec![];

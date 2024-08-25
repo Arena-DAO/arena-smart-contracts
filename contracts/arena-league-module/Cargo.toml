@@ -28,3 +28,4 @@ cw-ownable = { workspace = true }
 itertools = { workspace = true }
 cw-balance = { workspace = true }
 cw-paginate = { workspace = true }
+cw-orch = { workspace = true }

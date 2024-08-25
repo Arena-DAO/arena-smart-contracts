@@ -20,3 +20,4 @@ cosmwasm-std = { workspace = true }
 cw2 = { workspace = true }
 cw-competition-base = { workspace = true }
 arena-interface = { workspace = true }
+cw-orch = { workspace = true }

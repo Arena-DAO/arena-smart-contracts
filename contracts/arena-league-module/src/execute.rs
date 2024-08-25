@@ -196,10 +196,7 @@ pub fn process_matches(
 
     // Distribute funds if all matches have been processed.
     if league.extension.processed_matches >= league.extension.matches {
-        let mut leaderboard = query::leaderboard(deps.as_ref(), league_id, None)?;
-
-        // Sort the leaderboard based on points.
-        leaderboard.sort_by(|x, y| y.points.cmp(&x.points));
+        let leaderboard = query::leaderboard(deps.as_ref(), league_id, None)?;
 
         let placements = league.extension.distribution.len();
         let mut placement_members: Vec<Vec<Addr>> = vec![];

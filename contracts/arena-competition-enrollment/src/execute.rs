@@ -339,9 +339,7 @@ pub fn trigger_expiration(
                 )?,
             }
         }),
-        _ => Err(ContractError::StdError(StdError::generic_err(
-            "The competition has already been generated",
-        ))),
+        _ => Err(ContractError::AlreadyExpired {}),
     }?;
 
     let sub_msg = SubMsg::reply_always(
@@ -383,9 +381,7 @@ pub fn enroll(
 
     ensure!(
         !entry.has_triggered_expiration,
-        ContractError::StdError(StdError::generic_err(
-            "Competition has already been generated"
-        ))
+        ContractError::AlreadyExpired {}
     );
     if let Some(entry_fee) = &entry.entry_fee {
         let paid_amount = must_pay(&info, &entry_fee.denom)?;
@@ -440,9 +436,7 @@ pub fn withdraw(
     // Ensure the competition hasn't been triggered yet and is still in Pending state
     ensure!(
         !entry.has_triggered_expiration || is_pending,
-        ContractError::StdError(StdError::generic_err(
-            "Enrollment has already been expired or competition has been created, withdrawal not possible"
-        ))
+        ContractError::AlreadyExpired {}
     );
 
     // Remove the member from the enrollment
