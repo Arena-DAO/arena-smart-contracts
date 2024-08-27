@@ -15,15 +15,9 @@ use arena_interface::{
 
 use crate::Arena;
 
-#[derive(Clone)]
-pub struct ArenaDeployData {
-    pub admin: Addr,
-    pub voting_module_override: Option<ModuleInstantiateInfo>,
-}
-
 impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
     type Error = CwOrchError;
-    type DeployData = ArenaDeployData;
+    type DeployData = Addr;
 
     fn store_on(chain: Chain) -> Result<Self, Self::Error> {
         let arena = Arena::new(chain.clone());
@@ -31,34 +25,31 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
         Ok(arena)
     }
 
-    fn deploy_on(chain: Chain, deploy_data: ArenaDeployData) -> Result<Self, Self::Error> {
+    fn deploy_on(chain: Chain, admin: Addr) -> Result<Self, Self::Error> {
         let arena = Self::store_on(chain)?;
 
         // Prepare voting module info
-        let voting_module_info =
-            deploy_data
-                .voting_module_override
-                .unwrap_or_else(|| ModuleInstantiateInfo {
-                    code_id: arena
-                        .dao_dao
-                        .dao_proposal_sudo
-                        .code_id()
-                        .expect("Failed to get dao_proposal_sudo code_id"),
-                    msg: to_json_binary(&dao_proposal_sudo::msg::InstantiateMsg {
-                        root: deploy_data.admin.to_string(),
-                    })
-                    .expect("Failed to serialize dao_proposal_sudo InstantiateMsg"),
-                    admin: Some(Admin::CoreModule {}),
-                    label: "sudo voting module".to_string(),
-                    funds: vec![],
-                });
+        let voting_module_info = ModuleInstantiateInfo {
+            code_id: arena
+                .dao_dao
+                .dao_proposal_sudo
+                .code_id()
+                .expect("Failed to get dao_proposal_sudo code_id"),
+            msg: to_json_binary(&dao_proposal_sudo::msg::InstantiateMsg {
+                root: admin.to_string(),
+            })
+            .expect("Failed to serialize dao_proposal_sudo InstantiateMsg"),
+            admin: Some(Admin::CoreModule {}),
+            label: "sudo voting module".to_string(),
+            funds: vec![],
+        };
 
         // Prepare proposal modules
         let proposal_modules = vec![
             ModuleInstantiateInfo {
                 code_id: arena.dao_dao.dao_proposal_sudo.code_id()?,
                 msg: to_json_binary(&dao_proposal_sudo::msg::InstantiateMsg {
-                    root: deploy_data.admin.to_string(),
+                    root: admin.to_string(),
                 })?,
                 admin: Some(Admin::CoreModule {}),
                 label: "sudo proposal module".to_string(),

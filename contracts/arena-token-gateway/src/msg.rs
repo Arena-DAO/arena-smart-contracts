@@ -6,6 +6,7 @@ use crate::state::{ApplicationInfo, ApplicationStatus, ProjectLink, VestingConfi
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    /// The DAO
     pub owner: String,
     pub config: VestingConfiguration,
 }

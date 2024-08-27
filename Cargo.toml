@@ -46,6 +46,7 @@ cw-orch = "0.24.1"
 semver = "1.0.23"
 rust_decimal = "1.35.0"
 rust_decimal_macros = "1.35.0"
+serde_json = "1.0.127"
 
 #arena_dao dependencies
 cw-competition-base = { path = "./packages/cw-competition-base" }

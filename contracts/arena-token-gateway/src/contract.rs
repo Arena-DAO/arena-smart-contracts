@@ -8,6 +8,7 @@ use cw2::{ensure_from_older_version, set_contract_version};
 
 use crate::{
     execute,
+    helpers::get_payroll_address,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
     state::VESTING_CONFIGURATION,
@@ -28,7 +29,8 @@ pub fn instantiate(
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(&msg.owner))?;
 
-    // TODO: connect a cw-payroll-factory here for instantiating the vesting contracts
+    // Ensure we have a payroll contract set up on the DAO
+    let _ = get_payroll_address(deps.as_ref(), &env.block.chain_id)?;
 
     Ok(
         Response::default().add_message(CosmosMsg::Wasm(WasmMsg::Execute {

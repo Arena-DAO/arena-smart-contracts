@@ -7,7 +7,7 @@ use cw_utils::one_coin;
 use cw_vesting::vesting::Schedule;
 
 use crate::{
-    contract::CONTRACT_NAME,
+    helpers::get_payroll_address,
     msg::ApplyMsg,
     state::{
         applications, ApplicationInfo, ApplicationStatus, VestingConfiguration,
@@ -111,10 +111,12 @@ pub fn accept_application(
         .checked_mul_floor(vesting_config.upfront_ratio)?;
     let vesting_amount = application.requested_amount.checked_sub(upfront_amount)?;
 
+    // Get the payroll factory address
+    let payroll_factory = get_payroll_address(deps.as_ref(), &env.block.chain_id)?;
+
     // Prepare the instantiate message for the vesting contract
-    let vesting_msg = WasmMsg::Instantiate {
-        admin: Some(info.sender.to_string()),
-        code_id: vesting_config.cw_vesting_code_id,
+    let vesting_data = to_json_binary(&WasmMsg::Execute {
+        contract_addr: payroll_factory.to_string(),
         msg: to_json_binary(&cw_vesting::msg::InstantiateMsg {
             owner: Some(info.sender.to_string()),
             recipient: applicant.clone(),
@@ -128,8 +130,7 @@ pub fn accept_application(
             unbonding_duration_seconds: 1_209_600,
         })?,
         funds: coins(vesting_amount.u128(), vesting_config.denom.clone()),
-        label: CONTRACT_NAME.to_string(),
-    };
+    })?;
 
     // Prepare the send messsage for the upfront amount
     let send_msg = CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
@@ -138,7 +139,7 @@ pub fn accept_application(
     });
 
     Ok(Response::new()
-        .add_message(vesting_msg)
+        .set_data(vesting_data)
         .add_message(send_msg)
         .add_attribute("action", "accept_application")
         .add_attribute("applicant", applicant)

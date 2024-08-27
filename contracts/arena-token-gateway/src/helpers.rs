@@ -1,8 +1,13 @@
 use std::fmt;
 
-use cosmwasm_std::{Attribute, Decimal, StdError, StdResult};
+use cosmwasm_std::{Addr, Attribute, Decimal, Deps, StdError, StdResult};
+use dao_interface::query::GetItemResponse;
+use serde_json::Value;
 
-use crate::state::{ApplicationStatus, VestingConfiguration};
+use crate::{
+    state::{ApplicationStatus, VestingConfiguration},
+    ContractError,
+};
 
 impl VestingConfiguration {
     pub fn into_checked(&self) -> StdResult<()> {
@@ -39,4 +44,36 @@ impl fmt::Display for ApplicationStatus {
             ApplicationStatus::Rejected { .. } => write!(f, "rejected"),
         }
     }
+}
+
+pub fn get_payroll_address(deps: Deps, chain_id: &str) -> Result<Addr, ContractError> {
+    let ownership = cw_ownable::get_ownership(deps.storage)?;
+
+    let owner = ownership.owner.ok_or(ContractError::OwnershipError(
+        cw_ownable::OwnershipError::NoOwner,
+    ))?;
+
+    let get_item_response: GetItemResponse = deps.querier.query_wasm_smart(
+        owner.to_string(),
+        &dao_interface::msg::QueryMsg::GetItem {
+            key: "widget:vesting".to_owned(),
+        },
+    )?;
+
+    let value = get_item_response.item.ok_or_else(|| {
+        ContractError::StdError(StdError::generic_err("Could not find the payroll factory"))
+    })?;
+
+    let v: Value = serde_json::from_str(&value)
+        .map_err(|e| ContractError::StdError(StdError::parse_err("JSON", e.to_string())))?;
+
+    let address = v["factories"][chain_id]["address"]
+        .as_str()
+        .ok_or_else(|| {
+            ContractError::StdError(StdError::generic_err("Address not found or not a string"))
+        })?;
+
+    deps.api
+        .addr_validate(address)
+        .map_err(ContractError::StdError)
 }

@@ -1,4 +1,4 @@
-use crate::tests::helpers::setup_arena;
+use crate::tests::helpers::{setup_arena, setup_vesting};
 use arena_token_gateway::msg::{ApplyMsg, ExecuteMsgFns as _, QueryMsgFns as _};
 use cosmwasm_std::{coins, Decimal, Uint128};
 use cw_orch::{anyhow, prelude::*};
@@ -9,19 +9,19 @@ use super::{DENOM, PREFIX};
 fn test_instantiate_arena_token_gateway() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (arena, admin) = setup_arena(&mock)?;
+    setup_vesting(&arena, mock.block_info()?.chain_id, &admin)?;
 
     // Instantiate the arena_token_gateway
     arena.arena_token_gateway.instantiate(
         &arena_token_gateway::msg::InstantiateMsg {
-            owner: admin.to_string(),
+            owner: arena.dao_dao.dao_core.addr_str()?,
             config: arena_token_gateway::state::VestingConfiguration {
                 upfront_ratio: Decimal::percent(10),
                 vesting_time: 31_536_000, // 1 year in seconds
                 denom: DENOM.to_string(),
-                cw_vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
             },
         },
-        Some(&admin),
+        Some(&arena.dao_dao.dao_core.address()?),
         None,
     )?;
 
@@ -39,21 +39,24 @@ fn test_instantiate_arena_token_gateway() -> anyhow::Result<()> {
 fn test_apply_and_accept_application() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
+    setup_vesting(&arena, mock.block_info()?.chain_id, &admin)?;
 
-    mock.add_balance(&admin, coins(1_000_000_000_000, DENOM))?;
+    mock.add_balance(
+        &arena.dao_dao.dao_core.address()?,
+        coins(1_000_000_000_000, DENOM),
+    )?;
 
     // Instantiate the arena_token_gateway (similar to previous test)
     arena.arena_token_gateway.instantiate(
         &arena_token_gateway::msg::InstantiateMsg {
-            owner: admin.to_string(),
+            owner: arena.dao_dao.dao_core.addr_str()?,
             config: arena_token_gateway::state::VestingConfiguration {
                 upfront_ratio: Decimal::percent(10),
                 vesting_time: 31_536_000,
                 denom: DENOM.to_string(),
-                cw_vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
             },
         },
-        Some(&admin),
+        Some(&arena.dao_dao.dao_core.address()?),
         None,
     )?;
 
@@ -83,7 +86,9 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
     );
 
     // Accept the application
-    arena.arena_token_gateway.set_sender(&admin);
+    arena
+        .arena_token_gateway
+        .set_sender(&arena.dao_dao.dao_core.address()?);
     arena
         .arena_token_gateway
         .accept_application(applicant.to_string(), &coins(1000000, DENOM))?;
@@ -109,19 +114,19 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
 fn test_reject_application() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
+    setup_vesting(&arena, mock.block_info()?.chain_id, &admin)?;
 
     // Instantiate the arena_token_gateway (similar to previous test)
     arena.arena_token_gateway.instantiate(
         &arena_token_gateway::msg::InstantiateMsg {
-            owner: admin.to_string(),
+            owner: arena.dao_dao.dao_core.addr_str()?,
             config: arena_token_gateway::state::VestingConfiguration {
                 upfront_ratio: Decimal::percent(10),
                 vesting_time: 31_536_000,
                 denom: DENOM.to_string(),
-                cw_vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
             },
         },
-        Some(&admin),
+        Some(&arena.dao_dao.dao_core.address()?),
         None,
     )?;
 
@@ -140,7 +145,9 @@ fn test_reject_application() -> anyhow::Result<()> {
     })?;
 
     // Reject the application
-    arena.arena_token_gateway.set_sender(&admin);
+    arena
+        .arena_token_gateway
+        .set_sender(&arena.dao_dao.dao_core.address()?);
     arena
         .arena_token_gateway
         .reject_application(applicant.to_string(), Some("Not eligible".to_string()))?;
@@ -164,30 +171,31 @@ fn test_reject_application() -> anyhow::Result<()> {
 fn test_update_vesting_configuration() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
+    setup_vesting(&arena, mock.block_info()?.chain_id, &admin)?;
 
     // Instantiate the arena_token_gateway (similar to previous tests)
     arena.arena_token_gateway.instantiate(
         &arena_token_gateway::msg::InstantiateMsg {
-            owner: admin.to_string(),
+            owner: arena.dao_dao.dao_core.addr_str()?,
             config: arena_token_gateway::state::VestingConfiguration {
                 upfront_ratio: Decimal::percent(10),
                 vesting_time: 31_536_000,
                 denom: DENOM.to_string(),
-                cw_vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
             },
         },
-        Some(&admin),
+        Some(&arena.dao_dao.dao_core.address()?),
         None,
     )?;
 
     // Update the vesting configuration
-    arena.arena_token_gateway.set_sender(&admin);
+    arena
+        .arena_token_gateway
+        .set_sender(&arena.dao_dao.dao_core.address()?);
     arena.arena_token_gateway.update_vesting_configuration(
         arena_token_gateway::state::VestingConfiguration {
             upfront_ratio: Decimal::percent(20),
             vesting_time: 15_768_000, // 6 months
             denom: DENOM.to_string(),
-            cw_vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
         },
     )?;
 
@@ -205,19 +213,19 @@ fn test_update_vesting_configuration() -> anyhow::Result<()> {
 fn test_withdraw_application() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
+    setup_vesting(&arena, mock.block_info()?.chain_id, &admin)?;
 
     // Instantiate the arena_token_gateway (similar to previous tests)
     arena.arena_token_gateway.instantiate(
         &arena_token_gateway::msg::InstantiateMsg {
-            owner: admin.to_string(),
+            owner: arena.dao_dao.dao_core.addr_str()?,
             config: arena_token_gateway::state::VestingConfiguration {
                 upfront_ratio: Decimal::percent(10),
                 vesting_time: 31_536_000,
                 denom: DENOM.to_string(),
-                cw_vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
             },
         },
-        Some(&admin),
+        Some(&arena.dao_dao.dao_core.address()?),
         None,
     )?;
 

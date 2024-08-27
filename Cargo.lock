@@ -247,7 +247,9 @@ dependencies = [
  "cw-utils 1.0.3",
  "cw-vesting 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
  "cw2 1.1.2",
+ "dao-interface 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
  "serde",
+ "serde_json",
  "thiserror",
 ]
 
@@ -4490,9 +4492,11 @@ dependencies = [
  "arena-token-gateway",
  "arena-tournament-module",
  "arena-wager-module",
+ "cosmwasm-schema",
  "cosmwasm-std",
  "cw-balance",
  "cw-orch 0.24.1",
+ "cw-payroll-factory",
  "cw-utils 1.0.3",
  "cw-vesting 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=feature/cw-orch-interface)",
  "dao-cw-orch",
@@ -4507,6 +4511,7 @@ dependencies = [
  "itertools 0.13.0",
  "orch-interface",
  "pretty_env_logger",
+ "serde_json",
 ]
 
 [[package]]

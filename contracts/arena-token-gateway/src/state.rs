@@ -7,7 +7,6 @@ pub struct VestingConfiguration {
     pub upfront_ratio: Decimal,
     pub vesting_time: u64,
     pub denom: String,
-    pub cw_vesting_code_id: u64,
 }
 
 #[cw_serde]
