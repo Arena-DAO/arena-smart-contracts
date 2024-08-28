@@ -3,6 +3,7 @@ use std::str::FromStr;
 use arena_interface::competition::msg::{
     EscrowInstantiateInfo, ExecuteBaseFns as _, QueryBaseFns as _,
 };
+use arena_interface::core::QueryExtFns as _;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_league_module::msg::{
     ExecuteExtFns as _, LeagueInstantiateExt, LeagueQueryExtFns as _, MatchResultMsg,
@@ -16,7 +17,7 @@ use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
 use dao_proposal_sudo::msg::ExecuteMsgFns;
 
-use crate::tests::helpers::setup_arena;
+use crate::tests::helpers::{setup_arena, setup_voting_module};
 
 use super::{DENOM, PREFIX};
 
@@ -90,6 +91,14 @@ fn test_create_league() -> anyhow::Result<()> {
 fn test_process_league_matches() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
+    setup_voting_module(
+        &mock,
+        &arena,
+        vec![cw4::Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    )?;
 
     let teams: Vec<_> = (0..4)
         .map(|i| mock.addr_make_with_balance(format!("team{}", i), coins(10000, DENOM)))
@@ -244,6 +253,28 @@ fn test_process_league_matches() -> anyhow::Result<()> {
             .balance(member_points.member.to_string())?;
         assert_eq!(balance, expected_balances[i], "Mismatch for team {}", i);
     }
+
+    // Check that the winner has the highest ELO
+    let winner_rating = arena
+        .arena_core
+        .rating(leaderboard[0].member.to_string(), Uint128::one())?
+        .unwrap();
+    let second_place_rating = arena
+        .arena_core
+        .rating(leaderboard[1].member.to_string(), Uint128::one())?
+        .unwrap();
+    let third_place_rating = arena
+        .arena_core
+        .rating(leaderboard[2].member.to_string(), Uint128::one())?
+        .unwrap();
+    let fourth_place_rating = arena
+        .arena_core
+        .rating(leaderboard[3].member.to_string(), Uint128::one())?
+        .unwrap();
+
+    assert!(winner_rating.value > second_place_rating.value);
+    assert!(second_place_rating.value > third_place_rating.value);
+    assert!(third_place_rating.value > fourth_place_rating.value);
 
     Ok(())
 }

@@ -81,10 +81,6 @@ fn test_create_wager() -> anyhow::Result<()> {
 fn test_process_wager() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
-
-    let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
-    let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
-
     setup_voting_module(
         &mock,
         &arena,
@@ -93,6 +89,9 @@ fn test_process_wager() -> anyhow::Result<()> {
             weight: 1u64,
         }],
     )?;
+
+    let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
+    let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
 
     arena.arena_wager_module.set_sender(&admin);
 
@@ -192,7 +191,15 @@ fn test_process_wager() -> anyhow::Result<()> {
     assert!(user1_rating.is_some());
     assert!(user2_rating.is_some());
 
-    assert!(user1_rating.unwrap().value > user2_rating.unwrap().value);
+    assert!(user1_rating.as_ref().unwrap().value > user2_rating.as_ref().unwrap().value);
+
+    // Check that ELO for category 2 is different
+    assert_ne!(
+        user1_rating,
+        arena
+            .arena_core
+            .rating(user1.to_string(), Uint128::new(2))?
+    );
 
     Ok(())
 }

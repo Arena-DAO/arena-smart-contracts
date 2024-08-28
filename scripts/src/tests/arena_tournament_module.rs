@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use arena_interface::{
     competition::msg::EscrowInstantiateInfo,
     core::QueryExtFns as _,
@@ -14,7 +16,10 @@ use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_orch::{environment::ChainState, prelude::*};
 use itertools::Itertools;
 
-use crate::{tests::helpers::setup_arena, Arena};
+use crate::{
+    tests::helpers::{setup_arena, setup_voting_module},
+    Arena,
+};
 
 use super::{DENOM, PREFIX};
 
@@ -271,6 +276,14 @@ pub fn test_single_elimination_tournament() -> Result<(), CwOrchError> {
 pub fn test_ratings() -> Result<(), CwOrchError> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
+    setup_voting_module(
+        &mock,
+        &arena,
+        vec![cw4::Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    )?;
 
     // Set teams
     let mut teams = vec![];
@@ -285,45 +298,6 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
         &create_competition_msg(
             &arena,
             Some(Uint128::one()),
-            &teams,
-            EliminationType::SingleElimination {
-                play_third_place_match: false,
-            },
-            vec![
-                Decimal::from_ratio(75u128, 100u128),
-                Decimal::from_ratio(25u128, 100u128),
-            ],
-        ),
-        None,
-    )?;
-    mock.next_block()?;
-
-    // Get and set escrow addr
-    let escrow_addr = response.events.iter().find_map(|event| {
-        event
-            .attributes
-            .iter()
-            .find(|attr| attr.key == "escrow_addr")
-            .map(|attr| attr.value.clone())
-    });
-    assert!(escrow_addr.is_some());
-    arena
-        .arena_escrow
-        .set_address(&Addr::unchecked(escrow_addr.unwrap()));
-
-    // Fund tournament
-    for team in teams.iter() {
-        arena.arena_escrow.set_sender(team);
-        arena
-            .arena_escrow
-            .receive_native(&coins(10_000u128, DENOM))?;
-    }
-
-    // Create a tournament on category 2
-    let response = arena.arena_tournament_module.execute(
-        &create_competition_msg(
-            &arena,
-            Some(Uint128::new(2u128)),
             &teams,
             EliminationType::SingleElimination {
                 play_third_place_match: false,
@@ -380,28 +354,14 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
         ],
         Uint128::one(),
     )?;
-    arena.arena_tournament_module.process_match(
-        vec![
-            MatchResultMsg {
-                match_number: Uint128::new(1),
-                match_result: MatchResult::Team1,
-            },
-            MatchResultMsg {
-                match_number: Uint128::new(2),
-                match_result: MatchResult::Team1,
-            },
-            MatchResultMsg {
-                match_number: Uint128::new(4),
-                match_result: MatchResult::Team1,
-            },
-            MatchResultMsg {
-                match_number: Uint128::new(6),
-                match_result: MatchResult::Team1,
-            },
-        ],
-        Uint128::new(2),
-    )?;
     mock.next_block()?;
+
+    // Check ratings after first round
+    let ratings_after_first_round =
+        arena
+            .arena_core
+            .rating_leaderboard(Uint128::one(), None, None)?;
+    assert_eq!(ratings_after_first_round.len(), 8);
 
     // Process 2nd round of matches
     arena.arena_tournament_module.process_match(
@@ -417,20 +377,14 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
         ],
         Uint128::one(),
     )?;
-    arena.arena_tournament_module.process_match(
-        vec![
-            MatchResultMsg {
-                match_number: Uint128::new(3),
-                match_result: MatchResult::Team1,
-            },
-            MatchResultMsg {
-                match_number: Uint128::new(5),
-                match_result: MatchResult::Team1,
-            },
-        ],
-        Uint128::new(2),
-    )?;
     mock.next_block()?;
+
+    // Check ratings after second round
+    let ratings_after_second_round =
+        arena
+            .arena_core
+            .rating_leaderboard(Uint128::one(), None, None)?;
+    assert_eq!(ratings_after_second_round.len(), 10);
 
     // Process 3rd round of matches
     arena.arena_tournament_module.process_match(
@@ -446,22 +400,9 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
         ],
         Uint128::one(),
     )?;
-    arena.arena_tournament_module.process_match(
-        vec![
-            MatchResultMsg {
-                match_number: Uint128::new(7),
-                match_result: MatchResult::Team1,
-            },
-            MatchResultMsg {
-                match_number: Uint128::new(8),
-                match_result: MatchResult::Team1,
-            },
-        ],
-        Uint128::new(2),
-    )?;
     mock.next_block()?;
 
-    // Process the final matches
+    // Process the final match
     arena.arena_tournament_module.process_match(
         vec![MatchResultMsg {
             match_number: Uint128::new(9),
@@ -469,23 +410,24 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
         }],
         Uint128::one(),
     )?;
-    arena.arena_tournament_module.process_match(
-        vec![MatchResultMsg {
-            match_number: Uint128::new(9),
-            match_result: MatchResult::Team1,
-        }],
-        Uint128::new(2),
-    )?;
     mock.next_block()?;
 
-    // Check the rating leaderboard for both categories
-    let rating = arena
+    // Check final ratings
+    let final_ratings = arena
         .arena_core
         .rating_leaderboard(Uint128::one(), None, None)?;
-    let rating2 = arena
-        .arena_core
-        .rating_leaderboard(Uint128::new(2), None, None)?;
-    assert_eq!(rating, rating2);
+    assert_eq!(final_ratings.len(), 10);
+
+    // Verify that ratings have changed
+    assert_ne!(ratings_after_first_round, final_ratings);
+
+    // Verify winner has the highest rating
+    let winner_rating = final_ratings[0].rating.clone();
+    assert!(winner_rating.value > Decimal::from_str("1500")?);
+
+    // Verify loser has the lowest rating
+    let loser_rating = final_ratings.last().unwrap().rating.clone();
+    assert!(loser_rating.value < Decimal::from_str("1500")?);
 
     Ok(())
 }
