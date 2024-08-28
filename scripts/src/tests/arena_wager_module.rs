@@ -1,6 +1,7 @@
 use arena_interface::competition::msg::{
     EscrowInstantiateInfo, ExecuteBaseFns as _, QueryBaseFns as _,
 };
+use arena_interface::core::QueryExtFns;
 use arena_interface::escrow::ExecuteMsgFns as _;
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Decimal, Uint128};
@@ -8,7 +9,7 @@ use cw_balance::{BalanceUnchecked, Distribution, MemberBalanceUnchecked, MemberP
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
 
-use crate::tests::helpers::setup_arena;
+use crate::tests::helpers::{setup_arena, setup_voting_module};
 
 use super::{DENOM, PREFIX};
 
@@ -84,6 +85,15 @@ fn test_process_wager() -> anyhow::Result<()> {
     let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
     let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
 
+    setup_voting_module(
+        &mock,
+        &arena,
+        vec![cw4::Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    )?;
+
     arena.arena_wager_module.set_sender(&admin);
 
     // Create a wager
@@ -91,7 +101,7 @@ fn test_process_wager() -> anyhow::Result<()> {
         "A test wager".to_string(),
         Expiration::AtHeight(1000000),
         WagerInstantiateExt {
-            registered_members: None,
+            registered_members: Some(vec![user1.to_string(), user2.to_string()]),
         },
         "Test Wager".to_string(),
         None,
@@ -174,6 +184,15 @@ fn test_process_wager() -> anyhow::Result<()> {
     let user2_balance = mock.query_balance(&user2, DENOM)?;
     assert_eq!(user1_balance, Uint128::new(10900)); // Initial 10000 - 1000 stake + 1900 winnings (after 5% tax)
     assert_eq!(user2_balance, Uint128::new(9000)); // Initial 10000 - 1000 stake
+
+    // Ensure ELO was updated
+    let user1_rating = arena.arena_core.rating(user1.to_string(), Uint128::one())?;
+    let user2_rating = arena.arena_core.rating(user2.to_string(), Uint128::one())?;
+
+    assert!(user1_rating.is_some());
+    assert!(user2_rating.is_some());
+
+    assert!(user1_rating.unwrap().value > user2_rating.unwrap().value);
 
     Ok(())
 }

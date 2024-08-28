@@ -24,13 +24,10 @@ impl<Chain> Uploadable for Cw4Group<Chain> {
     }
     /// Returns a CosmWasm contract wrapper
     fn wrapper() -> Box<dyn MockContract<Empty>> {
-        Box::new(
-            ContractWrapper::new_with_empty(
-                cw721_base::entry::execute,
-                cw721_base::entry::instantiate,
-                cw721_base::entry::query,
-            )
-            .with_migrate(cw721_base::entry::migrate),
-        )
+        Box::new(ContractWrapper::new_with_empty(
+            cw4_group::contract::execute,
+            cw4_group::contract::instantiate,
+            cw4_group::contract::query,
+        ))
     }
 }

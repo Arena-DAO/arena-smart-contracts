@@ -5,7 +5,7 @@ use orch_interface::{
     arena_core::ArenaCoreContract, arena_escrow::ArenaEscrowContract,
     arena_league_module::ArenaLeagueModuleContract, arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
-    arena_wager_module::ArenaWagerModuleContract,
+    arena_wager_module::ArenaWagerModuleContract, cw4_group::Cw4Group,
 };
 
 use crate::dao_dao::DaoDao;
@@ -19,6 +19,7 @@ pub struct Arena<Chain> {
     pub arena_competition_enrollment: ArenaCompetitionEnrollmentContract<Chain>,
     pub arena_token_gateway: ArenaTokenGatewayContract<Chain>,
     pub dao_dao: DaoDao<Chain>,
+    pub cw4_group: Cw4Group<Chain>,
 }
 
 impl<Chain: CwEnv> Arena<Chain> {
@@ -32,6 +33,7 @@ impl<Chain: CwEnv> Arena<Chain> {
             arena_competition_enrollment: ArenaCompetitionEnrollmentContract::new(chain.clone()),
             arena_token_gateway: ArenaTokenGatewayContract::new(chain.clone()),
             dao_dao: DaoDao::new(chain.clone()),
+            cw4_group: Cw4Group::new(chain.clone()),
         }
     }
 
@@ -46,6 +48,7 @@ impl<Chain: CwEnv> Arena<Chain> {
 
         if with_dao_dao {
             self.dao_dao.upload()?;
+            self.cw4_group.upload()?;
         }
 
         Ok(())
