@@ -55,7 +55,6 @@ pub struct VestingConfiguration {
 - `upfront_ratio`: The ratio of tokens to be distributed immediately upon acceptance
 - `vesting_time`: The duration of the vesting period in seconds
 - `denom`: The denomination of the tokens being distributed
-- `cw_vesting_code_id`: The code ID of the cw-vesting contract to be used
 
 ## Application Structure
 
