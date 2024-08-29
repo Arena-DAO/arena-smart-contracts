@@ -1,6 +1,6 @@
 # Arena Core
 
-Arena Core is the core component of the Arena DAO ecosystem, managing competition modules, rulesets, categories, and ratings. It serves as the central hub for coordinating various aspects of decentralized competitions.
+Arena Core is the core component of the Arena DAO ecosystem, managing competition modules, rulesets, categories, and ratings. It serves as the central hub for coordinating various aspects of the decentralized competition platform.
 
 ## Contract Messages
 
