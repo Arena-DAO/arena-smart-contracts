@@ -23,7 +23,8 @@ use dao_voting::{
 use crate::{
     state::{
         competition_categories, competition_modules, ratings, rulesets,
-        COMPETITION_CATEGORIES_COUNT, ENROLLMENT_MODULES, RATING_PERIOD, RULESETS_COUNT, TAX,
+        COMPETITION_CATEGORIES_COUNT, ENROLLMENT_MODULES, PAYMENT_REGISTRY, RATING_PERIOD,
+        RULESETS_COUNT, TAX,
     },
     ContractError,
 };
@@ -482,4 +483,23 @@ pub fn update_enrollment_modules(
     }
 
     Ok(Response::new().add_attribute("action", "update_enrollment_modules"))
+}
+
+pub fn set_payment_registry(deps: DepsMut, addr: String) -> Result<Response, ContractError> {
+    let addr = deps.api.addr_validate(&addr)?;
+
+    // Ensure query exists on contract
+    deps.querier.query_wasm_smart(
+        addr.to_string(),
+        &arena_interface::registry::QueryMsg::GetDistribution {
+            addr: addr.to_string(),
+            height: None,
+        },
+    )?;
+
+    PAYMENT_REGISTRY.save(deps.storage, &addr)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "set_payment_registry")
+        .add_attribute("addr", addr))
 }

@@ -1389,7 +1389,6 @@ fn create_competition_msg<Chain: ChainState>(
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })
             .unwrap(),
             label: "Arena Escrow".to_string(),
@@ -1401,7 +1400,6 @@ fn create_competition_msg<Chain: ChainState>(
         rules: None,
         rulesets: None,
         banner: None,
-        should_activate_on_funded: None,
         instantiate_extension: TournamentInstantiateExt {
             elimination_type,
             teams: teams.iter().map(|x| x.to_string()).collect(),

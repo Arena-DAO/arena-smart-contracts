@@ -64,14 +64,12 @@ fn test_create_league() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["League Rule".to_string()]),
-        None,
         None,
     )?;
 
@@ -138,14 +136,12 @@ fn test_process_league_matches() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["League Rule".to_string()]),
-        None,
         None,
     )?;
 
@@ -322,14 +318,12 @@ fn test_add_point_adjustments() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["League Rule".to_string()]),
-        None,
         None,
     )?;
 
@@ -429,14 +423,12 @@ fn test_create_league_with_odd_number_of_teams() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "Odd League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["Odd League Rule".to_string()]),
-        None,
         None,
     )?;
 
@@ -499,14 +491,12 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "Tie League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["Tie League Rule".to_string()]),
-        None,
         None,
     )?;
 
@@ -683,14 +673,12 @@ fn test_update_distribution() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "Distribution League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["Distribution League Rule".to_string()]),
-        None,
         None,
     )?;
 
@@ -750,7 +738,6 @@ fn test_create_league_with_invalid_team_count() -> anyhow::Result<()> {
         None,
         Some(vec!["Invalid League Rule".to_string()]),
         None,
-        None,
     );
 
     assert!(result.is_err());
@@ -773,7 +760,6 @@ fn test_create_league_with_invalid_team_count() -> anyhow::Result<()> {
         None,
         None,
         Some(vec!["Too Many Teams League Rule".to_string()]),
-        None,
         None,
     );
 
@@ -825,14 +811,12 @@ fn test_process_matches_out_of_order() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "Out of Order League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["Out of Order League Rule".to_string()]),
-        None,
         None,
     )?;
 
@@ -900,14 +884,12 @@ fn test_multiple_point_adjustments() -> anyhow::Result<()> {
                         },
                     })
                     .collect(),
-                should_activate_on_funded: None,
             })?,
             label: "Multiple Adjustments League Escrow".to_string(),
             additional_layered_fees: None,
         }),
         None,
         Some(vec!["Multiple Adjustments League Rule".to_string()]),
-        None,
         None,
     )?;
 

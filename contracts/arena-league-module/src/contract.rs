@@ -60,7 +60,6 @@ pub fn execute(
             rules,
             rulesets,
             banner,
-            should_activate_on_funded,
             instantiate_extension,
         } => {
             let response = CompetitionModule::default().execute_create_competition(
@@ -76,7 +75,6 @@ pub fn execute(
                 rules,
                 rulesets,
                 banner,
-                should_activate_on_funded,
                 &instantiate_extension,
             )?;
 
@@ -159,7 +157,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let competition_module = CompetitionModule::default();
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -168,6 +166,9 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
     }
     if version.major == 1 && version.minor < 7 {
         competition_module.migrate_from_v1_6_to_v1_7(deps.branch())?;
+    }
+    if version.major == 1 && version.minor == 8 {
+        competition_module.migrate_from_v1_8_2_to_v2(deps.branch(), env)?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

@@ -26,6 +26,7 @@ pub struct InstantiateExt {
     pub tax: Decimal,
     pub tax_configuration: TaxConfiguration,
     pub rating_period: Duration,
+    pub payment_registry: Option<String>,
 }
 
 #[cw_serde]
@@ -56,6 +57,9 @@ pub enum ExecuteExt {
     UpdateEnrollmentModules {
         to_add: Option<Vec<String>>,
         to_remove: Option<Vec<String>>,
+    },
+    SetPaymentRegistry {
+        addr: String,
     },
 }
 
@@ -117,6 +121,8 @@ pub enum QueryExt {
     },
     #[returns(Option<Duration>)]
     RatingPeriod {},
+    #[returns(Addr)]
+    PaymentRegistry {},
 }
 
 impl From<QueryExt> for QueryMsg {

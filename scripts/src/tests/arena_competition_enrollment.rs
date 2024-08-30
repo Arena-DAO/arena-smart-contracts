@@ -2,7 +2,7 @@ use arena_competition_enrollment::msg::{
     CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, QueryMsgFns as _,
 };
 use arena_competition_enrollment::state::CompetitionType;
-use arena_interface::competition::msg::{ExecuteBaseFns as _, QueryBaseFns as _};
+use arena_interface::competition::msg::QueryBaseFns as _;
 use arena_interface::escrow::ExecuteMsgFns as _;
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
@@ -842,24 +842,6 @@ fn test_huge_tournament() -> anyhow::Result<()> {
     arena
         .arena_escrow
         .receive_native(coins(5000u128, DENOM).as_slice())?;
-
-    // Test withdraw - not activated yet
-    arena.arena_escrow.withdraw(None, None)?;
-
-    // Tip again
-    arena
-        .arena_escrow
-        .receive_native(coins(5000u128, DENOM).as_slice())?;
-
-    // Activate competition
-    arena.arena_tournament_module.set_sender(&admin);
-    arena
-        .arena_tournament_module
-        .activate_competition_manually(Uint128::one())?;
-
-    // Test withdraw is error
-    let result = arena.arena_escrow.withdraw(None, None);
-    assert!(result.is_err());
 
     Ok(())
 }

@@ -277,7 +277,6 @@ impl<
                 rules,
                 rulesets,
                 banner,
-                should_activate_on_funded,
                 instantiate_extension,
             } => self.execute_create_competition(
                 &mut deps,
@@ -292,7 +291,6 @@ impl<
                 rules,
                 rulesets,
                 banner,
-                should_activate_on_funded,
                 &instantiate_extension,
             ),
             ExecuteBase::ProcessCompetition {
@@ -304,9 +302,8 @@ impl<
                     cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
                 Ok(Response::new().add_attributes(ownership.into_attributes()))
             }
-            ExecuteBase::ActivateCompetition {} => self.execute_activate_from_escrow(deps, info),
-            ExecuteBase::ActivateCompetitionManually { id } => {
-                self.execute_activate_by_host(deps, info, id)
+            ExecuteBase::ActivateCompetition {} => {
+                self.execute_activate_from_escrow(deps, env, info)
             }
             ExecuteBase::SubmitEvidence {
                 competition_id: id,
@@ -521,6 +518,7 @@ impl<
     pub fn execute_activate_from_escrow(
         &self,
         deps: DepsMut,
+        env: Env,
         info: MessageInfo,
     ) -> Result<Response, CompetitionError> {
         // Load competition ID associated with the escrow
@@ -532,15 +530,22 @@ impl<
             })?;
 
         // Load competition using the ID
-        let mut competition = self.competitions.may_load(deps.storage, id)?.ok_or(
+        let competition = self.competitions.may_load(deps.storage, id)?.ok_or(
             CompetitionError::UnknownCompetitionId {
                 id: Uint128::new(id),
             },
         )?;
 
         // Update competition status
-        competition.status = CompetitionStatus::Active;
-        self.competitions.save(deps.storage, id, &competition)?;
+        let new_competition = Competition {
+            status: CompetitionStatus::Active {
+                height: env.block.height,
+            },
+            ..competition.clone()
+        };
+
+        self.competitions
+            .replace(deps.storage, id, Some(&new_competition), Some(&competition))?;
 
         // Do not expect another activation message
         self.escrows_to_competitions
@@ -549,57 +554,6 @@ impl<
         Ok(Response::new()
             .add_attribute("id", id.to_string())
             .add_attribute("action", "activate"))
-    }
-
-    pub fn execute_activate_by_host(
-        &self,
-        deps: DepsMut,
-        info: MessageInfo,
-        id: Uint128,
-    ) -> Result<Response, CompetitionError> {
-        let mut competition = self
-            .competitions
-            .may_load(deps.storage, id.u128())?
-            .ok_or(CompetitionError::UnknownCompetitionId { id })?;
-
-        ensure!(
-            competition.status == CompetitionStatus::Pending,
-            CompetitionError::InvalidCompetitionStatus {
-                current_status: competition.status
-            }
-        );
-        ensure!(
-            info.sender == competition.host || info.sender == competition.admin_dao,
-            CompetitionError::Unauthorized {}
-        );
-
-        // Only allow activation by host if the escrow should not activate on funded
-        let mut msgs = vec![];
-        if let Some(escrow) = &competition.escrow {
-            if deps.querier.query_wasm_smart::<bool>(
-                escrow.to_string(),
-                &arena_interface::escrow::QueryMsg::ShouldActivateOnFunded {},
-            )? {
-                return Err(CompetitionError::Unauthorized {});
-            }
-
-            // Trigger the activation on the escrow
-            msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: escrow.to_string(),
-                msg: to_json_binary(&arena_interface::escrow::ExecuteMsg::Activate {})?,
-                funds: vec![],
-            }));
-        } else {
-            // Update competition status
-            competition.status = CompetitionStatus::Active {};
-            self.competitions
-                .save(deps.storage, id.u128(), &competition)?;
-        }
-
-        Ok(Response::new()
-            .add_attribute("id", id.to_string())
-            .add_attribute("action", "activate_by_host")
-            .add_messages(msgs))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -628,7 +582,7 @@ impl<
 
                 // Validate competition status
                 if competition.status != CompetitionStatus::Jailed {
-                    if competition.status != CompetitionStatus::Active {
+                    if !matches!(competition.status, CompetitionStatus::Active { .. }) {
                         return Err(CompetitionError::InvalidCompetitionStatus {
                             current_status: competition.status,
                         });
@@ -680,7 +634,6 @@ impl<
         rules: Option<Vec<String>>,
         rulesets: Option<Vec<Uint128>>,
         banner: Option<String>,
-        should_activate_on_funded: Option<bool>,
         extension: &CompetitionInstantiateExt,
     ) -> Result<Response, CompetitionError> {
         // Validate expiration
@@ -728,7 +681,6 @@ impl<
 
         let admin_dao = self.query_dao(deps.as_ref())?;
         let mut msgs = vec![];
-        let mut initial_status = CompetitionStatus::Pending;
 
         // Handle escrow setup
         let (escrow_addr, fees) = if let Some(escrow_info) = escrow {
@@ -765,9 +717,6 @@ impl<
 
             (Some(escrow_addr), fees)
         } else {
-            if should_activate_on_funded.unwrap_or(true) {
-                initial_status = CompetitionStatus::Active;
-            }
             (None, None)
         };
 
@@ -806,7 +755,7 @@ impl<
             description,
             expiration,
             rulesets,
-            status: initial_status,
+            status: CompetitionStatus::Pending,
             extension: extension.to_competition_ext(deps.as_ref())?,
             fees,
             banner,
@@ -883,7 +832,7 @@ impl<
         competition: &Competition<CompetitionExt>,
     ) -> Result<(), CompetitionError> {
         match competition.status {
-            CompetitionStatus::Active => {
+            CompetitionStatus::Active { height: _ } => {
                 if competition.host != sender && competition.admin_dao != sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
@@ -973,22 +922,34 @@ impl<
                 Some(layered_fees)
             };
 
-            let sub_msg = SubMsg::reply_on_success(
-                CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: escrow.to_string(),
-                    msg: to_json_binary(&arena_interface::escrow::ExecuteMsg::Distribute {
-                        distribution: distribution_msg,
-                        layered_fees,
-                    })?,
-                    funds: vec![],
+            match competition.status {
+                CompetitionStatus::Active { height } => {
+                    let sub_msg = SubMsg::reply_on_success(
+                        CosmosMsg::Wasm(WasmMsg::Execute {
+                            contract_addr: escrow.to_string(),
+                            msg: to_json_binary(
+                                &arena_interface::escrow::ExecuteMsg::Distribute {
+                                    distribution: distribution_msg,
+                                    layered_fees,
+                                    activation_height: Some(height),
+                                },
+                            )?,
+                            funds: vec![],
+                        }),
+                        PROCESS_REPLY_ID,
+                    );
+
+                    self.temp_competition
+                        .save(deps.storage, &competition.id.u128())?;
+
+                    msgs.push(sub_msg);
+
+                    Ok(())
+                }
+                _ => Err(CompetitionError::InvalidCompetitionStatus {
+                    current_status: competition.status.clone(),
                 }),
-                PROCESS_REPLY_ID,
-            );
-
-            self.temp_competition
-                .save(deps.storage, &competition.id.u128())?;
-
-            msgs.push(sub_msg);
+            }?;
         }
 
         // Tax info is displayed in the escrow response
@@ -1069,6 +1030,11 @@ impl<
             QueryBase::CompetitionCount {} => {
                 to_json_binary(&self.competition_count.load(deps.storage)?)
             }
+            QueryBase::PaymentRegistry {} => to_json_binary(
+                &self
+                    .query_payment_registry(deps)
+                    .map_err(|x| StdError::generic_err(x.to_string()))?,
+            ),
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
         }
@@ -1094,6 +1060,23 @@ impl<
         }
 
         false
+    }
+
+    pub fn query_payment_registry(&self, deps: Deps) -> Result<Option<String>, CompetitionError> {
+        let owner = get_ownership(deps.storage)?
+            .owner
+            .ok_or(CompetitionError::OwnershipError(
+                cw_ownable::OwnershipError::NoOwner,
+            ))?;
+
+        let payment_registry: Option<String> = deps.querier.query_wasm_smart(
+            owner,
+            &arena_interface::core::QueryMsg::QueryExtension {
+                msg: arena_interface::core::QueryExt::PaymentRegistry {},
+            },
+        )?;
+
+        Ok(payment_registry)
     }
 
     pub fn query_result(
@@ -1149,19 +1132,20 @@ impl<
         deps: Deps,
         height: u64,
     ) -> Result<TaxConfigurationResponse, CompetitionError> {
-        let core = cw_ownable::get_ownership(deps.storage)?;
-        if core.owner.is_none() {
-            return Err(CompetitionError::OwnershipError(
+        let owner = get_ownership(deps.storage)?
+            .owner
+            .ok_or(CompetitionError::OwnershipError(
                 cw_ownable::OwnershipError::NoOwner,
-            ));
-        }
+            ))?;
 
-        Ok(deps.querier.query_wasm_smart(core.owner.unwrap(),
-        &dao_pre_propose_base::msg::QueryMsg::<arena_interface::core::QueryExt>::QueryExtension
-                {
-                    msg: arena_interface::core::QueryExt::TaxConfig { height }
-                })?
-       )
+        deps.querier
+            .query_wasm_smart(
+                owner,
+                &arena_interface::core::QueryMsg::QueryExtension {
+                    msg: arena_interface::core::QueryExt::TaxConfig { height },
+                },
+            )
+            .map_err(Into::into)
     }
 
     pub fn query_dao(&self, deps: Deps) -> Result<Addr, cw_ownable::OwnershipError> {
@@ -1313,6 +1297,40 @@ impl<
                 deps.storage,
                 competition_id,
                 Some(&competition),
+                Some(&competition),
+            )?;
+        }
+
+        Ok(())
+    }
+
+    pub fn migrate_from_v1_8_2_to_v2(
+        &self,
+        deps: DepsMut,
+        env: Env,
+    ) -> Result<(), CompetitionError> {
+        // Competition status 'Active' now stores its height for the payment registry
+        // Not too many, so we can just do it in the migration
+        let competition_range = self
+            .competitions
+            .idx
+            .status
+            .prefix(CompetitionStatus::Active { height: 0u64 }.to_string())
+            .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
+            .collect::<StdResult<Vec<_>>>()?;
+
+        for (competition_id, competition) in competition_range {
+            let new_competition = Competition {
+                status: CompetitionStatus::Active {
+                    height: env.block.height,
+                },
+                ..competition.clone()
+            };
+
+            self.competitions.replace(
+                deps.storage,
+                competition_id,
+                Some(&new_competition),
                 Some(&competition),
             )?;
         }

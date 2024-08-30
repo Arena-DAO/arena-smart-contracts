@@ -44,6 +44,13 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             funds: vec![],
         };
 
+        // Instantiate payment registry
+        arena.arena_payment_registry.instantiate(
+            &arena_interface::registry::InstantiateMsg {},
+            None,
+            None,
+        )?;
+
         // Prepare proposal modules
         let proposal_modules = vec![
             ModuleInstantiateInfo {
@@ -135,6 +142,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                         cw721_msg: None,
                                     },
                                     rating_period: Duration::Time(604800u64),
+                                    payment_registry: Some(arena.arena_payment_registry.addr_str()?),
                                 },
                             })?,
                             admin: Some(Admin::CoreModule {}),
@@ -174,11 +182,11 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
         arena
             .dao_dao
             .dao_proposal_sudo
-            .set_address(&proposal_modules[0].address);
+            .set_address(&proposal_modules[1].address);
         arena
             .dao_dao
             .dao_proposal_single
-            .set_address(&proposal_modules[1].address);
+            .set_address(&proposal_modules[0].address);
 
         let get_item_response = arena.dao_dao.dao_core.get_item("Arena".to_string())?;
         arena

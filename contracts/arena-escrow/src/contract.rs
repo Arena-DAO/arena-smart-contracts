@@ -1,6 +1,6 @@
 use crate::{
     execute, migrate, query,
-    state::{self, DUE, INITIAL_DUE, IS_LOCKED, SHOULD_ACTIVATE_ON_FUNDED},
+    state::{self, DUE, INITIAL_DUE, IS_LOCKED},
     ContractError,
 };
 use arena_interface::escrow::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -22,7 +22,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.dues, msg.should_activate_on_funded)?;
+    instantiate_contract(deps, info, msg.dues)?;
     Ok(Response::default())
 }
 
@@ -30,7 +30,6 @@ pub fn instantiate_contract(
     deps: DepsMut,
     info: MessageInfo,
     due: Vec<MemberBalanceUnchecked>,
-    should_activate_on_funded: Option<bool>,
 ) -> Result<(), ContractError> {
     if due.is_empty() {
         return Err(ContractError::InvalidDue {
@@ -40,9 +39,6 @@ pub fn instantiate_contract(
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
-    if let Some(should_activate_on_funded) = should_activate_on_funded {
-        SHOULD_ACTIVATE_ON_FUNDED.save(deps.storage, &should_activate_on_funded)?;
-    }
     for member_balance in due {
         let member_balance = member_balance.into_checked(deps.as_ref())?;
 
@@ -74,20 +70,17 @@ pub fn execute(
             cw20_msg,
             cw721_msg,
         } => execute::withdraw(deps, info, cw20_msg, cw721_msg),
-        ExecuteMsg::SetDistribution { distribution } => {
-            execute::set_distribution(deps, info, distribution)
-        }
         ExecuteMsg::Receive(cw20_receive_msg) => {
             execute::receive_cw20(deps, info, cw20_receive_msg)
         }
         ExecuteMsg::ReceiveNft(cw721_receive_msg) => {
             execute::receive_cw721(deps, info, cw721_receive_msg)
         }
-        ExecuteMsg::Activate {} => execute::activate(deps, env, info),
         ExecuteMsg::Distribute {
             distribution,
             layered_fees,
-        } => execute::distribute(deps, info, distribution, layered_fees),
+            activation_height,
+        } => execute::distribute(deps, info, distribution, layered_fees, activation_height),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
         ExecuteMsg::UpdateOwnership(action) => {
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
@@ -103,7 +96,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Due { addr } => to_json_binary(&query::due(deps, addr)?),
         QueryMsg::TotalBalance {} => to_json_binary(&query::total_balance(deps)?),
         QueryMsg::IsLocked {} => to_json_binary(&query::is_locked(deps)),
-        QueryMsg::Distribution { addr } => to_json_binary(&query::distribution(deps, addr)?),
         QueryMsg::IsFunded { addr } => to_json_binary(&query::is_funded(deps, addr)?),
         QueryMsg::IsFullyFunded {} => to_json_binary(&state::is_fully_funded(deps)),
         QueryMsg::Balances { start_after, limit } => {
@@ -117,9 +109,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::DumpState { addr } => to_json_binary(&query::dump_state(deps, addr)?),
-        QueryMsg::ShouldActivateOnFunded {} => {
-            to_json_binary(&query::should_activate_on_funded(deps)?)
-        }
     }
 }
 
@@ -128,7 +117,10 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     if version.major == 1 && version.minor == 3 {
-        migrate::from_v1_3_to_v_1_4(deps.branch())?;
+        migrate::from_v1_3_to_v1_4(deps.branch())?;
+    }
+    if version.major == 1 && version.minor == 8 {
+        migrate::from_v1_8_2_to_v2(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

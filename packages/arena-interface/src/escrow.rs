@@ -12,9 +12,6 @@ use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 #[cw_serde]
 pub struct InstantiateMsg {
     pub dues: Vec<MemberBalanceUnchecked>,
-    /// Determines if the competition is automatically activated if all dues are paid
-    /// Defaults to true
-    pub should_activate_on_funded: Option<bool>,
 }
 
 #[cw_ownable_execute]
@@ -25,10 +22,6 @@ pub enum ExecuteMsg {
         cw20_msg: Option<Binary>,
         cw721_msg: Option<Binary>,
     },
-    SetDistribution {
-        distribution: Option<Distribution<String>>,
-    },
-    Activate {},
     #[cw_orch(payable)]
     ReceiveNative {},
     Receive(Cw20ReceiveMsg),
@@ -39,6 +32,7 @@ pub enum ExecuteMsg {
         /// The term layered refers to the implementation: Arena Tax -> Host Fee? -> Other Fee?
         /// Each fee is calculated based off the available funds at its layer
         layered_fees: Option<Vec<FeeInformation<String>>>,
+        activation_height: Option<u64>,
     },
     Lock {
         value: bool,
@@ -76,12 +70,8 @@ pub enum QueryMsg {
     TotalBalance {},
     #[returns(bool)]
     IsLocked {},
-    #[returns(Option<Distribution<String>>)]
-    Distribution { addr: String },
     #[returns(DumpStateResponse)]
     DumpState { addr: Option<String> },
-    #[returns(bool)]
-    ShouldActivateOnFunded {},
 }
 
 #[cw_serde]

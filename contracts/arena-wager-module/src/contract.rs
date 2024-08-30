@@ -144,7 +144,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(
     mut deps: DepsMut,
-    _env: Env,
+    env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, CompetitionError> {
     let competition_module = CompetitionModule::default();
@@ -152,6 +152,9 @@ pub fn migrate(
 
     if version.major == 1 && version.minor < 7 {
         competition_module.migrate_from_v1_6_to_v1_7(deps.branch())?;
+    }
+    if version.major == 1 && version.minor == 8 {
+        competition_module.migrate_from_v1_8_2_to_v2(deps.branch(), env)?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

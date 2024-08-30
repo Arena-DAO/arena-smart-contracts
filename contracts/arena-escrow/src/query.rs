@@ -1,13 +1,10 @@
 use arena_interface::escrow::DumpStateResponse;
-use cosmwasm_std::{Addr, Deps, StdError, StdResult};
-use cw_balance::{BalanceVerified, Distribution, MemberBalanceChecked};
+use cosmwasm_std::{Deps, StdError, StdResult};
+use cw_balance::{BalanceVerified, MemberBalanceChecked};
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
-use crate::state::{
-    BALANCE, DEFERRED_FEES, DUE, INITIAL_DUE, IS_LOCKED, PRESET_DISTRIBUTION,
-    SHOULD_ACTIVATE_ON_FUNDED, TOTAL_BALANCE,
-};
+use crate::state::{BALANCE, DEFERRED_FEES, DUE, INITIAL_DUE, IS_LOCKED, TOTAL_BALANCE};
 
 pub fn balance(deps: Deps, addr: String) -> StdResult<Option<BalanceVerified>> {
     let addr = deps.api.addr_validate(&addr)?;
@@ -46,11 +43,6 @@ pub fn total_balance(deps: Deps) -> StdResult<Option<BalanceVerified>> {
 
 pub fn is_locked(deps: Deps) -> bool {
     IS_LOCKED.load(deps.storage).unwrap_or_default()
-}
-
-pub fn distribution(deps: Deps, addr: String) -> StdResult<Option<Distribution<Addr>>> {
-    let addr = deps.api.addr_validate(&addr)?;
-    PRESET_DISTRIBUTION.may_load(deps.storage, &addr)
 }
 
 pub fn is_funded(deps: Deps, addr: String) -> StdResult<bool> {
@@ -139,10 +131,4 @@ pub fn dump_state(deps: Deps, addr: Option<String>) -> StdResult<DumpStateRespon
         total_balance: total_balance(deps)?,
         balance,
     })
-}
-
-pub fn should_activate_on_funded(deps: Deps) -> StdResult<bool> {
-    Ok(SHOULD_ACTIVATE_ON_FUNDED
-        .may_load(deps.storage)?
-        .unwrap_or(true))
 }

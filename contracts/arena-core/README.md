@@ -2,17 +2,21 @@
 
 Arena Core is the core component of the Arena DAO ecosystem, managing competition modules, rulesets, categories, and ratings. It serves as the central hub for coordinating various aspects of the decentralized competition platform.
 
+This contract is a modified version of the dao-prepropose-base and can handle the 'jailing' of unresolved competitions. The proposal deposit for this functionality is configurable to avoid spam or dishonest proposals.
+
 ## Contract Messages
 
 ### InstantiateMsg
 
-Initializes the Arena Core contract with the following parameters:
+The contract is instantiated with the following parameters:
 
-- Competition module instantiation information
-- Initial rulesets
-- Initial categories
-- Tax rate and configuration
-- Rating period duration
+- `competition_modules_instantiate_info`: Optional vector of `ModuleInstantiateInfo` to initialize competition modules
+- `rulesets`: Optional vector of `NewRuleset` to set up initial rulesets
+- `categories`: Optional vector of `NewCompetitionCategory` to establish initial competition categories
+- `tax`: Decimal value representing the tax rate
+- `tax_configuration`: Configuration for tax application
+- `rating_period`: Duration for the rating period
+- `payment_registry`: Optional string to set the payment registry module
 
 ### ExecuteMsg
 
@@ -25,6 +29,7 @@ The contract supports the following execute messages:
 - `AdjustRatings`: Update ratings for participants in a specific category
 - `UpdateRatingPeriod`: Modify the rating period duration
 - `UpdateEnrollmentModules`: Add or remove enrollment modules
+- `SetPaymentRegistry`: Sets the payment registry module
 
 ### QueryMsg
 
@@ -43,3 +48,4 @@ The contract supports various query messages:
 - `TaxConfig`: Get tax configuration for a specific height
 - `Rating`: Get rating for a participant in a category
 - `RatingLeaderboard`: Get the rating leaderboard for a category
+- `PaymentRegistry`: Get the payment registry module

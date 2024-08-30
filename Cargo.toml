@@ -7,7 +7,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "1.9.0"
+version = "2.0.0"
 
 [profile.release]
 codegen-units = 1
@@ -62,6 +62,7 @@ arena-league-module = { path = "./contracts/arena-league-module" }
 arena-tournament-module = { path = "./contracts/arena-tournament-module" }
 arena-competition-enrollment = { path = "./contracts/arena-competition-enrollment" }
 arena-token-gateway = { path = "./contracts/arena-token-gateway" }
+arena-payment-registry = { path = "./contracts/arena-payment-registry" }
 
 #dao dependencies
 dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }

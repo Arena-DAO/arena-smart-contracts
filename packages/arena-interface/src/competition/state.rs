@@ -8,7 +8,9 @@ use std::fmt;
 #[derive(Default)]
 pub enum CompetitionStatus {
     Pending,
-    Active,
+    Active {
+        height: u64,
+    },
     #[default]
     Inactive,
     Jailed,
@@ -19,7 +21,7 @@ impl fmt::Display for CompetitionStatus {
         match self {
             CompetitionStatus::Pending => write!(f, "Pending"),
             CompetitionStatus::Jailed => write!(f, "Jailed"),
-            CompetitionStatus::Active => write!(f, "Active"),
+            CompetitionStatus::Active { height: _ } => write!(f, "Active"),
             CompetitionStatus::Inactive => write!(f, "Inactive"),
         }
     }

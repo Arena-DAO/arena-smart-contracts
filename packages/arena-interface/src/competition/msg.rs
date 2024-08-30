@@ -55,9 +55,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         rules: Option<Vec<String>>,
         rulesets: Option<Vec<Uint128>>,
         banner: Option<String>,
-        /// Determines if the competition is automatically activated if all dues are paid
-        /// Defaults to true
-        should_activate_on_funded: Option<bool>,
         instantiate_extension: CompetitionInstantiateExt,
     },
     SubmitEvidence {
@@ -70,9 +67,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     },
     Extension {
         msg: ExecuteExt,
-    },
-    ActivateCompetitionManually {
-        id: Uint128,
     },
     MigrateEscrows {
         start_after: Option<Uint128>,
@@ -116,6 +110,8 @@ where
     Result { competition_id: Uint128 },
     #[returns(cosmwasm_std::Binary)]
     QueryExtension { msg: QueryExt },
+    #[returns(Option<String>)]
+    PaymentRegistry {},
     #[serde(skip)]
     #[returns(PhantomData<(InstantiateExt, CompetitionExt)>)]
     _Phantom(PhantomData<(InstantiateExt, CompetitionExt)>),

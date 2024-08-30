@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Arena-Escrow smart contract is a crucial component of the Arena DAO ecosystem, designed to manage the lifecycle of competitions and their associated funds. This contract handles dues collection, fund distribution, competition state management, and supports various token types including native, CW20, and CW721 tokens.
+The `arena-escrow` smart contract is designed to manage the lifecycle of competitions and their associated funds. This contract handles dues collection, fund distribution, competition state management, and supports various token types including native, CW20, and CW721 tokens.
 
 ## Competition and Escrow Lifecycle
 
@@ -11,17 +11,10 @@ The following flowchart illustrates the lifecycle of a competition and its assoc
 ```mermaid
 flowchart TB
     Start([Start]) --> HasDues{Competition<br>Has Dues?}
-    HasDues -->|Yes| ShouldActivateDues{Should Activate<br>On Funded?}
-    HasDues -->|No| ShouldActivateNoDues{Should Activate<br>On Funded?}
-    
-    ShouldActivateDues -->|Yes| PendingDues[Pending:<br>Awaiting Dues]
-    ShouldActivateDues -->|No| PendingManual[Pending:<br>Manual Activation]
-    
-    ShouldActivateNoDues -->|Yes| ActiveCompetition[Active Competition]
-    ShouldActivateNoDues -->|No| PendingManual
+    HasDues -->|Yes| PendingDues[Pending:<br>Awaiting Dues]
+    HasDues -->|No| ActiveCompetition[Active Competition]
     
     PendingDues -->|All Dues Paid| ActiveCompetition
-    PendingManual -->|Host Manually<br>Activates| ActiveCompetition
     
     ActiveCompetition -->|Expiration Reached| ConsensusCheck{Consensus<br>Reached?}
     ConsensusCheck -->|Yes| InactiveCompetition[Inactive Competition]
@@ -35,7 +28,6 @@ flowchart TB
     LockedEscrow -->|Competition<br>Resolved| UnlockedEscrow
     
     PendingDues -.-> UnlockedEscrow
-    PendingManual -.-> UnlockedEscrow
     ActiveCompetition -.-> LockedEscrow
     InactiveCompetition -.-> UnlockedEscrow
     
@@ -44,7 +36,7 @@ flowchart TB
     classDef escrow fill:#73D2DE,stroke:#2E4057,stroke-width:2px,color:#2E4057;
     classDef startend fill:#2ECC71,stroke:#2E4057,stroke-width:2px,color:#2E4057;
     
-    class HasDues,ShouldActivateDues,ShouldActivateNoDues,ConsensusCheck decision;
+    class HasDues,ConsensusCheck decision;
     class UnlockedEscrow,LockedEscrow escrow;
     class Start,End startend;
 ```
@@ -52,7 +44,7 @@ flowchart TB
 ## Key Features
 
 - Dues collection and management
-- Automatic or manual competition activation
+- Automatic competition activation
 - Fund locking and unlocking
 - Distribution of funds based on competition results
 - Support for native, CW20, and CW721 tokens
@@ -65,7 +57,6 @@ flowchart TB
 ```rust
 pub struct InstantiateMsg {
     pub dues: Vec<MemberBalanceUnchecked>,
-    pub should_activate_on_funded: Option<bool>,
 }
 ```
 
@@ -74,7 +65,6 @@ pub struct InstantiateMsg {
 The contract supports the following execute messages:
 
 - `Withdraw`: Withdraw funds from the contract
-- `SetDistribution`: Set the distribution of funds
 - `Activate`: Activate the competition
 - `ReceiveNative`: Receive native tokens
 - `Receive`: Receive CW20 tokens
@@ -97,8 +87,6 @@ The contract supports various query messages:
 - `IsFullyFunded`: Check if the contract is fully funded
 - `TotalBalance`: Get total balance of the contract
 - `IsLocked`: Check if the contract is locked
-- `Distribution`: Get distribution for a specific address
 - `DumpState`: Dump the entire state of the contract
-- `ShouldActivateOnFunded`: Check if the contract should activate when fully funded
 
 The contract also implements `cw_ownable_query` for ownership-related queries.

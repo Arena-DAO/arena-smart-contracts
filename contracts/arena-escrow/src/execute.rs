@@ -1,7 +1,7 @@
 use arena_interface::fees::FeeInformation;
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, Binary, CosmosMsg, Decimal, DepsMut, Empty, Env, MessageInfo,
-    Response, StdResult,
+    to_json_binary, Addr, Binary, CosmosMsg, Decimal, DepsMut, Empty, MessageInfo, Response,
+    StdResult,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
@@ -9,10 +9,10 @@ use cw_balance::{BalanceError, BalanceVerified, Cw721CollectionVerified, Distrib
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
-    query::{is_locked, should_activate_on_funded},
+    query::is_locked,
     state::{
         is_fully_funded, BALANCE, DEFERRED_FEES, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED,
-        PRESET_DISTRIBUTION, TOTAL_BALANCE,
+        TOTAL_BALANCE,
     },
     ContractError,
 };
@@ -83,35 +83,6 @@ pub fn withdraw(
         .add_attribute("action", "withdraw")
         .add_attribute("addr", info.sender)
         .add_messages(msgs))
-}
-
-pub fn set_distribution(
-    deps: DepsMut,
-    info: MessageInfo,
-    distribution: Option<Distribution<String>>,
-) -> Result<Response, ContractError> {
-    if is_locked(deps.as_ref()) {
-        return Err(ContractError::Locked {});
-    }
-
-    if let Some(distribution) = &distribution {
-        // Validate
-        let distribution = distribution.into_checked(deps.as_ref())?;
-
-        // Save distribution in the state
-        PRESET_DISTRIBUTION.save(deps.storage, &info.sender, &distribution)?;
-    } else {
-        PRESET_DISTRIBUTION.remove(deps.storage, &info.sender);
-    }
-
-    Ok(Response::new()
-        .add_attribute("action", "set_distribution")
-        .add_attribute(
-            "distribution",
-            distribution
-                .map(|some| some.to_string())
-                .unwrap_or("None".to_owned()),
-        ))
 }
 
 // This function receives native tokens and updates the balance
@@ -194,7 +165,7 @@ fn receive_balance(
             DUE.remove(deps.storage, &addr);
 
             // Lock if fully funded and send activation message if needed
-            if is_fully_funded(deps.as_ref()) && should_activate_on_funded(deps.as_ref())? {
+            if is_fully_funded(deps.as_ref()) {
                 IS_LOCKED.save(deps.storage, &true)?;
 
                 if let Some(owner) = get_ownership(deps.storage)?.owner {
@@ -231,6 +202,7 @@ pub fn distribute(
     info: MessageInfo,
     distribution: Option<Distribution<String>>,
     layered_fees: Option<Vec<FeeInformation<String>>>,
+    activation_height: Option<u64>,
 ) -> Result<Response, ContractError> {
     // Ensure the sender is the owner
     assert_owner(deps.storage, &info.sender)?;
@@ -238,37 +210,37 @@ pub fn distribute(
     // Load the total balance available for distribution
     let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
 
-    // Validate the tax info
-    let validated_layered_fees = layered_fees
-        .as_ref()
-        .map(|layered_fees| {
-            layered_fees
-                .iter()
-                .map(|layered_fee| layered_fee.into_checked(deps.as_ref()))
-                .collect::<StdResult<Vec<FeeInformation<Addr>>>>()
-        })
-        .transpose()?;
-
-    // Process the layered fees
-    // This will automatically be sent to the receiver
+    let mut msgs = vec![];
     let mut attrs = vec![];
-    let msgs = if let Some(layered_fees) = validated_layered_fees {
-        let mut msgs = vec![];
+
+    // Process layered fees if provided
+    if let Some(layered_fees) = layered_fees {
+        // Validate the tax info
+        let validated_layered_fees: Vec<FeeInformation<Addr>> = layered_fees
+            .iter()
+            .map(|fee| fee.into_checked(deps.as_ref()))
+            .collect::<StdResult<_>>()?;
 
         // If funds will not be split, then we should have the fees available at withdrawal
         if distribution.is_none() {
-            DEFERRED_FEES.save(deps.storage, &layered_fees.iter().map(|x| x.tax).collect())?;
+            DEFERRED_FEES.save(
+                deps.storage,
+                &validated_layered_fees.iter().map(|x| x.tax).collect(),
+            )?;
         }
 
-        for fee in layered_fees {
+        // Process each fee
+        for fee in validated_layered_fees {
             let fee_amounts = total_balance.checked_mul_floor(fee.tax)?;
 
+            // Update total balance
             total_balance = TOTAL_BALANCE.update(deps.storage, |x| -> Result<_, BalanceError> {
                 x.checked_sub(&fee_amounts)
             })?;
 
+            // Add messages for fee transmission if amounts are not empty
             if !fee_amounts.is_empty() {
-                msgs.append(&mut fee_amounts.transmit_all(
+                msgs.extend(fee_amounts.transmit_all(
                     deps.as_ref(),
                     &fee.receiver,
                     fee.cw20_msg,
@@ -277,41 +249,66 @@ pub fn distribute(
                 attrs.push(("Fee", fee.receiver.to_string()));
             }
         }
+    }
 
-        msgs
-    } else {
-        vec![]
-    };
-
-    // Clear the existing balance storage and update with new distribution
-    if let Some(distribution) = &distribution {
+    // Process distribution if provided
+    if let Some(distribution) = distribution {
         let distribution = distribution.into_checked(deps.as_ref())?;
 
         // Calculate the distribution amounts based on the total balance and distribution
         let distributed_amounts = total_balance.split(&distribution)?;
 
+        // Clear existing balance storage
         BALANCE.clear(deps.storage);
+
+        // Query payment registry
+        let payment_registry: Option<String> = deps.querier.query_wasm_smart(
+            info.sender.to_string(),
+            &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::PaymentRegistry {}
+        )?;
+        let payment_registry = payment_registry
+            .map(|x| deps.api.addr_validate(&x))
+            .transpose()?;
+        let mut has_preset_distribution = false;
+
+        // Process each distributed amount
         for distributed_amount in distributed_amounts {
-            // Check for preset distribution and apply if available
-            if let Some(preset) =
-                PRESET_DISTRIBUTION.may_load(deps.storage, &distributed_amount.addr)?
-            {
-                let new_balances = distributed_amount.balance.split(&preset)?;
-                for new_balance in new_balances {
-                    BALANCE.update(
-                        deps.storage,
-                        &new_balance.addr,
-                        |old_balance| -> Result<_, ContractError> {
-                            match old_balance {
-                                Some(old_balance) => {
-                                    Ok(old_balance.checked_add(&new_balance.balance)?)
-                                }
-                                None => Ok(new_balance.balance),
-                            }
+            if let Some(ref payment_registry) = payment_registry {
+                // Query preset distribution from payment registry
+                let preset_distribution: Option<Distribution<String>> =
+                    deps.querier.query_wasm_smart(
+                        payment_registry.to_string(),
+                        &arena_interface::registry::QueryMsg::GetDistribution {
+                            addr: distributed_amount.addr.to_string(),
+                            height: activation_height,
                         },
                     )?;
+
+                if let Some(preset_distribution) = preset_distribution {
+                    let preset_distribution = preset_distribution.into_checked(deps.as_ref())?;
+                    let new_balances = distributed_amount.balance.split(&preset_distribution)?;
+                    has_preset_distribution = true;
+
+                    // Update balances based on preset distribution
+                    for new_balance in new_balances {
+                        BALANCE.update(
+                            deps.storage,
+                            &new_balance.addr,
+                            |old_balance| -> Result<_, ContractError> {
+                                match old_balance {
+                                    Some(old_balance) => {
+                                        Ok(old_balance.checked_add(&new_balance.balance)?)
+                                    }
+                                    None => Ok(new_balance.balance),
+                                }
+                            },
+                        )?;
+                    }
                 }
-            } else {
+            }
+
+            if !has_preset_distribution {
+                // Update balance directly if no preset distribution
                 BALANCE.update(
                     deps.storage,
                     &distributed_amount.addr,
@@ -328,12 +325,10 @@ pub fn distribute(
         }
     }
 
+    // Update contract state
     IS_LOCKED.save(deps.storage, &false)?;
     HAS_DISTRIBUTED.save(deps.storage, &true)?;
-
-    // Clear the contract state
     DUE.clear(deps.storage);
-    PRESET_DISTRIBUTION.clear(deps.storage);
 
     Ok(Response::new()
         .add_attribute("action", "handle_competition_result")
@@ -351,34 +346,4 @@ pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, C
     Ok(Response::new()
         .add_attribute("action", "handle_competition_state_changed")
         .add_attribute("is_locked", value.to_string()))
-}
-
-pub fn activate(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    if env.contract.address != info.sender {
-        assert_owner(deps.storage, &info.sender)?;
-    }
-    ensure!(
-        is_fully_funded(deps.as_ref()),
-        ContractError::NotFullyFunded {}
-    );
-
-    IS_LOCKED.save(deps.storage, &true)?;
-
-    let mut msgs = vec![];
-    if let Some(owner) = get_ownership(deps.storage)?.owner {
-        msgs.push(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: owner.to_string(),
-                msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<
-                    Empty,
-                    Empty,
-                >::ActivateCompetition {})?,
-                funds: vec![],
-            },
-        ));
-    }
-
-    Ok(Response::new()
-        .add_attribute("action", "activate")
-        .add_messages(msgs))
 }

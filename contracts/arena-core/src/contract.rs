@@ -3,7 +3,7 @@ use crate::{
     migrate, query,
     state::{
         competition_modules, rulesets, CompetitionModule, ARENA_TAX_CONFIG,
-        COMPETITION_CATEGORIES_COUNT, KEYS, RATING_PERIOD, RULESETS_COUNT,
+        COMPETITION_CATEGORIES_COUNT, KEYS, PAYMENT_REGISTRY, RATING_PERIOD, RULESETS_COUNT,
     },
     ContractError,
 };
@@ -42,26 +42,97 @@ pub fn instantiate(
 
 pub fn instantiate_extension(
     prepropose_response: Response,
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     extension: InstantiateExt,
 ) -> Result<Response, ContractError> {
     let dao = PrePropose::default().dao.load(deps.storage)?;
     RULESETS_COUNT.save(deps.storage, &Uint128::zero())?;
     COMPETITION_CATEGORIES_COUNT.save(deps.storage, &Uint128::zero())?;
-    execute::update_tax(deps.branch(), &env, extension.tax)?;
-    execute::update_categories(deps.branch(), extension.categories, None)?;
-    execute::update_rulesets(deps.branch(), extension.rulesets, None)?;
-    execute::update_rating_period(deps.branch(), extension.rating_period)?;
+    let mut msgs = vec![];
+
+    // Update Tax
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_json_binary(&ExecuteMsg::Extension {
+            msg: ExecuteExt::UpdateTax { tax: extension.tax },
+        })?,
+        funds: vec![],
+    }));
+
+    // Update Categories
+    if let Some(categories) = extension.categories {
+        msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_json_binary(&ExecuteMsg::Extension {
+                msg: ExecuteExt::UpdateCategories {
+                    to_add: Some(categories),
+                    to_edit: None,
+                },
+            })?,
+            funds: vec![],
+        }));
+    }
+
+    // Update Rulesets
+    if let Some(rulesets) = extension.rulesets {
+        msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_json_binary(&ExecuteMsg::Extension {
+                msg: ExecuteExt::UpdateRulesets {
+                    to_add: Some(rulesets),
+                    to_disable: None,
+                },
+            })?,
+            funds: vec![],
+        }));
+    }
+
+    // Update Rating Period
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_json_binary(&ExecuteMsg::Extension {
+            msg: ExecuteExt::UpdateRatingPeriod {
+                period: extension.rating_period,
+            },
+        })?,
+        funds: vec![],
+    }));
+
+    // Save Arena Tax Config
     ARENA_TAX_CONFIG.save(deps.storage, &extension.tax_configuration)?;
-    let competition_response = crate::execute::update_competition_modules(
-        deps.branch(),
-        dao.clone(),
-        extension.competition_modules_instantiate_info,
-        None,
-    )?;
+
+    // Update Competition Modules
+    if let Some(competition_modules_instantiate_info) =
+        extension.competition_modules_instantiate_info
+    {
+        msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_json_binary(&ExecuteMsg::Extension {
+                msg: ExecuteExt::UpdateCompetitionModules {
+                    to_add: Some(competition_modules_instantiate_info),
+                    to_disable: None,
+                },
+            })?,
+            funds: vec![],
+        }));
+    }
+
+    // Set Payment Registry
+    if let Some(payment_registry) = extension.payment_registry {
+        msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_json_binary(&ExecuteMsg::Extension {
+                msg: ExecuteExt::SetPaymentRegistry {
+                    addr: payment_registry,
+                },
+            })?,
+            funds: vec![],
+        }));
+    }
+
     Ok(prepropose_response
-        .add_submessages(competition_response.messages)
+        .add_messages(msgs)
         .set_data(to_json_binary(&ModuleInstantiateCallback {
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: dao.to_string(),
@@ -85,7 +156,9 @@ pub fn execute(
         ExecuteMsg::Propose { msg } => Ok(execute::propose(deps, env, info, msg)?),
         ExecuteMsg::Extension { msg } => {
             // Check authorization for all Extension messages except AdjustRatings
-            if !matches!(msg, ExecuteExt::AdjustRatings { .. }) {
+            if !matches!(msg, ExecuteExt::AdjustRatings { .. })
+                && env.contract.address != info.sender
+            {
                 let dao = PrePropose::default().dao.load(deps.storage)?;
                 if dao != info.sender {
                     return Err(ContractError::Unauthorized {});
@@ -112,6 +185,9 @@ pub fn execute(
                 }
                 ExecuteExt::UpdateEnrollmentModules { to_add, to_remove } => {
                     execute::update_enrollment_modules(deps, to_add, to_remove)
+                }
+                ExecuteExt::SetPaymentRegistry { addr } => {
+                    execute::set_payment_registry(deps, addr)
                 }
             }
         }
@@ -242,6 +318,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
                 to_json_binary(&query::is_valid_enrollment_module(deps, addr)?)
             }
             QueryExt::RatingPeriod {} => to_json_binary(&RATING_PERIOD.may_load(deps.storage)?),
+            QueryExt::PaymentRegistry {} => {
+                to_json_binary(&PAYMENT_REGISTRY.may_load(deps.storage)?)
+            }
         },
         _ => PrePropose::default().query(deps, env, msg),
     };

@@ -261,7 +261,6 @@ pub fn trigger_expiration(
                                 cw721: None,
                             },
                         }],
-                        should_activate_on_funded: Some(false),
                     })?,
                     label: "Arena Escrow".to_string(),
                     additional_layered_fees,
@@ -287,7 +286,6 @@ pub fn trigger_expiration(
                         rules,
                         rulesets,
                         banner,
-                        should_activate_on_funded: Some(false),
                         instantiate_extension: WagerInstantiateExt { registered_members },
                     })?
                 }
@@ -306,7 +304,6 @@ pub fn trigger_expiration(
                     rules,
                     rulesets,
                     banner,
-                    should_activate_on_funded: Some(false),
                     instantiate_extension: LeagueInstantiateExt {
                         match_win_points,
                         match_draw_points,
@@ -329,7 +326,6 @@ pub fn trigger_expiration(
                         rules,
                         rulesets,
                         banner,
-                        should_activate_on_funded: Some(false),
                         instantiate_extension: TournamentInstantiateExt {
                             elimination_type,
                             teams: members.iter().map(|x| x.to_string()).collect(),
