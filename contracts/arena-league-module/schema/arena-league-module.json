@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-league-module",
-  "contract_version": "1.8.2",
+  "contract_version": "2.0.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -246,13 +246,6 @@
                 "items": {
                   "$ref": "#/definitions/Uint128"
                 }
-              },
-              "should_activate_on_funded": {
-                "description": "Determines if the competition is automatically activated if all dues are paid Defaults to true",
-                "type": [
-                  "boolean",
-                  "null"
-                ]
               }
             },
             "additionalProperties": false
@@ -333,27 +326,6 @@
             "properties": {
               "msg": {
                 "$ref": "#/definitions/ExecuteExt"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
-          "activate_competition_manually"
-        ],
-        "properties": {
-          "activate_competition_manually": {
-            "type": "object",
-            "required": [
-              "id"
-            ],
-            "properties": {
-              "id": {
-                "$ref": "#/definitions/Uint128"
               }
             },
             "additionalProperties": false
@@ -487,12 +459,38 @@
         "type": "string"
       },
       "CompetitionStatus": {
-        "type": "string",
-        "enum": [
-          "pending",
-          "active",
-          "inactive",
-          "jailed"
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "pending",
+              "inactive",
+              "jailed"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "active"
+            ],
+            "properties": {
+              "active": {
+                "type": "object",
+                "required": [
+                  "height"
+                ],
+                "properties": {
+                  "height": {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
         ]
       },
       "CompetitionsFilter": {
@@ -1116,6 +1114,19 @@
         "additionalProperties": false
       },
       {
+        "type": "object",
+        "required": [
+          "payment_registry"
+        ],
+        "properties": {
+          "payment_registry": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Query the contract's ownership information",
         "type": "object",
         "required": [
@@ -1132,12 +1143,38 @@
     ],
     "definitions": {
       "CompetitionStatus": {
-        "type": "string",
-        "enum": [
-          "pending",
-          "active",
-          "inactive",
-          "jailed"
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "pending",
+              "inactive",
+              "jailed"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "active"
+            ],
+            "properties": {
+              "active": {
+                "type": "object",
+                "required": [
+                  "height"
+                ],
+                "properties": {
+                  "height": {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
         ]
       },
       "CompetitionsFilter": {
@@ -1582,12 +1619,38 @@
           "type": "string"
         },
         "CompetitionStatus": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "active",
-            "inactive",
-            "jailed"
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "pending",
+                "inactive",
+                "jailed"
+              ]
+            },
+            {
+              "type": "object",
+              "required": [
+                "active"
+              ],
+              "properties": {
+                "active": {
+                  "type": "object",
+                  "required": [
+                    "height"
+                  ],
+                  "properties": {
+                    "height": {
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
           ]
         },
         "Decimal": {
@@ -1861,12 +1924,38 @@
           "additionalProperties": false
         },
         "CompetitionStatus": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "active",
-            "inactive",
-            "jailed"
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "pending",
+                "inactive",
+                "jailed"
+              ]
+            },
+            {
+              "type": "object",
+              "required": [
+                "active"
+              ],
+              "properties": {
+                "active": {
+                  "type": "object",
+                  "required": [
+                    "height"
+                  ],
+                  "properties": {
+                    "height": {
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
           ]
         },
         "Decimal": {
@@ -2198,6 +2287,14 @@
           "type": "string"
         }
       }
+    },
+    "payment_registry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Nullable_String",
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "query_extension": {
       "$schema": "http://json-schema.org/draft-07/schema#",
