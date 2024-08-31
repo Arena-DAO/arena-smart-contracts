@@ -1,0 +1,202 @@
+{
+  "contract_name": "arena-payment-registry",
+  "contract_version": "2.0.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "set_distribution"
+        ],
+        "properties": {
+          "set_distribution": {
+            "type": "object",
+            "required": [
+              "distribution"
+            ],
+            "properties": {
+              "distribution": {
+                "$ref": "#/definitions/Distribution_for_String"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "remove_distribution"
+        ],
+        "properties": {
+          "remove_distribution": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Decimal": {
+        "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+        "type": "string"
+      },
+      "Distribution_for_String": {
+        "type": "object",
+        "required": [
+          "member_percentages",
+          "remainder_addr"
+        ],
+        "properties": {
+          "member_percentages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/MemberPercentage_for_String"
+            }
+          },
+          "remainder_addr": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MemberPercentage_for_String": {
+        "type": "object",
+        "required": [
+          "addr",
+          "percentage"
+        ],
+        "properties": {
+          "addr": {
+            "type": "string"
+          },
+          "percentage": {
+            "$ref": "#/definitions/Decimal"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "get_distribution"
+        ],
+        "properties": {
+          "get_distribution": {
+            "type": "object",
+            "required": [
+              "addr"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              },
+              "height": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
+  "migrate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MigrateMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "from_compatible"
+        ],
+        "properties": {
+          "from_compatible": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
+  "sudo": null,
+  "responses": {
+    "get_distribution": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Nullable_Distribution_for_String",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Distribution_for_String"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "definitions": {
+        "Decimal": {
+          "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+          "type": "string"
+        },
+        "Distribution_for_String": {
+          "type": "object",
+          "required": [
+            "member_percentages",
+            "remainder_addr"
+          ],
+          "properties": {
+            "member_percentages": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MemberPercentage_for_String"
+              }
+            },
+            "remainder_addr": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "MemberPercentage_for_String": {
+          "type": "object",
+          "required": [
+            "addr",
+            "percentage"
+          ],
+          "properties": {
+            "addr": {
+              "type": "string"
+            },
+            "percentage": {
+              "$ref": "#/definitions/Decimal"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
