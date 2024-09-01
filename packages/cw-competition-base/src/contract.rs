@@ -49,16 +49,6 @@ impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
     }
 }
 
-pub struct StatTypeIndexes<'a> {
-    pub priority: MultiIndex<'a, u8, StatType, (u128, String)>,
-}
-
-impl<'a> IndexList<StatType> for StatTypeIndexes<'a> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<StatType>> + '_> {
-        Box::new(std::iter::once(&self.priority as &dyn Index<StatType>))
-    }
-}
-
 pub struct CompetitionModuleContract<
     'a,
     InstantiateExt,
@@ -83,7 +73,7 @@ pub struct CompetitionModuleContract<
     pub temp_competition: Item<'static, u128>,
     pub competition_hooks: Map<'static, (u128, &'a Addr), HookDirection>,
     pub stats: Map<'static, (u128, &'a Addr, &'a str), StatValue>,
-    pub stat_types: IndexedMap<'a, (u128, &'a str), StatType, StatTypeIndexes<'a>>,
+    pub stat_types: Map<'a, (u128, &'a str), StatType>,
 
     instantiate_type: PhantomData<InstantiateExt>,
     execute_type: PhantomData<ExecuteExt>,
@@ -125,7 +115,6 @@ impl<
         competition_rules_key: &'static str,
         stats_key: &'static str,
         stat_types_key: &'static str,
-        stat_types_priority_key: &'static str,
     ) -> Self {
         Self {
             config: Item::new(config_key),
@@ -144,16 +133,7 @@ impl<
             competition_result: Map::new(competition_result_key),
             competition_rules: Map::new(competition_rules_key),
             stats: Map::new(stats_key),
-            stat_types: IndexedMap::new(
-                stat_types_key,
-                StatTypeIndexes {
-                    priority: MultiIndex::new(
-                        |_, st| st.tie_breaker_priority.unwrap_or(u8::MAX),
-                        stat_types_key,
-                        stat_types_priority_key,
-                    ),
-                },
-            ),
+            stat_types: Map::new(stat_types_key),
             instantiate_type: PhantomData,
             execute_type: PhantomData,
             query_type: PhantomData,
@@ -229,7 +209,6 @@ impl<
             "competition_rules",
             "stats",
             "stat_types",
-            "stat_types__priority",
         )
     }
 }
@@ -1080,7 +1059,7 @@ impl<
                 return Err(CompetitionError::StatTypeNotFound { name });
             }
             self.stat_types
-                .remove(deps.storage, (competition_id.u128(), &name))?;
+                .remove(deps.storage, (competition_id.u128(), &name));
         }
 
         Ok(Response::new()
