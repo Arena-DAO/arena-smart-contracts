@@ -12,7 +12,6 @@ use cw_balance::{
 };
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
-use dao_proposal_single::msg::ExecuteMsgFns;
 
 use crate::tests::helpers::{setup_arena, setup_voting_module};
 
@@ -729,6 +728,7 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
     arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
     arena.arena_escrow.set_sender(&user2);
     arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
+    let activation_height = mock.block_info()?.height;
 
     // Jailing before expiration is an error
     arena.arena_wager_module.set_sender(&admin);
@@ -766,24 +766,22 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
         }),
         &[],
     )?;
-    mock.next_block()?;
 
     // Check that the wager is jailed
     let wager = arena.arena_wager_module.competition(Uint128::one())?;
-    assert_eq!(wager.status, CompetitionStatus::Jailed);
+    assert_eq!(
+        wager.status,
+        CompetitionStatus::Jailed { activation_height }
+    );
 
-    // Vote and execute the jail resolution proposal
-    arena.dao_dao.dao_proposal_single.call_as(&admin).vote(
-        1,
-        dao_voting::voting::Vote::Yes,
-        None,
-    )?;
+    // Execute the jailed proposal after expiration
     mock.wait_blocks(100)?;
-    mock.call_as(&admin).execute(
+    let res = mock.call_as(&admin).execute(
         &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1 },
         &[],
         &arena.dao_dao.dao_proposal_single.address()?,
     )?;
+    dbg!(res);
 
     // Check the result
     let result = arena.arena_wager_module.result(Uint128::one())?;

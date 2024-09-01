@@ -527,8 +527,7 @@
             "type": "string",
             "enum": [
               "pending",
-              "inactive",
-              "jailed"
+              "inactive"
             ]
           },
           {
@@ -540,10 +539,33 @@
               "active": {
                 "type": "object",
                 "required": [
-                  "height"
+                  "activation_height"
                 ],
                 "properties": {
-                  "height": {
+                  "activation_height": {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "jailed"
+            ],
+            "properties": {
+              "jailed": {
+                "type": "object",
+                "required": [
+                  "activation_height"
+                ],
+                "properties": {
+                  "activation_height": {
                     "type": "integer",
                     "format": "uint64",
                     "minimum": 0.0
@@ -1310,8 +1332,7 @@
             "type": "string",
             "enum": [
               "pending",
-              "inactive",
-              "jailed"
+              "inactive"
             ]
           },
           {
@@ -1323,10 +1344,33 @@
               "active": {
                 "type": "object",
                 "required": [
-                  "height"
+                  "activation_height"
                 ],
                 "properties": {
-                  "height": {
+                  "activation_height": {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "jailed"
+            ],
+            "properties": {
+              "jailed": {
+                "type": "object",
+                "required": [
+                  "activation_height"
+                ],
+                "properties": {
+                  "activation_height": {
                     "type": "integer",
                     "format": "uint64",
                     "minimum": 0.0
@@ -1711,8 +1755,7 @@
               "type": "string",
               "enum": [
                 "pending",
-                "inactive",
-                "jailed"
+                "inactive"
               ]
             },
             {
@@ -1724,10 +1767,33 @@
                 "active": {
                   "type": "object",
                   "required": [
-                    "height"
+                    "activation_height"
                   ],
                   "properties": {
-                    "height": {
+                    "activation_height": {
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "jailed"
+              ],
+              "properties": {
+                "jailed": {
+                  "type": "object",
+                  "required": [
+                    "activation_height"
+                  ],
+                  "properties": {
+                    "activation_height": {
                       "type": "integer",
                       "format": "uint64",
                       "minimum": 0.0
@@ -2031,8 +2097,7 @@
               "type": "string",
               "enum": [
                 "pending",
-                "inactive",
-                "jailed"
+                "inactive"
               ]
             },
             {
@@ -2044,10 +2109,33 @@
                 "active": {
                   "type": "object",
                   "required": [
-                    "height"
+                    "activation_height"
                   ],
                   "properties": {
-                    "height": {
+                    "activation_height": {
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "jailed"
+              ],
+              "properties": {
+                "jailed": {
+                  "type": "object",
+                  "required": [
+                    "activation_height"
+                  ],
+                  "properties": {
+                    "activation_height": {
                       "type": "integer",
                       "format": "uint64",
                       "minimum": 0.0

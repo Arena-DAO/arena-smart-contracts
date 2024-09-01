@@ -412,7 +412,7 @@ impl<
             .load(deps.storage, competition_id.u128())?;
 
         // Validate that competition is jailed
-        if competition.status != CompetitionStatus::Jailed {
+        if !matches!(competition.status, CompetitionStatus::Jailed { .. }) {
             return Err(CompetitionError::InvalidCompetitionStatus {
                 current_status: competition.status,
             });
@@ -560,7 +560,7 @@ impl<
         // Update competition status
         let new_competition = Competition {
             status: CompetitionStatus::Active {
-                height: env.block.height,
+                activation_height: env.block.height,
             },
             ..competition.clone()
         };
@@ -602,18 +602,21 @@ impl<
                     x.ok_or(CompetitionError::UnknownCompetitionId { id: competition_id })?;
 
                 // Validate competition status
-                if competition.status != CompetitionStatus::Jailed {
-                    if !matches!(competition.status, CompetitionStatus::Active { .. }) {
-                        return Err(CompetitionError::InvalidCompetitionStatus {
-                            current_status: competition.status,
-                        });
-                    }
-                    if !competition.expiration.is_expired(&env.block) {
-                        return Err(CompetitionError::CompetitionNotExpired {});
-                    }
-                }
+                let activation_height = match competition.status {
+                    CompetitionStatus::Active { activation_height } => {
+                        if !competition.expiration.is_expired(&env.block) {
+                            return Err(CompetitionError::CompetitionNotExpired {});
+                        }
 
-                competition.status = CompetitionStatus::Jailed;
+                        Ok(activation_height)
+                    }
+                    CompetitionStatus::Jailed { activation_height } => Ok(activation_height),
+                    _ => Err(CompetitionError::InvalidCompetitionStatus {
+                        current_status: competition.status,
+                    }),
+                }?;
+
+                competition.status = CompetitionStatus::Jailed { activation_height };
                 Ok(competition)
             })?;
 
@@ -704,7 +707,7 @@ impl<
         let mut msgs = vec![];
 
         // Handle escrow setup
-        let (escrow_addr, fees) = if let Some(escrow_info) = escrow {
+        let (escrow_addr, fees, status) = if let Some(escrow_info) = escrow {
             let salt = env.block.height.to_ne_bytes();
             let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
             let code_info = deps.querier.query_wasm_code_info(escrow_info.code_id)?;
@@ -736,9 +739,15 @@ impl<
                 })
                 .transpose()?;
 
-            (Some(escrow_addr), fees)
+            (Some(escrow_addr), fees, CompetitionStatus::Pending)
         } else {
-            (None, None)
+            (
+                None,
+                None,
+                CompetitionStatus::Active {
+                    activation_height: env.block.height,
+                },
+            )
         };
 
         // Validate category and rulesets
@@ -776,7 +785,7 @@ impl<
             description,
             expiration,
             rulesets,
-            status: CompetitionStatus::Pending,
+            status,
             extension: extension.to_competition_ext(deps.as_ref())?,
             fees,
             banner,
@@ -824,7 +833,7 @@ impl<
             .ok_or(CompetitionError::UnknownCompetitionId { id: competition_id })?;
 
         // Validate competition status and sender's authorization
-        self.inner_validate_auth(&info.sender, &competition)?;
+        self.inner_validate_auth(&info.sender, &competition, false)?;
 
         // Validate the distribution
         let validated_distribution = distribution
@@ -851,14 +860,24 @@ impl<
         &self,
         sender: &Addr,
         competition: &Competition<CompetitionExt>,
+        allow_pending: bool,
     ) -> Result<(), CompetitionError> {
         match competition.status {
-            CompetitionStatus::Active { height: _ } => {
+            CompetitionStatus::Pending if allow_pending => {
                 if competition.host != sender && competition.admin_dao != sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
             }
-            CompetitionStatus::Jailed => {
+            CompetitionStatus::Active {
+                activation_height: _,
+            } => {
+                if competition.host != sender && competition.admin_dao != sender {
+                    return Err(CompetitionError::Unauthorized {});
+                }
+            }
+            CompetitionStatus::Jailed {
+                activation_height: _,
+            } => {
                 if competition.admin_dao != sender {
                     return Err(CompetitionError::Unauthorized {});
                 }
@@ -944,7 +963,8 @@ impl<
             };
 
             match competition.status {
-                CompetitionStatus::Active { height } => {
+                CompetitionStatus::Jailed { activation_height }
+                | CompetitionStatus::Active { activation_height } => {
                     let sub_msg = SubMsg::reply_on_success(
                         CosmosMsg::Wasm(WasmMsg::Execute {
                             contract_addr: escrow.to_string(),
@@ -952,7 +972,7 @@ impl<
                                 &arena_interface::escrow::ExecuteMsg::Distribute {
                                     distribution: distribution_msg,
                                     layered_fees,
-                                    activation_height: Some(height),
+                                    activation_height: Some(activation_height),
                                 },
                             )?,
                             funds: vec![],
@@ -1031,7 +1051,7 @@ impl<
         let competition = self
             .competitions
             .load(deps.storage, competition_id.u128())?;
-        self.inner_validate_auth(&info.sender, &competition)?;
+        self.inner_validate_auth(&info.sender, &competition, true)?;
 
         // Add new stat types
         for stat_type in to_add {
@@ -1079,7 +1099,7 @@ impl<
         let competition = self
             .competitions
             .load(deps.storage, competition_id.u128())?;
-        self.inner_validate_auth(&info.sender, &competition)?;
+        self.inner_validate_auth(&info.sender, &competition, false)?;
 
         for update in updates {
             let addr = deps.api.addr_validate(&update.addr)?;
@@ -1460,20 +1480,53 @@ impl<
         deps: DepsMut,
         env: Env,
     ) -> Result<(), CompetitionError> {
-        // Competition status 'Active' now stores its height for the payment registry
+        // Competition status 'Active' and 'Jailed' now store the activation height for the payment registry
         // Not too many, so we can just do it in the migration
         let competition_range = self
             .competitions
             .idx
             .status
-            .prefix(CompetitionStatus::Active { height: 0u64 }.to_string())
+            .prefix(
+                CompetitionStatus::Active {
+                    activation_height: 0u64,
+                }
+                .to_string(),
+            )
+            .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
+            .collect::<StdResult<Vec<_>>>()?;
+        let competition_range_jailed = self
+            .competitions
+            .idx
+            .status
+            .prefix(
+                CompetitionStatus::Jailed {
+                    activation_height: 0u64,
+                }
+                .to_string(),
+            )
             .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
             .collect::<StdResult<Vec<_>>>()?;
 
         for (competition_id, competition) in competition_range {
             let new_competition = Competition {
                 status: CompetitionStatus::Active {
-                    height: env.block.height,
+                    activation_height: env.block.height,
+                },
+                ..competition.clone()
+            };
+
+            self.competitions.replace(
+                deps.storage,
+                competition_id,
+                Some(&new_competition),
+                Some(&competition),
+            )?;
+        }
+
+        for (competition_id, competition) in competition_range_jailed {
+            let new_competition = Competition {
+                status: CompetitionStatus::Jailed {
+                    activation_height: env.block.height,
                 },
                 ..competition.clone()
             };

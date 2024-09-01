@@ -9,19 +9,25 @@ use std::fmt;
 pub enum CompetitionStatus {
     Pending,
     Active {
-        height: u64,
+        activation_height: u64,
     },
     #[default]
     Inactive,
-    Jailed,
+    Jailed {
+        activation_height: u64,
+    },
 }
 
 impl fmt::Display for CompetitionStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             CompetitionStatus::Pending => write!(f, "Pending"),
-            CompetitionStatus::Jailed => write!(f, "Jailed"),
-            CompetitionStatus::Active { height: _ } => write!(f, "Active"),
+            CompetitionStatus::Jailed {
+                activation_height: _,
+            } => write!(f, "Jailed"),
+            CompetitionStatus::Active {
+                activation_height: _,
+            } => write!(f, "Active"),
             CompetitionStatus::Inactive => write!(f, "Inactive"),
         }
     }

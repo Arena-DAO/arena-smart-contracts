@@ -428,7 +428,7 @@ pub fn process_matches(
     let mut tournament = competition_module
         .competitions
         .load(deps.storage, tournament_id.u128())?;
-    competition_module.inner_validate_auth(&info.sender, &tournament)?;
+    competition_module.inner_validate_auth(&info.sender, &tournament, false)?;
 
     // Prepare updates for the next matches
     let mut updates = Vec::new();

@@ -968,3 +968,323 @@ fn test_multiple_point_adjustments() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+// TODO: this logic still a WIP
+/*#[test]
+fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+
+    let team1 = mock.addr_make_with_balance("team1", coins(10000, DENOM))?;
+    let team2 = mock.addr_make_with_balance("team2", coins(10000, DENOM))?;
+    let team3 = mock.addr_make_with_balance("team3", coins(10000, DENOM))?;
+    let team4 = mock.addr_make_with_balance("team4", coins(10000, DENOM))?;
+
+    arena.arena_league_module.set_sender(&admin);
+
+    // Create a league
+    let res = arena.arena_league_module.create_competition(
+        "Test League".to_string(),
+        Expiration::AtHeight(1000000),
+        LeagueInstantiateExt {
+            match_win_points: Uint64::new(3),
+            match_draw_points: Uint64::new(1),
+            match_lose_points: Uint64::zero(),
+            teams: vec![
+                team1.to_string(),
+                team2.to_string(),
+                team3.to_string(),
+                team4.to_string(),
+            ],
+            distribution: vec![
+                Decimal::percent(50),
+                Decimal::percent(30),
+                Decimal::percent(15),
+                Decimal::percent(5),
+            ],
+        },
+        "Tiebreaker Test League".to_string(),
+        None,
+        Some(Uint128::one()),
+        Some(EscrowInstantiateInfo {
+            code_id: arena.arena_escrow.code_id()?,
+            msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
+                dues: vec![
+                    MemberBalanceUnchecked {
+                        addr: team1.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                    MemberBalanceUnchecked {
+                        addr: team2.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                    MemberBalanceUnchecked {
+                        addr: team3.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                    MemberBalanceUnchecked {
+                        addr: team4.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                ],
+            })?,
+            label: "League Escrow".to_string(),
+            additional_layered_fees: None,
+        }),
+        None,
+        Some(vec!["League Rule".to_string()]),
+        None,
+    )?;
+    let league_id = Uint128::one();
+
+    let escrow_addr = res
+        .events
+        .iter()
+        .find_map(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attr| attr.key == "escrow_addr")
+                .map(|attr| attr.value.clone())
+        })
+        .unwrap();
+
+    arena
+        .arena_escrow
+        .set_address(&Addr::unchecked(escrow_addr));
+
+    // Fund the escrow
+    for team in [&team1, &team2, &team3, &team4] {
+        arena.arena_escrow.set_sender(team);
+        arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
+    }
+
+    // Add stat types
+    arena.arena_league_module.update_stat_types(
+        league_id,
+        vec![
+            StatType {
+                name: "goal_difference".to_string(),
+                value_type: StatValueType::Int,
+                tie_breaker_priority: Some(1),
+                is_beneficial: true,
+            },
+            StatType {
+                name: "goals_scored".to_string(),
+                value_type: StatValueType::Int,
+                tie_breaker_priority: Some(2),
+                is_beneficial: true,
+            },
+        ],
+        vec![],
+    )?;
+
+    // Simulate matches and update stats
+    // Round 1: Team1 vs Team2 (3-1) and Team3 vs Team4 (2-2)
+    arena.arena_league_module.process_match(
+        league_id,
+        vec![
+            MatchResultMsg {
+                match_number: Uint128::one(),
+                match_result: MatchResult::Team1,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(2),
+                match_result: MatchResult::Draw,
+            },
+        ],
+        Uint64::one(),
+    )?;
+    arena.arena_league_module.update_stats(
+        league_id,
+        vec![
+            MemberStatUpdate {
+                addr: team1.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(2)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(3)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team2.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(-2)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(1)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team3.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(2)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team4.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(2)),
+                    },
+                ],
+            },
+        ],
+    )?;
+
+    // Round 2: Team1 vs Team3 (1-1) and Team2 vs Team4 (0-2)
+    arena.arena_league_module.process_match(
+        league_id,
+        vec![
+            MatchResultMsg {
+                match_number: Uint128::new(3),
+                match_result: MatchResult::Draw,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(4),
+                match_result: MatchResult::Team2,
+            },
+        ],
+        Uint64::new(2),
+    )?;
+    arena.arena_league_module.update_stats(
+        league_id,
+        vec![
+            MemberStatUpdate {
+                addr: team1.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(2)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(4)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team2.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(1)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(5)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team3.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(3)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team4.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(2)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(4)),
+                    },
+                ],
+            },
+        ],
+    )?;
+
+    // Get the final leaderboard
+    let leaderboard = arena.arena_league_module.leaderboard(league_id, None)?;
+    dbg!(leaderboard.clone());
+
+    // Check the leaderboard order
+    assert_eq!(leaderboard[0].member, team1); // 4 points, +2 goal difference, 4 goals scored
+    assert_eq!(leaderboard[1].member, team2); // 4 points, +1 goal difference, 5 goals scored (same as team1, but loses on tie-breaker priority)
+    assert_eq!(leaderboard[2].member, team4); // 2 points, +2 goal difference, 4 goals scored
+    assert_eq!(leaderboard[3].member, team3); // 0 point, 0 goal difference, 3 goal scored
+
+    // Check points
+    assert_eq!(leaderboard[0].points, Int128::new(4));
+    assert_eq!(leaderboard[1].points, Int128::new(4));
+    assert_eq!(leaderboard[2].points, Int128::new(2));
+    assert_eq!(leaderboard[3].points, Int128::new(0));
+
+    // Check final distribution
+    let team1_balance = arena.arena_escrow.balance(team1.to_string())?;
+    let team2_balance = arena.arena_escrow.balance(team2.to_string())?;
+    let team3_balance = arena.arena_escrow.balance(team3.to_string())?;
+    let team4_balance = arena.arena_escrow.balance(team4.to_string())?;
+
+    assert_eq!(
+        team1_balance.unwrap().native.unwrap()[0].amount,
+        Uint128::new(1900)
+    ); // 50% of 3800 (4000 - 5% tax)
+    assert_eq!(
+        team4_balance.unwrap().native.unwrap()[0].amount,
+        Uint128::new(1140)
+    ); // 30% of 3800
+    assert_eq!(
+        team3_balance.unwrap().native.unwrap()[0].amount,
+        Uint128::new(570)
+    ); // 15% of 3800
+    assert_eq!(
+        team2_balance.unwrap().native.unwrap()[0].amount,
+        Uint128::new(190)
+    ); // 5% of 3800
+
+    // Check DAO balance (5% tax)
+    let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
+    assert_eq!(dao_balance, Uint128::new(200)); // 5% of 4000
+
+    Ok(())
+}
+*/
