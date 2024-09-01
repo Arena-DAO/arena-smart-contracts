@@ -1,16 +1,18 @@
 use arena_interface::competition::msg::{
     EscrowInstantiateInfo, ExecuteBaseFns as _, QueryBaseFns as _,
 };
+use arena_interface::competition::state::CompetitionStatus;
 use arena_interface::core::QueryExtFns;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_interface::registry::ExecuteMsgFns as _;
 use arena_wager_module::msg::WagerInstantiateExt;
-use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Decimal, Uint128};
+use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Decimal, Int128, Uint128};
 use cw_balance::{
     BalanceUnchecked, BalanceVerified, Distribution, MemberBalanceUnchecked, MemberPercentage,
 };
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
+use dao_proposal_single::msg::ExecuteMsgFns;
 
 use crate::tests::helpers::{setup_arena, setup_voting_module};
 
@@ -644,6 +646,305 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
     // Check DAO balance
     let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
     assert_eq!(dao_balance, Uint128::new(100)); // 5% of 2000
+
+    Ok(())
+}
+
+#[test]
+fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+    setup_voting_module(
+        &mock,
+        &arena,
+        vec![cw4::Member {
+            addr: admin.to_string(),
+            weight: 1u64,
+        }],
+    )?;
+
+    let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
+    let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
+
+    arena.arena_wager_module.set_sender(&admin);
+
+    // Create a wager
+    let res = arena.arena_wager_module.create_competition(
+        "A test wager".to_string(),
+        Expiration::AtHeight(100000),
+        WagerInstantiateExt {
+            registered_members: Some(vec![user1.to_string(), user2.to_string()]),
+        },
+        "Test Wager".to_string(),
+        None,
+        Some(Uint128::one()),
+        Some(EscrowInstantiateInfo {
+            code_id: arena.arena_escrow.code_id()?,
+            msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
+                dues: vec![
+                    MemberBalanceUnchecked {
+                        addr: user1.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                    MemberBalanceUnchecked {
+                        addr: user2.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                ],
+            })?,
+            label: "Wager Escrow".to_string(),
+            additional_layered_fees: None,
+        }),
+        None,
+        Some(vec!["Wager Rule".to_string()]),
+        None,
+    )?;
+
+    let escrow_addr = res
+        .events
+        .iter()
+        .find_map(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attr| attr.key == "escrow_addr")
+                .map(|attr| attr.value.clone())
+        })
+        .unwrap();
+
+    arena
+        .arena_escrow
+        .set_address(&Addr::unchecked(escrow_addr));
+
+    // Fund the escrow
+    arena.arena_escrow.set_sender(&user1);
+    arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
+    arena.arena_escrow.set_sender(&user2);
+    arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
+
+    // Jailing before expiration is an error
+    arena.arena_wager_module.set_sender(&admin);
+    let res = arena.arena_wager_module.jail_competition(
+        Uint128::one(),
+        "Jailed Wager".to_string(),
+        "This wager needs DAO resolution".to_string(),
+        None,
+        Some(Distribution {
+            member_percentages: vec![MemberPercentage {
+                addr: user1.to_string(),
+                percentage: Decimal::one(),
+            }],
+            remainder_addr: user1.to_string(),
+        }),
+        &[],
+    );
+    assert!(res.is_err());
+
+    // Wait enough time for the wager to be jailable
+    mock.wait_blocks(100000)?;
+
+    // Jail the wager
+    arena.arena_wager_module.jail_competition(
+        Uint128::one(),
+        "Jailed Wager".to_string(),
+        "This wager needs DAO resolution".to_string(),
+        None,
+        Some(Distribution {
+            member_percentages: vec![MemberPercentage {
+                addr: user1.to_string(),
+                percentage: Decimal::one(),
+            }],
+            remainder_addr: user1.to_string(),
+        }),
+        &[],
+    )?;
+    mock.next_block()?;
+
+    // Check that the wager is jailed
+    let wager = arena.arena_wager_module.competition(Uint128::one())?;
+    assert_eq!(wager.status, CompetitionStatus::Jailed);
+
+    // Vote and execute the jail resolution proposal
+    arena.dao_dao.dao_proposal_single.call_as(&admin).vote(
+        1,
+        dao_voting::voting::Vote::Yes,
+        None,
+    )?;
+    mock.wait_blocks(100)?;
+    mock.call_as(&admin).execute(
+        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1 },
+        &[],
+        &arena.dao_dao.dao_proposal_single.address()?,
+    )?;
+
+    // Check the result
+    let result = arena.arena_wager_module.result(Uint128::one())?;
+    assert!(result.is_some());
+    assert_eq!(
+        result.unwrap().member_percentages[0].addr,
+        user1.to_string()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_wager_with_stats() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+
+    let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
+    let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
+
+    arena.arena_wager_module.set_sender(&admin);
+
+    // Create a wager
+    let res = arena.arena_wager_module.create_competition(
+        "A test wager with stats".to_string(),
+        Expiration::AtHeight(1000000),
+        WagerInstantiateExt {
+            registered_members: Some(vec![user1.to_string(), user2.to_string()]),
+        },
+        "Test Wager with Stats".to_string(),
+        None,
+        Some(Uint128::one()),
+        Some(EscrowInstantiateInfo {
+            code_id: arena.arena_escrow.code_id()?,
+            msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
+                dues: vec![
+                    MemberBalanceUnchecked {
+                        addr: user1.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                    MemberBalanceUnchecked {
+                        addr: user2.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                ],
+            })?,
+            label: "Wager with Stats".to_string(),
+            additional_layered_fees: None,
+        }),
+        None,
+        Some(vec!["Wager Rule".to_string()]),
+        None,
+    )?;
+
+    let escrow_addr = res
+        .events
+        .iter()
+        .find_map(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attr| attr.key == "escrow_addr")
+                .map(|attr| attr.value.clone())
+        })
+        .unwrap();
+
+    arena
+        .arena_escrow
+        .set_address(&Addr::unchecked(escrow_addr));
+
+    // Fund the escrow
+    arena.arena_escrow.set_sender(&user1);
+    arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
+    arena.arena_escrow.set_sender(&user2);
+    arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
+
+    // Add stat types
+    arena.arena_wager_module.update_stat_types(
+        Uint128::one(),
+        vec![
+            arena_interface::competition::state::StatType {
+                name: "wins".to_string(),
+                value_type: arena_interface::competition::state::StatValueType::Int,
+                tie_breaker_priority: Some(1),
+                is_beneficial: true,
+            },
+            arena_interface::competition::state::StatType {
+                name: "points".to_string(),
+                value_type: arena_interface::competition::state::StatValueType::Int,
+                tie_breaker_priority: Some(2),
+                is_beneficial: true,
+            },
+        ],
+        vec![],
+    )?;
+
+    // Update stats
+    arena.arena_wager_module.update_stats(
+        Uint128::one(),
+        vec![
+            arena_interface::competition::msg::MemberStatUpdate {
+                addr: user1.to_string(),
+                stats: vec![
+                    arena_interface::competition::msg::StatMsg {
+                        name: "wins".to_string(),
+                        value: arena_interface::competition::state::StatValue::Int(Int128::one()),
+                    },
+                    arena_interface::competition::msg::StatMsg {
+                        name: "points".to_string(),
+                        value: arena_interface::competition::state::StatValue::Int(Int128::new(10)),
+                    },
+                ],
+            },
+            arena_interface::competition::msg::MemberStatUpdate {
+                addr: user2.to_string(),
+                stats: vec![
+                    arena_interface::competition::msg::StatMsg {
+                        name: "wins".to_string(),
+                        value: arena_interface::competition::state::StatValue::Int(Int128::zero()),
+                    },
+                    arena_interface::competition::msg::StatMsg {
+                        name: "points".to_string(),
+                        value: arena_interface::competition::state::StatValue::Int(Int128::new(5)),
+                    },
+                ],
+            },
+        ],
+    )?;
+
+    // Check final stats
+    let user1_stats = arena
+        .arena_wager_module
+        .stats(user1.to_string(), Uint128::one())?;
+    let user2_stats = arena
+        .arena_wager_module
+        .stats(user2.to_string(), Uint128::one())?;
+
+    assert_eq!(
+        user1_stats.as_ref().unwrap()[1].value,
+        arena_interface::competition::state::StatValue::Int(Int128::one())
+    ); // wins
+    assert_eq!(
+        user1_stats.as_ref().unwrap()[0].value,
+        arena_interface::competition::state::StatValue::Int(Int128::new(10))
+    ); // points
+    assert_eq!(
+        user2_stats.as_ref().unwrap()[1].value,
+        arena_interface::competition::state::StatValue::Int(Int128::zero())
+    ); // wins
+    assert_eq!(
+        user2_stats.as_ref().unwrap()[0].value,
+        arena_interface::competition::state::StatValue::Int(Int128::new(5))
+    ); // points
 
     Ok(())
 }

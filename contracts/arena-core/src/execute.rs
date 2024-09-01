@@ -249,7 +249,7 @@ pub fn propose(
                 })?,
                 funds: vec![],
             })],
-            proposer: Some(info.sender.to_string()),
+            proposer: Some(originator.to_string()),
         });
 
     let propose_message = WasmMsg::Execute {
