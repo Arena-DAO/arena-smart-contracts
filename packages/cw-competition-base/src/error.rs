@@ -45,7 +45,7 @@ pub enum CompetitionError {
     #[error("Unknown reply id")]
     UnknownReplyId { id: u64 },
 
-    #[error("Invalid competition status for action")]
+    #[error("Invalid competition status '{current_status}' for action")]
     InvalidCompetitionStatus { current_status: CompetitionStatus },
 
     #[error("Invalid category and rulesets")]
@@ -53,4 +53,10 @@ pub enum CompetitionError {
         category_id: Uint128,
         rulesets: Vec<Uint128>,
     },
+
+    #[error("Stat type '{name}' already exists")]
+    StatTypeAlreadyExists { name: String },
+
+    #[error("Stat type '{name}' not found")]
+    StatTypeNotFound { name: String },
 }

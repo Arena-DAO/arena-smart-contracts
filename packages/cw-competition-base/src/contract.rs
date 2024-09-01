@@ -4,9 +4,12 @@ use arena_interface::{
     competition::{
         msg::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
-            QueryBase, ToCompetitionExt,
+            MemberStatUpdate, QueryBase, StatMsg, ToCompetitionExt,
         },
-        state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
+        state::{
+            Competition, CompetitionResponse, CompetitionStatus, Config, Evidence, StatType,
+            StatValue,
+        },
     },
     core::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
     fees::FeeInformation,
@@ -15,7 +18,8 @@ use arena_interface::{
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
     ensure, instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty,
-    Env, MessageInfo, Reply, Response, StdError, StdResult, Storage, SubMsg, Uint128, WasmMsg,
+    Env, MessageInfo, Order, Reply, Response, StdError, StdResult, Storage, SubMsg, Uint128,
+    WasmMsg,
 };
 use cw_balance::Distribution;
 use cw_ownable::{assert_owner, get_ownership, initialize_owner};
@@ -45,6 +49,16 @@ impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
     }
 }
 
+pub struct StatTypeIndexes<'a> {
+    pub priority: MultiIndex<'a, u8, StatType, (u128, String)>,
+}
+
+impl<'a> IndexList<StatType> for StatTypeIndexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<StatType>> + '_> {
+        Box::new(std::iter::once(&self.priority as &dyn Index<StatType>))
+    }
+}
+
 pub struct CompetitionModuleContract<
     'a,
     InstantiateExt,
@@ -68,6 +82,8 @@ pub struct CompetitionModuleContract<
     pub escrows_to_competitions: Map<'static, &'a Addr, u128>,
     pub temp_competition: Item<'static, u128>,
     pub competition_hooks: Map<'static, (u128, &'a Addr), HookDirection>,
+    pub stats: Map<'static, (u128, &'a Addr, &'a str), StatValue>,
+    pub stat_types: IndexedMap<'a, (u128, &'a str), StatType, StatTypeIndexes<'a>>,
 
     instantiate_type: PhantomData<InstantiateExt>,
     execute_type: PhantomData<ExecuteExt>,
@@ -107,6 +123,9 @@ impl<
         competition_evidence_count_key: &'static str,
         competition_result_key: &'static str,
         competition_rules_key: &'static str,
+        stats_key: &'static str,
+        stat_types_key: &'static str,
+        stat_types_priority_key: &'static str,
     ) -> Self {
         Self {
             config: Item::new(config_key),
@@ -124,6 +143,17 @@ impl<
             competition_evidence_count: Map::new(competition_evidence_count_key),
             competition_result: Map::new(competition_result_key),
             competition_rules: Map::new(competition_rules_key),
+            stats: Map::new(stats_key),
+            stat_types: IndexedMap::new(
+                stat_types_key,
+                StatTypeIndexes {
+                    priority: MultiIndex::new(
+                        |_, st| st.tie_breaker_priority.unwrap_or(u8::MAX),
+                        stat_types_key,
+                        stat_types_priority_key,
+                    ),
+                },
+            ),
             instantiate_type: PhantomData,
             execute_type: PhantomData,
             query_type: PhantomData,
@@ -197,6 +227,9 @@ impl<
             "competition_evidence_count",
             "competition_result",
             "competition_rules",
+            "stats",
+            "stat_types",
+            "stat_types__priority",
         )
     }
 }
@@ -331,6 +364,15 @@ impl<
                 escrow_code_id,
                 escrow_migrate_msg,
             ),
+            ExecuteBase::UpdateStatTypes {
+                competition_id,
+                to_add,
+                to_remove,
+            } => self.execute_update_stat_types(deps, env, info, competition_id, to_add, to_remove),
+            ExecuteBase::UpdateStats {
+                competition_id,
+                updates,
+            } => self.execute_update_stats(deps, env, info, competition_id, updates),
             ExecuteBase::ExecuteCompetitionHook {
                 competition_id: _,
                 distribution: _,
@@ -997,6 +1039,96 @@ impl<
         ))
     }
 
+    pub fn execute_update_stat_types(
+        &self,
+        deps: DepsMut,
+        _env: Env,
+        info: MessageInfo,
+        competition_id: Uint128,
+        to_add: Vec<StatType>,
+        to_remove: Vec<String>,
+    ) -> Result<Response, CompetitionError> {
+        // Check if the competition exists and the sender is authorized
+        let competition = self
+            .competitions
+            .load(deps.storage, competition_id.u128())?;
+        self.inner_validate_auth(&info.sender, &competition)?;
+
+        // Add new stat types
+        for stat_type in to_add {
+            if self
+                .stat_types
+                .has(deps.storage, (competition_id.u128(), &stat_type.name))
+            {
+                return Err(CompetitionError::StatTypeAlreadyExists {
+                    name: stat_type.name,
+                });
+            }
+            self.stat_types.save(
+                deps.storage,
+                (competition_id.u128(), &stat_type.name),
+                &stat_type,
+            )?;
+        }
+
+        // Remove stat types
+        for name in to_remove {
+            if !self
+                .stat_types
+                .has(deps.storage, (competition_id.u128(), &name))
+            {
+                return Err(CompetitionError::StatTypeNotFound { name });
+            }
+            self.stat_types
+                .remove(deps.storage, (competition_id.u128(), &name))?;
+        }
+
+        Ok(Response::new()
+            .add_attribute("action", "update_stat_types")
+            .add_attribute("competition_id", competition_id.to_string()))
+    }
+
+    pub fn execute_update_stats(
+        &self,
+        deps: DepsMut,
+        _env: Env,
+        info: MessageInfo,
+        competition_id: Uint128,
+        updates: Vec<MemberStatUpdate>,
+    ) -> Result<Response, CompetitionError> {
+        // Check if the competition exists and the sender is authorized
+        let competition = self
+            .competitions
+            .load(deps.storage, competition_id.u128())?;
+        self.inner_validate_auth(&info.sender, &competition)?;
+
+        for update in updates {
+            let addr = deps.api.addr_validate(&update.addr)?;
+            for stat in update.stats {
+                // Check if the stat type exists
+                if !self
+                    .stat_types
+                    .has(deps.storage, (competition_id.u128(), &stat.name))
+                {
+                    return Err(CompetitionError::StatTypeNotFound {
+                        name: stat.name.clone(),
+                    });
+                }
+
+                // Update the stat
+                self.stats.save(
+                    deps.storage,
+                    (competition_id.u128(), &addr, &stat.name),
+                    &stat.value,
+                )?;
+            }
+        }
+
+        Ok(Response::new()
+            .add_attribute("action", "update_stats")
+            .add_attribute("competition_id", competition_id.to_string()))
+    }
+
     pub fn query(
         &self,
         deps: Deps,
@@ -1036,8 +1168,48 @@ impl<
                     .map_err(|x| StdError::generic_err(x.to_string()))?,
             ),
             QueryBase::QueryExtension { .. } => Ok(Binary::default()),
+            QueryBase::StatTypes { competition_id } => {
+                to_json_binary(&self.query_stat_types(deps, competition_id)?)
+            }
+            QueryBase::Stats {
+                competition_id,
+                addr,
+            } => to_json_binary(&self.query_stats(deps, competition_id, addr)?),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
         }
+    }
+
+    pub fn query_stat_types(
+        &self,
+        deps: Deps,
+        competition_id: Uint128,
+    ) -> StdResult<Vec<StatType>> {
+        let stat_types: Vec<StatType> = self
+            .stat_types
+            .prefix(competition_id.u128())
+            .range(deps.storage, None, None, Order::Ascending)
+            .map(|item| item.map(|(_, stat_type)| stat_type))
+            .collect::<StdResult<Vec<_>>>()?;
+
+        Ok(stat_types)
+    }
+
+    pub fn query_stats(
+        &self,
+        deps: Deps,
+        competition_id: Uint128,
+        addr: String,
+    ) -> StdResult<Vec<StatMsg>> {
+        let addr = deps.api.addr_validate(&addr)?;
+
+        let stats: Vec<StatMsg> = self
+            .stats
+            .prefix((competition_id.u128(), &addr))
+            .range(deps.storage, None, None, Order::Ascending)
+            .map(|item| item.map(|(key, value)| StatMsg { name: key, value }))
+            .collect::<StdResult<Vec<_>>>()?;
+
+        Ok(stats)
     }
 
     pub fn query_is_dao_member(&self, deps: Deps, addr: &Addr, height: u64) -> bool {

@@ -11,6 +11,8 @@ use cw_utils::Expiration;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+use super::state::{StatType, StatValue};
+
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
     pub key: String, //this is used to map a key (wager, tournament, league) to a module
@@ -75,6 +77,15 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         escrow_code_id: u64,
         escrow_migrate_msg: crate::escrow::MigrateMsg,
     },
+    UpdateStats {
+        competition_id: Uint128,
+        updates: Vec<MemberStatUpdate>,
+    },
+    UpdateStatTypes {
+        competition_id: Uint128,
+        to_add: Vec<StatType>,
+        to_remove: Vec<String>,
+    },
 }
 
 #[cw_ownable_query]
@@ -112,6 +123,13 @@ where
     QueryExtension { msg: QueryExt },
     #[returns(Option<String>)]
     PaymentRegistry {},
+    #[returns(Option<Vec<StatType>>)]
+    StatTypes { competition_id: Uint128 },
+    #[returns(Option<Vec<StatMsg>>)]
+    Stats {
+        competition_id: Uint128,
+        addr: String,
+    },
     #[serde(skip)]
     #[returns(PhantomData<(InstantiateExt, CompetitionExt)>)]
     _Phantom(PhantomData<(InstantiateExt, CompetitionExt)>),
@@ -141,6 +159,19 @@ pub enum HookDirection {
     Incoming,
     Outgoing,
 }
+
+#[cw_serde]
+pub struct MemberStatUpdate {
+    pub addr: String,
+    pub stats: Vec<StatMsg>,
+}
+
+#[cw_serde]
+pub struct StatMsg {
+    pub name: String,
+    pub value: StatValue,
+}
+
 pub trait ToCompetitionExt<T> {
     fn to_competition_ext(&self, deps: Deps) -> StdResult<T>;
 }

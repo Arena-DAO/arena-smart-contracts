@@ -1,6 +1,6 @@
 use crate::fees::FeeInformation;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, BlockInfo, Timestamp, Uint128};
+use cosmwasm_std::{Addr, BlockInfo, Decimal, Int128, Timestamp, Uint128};
 use cw_utils::Expiration;
 use std::fmt;
 
@@ -108,4 +108,28 @@ pub struct Evidence {
     pub submit_user: Addr,
     pub content: String,
     pub submit_time: Timestamp,
+}
+
+#[cw_serde]
+pub enum StatValueType {
+    Bool,
+    Decimal,
+    Int,
+}
+
+#[cw_serde]
+pub struct StatType {
+    pub name: String,
+    pub value_type: StatValueType,
+    pub tie_breaker_priority: Option<u8>,
+    pub is_beneficial: bool,
+}
+
+// Stats
+
+#[cw_serde]
+pub enum StatValue {
+    Bool(bool),
+    Decimal(Decimal),
+    Int(Int128),
 }

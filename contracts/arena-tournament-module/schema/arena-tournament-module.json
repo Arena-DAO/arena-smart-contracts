@@ -389,6 +389,69 @@
         "additionalProperties": false
       },
       {
+        "type": "object",
+        "required": [
+          "update_stats"
+        ],
+        "properties": {
+          "update_stats": {
+            "type": "object",
+            "required": [
+              "competition_id",
+              "updates"
+            ],
+            "properties": {
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              },
+              "updates": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/MemberStatUpdate"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "update_stat_types"
+        ],
+        "properties": {
+          "update_stat_types": {
+            "type": "object",
+            "required": [
+              "competition_id",
+              "to_add",
+              "to_remove"
+            ],
+            "properties": {
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              },
+              "to_add": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/StatType"
+                }
+              },
+              "to_remove": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.",
         "type": "object",
         "required": [
@@ -763,6 +826,10 @@
         },
         "additionalProperties": false
       },
+      "Int128": {
+        "description": "An implementation of i128 that is using strings for JSON encoding/decoding, such that the full i128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `i128` to get the value out:\n\n``` # use cosmwasm_std::Int128; let a = Int128::from(258i128); assert_eq!(a.i128(), 258); ```",
+        "type": "string"
+      },
       "MatchResult": {
         "type": "string",
         "enum": [
@@ -802,6 +869,25 @@
         },
         "additionalProperties": false
       },
+      "MemberStatUpdate": {
+        "type": "object",
+        "required": [
+          "addr",
+          "stats"
+        ],
+        "properties": {
+          "addr": {
+            "type": "string"
+          },
+          "stats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/StatMsg"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "MigrateMsg": {
         "oneOf": [
           {
@@ -817,6 +903,98 @@
             },
             "additionalProperties": false
           }
+        ]
+      },
+      "StatMsg": {
+        "type": "object",
+        "required": [
+          "name",
+          "value"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/definitions/StatValue"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StatType": {
+        "type": "object",
+        "required": [
+          "is_beneficial",
+          "name",
+          "value_type"
+        ],
+        "properties": {
+          "is_beneficial": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tie_breaker_priority": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint8",
+            "minimum": 0.0
+          },
+          "value_type": {
+            "$ref": "#/definitions/StatValueType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StatValue": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "bool"
+            ],
+            "properties": {
+              "bool": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "decimal"
+            ],
+            "properties": {
+              "decimal": {
+                "$ref": "#/definitions/Decimal"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "int"
+            ],
+            "properties": {
+              "int": {
+                "$ref": "#/definitions/Int128"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "StatValueType": {
+        "type": "string",
+        "enum": [
+          "bool",
+          "decimal",
+          "int"
         ]
       },
       "Timestamp": {
@@ -1059,6 +1237,52 @@
         "properties": {
           "payment_registry": {
             "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "stat_types"
+        ],
+        "properties": {
+          "stat_types": {
+            "type": "object",
+            "required": [
+              "competition_id"
+            ],
+            "properties": {
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "stats"
+        ],
+        "properties": {
+          "stats": {
+            "type": "object",
+            "required": [
+              "addr",
+              "competition_id"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              },
+              "competition_id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
             "additionalProperties": false
           }
         },
@@ -2245,6 +2469,132 @@
             }
           },
           "additionalProperties": false
+        }
+      }
+    },
+    "stat_types": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Nullable_Array_of_StatType",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/definitions/StatType"
+      },
+      "definitions": {
+        "StatType": {
+          "type": "object",
+          "required": [
+            "is_beneficial",
+            "name",
+            "value_type"
+          ],
+          "properties": {
+            "is_beneficial": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tie_breaker_priority": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0.0
+            },
+            "value_type": {
+              "$ref": "#/definitions/StatValueType"
+            }
+          },
+          "additionalProperties": false
+        },
+        "StatValueType": {
+          "type": "string",
+          "enum": [
+            "bool",
+            "decimal",
+            "int"
+          ]
+        }
+      }
+    },
+    "stats": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Nullable_Array_of_StatMsg",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/definitions/StatMsg"
+      },
+      "definitions": {
+        "Decimal": {
+          "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+          "type": "string"
+        },
+        "Int128": {
+          "description": "An implementation of i128 that is using strings for JSON encoding/decoding, such that the full i128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `i128` to get the value out:\n\n``` # use cosmwasm_std::Int128; let a = Int128::from(258i128); assert_eq!(a.i128(), 258); ```",
+          "type": "string"
+        },
+        "StatMsg": {
+          "type": "object",
+          "required": [
+            "name",
+            "value"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/StatValue"
+            }
+          },
+          "additionalProperties": false
+        },
+        "StatValue": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "bool"
+              ],
+              "properties": {
+                "bool": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "decimal"
+              ],
+              "properties": {
+                "decimal": {
+                  "$ref": "#/definitions/Decimal"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "int"
+              ],
+              "properties": {
+                "int": {
+                  "$ref": "#/definitions/Int128"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         }
       }
     }
