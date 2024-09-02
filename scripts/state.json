@@ -13,14 +13,14 @@
     },
     "pion-1": {
       "code_ids": {
-        "arena_competition_enrollment": 6395,
-        "arena_core": 6391,
-        "arena_escrow": 6390,
-        "arena_league_module": 6393,
-        "arena_payment_registry": 6397,
-        "arena_token_gateway": 6396,
-        "arena_tournament_module": 6394,
-        "arena_wager_module": 6392
+        "arena_competition_enrollment": 6403,
+        "arena_core": 6399,
+        "arena_escrow": 6398,
+        "arena_league_module": 6401,
+        "arena_payment_registry": 6405,
+        "arena_token_gateway": 6404,
+        "arena_tournament_module": 6402,
+        "arena_wager_module": 6400
       },
       "default": {}
     }
