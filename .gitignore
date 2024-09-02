@@ -39,3 +39,5 @@ typescript/**
 
 # Env
 .env.keys
+scripts/node_modules/
+scripts/codegen/

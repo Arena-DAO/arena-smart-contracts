@@ -24,4 +24,6 @@ for dir in */; do
     echo "Completed $dir"
 done
 
-echo "All operations completed."
+cd ../scripts
+npm i
+npm run gen
