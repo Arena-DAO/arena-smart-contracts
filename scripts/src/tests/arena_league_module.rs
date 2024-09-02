@@ -1,8 +1,9 @@
 use std::str::FromStr;
 
 use arena_interface::competition::msg::{
-    EscrowInstantiateInfo, ExecuteBaseFns as _, QueryBaseFns as _,
+    EscrowInstantiateInfo, ExecuteBaseFns as _, MemberStatUpdate, QueryBaseFns as _, StatMsg,
 };
+use arena_interface::competition::state::{StatType, StatValue, StatValueType};
 use arena_interface::core::QueryExtFns as _;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_league_module::msg::{
@@ -969,8 +970,7 @@ fn test_multiple_point_adjustments() -> anyhow::Result<()> {
     Ok(())
 }
 
-// TODO: this logic still a WIP
-/*#[test]
+#[test]
 fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
@@ -1091,18 +1091,23 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                 tie_breaker_priority: Some(2),
                 is_beneficial: true,
             },
+            StatType {
+                name: "fouls".to_string(),
+                value_type: StatValueType::Int,
+                tie_breaker_priority: Some(3),
+                is_beneficial: false,
+            },
         ],
         vec![],
     )?;
 
-    // Simulate matches and update stats
-    // Round 1: Team1 vs Team2 (3-1) and Team3 vs Team4 (2-2)
+    // Round 1: Team1 vs Team2 (Draw), Team3 vs Team4 (Draw)
     arena.arena_league_module.process_match(
         league_id,
         vec![
             MatchResultMsg {
                 match_number: Uint128::one(),
-                match_result: MatchResult::Team1,
+                match_result: MatchResult::Draw,
             },
             MatchResultMsg {
                 match_number: Uint128::new(2),
@@ -1119,11 +1124,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                 stats: vec![
                     StatMsg {
                         name: "goal_difference".to_string(),
-                        value: StatValue::Int(Int128::new(2)),
+                        value: StatValue::Int(Int128::new(0)),
                     },
                     StatMsg {
                         name: "goals_scored".to_string(),
-                        value: StatValue::Int(Int128::new(3)),
+                        value: StatValue::Int(Int128::new(2)),
                     },
                 ],
             },
@@ -1132,11 +1137,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                 stats: vec![
                     StatMsg {
                         name: "goal_difference".to_string(),
-                        value: StatValue::Int(Int128::new(-2)),
+                        value: StatValue::Int(Int128::new(0)),
                     },
                     StatMsg {
                         name: "goals_scored".to_string(),
-                        value: StatValue::Int(Int128::new(1)),
+                        value: StatValue::Int(Int128::new(2)),
                     },
                 ],
             },
@@ -1149,7 +1154,7 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                     },
                     StatMsg {
                         name: "goals_scored".to_string(),
-                        value: StatValue::Int(Int128::new(2)),
+                        value: StatValue::Int(Int128::new(4)),
                     },
                 ],
             },
@@ -1162,14 +1167,14 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                     },
                     StatMsg {
                         name: "goals_scored".to_string(),
-                        value: StatValue::Int(Int128::new(2)),
+                        value: StatValue::Int(Int128::new(4)),
                     },
                 ],
             },
         ],
     )?;
 
-    // Round 2: Team1 vs Team3 (1-1) and Team2 vs Team4 (0-2)
+    // Round 2: Team1 vs Team3 (Draw), Team2 vs Team4 (Draw)
     arena.arena_league_module.process_match(
         league_id,
         vec![
@@ -1179,7 +1184,7 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             },
             MatchResultMsg {
                 match_number: Uint128::new(4),
-                match_result: MatchResult::Team2,
+                match_result: MatchResult::Draw,
             },
         ],
         Uint64::new(2),
@@ -1192,29 +1197,16 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                 stats: vec![
                     StatMsg {
                         name: "goal_difference".to_string(),
-                        value: StatValue::Int(Int128::new(2)),
+                        value: StatValue::Int(Int128::new(0)),
                     },
                     StatMsg {
                         name: "goals_scored".to_string(),
-                        value: StatValue::Int(Int128::new(4)),
+                        value: StatValue::Int(Int128::new(3)),
                     },
                 ],
             },
             MemberStatUpdate {
                 addr: team2.to_string(),
-                stats: vec![
-                    StatMsg {
-                        name: "goal_difference".to_string(),
-                        value: StatValue::Int(Int128::new(1)),
-                    },
-                    StatMsg {
-                        name: "goals_scored".to_string(),
-                        value: StatValue::Int(Int128::new(5)),
-                    },
-                ],
-            },
-            MemberStatUpdate {
-                addr: team3.to_string(),
                 stats: vec![
                     StatMsg {
                         name: "goal_difference".to_string(),
@@ -1227,59 +1219,161 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                 ],
             },
             MemberStatUpdate {
+                addr: team3.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(5)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
                 addr: team4.to_string(),
                 stats: vec![
                     StatMsg {
                         name: "goal_difference".to_string(),
-                        value: StatValue::Int(Int128::new(2)),
+                        value: StatValue::Int(Int128::new(0)),
                     },
                     StatMsg {
                         name: "goals_scored".to_string(),
-                        value: StatValue::Int(Int128::new(4)),
+                        value: StatValue::Int(Int128::new(5)),
                     },
                 ],
             },
         ],
     )?;
 
+    // Round 3: Team1 vs Team4 (Draw), Team3 vs Team2 (Draw)
+    arena.arena_league_module.update_stats(
+        league_id,
+        vec![
+            MemberStatUpdate {
+                addr: team1.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(3)),
+                    },
+                    StatMsg {
+                        name: "fouls".to_string(),
+                        value: StatValue::Int(Int128::new(5)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team2.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(3)),
+                    },
+                    StatMsg {
+                        name: "fouls".to_string(),
+                        value: StatValue::Int(Int128::new(4)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team3.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(5)),
+                    },
+                    StatMsg {
+                        name: "fouls".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                ],
+            },
+            MemberStatUpdate {
+                addr: team4.to_string(),
+                stats: vec![
+                    StatMsg {
+                        name: "goal_difference".to_string(),
+                        value: StatValue::Int(Int128::new(0)),
+                    },
+                    StatMsg {
+                        name: "goals_scored".to_string(),
+                        value: StatValue::Int(Int128::new(5)),
+                    },
+                    StatMsg {
+                        name: "fouls".to_string(),
+                        value: StatValue::Int(Int128::new(1)),
+                    },
+                ],
+            },
+        ],
+    )?;
+    arena.arena_league_module.process_match(
+        league_id,
+        vec![
+            MatchResultMsg {
+                match_number: Uint128::new(5),
+                match_result: MatchResult::Draw,
+            },
+            MatchResultMsg {
+                match_number: Uint128::new(6),
+                match_result: MatchResult::Draw,
+            },
+        ],
+        Uint64::new(3),
+    )?;
+
     // Get the final leaderboard
     let leaderboard = arena.arena_league_module.leaderboard(league_id, None)?;
-    dbg!(leaderboard.clone());
-
-    // Check the leaderboard order
-    assert_eq!(leaderboard[0].member, team1); // 4 points, +2 goal difference, 4 goals scored
-    assert_eq!(leaderboard[1].member, team2); // 4 points, +1 goal difference, 5 goals scored (same as team1, but loses on tie-breaker priority)
-    assert_eq!(leaderboard[2].member, team4); // 2 points, +2 goal difference, 4 goals scored
-    assert_eq!(leaderboard[3].member, team3); // 0 point, 0 goal difference, 3 goal scored
 
     // Check points
-    assert_eq!(leaderboard[0].points, Int128::new(4));
-    assert_eq!(leaderboard[1].points, Int128::new(4));
-    assert_eq!(leaderboard[2].points, Int128::new(2));
-    assert_eq!(leaderboard[3].points, Int128::new(0));
+    assert_eq!(leaderboard[0].points, Int128::new(3));
+    assert_eq!(leaderboard[1].points, Int128::new(3));
+    assert_eq!(leaderboard[2].points, Int128::new(3));
+    assert_eq!(leaderboard[3].points, Int128::new(3));
 
     // Check final distribution
     let team1_balance = arena.arena_escrow.balance(team1.to_string())?;
-    let team2_balance = arena.arena_escrow.balance(team2.to_string())?;
     let team3_balance = arena.arena_escrow.balance(team3.to_string())?;
+    let team2_balance = arena.arena_escrow.balance(team2.to_string())?;
     let team4_balance = arena.arena_escrow.balance(team4.to_string())?;
 
     assert_eq!(
-        team1_balance.unwrap().native.unwrap()[0].amount,
+        team3_balance.unwrap().native.unwrap()[0].amount,
         Uint128::new(1900)
     ); // 50% of 3800 (4000 - 5% tax)
+       // Team3: 1st place due to highest goals scored (5) and lowest fouls (0)
+
     assert_eq!(
         team4_balance.unwrap().native.unwrap()[0].amount,
         Uint128::new(1140)
     ); // 30% of 3800
-    assert_eq!(
-        team3_balance.unwrap().native.unwrap()[0].amount,
-        Uint128::new(570)
-    ); // 15% of 3800
+       // Team4: 2nd place due to highest goals scored (5) and second-lowest fouls (1)
+
     assert_eq!(
         team2_balance.unwrap().native.unwrap()[0].amount,
+        Uint128::new(570)
+    ); // 15% of 3800
+       // Team2: 3rd place due to lower goals scored (3) than Team3/Team4, but fewer fouls (4) than Team1
+
+    assert_eq!(
+        team1_balance.unwrap().native.unwrap()[0].amount,
         Uint128::new(190)
     ); // 5% of 3800
+       // Team1: 4th place due to lower goals scored (3) and highest fouls (5)
 
     // Check DAO balance (5% tax)
     let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
@@ -1287,4 +1381,3 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
 
     Ok(())
 }
-*/

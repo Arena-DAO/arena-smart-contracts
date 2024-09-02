@@ -345,9 +345,9 @@ fn compare_stat_values(a: &StatValue, b: &StatValue, is_beneficial: bool) -> std
         _ => std::cmp::Ordering::Equal,
     };
     if is_beneficial {
-        ord
-    } else {
         ord.reverse()
+    } else {
+        ord
     }
 }
 
