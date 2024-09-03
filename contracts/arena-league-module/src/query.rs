@@ -18,7 +18,7 @@ use cw_storage_plus::Bound;
 /// # Returns
 /// Returns a `StdResult` containing a `Vec<MemberPoints>`. On success, the vector contains
 /// `MemberPoints` structs for each member in the league, sorted in descending order by points.
-/// If two members have the same points, they are further sorted by the number of matches played
+/// If two members have the same points, they are further sorted by the stats
 /// (also in descending order).
 ///
 /// # Details
@@ -26,7 +26,7 @@ use cw_storage_plus::Bound;
 /// - It processes all rounds up to `round_number` if specified, or all rounds if None.
 /// - Match results are processed in descending order within each round.
 /// - Point adjustments are applied after processing all matches.
-/// - The final leaderboard is sorted by points (highest to lowest) and then by matches played.
+/// - The final leaderboard is sorted by points (highest to lowest) and then by stats.
 ///
 /// # Errors
 /// This function will return an error if:
