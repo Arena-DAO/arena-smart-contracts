@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use arena_interface::{
     competition::{
+        migrate::CompetitionV182,
         msg::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
             MemberStatUpdate, QueryBase, StatMsg, ToCompetitionExt,
@@ -49,6 +50,24 @@ impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
     }
 }
 
+pub struct CompetitionV182Indexes<'a, CompetitionExt> {
+    pub status: MultiIndex<'a, String, CompetitionV182<CompetitionExt>, u128>,
+    pub category: MultiIndex<'a, u128, CompetitionV182<CompetitionExt>, u128>,
+    pub host: MultiIndex<'a, String, CompetitionV182<CompetitionExt>, u128>,
+}
+
+impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
+    IndexList<CompetitionV182<CompetitionExt>> for CompetitionV182Indexes<'a, CompetitionExt>
+{
+    fn get_indexes(
+        &'_ self,
+    ) -> Box<dyn Iterator<Item = &'_ dyn Index<CompetitionV182<CompetitionExt>>> + '_> {
+        let v: Vec<&dyn Index<CompetitionV182<CompetitionExt>>> =
+            vec![&self.status, &self.category, &self.host];
+        Box::new(v.into_iter())
+    }
+}
+
 pub struct CompetitionModuleContract<
     'a,
     InstantiateExt,
@@ -64,6 +83,12 @@ pub struct CompetitionModuleContract<
         u128,
         Competition<CompetitionExt>,
         CompetitionIndexes<'static, CompetitionExt>,
+    >,
+    pub competitions_v182: IndexedMap<
+        'static,
+        u128,
+        CompetitionV182<CompetitionExt>,
+        CompetitionV182Indexes<'static, CompetitionExt>,
     >,
     pub competition_evidence: Map<'static, (u128, u128), Evidence>,
     pub competition_evidence_count: Map<'static, u128, Uint128>,
@@ -125,6 +150,12 @@ impl<
                 competitions_category_key,
                 competitions_host_key,
             ),
+            competitions_v182: Self::competitions_v182(
+                competitions_key,
+                competitions_status_key,
+                competitions_category_key,
+                competitions_host_key,
+            ),
             escrows_to_competitions: Map::new(escrows_to_competitions_key),
             temp_competition: Item::new(temp_competition_key),
             competition_hooks: Map::new(competition_hooks_key),
@@ -167,6 +198,39 @@ impl<
             ),
             host: MultiIndex::new(
                 |_x, d: &Competition<CompetitionExt>| d.host.to_string(),
+                competitions_key,
+                competitions_host_key,
+            ),
+        };
+        IndexedMap::new(competitions_key, indexes)
+    }
+
+    const fn competitions_v182(
+        competitions_key: &'static str,
+        competitions_status_key: &'static str,
+        competitions_category_key: &'static str,
+        competitions_host_key: &'static str,
+    ) -> IndexedMap<
+        'static,
+        u128,
+        CompetitionV182<CompetitionExt>,
+        CompetitionV182Indexes<'static, CompetitionExt>,
+    > {
+        let indexes = CompetitionV182Indexes {
+            status: MultiIndex::new(
+                |_x, d: &CompetitionV182<CompetitionExt>| d.status.to_string(),
+                competitions_key,
+                competitions_status_key,
+            ),
+            category: MultiIndex::new(
+                |_x, d: &CompetitionV182<CompetitionExt>| {
+                    d.category_id.unwrap_or(Uint128::zero()).u128()
+                },
+                competitions_key,
+                competitions_category_key,
+            ),
+            host: MultiIndex::new(
+                |_x, d: &CompetitionV182<CompetitionExt>| d.host.to_string(),
                 competitions_key,
                 competitions_host_key,
             ),
@@ -1483,7 +1547,7 @@ impl<
         // Competition status 'Active' and 'Jailed' now store the activation height for the payment registry
         // Not too many, so we can just do it in the migration
         let competition_range = self
-            .competitions
+            .competitions_v182
             .idx
             .status
             .prefix(
@@ -1495,7 +1559,7 @@ impl<
             .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
             .collect::<StdResult<Vec<_>>>()?;
         let competition_range_jailed = self
-            .competitions
+            .competitions_v182
             .idx
             .status
             .prefix(
@@ -1508,34 +1572,18 @@ impl<
             .collect::<StdResult<Vec<_>>>()?;
 
         for (competition_id, competition) in competition_range {
-            let new_competition = Competition {
-                status: CompetitionStatus::Active {
-                    activation_height: env.block.height,
-                },
-                ..competition.clone()
-            };
-
-            self.competitions.replace(
+            self.competitions.save(
                 deps.storage,
                 competition_id,
-                Some(&new_competition),
-                Some(&competition),
+                &competition.into_competition(env.block.height),
             )?;
         }
 
         for (competition_id, competition) in competition_range_jailed {
-            let new_competition = Competition {
-                status: CompetitionStatus::Jailed {
-                    activation_height: env.block.height,
-                },
-                ..competition.clone()
-            };
-
-            self.competitions.replace(
+            self.competitions.save(
                 deps.storage,
                 competition_id,
-                Some(&new_competition),
-                Some(&competition),
+                &competition.into_competition(env.block.height),
             )?;
         }
 

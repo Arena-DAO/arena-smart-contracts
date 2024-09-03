@@ -2,8 +2,10 @@ use arena::Arena;
 use cw_orch::{anyhow, prelude::*};
 use orch_interface::{
     arena_competition_enrollment::ArenaCompetitionEnrollmentContract,
-    arena_core::ArenaCoreContract, arena_token_gateway::ArenaTokenGatewayContract,
+    arena_core::ArenaCoreContract, arena_league_module::ArenaLeagueModuleContract,
+    arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
+    arena_wager_module::ArenaWagerModuleContract,
 };
 use std::env;
 
@@ -42,6 +44,7 @@ enum DeployComponent {
     Tournament,
     Enrollment,
     TokenGateway,
+    CompetitionModules,
 }
 
 fn parse_command(args: &[String]) -> Command {
@@ -61,6 +64,7 @@ fn parse_command(args: &[String]) -> Command {
         "tournament" => DeployComponent::Tournament,
         "enrollment" => DeployComponent::Enrollment,
         "token_gateway" => DeployComponent::TokenGateway,
+        "competition_modules" => DeployComponent::CompetitionModules,
         _ => return Command::Unknown,
     };
 
@@ -79,6 +83,7 @@ fn deploy(network: Network, component: DeployComponent) -> anyhow::Result<()> {
         DeployComponent::Tournament => deploy_tournament(daemon)?,
         DeployComponent::Enrollment => deploy_enrollment(daemon)?,
         DeployComponent::TokenGateway => deploy_token_gateway(daemon)?,
+        DeployComponent::CompetitionModules => deploy_competition_modules(daemon)?,
     }
 
     Ok(())
@@ -111,6 +116,16 @@ fn deploy_enrollment(daemon: Daemon) -> anyhow::Result<()> {
 fn deploy_token_gateway(daemon: Daemon) -> anyhow::Result<()> {
     let token_gateway = ArenaTokenGatewayContract::new(daemon);
     token_gateway.upload()?;
+    Ok(())
+}
+
+fn deploy_competition_modules(daemon: Daemon) -> anyhow::Result<()> {
+    let wager_module = ArenaWagerModuleContract::new(daemon.clone());
+    wager_module.upload()?;
+    let league_module = ArenaLeagueModuleContract::new(daemon.clone());
+    league_module.upload()?;
+    let tournament_module = ArenaTournamentModuleContract::new(daemon);
+    tournament_module.upload()?;
     Ok(())
 }
 
