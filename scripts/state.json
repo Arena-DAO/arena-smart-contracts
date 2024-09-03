@@ -18,7 +18,7 @@
         "arena_escrow": 6398,
         "arena_league_module": 6401,
         "arena_payment_registry": 6405,
-        "arena_token_gateway": 6404,
+        "arena_token_gateway": 6441,
         "arena_tournament_module": 6402,
         "arena_wager_module": 6400
       },

@@ -126,8 +126,8 @@ pub fn accept_application(
             denom: cw_vesting::UncheckedDenom::Native(vesting_config.denom.clone()),
             schedule: Schedule::SaturatingLinear,
             start_time: Some(env.block.time),
-            vesting_duration_seconds: 31_536_000, // 365 days * 24 hours * 60 minutes * 60 seconds
-            unbonding_duration_seconds: 1_209_600,
+            vesting_duration_seconds: vesting_config.vesting_time,
+            unbonding_duration_seconds: 1_209_600, // N/A
         })?,
         funds: coins(vesting_amount.u128(), vesting_config.denom.clone()),
     })?;

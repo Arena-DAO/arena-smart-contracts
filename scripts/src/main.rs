@@ -2,7 +2,8 @@ use arena::Arena;
 use cw_orch::{anyhow, prelude::*};
 use orch_interface::{
     arena_competition_enrollment::ArenaCompetitionEnrollmentContract,
-    arena_core::ArenaCoreContract, arena_tournament_module::ArenaTournamentModuleContract,
+    arena_core::ArenaCoreContract, arena_token_gateway::ArenaTokenGatewayContract,
+    arena_tournament_module::ArenaTournamentModuleContract,
 };
 use std::env;
 
@@ -40,6 +41,7 @@ enum DeployComponent {
     Core,
     Tournament,
     Enrollment,
+    TokenGateway,
 }
 
 fn parse_command(args: &[String]) -> Command {
@@ -58,6 +60,7 @@ fn parse_command(args: &[String]) -> Command {
         "core" => DeployComponent::Core,
         "tournament" => DeployComponent::Tournament,
         "enrollment" => DeployComponent::Enrollment,
+        "token_gateway" => DeployComponent::TokenGateway,
         _ => return Command::Unknown,
     };
 
@@ -75,6 +78,7 @@ fn deploy(network: Network, component: DeployComponent) -> anyhow::Result<()> {
         DeployComponent::Core => deploy_core(daemon)?,
         DeployComponent::Tournament => deploy_tournament(daemon)?,
         DeployComponent::Enrollment => deploy_enrollment(daemon)?,
+        DeployComponent::TokenGateway => deploy_token_gateway(daemon)?,
     }
 
     Ok(())
@@ -101,6 +105,12 @@ fn deploy_tournament(daemon: Daemon) -> anyhow::Result<()> {
 fn deploy_enrollment(daemon: Daemon) -> anyhow::Result<()> {
     let enrollment = ArenaCompetitionEnrollmentContract::new(daemon);
     enrollment.upload()?;
+    Ok(())
+}
+
+fn deploy_token_gateway(daemon: Daemon) -> anyhow::Result<()> {
+    let token_gateway = ArenaTokenGatewayContract::new(daemon);
+    token_gateway.upload()?;
     Ok(())
 }
 
