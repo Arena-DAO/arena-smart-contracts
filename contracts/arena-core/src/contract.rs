@@ -355,6 +355,8 @@ pub fn migrate(mut deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response
             }
         },
         MigrateMsg::FromUnderV250 { policy: _ } => {
+            // Need to set_contract_version before using the base migrate because of versioning checks
+            set_contract_version(deps.storage, CONTRACT_NAME, "2.4.1")?;
             PrePropose::default().migrate(deps.branch(), msg)?;
         }
     };
