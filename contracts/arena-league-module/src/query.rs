@@ -18,15 +18,14 @@ use cw_storage_plus::Bound;
 /// # Returns
 /// Returns a `StdResult` containing a `Vec<MemberPoints>`. On success, the vector contains
 /// `MemberPoints` structs for each member in the league, sorted in descending order by points.
-/// If two members have the same points, they are further sorted by the stats
-/// (also in descending order).
 ///
 /// # Details
 /// - The function calculates points based on match results and any point adjustments.
 /// - It processes all rounds up to `round_number` if specified, or all rounds if None.
 /// - Match results are processed in descending order within each round.
 /// - Point adjustments are applied after processing all matches.
-/// - The final leaderboard is sorted by points (highest to lowest) and then by stats.
+/// - The final leaderboard is sorted by points (highest to lowest).
+/// - In case of ties (equal points), no additional tie-breaking mechanism is applied.
 ///
 /// # Errors
 /// This function will return an error if:
@@ -37,6 +36,9 @@ use cw_storage_plus::Bound;
 /// # Performance
 /// - Time complexity: O(m log m + n log n), where m is the number of matches and n is the number of members
 /// - Space complexity: O(n) for storing the leaderboard
+///
+/// # Note
+/// Tie breaking is handled in conjunction with this query
 pub fn leaderboard(
     deps: Deps,
     league_id: Uint128,
@@ -126,7 +128,7 @@ pub fn leaderboard(
         })
         .collect();
 
-    sorted_leaderboard.sort_unstable_by_key(|mp| Reverse((mp.points, mp.matches_played)));
+    sorted_leaderboard.sort_unstable_by_key(|mp| Reverse(mp.points));
 
     Ok(sorted_leaderboard)
 }

@@ -18,12 +18,12 @@ use arena_interface::{
 };
 use cosmwasm_schema::schemars::JsonSchema;
 use cosmwasm_std::{
-    ensure, instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty,
-    Env, MessageInfo, Order, Reply, Response, StdError, StdResult, Storage, SubMsg, Uint128,
-    WasmMsg,
+    ensure, ensure_eq, instantiate2_address, to_json_binary, Addr, Binary, CosmosMsg, Deps,
+    DepsMut, Empty, Env, MessageInfo, Order, Reply, Response, StdError, StdResult, Storage, SubMsg,
+    Uint128, WasmMsg,
 };
 use cw_balance::Distribution;
-use cw_ownable::{assert_owner, get_ownership, initialize_owner};
+use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -31,6 +31,7 @@ use crate::error::CompetitionError;
 
 pub const PROCESS_REPLY_ID: u64 = 1;
 pub const UPDATE_RATING_FAILED_REPLY_ID: u64 = 2;
+pub const MIGRATE_ESCROW_ERROR_REPLY_ID: u64 = 3;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
@@ -436,15 +437,22 @@ impl<
         escrow_code_id: u64,
         escrow_migrate_msg: arena_interface::escrow::MigrateMsg,
     ) -> Result<Response, CompetitionError> {
-        // Ensure only the contract owner can call this function
-        assert_owner(deps.storage, &info.sender)?;
+        // Ensure only the DAO can call this function
+        ensure_eq!(
+            info.sender,
+            self.query_dao(deps.as_ref())?,
+            CompetitionError::Unauthorized {}
+        );
 
         let competitions =
             self.query_competitions(deps.as_ref(), env, start_after, limit, filter)?;
 
         let mut messages: Vec<SubMsg> = vec![];
 
-        for competition in competitions.iter() {
+        for competition in competitions
+            .into_iter()
+            .filter(|x| !matches!(x.status, CompetitionStatus::Inactive))
+        {
             if let Some(escrow) = &competition.escrow {
                 let msg = WasmMsg::Migrate {
                     contract_addr: escrow.to_string(),
@@ -452,7 +460,7 @@ impl<
                     msg: to_json_binary(&escrow_migrate_msg)?,
                 };
 
-                messages.push(SubMsg::new(msg));
+                messages.push(SubMsg::reply_on_error(msg, MIGRATE_ESCROW_ERROR_REPLY_ID));
             }
         }
 
@@ -1487,6 +1495,7 @@ impl<
         match msg.id {
             PROCESS_REPLY_ID => self.reply_process(deps, msg),
             UPDATE_RATING_FAILED_REPLY_ID => self.reply_update_rating_failed(deps, msg),
+            MIGRATE_ESCROW_ERROR_REPLY_ID => self.reply_migrate_escrow_error(deps, msg),
             _ => Err(CompetitionError::UnknownReplyId { id: msg.id }),
         }
     }
@@ -1517,6 +1526,14 @@ impl<
     ) -> Result<Response, CompetitionError> {
         // There should be an event if the rating update has failed, but it should not cause the overall message to fail
         Ok(Response::new().add_attribute("action", "update_rating_failed"))
+    }
+
+    pub fn reply_migrate_escrow_error(
+        &self,
+        _deps: DepsMut,
+        msg: Reply,
+    ) -> Result<Response, CompetitionError> {
+        Ok(Response::new().add_attribute("migrate_escrow_error", msg.result.unwrap_err()))
     }
 
     pub fn migrate_from_v1_6_to_v1_7(&self, deps: DepsMut) -> Result<(), CompetitionError> {
@@ -1572,18 +1589,25 @@ impl<
             .collect::<StdResult<Vec<_>>>()?;
 
         for (competition_id, competition) in competition_range {
-            self.competitions.save(
+            let new_competition = competition.into_competition(env.block.height);
+
+            // Need to replace ().save() will attempt to parse into competition instead of competitionV182)
+            self.competitions.replace(
                 deps.storage,
                 competition_id,
-                &competition.into_competition(env.block.height),
+                Some(&new_competition),
+                Some(&new_competition),
             )?;
         }
 
         for (competition_id, competition) in competition_range_jailed {
-            self.competitions.save(
+            let new_competition = competition.into_competition(env.block.height);
+
+            self.competitions.replace(
                 deps.storage,
                 competition_id,
-                &competition.into_competition(env.block.height),
+                Some(&new_competition),
+                Some(&new_competition),
             )?;
         }
 
