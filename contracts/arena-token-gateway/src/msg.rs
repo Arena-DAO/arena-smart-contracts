@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::Uint128;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 use crate::state::{ApplicationInfo, ApplicationStatus, ProjectLink, VestingConfiguration};
@@ -47,7 +47,7 @@ pub enum QueryMsg {
         limit: Option<u32>,
         filter: Option<ApplicationsFilter>,
     },
-    #[returns(Addr)]
+    #[returns(cosmwasm_std::Addr)]
     PayrollAddress {},
 }
 
