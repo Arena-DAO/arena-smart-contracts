@@ -69,6 +69,9 @@ dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "de
 cw-vesting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }
+cw-payroll-factory = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+	"library",
+] }
 dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
 	"library",
 ] }

@@ -1,54 +1,70 @@
-use cosmwasm_std::{Deps, Order, StdResult};
+use cosmwasm_std::{Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::{
-    msg::ApplicationResponse,
-    state::{applications, ApplicationStatus},
+    msg::{ApplicationResponse, ApplicationsFilter},
+    state::applications,
 };
 
-pub fn application(deps: Deps, applicant: String) -> StdResult<ApplicationResponse> {
-    let applicant_addr = deps.api.addr_validate(&applicant)?;
-    let application = applications().load(deps.storage, &applicant_addr)?;
+pub fn application(deps: Deps, application_id: Uint128) -> StdResult<ApplicationResponse> {
+    let application = applications().load(deps.storage, application_id.u128())?;
     Ok(ApplicationResponse {
-        applicant,
+        application_id,
         application,
     })
 }
 
 pub fn list_applications(
     deps: Deps,
-    start_after: Option<String>,
+    start_after: Option<Uint128>,
     limit: Option<u32>,
-    status: Option<ApplicationStatus>,
+    filter: Option<ApplicationsFilter>,
 ) -> StdResult<Vec<ApplicationResponse>> {
     let limit = limit.unwrap_or(30) as usize;
-    let validated_start_after = start_after
-        .map(|s| deps.api.addr_validate(&s))
-        .transpose()?;
-    let start = validated_start_after.as_ref().map(Bound::exclusive);
+    let start = start_after.map(|x| x.u128()).map(Bound::exclusive);
 
-    let applications: StdResult<Vec<ApplicationResponse>> = match status {
-        Some(status) => applications()
-            .idx
-            .status
-            .prefix(status.to_string())
-            .range(deps.storage, start, None, Order::Ascending)
-            .take(limit)
-            .map(|item| {
-                let (applicant, application) = item?;
-                Ok(ApplicationResponse {
-                    applicant: applicant.to_string(),
-                    application,
+    let applications: StdResult<Vec<ApplicationResponse>> = match filter {
+        Some(filter) => match filter {
+            ApplicationsFilter::Status(status) => applications()
+                .idx
+                .status
+                .prefix(status.to_string())
+                .range(deps.storage, start, None, Order::Ascending)
+                .take(limit)
+                .map(|item| {
+                    let (application_id, application) = item?;
+                    Ok(ApplicationResponse {
+                        application_id: Uint128::new(application_id),
+                        application,
+                    })
                 })
-            })
-            .collect(),
+                .collect(),
+            ApplicationsFilter::Applicant(applicant) => {
+                let applicant = deps.api.addr_validate(&applicant)?;
+
+                applications()
+                    .idx
+                    .applicant
+                    .prefix(applicant)
+                    .range(deps.storage, start, None, Order::Ascending)
+                    .take(limit)
+                    .map(|item| {
+                        let (application_id, application) = item?;
+                        Ok(ApplicationResponse {
+                            application_id: Uint128::new(application_id),
+                            application,
+                        })
+                    })
+                    .collect()
+            }
+        },
         None => applications()
             .range(deps.storage, start, None, Order::Ascending)
             .take(limit)
             .map(|item| {
-                let (applicant, application) = item?;
+                let (application_id, application) = item?;
                 Ok(ApplicationResponse {
-                    applicant: applicant.to_string(),
+                    application_id: Uint128::new(application_id),
                     application,
                 })
             })

@@ -2,6 +2,7 @@ use crate::tests::helpers::{setup_arena, setup_vesting};
 use arena_token_gateway::msg::{ApplyMsg, ExecuteMsgFns as _, QueryMsgFns as _};
 use cosmwasm_std::{coins, Decimal, Uint128};
 use cw_orch::{anyhow, prelude::*};
+use cw_payroll_factory::msg::QueryMsgFns as _;
 
 use super::{DENOM, PREFIX};
 
@@ -75,9 +76,7 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
     })?;
 
     // Query the application
-    let application = arena
-        .arena_token_gateway
-        .application(applicant.to_string())?;
+    let application = arena.arena_token_gateway.application(1u128)?;
 
     assert_eq!(application.application.title, "Test Application");
     assert_eq!(
@@ -85,18 +84,16 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
         arena_token_gateway::state::ApplicationStatus::Pending {}
     );
 
-    // Accept the application
+    // Accept the application with the upfront amount attached
     arena
         .arena_token_gateway
         .set_sender(&arena.dao_dao.dao_core.address()?);
     arena
         .arena_token_gateway
-        .accept_application(applicant.to_string(), &coins(1000000, DENOM))?;
+        .accept_application(1u128, &coins(100000, DENOM))?;
 
     // Query the application again
-    let updated_application = arena
-        .arena_token_gateway
-        .application(applicant.to_string())?;
+    let updated_application = arena.arena_token_gateway.application(1u128)?;
 
     assert_eq!(
         updated_application.application.status,
@@ -106,6 +103,26 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
     // Ensure the upfront amount was received
     let balance = mock.query_balance(&applicant, DENOM)?;
     assert_eq!(balance, Uint128::new(100000));
+
+    // Ensure vesting was successful
+    let payroll_address = arena.arena_token_gateway.payroll_address()?;
+
+    arena
+        .dao_dao
+        .cw_payroll_factory
+        .set_address(&payroll_address);
+
+    let _vesting_contracts = arena
+        .dao_dao
+        .cw_payroll_factory
+        .list_vesting_contracts(None, None)?;
+
+    // TODO: proposal execute data does not get picked up by the DAO atm
+    // assert!(!vesting_contracts.is_empty());
+
+    // Ensure token gateway balance is empty
+    let gateway_balance = mock.query_balance(&arena.arena_token_gateway.address()?, DENOM)?;
+    assert!(gateway_balance.is_zero());
 
     Ok(())
 }
@@ -150,12 +167,10 @@ fn test_reject_application() -> anyhow::Result<()> {
         .set_sender(&arena.dao_dao.dao_core.address()?);
     arena
         .arena_token_gateway
-        .reject_application(applicant.to_string(), Some("Not eligible".to_string()))?;
+        .reject_application(1u128, Some("Not eligible".to_string()))?;
 
     // Query the application
-    let rejected_application = arena
-        .arena_token_gateway
-        .application(applicant.to_string())?;
+    let rejected_application = arena.arena_token_gateway.application(1u128)?;
 
     assert_eq!(
         rejected_application.application.status,
@@ -244,10 +259,10 @@ fn test_withdraw_application() -> anyhow::Result<()> {
     })?;
 
     // Withdraw the application
-    arena.arena_token_gateway.withdraw()?;
+    arena.arena_token_gateway.withdraw(1u128)?;
 
     // Try to query the application (should fail)
-    let result = arena.arena_token_gateway.application(applicant.to_string());
+    let result = arena.arena_token_gateway.application(1u128);
     assert!(result.is_err());
 
     Ok(())

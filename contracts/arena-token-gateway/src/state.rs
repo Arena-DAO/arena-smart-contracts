@@ -11,6 +11,7 @@ pub struct VestingConfiguration {
 
 #[cw_serde]
 pub struct ApplicationInfo {
+    pub applicant: Addr,
     pub title: String,
     pub description: String,
     pub requested_amount: Uint128,
@@ -32,24 +33,31 @@ pub enum ApplicationStatus {
 }
 
 pub const VESTING_CONFIGURATION: Item<VestingConfiguration> = Item::new("vesting_configuration");
+pub const APPLICATIONS_COUNT: Item<Uint128> = Item::new("applications_count");
 
 pub struct ApplicationIndexes<'a> {
-    pub status: MultiIndex<'a, String, ApplicationInfo, &'a Addr>,
+    pub status: MultiIndex<'a, String, ApplicationInfo, u128>,
+    pub applicant: MultiIndex<'a, Addr, ApplicationInfo, u128>,
 }
 
 impl<'a> IndexList<ApplicationInfo> for ApplicationIndexes<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<ApplicationInfo>> + '_> {
-        let v: Vec<&dyn Index<ApplicationInfo>> = vec![&self.status];
+        let v: Vec<&dyn Index<ApplicationInfo>> = vec![&self.status, &self.applicant];
         Box::new(v.into_iter())
     }
 }
 
-pub fn applications<'a>() -> IndexedMap<'a, &'a Addr, ApplicationInfo, ApplicationIndexes<'a>> {
+pub fn applications<'a>() -> IndexedMap<'a, u128, ApplicationInfo, ApplicationIndexes<'a>> {
     let indexes = ApplicationIndexes {
         status: MultiIndex::new(
             |_pk, d: &ApplicationInfo| d.status.to_string(),
             "applications",
             "applications__status",
+        ),
+        applicant: MultiIndex::new(
+            |_pk, d: &ApplicationInfo| d.applicant.clone(),
+            "applications",
+            "applications__applicant",
         ),
     };
     IndexedMap::new("applications", indexes)

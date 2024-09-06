@@ -37,4 +37,7 @@ pub enum ContractError {
 
     #[error("Invalid application status")]
     InvalidApplicationStatus {},
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 }

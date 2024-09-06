@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-    WasmMsg,
+    to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult, Uint128, WasmMsg,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 
@@ -11,7 +11,7 @@ use crate::{
     helpers::get_payroll_address,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::VESTING_CONFIGURATION,
+    state::{APPLICATIONS_COUNT, VESTING_CONFIGURATION},
     ContractError,
 };
 
@@ -31,6 +31,8 @@ pub fn instantiate(
 
     // Ensure we have a payroll contract set up on the DAO
     let _ = get_payroll_address(deps.as_ref(), &env.block.chain_id)?;
+
+    APPLICATIONS_COUNT.save(deps.storage, &Uint128::zero())?;
 
     Ok(
         Response::default().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -57,32 +59,41 @@ pub fn execute(
             Ok(Response::default().add_attributes(ownership.into_attributes()))
         }
         ExecuteMsg::Apply(msg) => execute::apply(deps, env, info, msg),
-        ExecuteMsg::AcceptApplication { applicant } => {
-            execute::accept_application(deps, env, info, applicant)
+        ExecuteMsg::AcceptApplication { application_id } => {
+            execute::accept_application(deps, env, info, application_id)
         }
-        ExecuteMsg::RejectApplication { applicant, reason } => {
-            execute::reject_application(deps, env, info, applicant, reason)
+        ExecuteMsg::RejectApplication {
+            application_id,
+            reason,
+        } => execute::reject_application(deps, env, info, application_id, reason),
+        ExecuteMsg::Update(application_id, msg) => {
+            execute::update(deps, env, info, application_id, msg)
         }
-        ExecuteMsg::Update(msg) => execute::update(deps, env, info, msg),
-        ExecuteMsg::Withdraw {} => execute::withdraw(deps, env, info),
+        ExecuteMsg::Withdraw { application_id } => {
+            execute::withdraw(deps, env, info, application_id)
+        }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
-        QueryMsg::Application { applicant } => {
-            to_json_binary(&query::application(deps, applicant)?)
+        QueryMsg::Application { application_id } => {
+            to_json_binary(&query::application(deps, application_id)?)
         }
         QueryMsg::Applications {
             start_after,
             limit,
-            status,
-        } => to_json_binary(&query::list_applications(deps, start_after, limit, status)?),
+            filter,
+        } => to_json_binary(&query::list_applications(deps, start_after, limit, filter)?),
         QueryMsg::VestingConfiguration {} => {
             to_json_binary(&VESTING_CONFIGURATION.load(deps.storage)?)
         }
+        QueryMsg::PayrollAddress {} => to_json_binary(
+            &get_payroll_address(deps, &env.block.chain_id)
+                .map_err(|x| StdError::generic_err(x.to_string()))?,
+        ),
     }
 }
 

@@ -260,6 +260,7 @@ dependencies = [
  "cw-address-like",
  "cw-orch 0.24.1",
  "cw-ownable",
+ "cw-payroll-factory 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw-vesting 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
@@ -1664,6 +1665,23 @@ dependencies = [
 [[package]]
 name = "cw-payroll-factory"
 version = "2.5.0"
+source = "git+https://github.com/DA0-DA0/dao-contracts?branch=development#a417f9de15cf2e5d252c017feb67393eb1dfa4d1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-denom 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
+ "cw-ownable",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw-vesting 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=development)",
+ "cw2 1.1.2",
+ "cw20 1.1.2",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-payroll-factory"
+version = "2.5.0"
 source = "git+https://github.com/DA0-DA0/dao-contracts?branch=feature/cw-orch-interface#685211d934c510f55cdc1a531a0802ef0016fc4a"
 dependencies = [
  "cosmwasm-schema",
@@ -2376,7 +2394,7 @@ dependencies = [
  "cw-admin-factory",
  "cw-fund-distributor",
  "cw-orch 0.24.1",
- "cw-payroll-factory",
+ "cw-payroll-factory 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=feature/cw-orch-interface)",
  "cw-token-swap",
  "cw-tokenfactory-issuer",
  "cw-vesting 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=feature/cw-orch-interface)",
@@ -4986,7 +5004,7 @@ dependencies = [
  "cw-balance",
  "cw-orch 0.24.1",
  "cw-orch-clone-testing",
- "cw-payroll-factory",
+ "cw-payroll-factory 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=feature/cw-orch-interface)",
  "cw-utils 1.0.3",
  "cw-vesting 2.5.0 (git+https://github.com/DA0-DA0/dao-contracts?branch=feature/cw-orch-interface)",
  "cw4 1.1.2",

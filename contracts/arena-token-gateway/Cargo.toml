@@ -26,5 +26,6 @@ cw-orch = { workspace = true }
 cw-ownable = { workspace = true }
 cw-address-like = { workspace = true }
 cw-vesting = { workspace = true }
+cw-payroll-factory = { workspace = true }
 dao-interface = { workspace = true }
 serde_json = { workspace = true }
