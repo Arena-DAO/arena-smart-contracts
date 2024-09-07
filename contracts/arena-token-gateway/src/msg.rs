@@ -16,7 +16,10 @@ pub struct InstantiateMsg {
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
     Apply(ApplyMsg),
-    Update(Uint128, ApplyMsg),
+    Update {
+        application_id: Uint128,
+        application_info: ApplyMsg,
+    },
     Withdraw {
         application_id: Uint128,
     },

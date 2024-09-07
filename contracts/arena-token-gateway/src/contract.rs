@@ -66,9 +66,10 @@ pub fn execute(
             application_id,
             reason,
         } => execute::reject_application(deps, env, info, application_id, reason),
-        ExecuteMsg::Update(application_id, msg) => {
-            execute::update(deps, env, info, application_id, msg)
-        }
+        ExecuteMsg::Update {
+            application_id,
+            application_info,
+        } => execute::update(deps, env, info, application_id, application_info),
         ExecuteMsg::Withdraw { application_id } => {
             execute::withdraw(deps, env, info, application_id)
         }

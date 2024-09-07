@@ -72,17 +72,20 @@
         ],
         "properties": {
           "update": {
-            "type": "array",
-            "items": [
-              {
+            "type": "object",
+            "required": [
+              "application_id",
+              "application_info"
+            ],
+            "properties": {
+              "application_id": {
                 "$ref": "#/definitions/Uint128"
               },
-              {
+              "application_info": {
                 "$ref": "#/definitions/ApplyMsg"
               }
-            ],
-            "maxItems": 2,
-            "minItems": 2
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
