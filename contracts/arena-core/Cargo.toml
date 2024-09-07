@@ -28,3 +28,4 @@ dao-pre-propose-base = { workspace = true }
 cw-paginate = { workspace = true }
 arena-interface = { workspace = true }
 glicko_2 = { workspace = true }
+cw-balance = { workspace = true }

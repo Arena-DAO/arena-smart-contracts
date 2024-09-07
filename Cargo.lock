@@ -163,6 +163,7 @@ dependencies = [
  "arena-interface",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-balance",
  "cw-paginate",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",

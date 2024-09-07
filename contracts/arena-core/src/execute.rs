@@ -489,7 +489,7 @@ pub fn set_payment_registry(deps: DepsMut, addr: String) -> Result<Response, Con
     let addr = deps.api.addr_validate(&addr)?;
 
     // Ensure query exists on contract
-    deps.querier.query_wasm_smart(
+    let _: Option<cw_balance::Distribution<String>> = deps.querier.query_wasm_smart(
         addr.to_string(),
         &arena_interface::registry::QueryMsg::GetDistribution {
             addr: addr.to_string(),
