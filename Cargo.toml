@@ -65,32 +65,33 @@ arena-token-gateway = { path = "./contracts/arena-token-gateway" }
 arena-payment-registry = { path = "./contracts/arena-payment-registry" }
 
 #dao dependencies
-dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
-cw-vesting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-interface = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks" }
+dao-cw-orch = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks" }
+cw-vesting = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-cw-payroll-factory = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+cw-payroll-factory = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-dao-proposal-multiple = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-proposal-multiple = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-proposal-single = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-dao-pre-propose-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-pre-propose-single = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
-dao-voting-cw4 = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-voting = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks" }
+dao-voting-cw4 = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-proposal-sudo = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-dao-pre-propose-base = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-pre-propose-base = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }
-dao-dao-core = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "development", features = [
+dao-dao-core = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-callbacks", features = [
 	"library",
 ] }

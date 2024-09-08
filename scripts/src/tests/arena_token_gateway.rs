@@ -1,8 +1,10 @@
-use crate::tests::helpers::{setup_arena, setup_vesting};
-use arena_token_gateway::msg::{ApplyMsg, ExecuteMsgFns as _, QueryMsgFns as _};
-use cosmwasm_std::{coins, Decimal, Uint128};
+use crate::tests::helpers::{setup_arena, setup_vesting, setup_voting_module};
+use arena_token_gateway::msg::{ApplyMsg, ExecuteMsg, ExecuteMsgFns as _, QueryMsgFns as _};
+use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, WasmMsg};
+use cw4::Member;
 use cw_orch::{anyhow, prelude::*};
 use cw_payroll_factory::msg::QueryMsgFns as _;
+use dao_voting::{proposal::SingleChoiceProposeMsg, voting::SingleChoiceAutoVote};
 
 use super::{DENOM, PREFIX};
 
@@ -41,6 +43,14 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
     setup_vesting(&arena, mock.block_info()?.chain_id, &admin)?;
+    setup_voting_module(
+        &mock,
+        &arena,
+        vec![Member {
+            addr: admin.to_string(),
+            weight: 1,
+        }],
+    )?;
 
     mock.add_balance(
         &arena.dao_dao.dao_core.address()?,
@@ -85,12 +95,32 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
     );
 
     // Accept the application with the upfront amount attached
-    arena
-        .arena_token_gateway
-        .set_sender(&arena.dao_dao.dao_core.address()?);
-    arena
-        .arena_token_gateway
-        .accept_application(1u128, &coins(100000, DENOM))?;
+    arena.dao_dao.dao_proposal_single.call_as(&admin).execute(
+        &dao_proposal_single::msg::ExecuteMsg::Propose(SingleChoiceProposeMsg {
+            title: "Accept token gateway application".to_owned(),
+            description: "Testing the token gateway application process with callback messages"
+                .to_owned(),
+            msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: arena.arena_token_gateway.addr_str()?,
+                msg: to_json_binary(&ExecuteMsg::AcceptApplication {
+                    application_id: Uint128::one(),
+                })?,
+                funds: coins(100000, DENOM),
+            })],
+            proposer: None,
+            vote: Some(SingleChoiceAutoVote {
+                vote: dao_voting::voting::Vote::Yes,
+                rationale: None,
+            }),
+        }),
+        None,
+    )?;
+    let res = arena.dao_dao.dao_proposal_single.execute(
+        &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1 },
+        None,
+    )?;
+    dbg!(res.events);
+    dbg!(arena.dao_dao.cw_payroll_factory.address()?);
 
     // Query the application again
     let updated_application = arena.arena_token_gateway.application(1u128)?;
@@ -112,13 +142,12 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
         .cw_payroll_factory
         .set_address(&payroll_address);
 
-    let _vesting_contracts = arena
+    let vesting_contracts = arena
         .dao_dao
         .cw_payroll_factory
         .list_vesting_contracts(None, None)?;
 
-    // TODO: proposal execute data does not get picked up by the DAO atm
-    // assert!(!vesting_contracts.is_empty());
+    assert!(!vesting_contracts.is_empty());
 
     // Ensure token gateway balance is empty
     let gateway_balance = mock.query_balance(&arena.arena_token_gateway.address()?, DENOM)?;

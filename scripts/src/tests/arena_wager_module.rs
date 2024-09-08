@@ -13,6 +13,7 @@ use cw_balance::{
 use cw_orch::{anyhow, prelude::*};
 use cw_orch_clone_testing::CloneTesting;
 use cw_utils::Expiration;
+use dao_interface::CoreQueryMsgFns;
 use networks::PION_1;
 
 use crate::arena::Arena;
@@ -782,7 +783,7 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
     let res = mock.call_as(&admin).execute(
         &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1 },
         &[],
-        &arena.dao_dao.dao_proposal_single.address()?,
+        &arena.dao_dao.dao_core.proposal_modules(None, None)?[1].address,
     )?;
     dbg!(res);
 

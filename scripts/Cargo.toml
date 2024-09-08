@@ -17,7 +17,7 @@ cosmwasm-std = { workspace = true }
 orch-interface = { workspace = true }
 cw-utils = { workspace = true }
 cw-balance = { workspace = true }
-dao-cw-orch = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
+dao-cw-orch = { workspace = true }
 itertools = { workspace = true }
 arena-competition-enrollment = { workspace = true }
 arena-token-gateway = { workspace = true }
@@ -25,24 +25,17 @@ arena-payment-registry = { workspace = true }
 cosmwasm-schema = { workspace = true }
 serde_json = { workspace = true }
 
+# DA0 DA0
+dao-interface = { workspace = true }
+dao-voting = { workspace = true }
+dao-proposal-sudo = { workspace = true }
+dao-proposal-single = { workspace = true }
+cw-vesting = { workspace = true }
+cw-payroll-factory = { workspace = true }
+dao-voting-cw4 = { workspace = true }
+cw4 = { workspace = true }
+
 # scripts specific
 dotenv = { version = "0.15.0" }
 pretty_env_logger = { version = "0.5.0" }
 cw-orch-clone-testing = "0.6.4"
-
-# cw-orch enabled DAO DAO deps
-[dev-dependencies]
-dao-interface-master = { package = "dao-interface", git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
-dao-voting-master = { package = "dao-voting", git = "https://github.com/DA0-DA0/dao-contracts", branch = "development" }
-dao-interface = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
-dao-proposal-sudo = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface", features = [
-    "library",
-] }
-dao-proposal-single = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface", features = [
-    "library",
-] }
-dao-voting = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
-cw-vesting  = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
-cw-payroll-factory  = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
-dao-voting-cw4  = { git = "https://github.com/DA0-DA0/dao-contracts", branch = "feature/cw-orch-interface" }
-cw4 = { workspace = true }

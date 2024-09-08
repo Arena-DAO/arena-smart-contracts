@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use cw_ownable::assert_owner;
 use cw_utils::one_coin;
 use cw_vesting::vesting::Schedule;
-use dao_interface::state::ModuleInstantiateCallback;
+use dao_interface::state::CallbackMessages;
 
 use crate::{
     helpers::get_payroll_address,
@@ -122,7 +122,7 @@ pub fn accept_application(
     let payroll_factory = get_payroll_address(deps.as_ref(), &env.block.chain_id)?;
 
     // Prepare the instantiate message for the vesting contract
-    let vesting_data = to_json_binary(&ModuleInstantiateCallback {
+    let vesting_data = to_json_binary(&CallbackMessages {
         msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: payroll_factory.to_string(),
             msg: to_json_binary(
