@@ -246,14 +246,30 @@ fn process_final_results(
     let compare_members = |a: &MemberPoints, b: &MemberPoints| {
         b.points.cmp(&a.points).then_with(|| {
             for (_, stat_type) in &stat_types {
-                let a_stat = CompetitionModule::default()
-                    .stats
-                    .may_load(deps.storage, (league_id.u128(), &a.member, &stat_type.name))
-                    .unwrap_or(None);
-                let b_stat = CompetitionModule::default()
-                    .stats
-                    .may_load(deps.storage, (league_id.u128(), &b.member, &stat_type.name))
-                    .unwrap_or(None);
+                let (a_stat, b_stat) = match &stat_type.aggregation_type {
+                    Some(_) => (
+                        CompetitionModule::default()
+                            .inner_aggregate(deps.as_ref(), league_id, &a.member, stat_type)
+                            .ok(),
+                        CompetitionModule::default()
+                            .inner_aggregate(deps.as_ref(), league_id, &b.member, stat_type)
+                            .ok(),
+                    ),
+                    None => (
+                        CompetitionModule::default()
+                            .stats
+                            .may_load(deps.storage, (league_id.u128(), &a.member, &stat_type.name))
+                            .ok()
+                            .flatten(),
+                        CompetitionModule::default()
+                            .stats
+                            .may_load(deps.storage, (league_id.u128(), &b.member, &stat_type.name))
+                            .ok()
+                            .flatten(),
+                    ),
+                };
+                dbg!(a_stat.clone());
+                dbg!(b_stat.clone());
                 if let (Some(a_val), Some(b_val)) = (a_stat, b_stat) {
                     let cmp = compare_stat_values(&a_val, &b_val, stat_type.is_beneficial);
                     if cmp != std::cmp::Ordering::Equal {
@@ -341,7 +357,7 @@ fn compare_stat_values(a: &StatValue, b: &StatValue, is_beneficial: bool) -> std
     let ord = match (a, b) {
         (StatValue::Bool(a), StatValue::Bool(b)) => a.cmp(b),
         (StatValue::Decimal(a), StatValue::Decimal(b)) => a.cmp(b),
-        (StatValue::Int(a), StatValue::Int(b)) => a.cmp(b),
+        (StatValue::Uint(a), StatValue::Uint(b)) => a.cmp(b),
         _ => std::cmp::Ordering::Equal,
     };
     if is_beneficial {

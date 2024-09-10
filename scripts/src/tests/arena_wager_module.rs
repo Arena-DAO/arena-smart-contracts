@@ -1,12 +1,12 @@
 use arena_interface::competition::msg::{
-    EscrowInstantiateInfo, ExecuteBaseFns as _, QueryBaseFns as _,
+    EscrowInstantiateInfo, ExecuteBaseFns as _, QueryBaseFns as _, StatAggregationType,
 };
-use arena_interface::competition::state::CompetitionStatus;
+use arena_interface::competition::state::{CompetitionStatus, StatValue, StatValueType};
 use arena_interface::core::QueryExtFns;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_interface::registry::ExecuteMsgFns as _;
 use arena_wager_module::msg::{MigrateMsg, WagerInstantiateExt};
-use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Decimal, Int128, Uint128};
+use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Decimal, Uint128};
 use cw_balance::{
     BalanceUnchecked, BalanceVerified, Distribution, MemberBalanceUnchecked, MemberPercentage,
 };
@@ -876,47 +876,49 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
         vec![
             arena_interface::competition::state::StatType {
                 name: "wins".to_string(),
-                value_type: arena_interface::competition::state::StatValueType::Int,
+                value_type: StatValueType::Uint,
                 tie_breaker_priority: Some(1),
                 is_beneficial: true,
+                aggregation_type: None,
             },
             arena_interface::competition::state::StatType {
                 name: "points".to_string(),
-                value_type: arena_interface::competition::state::StatValueType::Int,
+                value_type: StatValueType::Uint,
                 tie_breaker_priority: Some(2),
                 is_beneficial: true,
+                aggregation_type: None,
             },
         ],
         vec![],
     )?;
 
     // Update stats
-    arena.arena_wager_module.update_stats(
+    arena.arena_wager_module.input_stats(
         Uint128::one(),
         vec![
-            arena_interface::competition::msg::MemberStatUpdate {
+            arena_interface::competition::msg::MemberStatsMsg {
                 addr: user1.to_string(),
                 stats: vec![
                     arena_interface::competition::msg::StatMsg {
                         name: "wins".to_string(),
-                        value: arena_interface::competition::state::StatValue::Int(Int128::one()),
+                        value: StatValue::Uint(Uint128::one()),
                     },
                     arena_interface::competition::msg::StatMsg {
                         name: "points".to_string(),
-                        value: arena_interface::competition::state::StatValue::Int(Int128::new(10)),
+                        value: StatValue::Uint(Uint128::new(10)),
                     },
                 ],
             },
-            arena_interface::competition::msg::MemberStatUpdate {
+            arena_interface::competition::msg::MemberStatsMsg {
                 addr: user2.to_string(),
                 stats: vec![
                     arena_interface::competition::msg::StatMsg {
                         name: "wins".to_string(),
-                        value: arena_interface::competition::state::StatValue::Int(Int128::zero()),
+                        value: StatValue::Uint(Uint128::zero()),
                     },
                     arena_interface::competition::msg::StatMsg {
                         name: "points".to_string(),
-                        value: arena_interface::competition::state::StatValue::Int(Int128::new(5)),
+                        value: StatValue::Uint(Uint128::new(5)),
                     },
                 ],
             },
@@ -933,20 +935,148 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
 
     assert_eq!(
         user1_stats.as_ref().unwrap()[1].value,
-        arena_interface::competition::state::StatValue::Int(Int128::one())
+        StatValue::Uint(Uint128::one())
     ); // wins
     assert_eq!(
         user1_stats.as_ref().unwrap()[0].value,
-        arena_interface::competition::state::StatValue::Int(Int128::new(10))
+        StatValue::Uint(Uint128::new(10))
     ); // points
     assert_eq!(
         user2_stats.as_ref().unwrap()[1].value,
-        arena_interface::competition::state::StatValue::Int(Int128::zero())
+        StatValue::Uint(Uint128::zero())
     ); // wins
     assert_eq!(
         user2_stats.as_ref().unwrap()[0].value,
-        arena_interface::competition::state::StatValue::Int(Int128::new(5))
+        StatValue::Uint(Uint128::new(5))
     ); // points
+
+    Ok(())
+}
+
+#[test]
+fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+
+    let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
+
+    arena.arena_wager_module.set_sender(&admin);
+
+    // Create a wager
+    let res = arena.arena_wager_module.create_competition(
+        "A test wager with aggregate stats".to_string(),
+        Expiration::AtHeight(1000000),
+        WagerInstantiateExt {
+            registered_members: None,
+        },
+        "Test Wager with Aggregate Stats".to_string(),
+        None,
+        Some(Uint128::one()),
+        Some(EscrowInstantiateInfo {
+            code_id: arena.arena_escrow.code_id()?,
+            msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
+                dues: vec![MemberBalanceUnchecked {
+                    addr: user1.to_string(),
+                    balance: BalanceUnchecked {
+                        native: Some(vec![Coin::new(1000, DENOM)]),
+                        cw20: None,
+                        cw721: None,
+                    },
+                }],
+            })?,
+            label: "Wager with Aggregate Stats".to_string(),
+            additional_layered_fees: None,
+        }),
+        None,
+        Some(vec!["Wager Rule".to_string()]),
+        None,
+    )?;
+
+    let escrow_addr = res
+        .events
+        .iter()
+        .find_map(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attr| attr.key == "escrow_addr")
+                .map(|attr| attr.value.clone())
+        })
+        .unwrap();
+
+    arena
+        .arena_escrow
+        .set_address(&Addr::unchecked(escrow_addr));
+
+    // Fund the escrow
+    arena.arena_escrow.set_sender(&user1);
+    arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
+
+    // Add stat types with aggregation
+    arena.arena_wager_module.update_stat_types(
+        Uint128::one(),
+        vec![
+            arena_interface::competition::state::StatType {
+                name: "total_wins".to_string(),
+                value_type: StatValueType::Uint,
+                tie_breaker_priority: Some(1),
+                is_beneficial: true,
+                aggregation_type: Some(StatAggregationType::Cumulative),
+            },
+            arena_interface::competition::state::StatType {
+                name: "average_score".to_string(),
+                value_type: StatValueType::Decimal,
+                tie_breaker_priority: Some(2),
+                is_beneficial: true,
+                aggregation_type: Some(StatAggregationType::Average),
+            },
+        ],
+        vec![],
+    )?;
+
+    // Update stats multiple times
+    for i in 0..3 {
+        arena.arena_wager_module.input_stats(
+            Uint128::one(),
+            vec![arena_interface::competition::msg::MemberStatsMsg {
+                addr: user1.to_string(),
+                stats: vec![
+                    arena_interface::competition::msg::StatMsg {
+                        name: "total_wins".to_string(),
+                        value: StatValue::Uint(Uint128::one()),
+                    },
+                    arena_interface::competition::msg::StatMsg {
+                        name: "average_score".to_string(),
+                        value: StatValue::Decimal(Decimal::percent(20 * i)),
+                    },
+                ],
+            }],
+        )?;
+        mock.next_block()?;
+    }
+
+    // Check aggregated stats
+    let stats = arena
+        .arena_wager_module
+        .stats(user1.to_string(), Uint128::one())?;
+    let total_wins = stats
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|s| s.name == "total_wins")
+        .unwrap();
+    let average_possession = stats
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|s| s.name == "average_score")
+        .unwrap();
+
+    assert_eq!(total_wins.value, StatValue::Uint(Uint128::new(3)));
+    assert_eq!(
+        average_possession.value,
+        StatValue::Decimal(Decimal::percent(20))
+    );
 
     Ok(())
 }

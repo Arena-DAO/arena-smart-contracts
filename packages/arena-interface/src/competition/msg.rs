@@ -77,9 +77,13 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         escrow_code_id: u64,
         escrow_migrate_msg: crate::escrow::MigrateMsg,
     },
-    UpdateStats {
+    InputStats {
         competition_id: Uint128,
-        updates: Vec<MemberStatUpdate>,
+        stats: Vec<MemberStatsMsg>,
+    },
+    RemoveStats {
+        competition_id: Uint128,
+        stats: Vec<MemberStatsRemoveMsg>,
     },
     UpdateStatTypes {
         competition_id: Uint128,
@@ -130,6 +134,13 @@ where
         competition_id: Uint128,
         addr: String,
     },
+    #[returns(StatMsg)]
+    Stat {
+        competition_id: Uint128,
+        addr: String,
+        stat_name: String,
+        height: Option<u64>,
+    },
     #[serde(skip)]
     #[returns(PhantomData<(InstantiateExt, CompetitionExt)>)]
     _Phantom(PhantomData<(InstantiateExt, CompetitionExt)>),
@@ -161,9 +172,21 @@ pub enum HookDirection {
 }
 
 #[cw_serde]
-pub struct MemberStatUpdate {
+pub struct MemberStatsMsg {
     pub addr: String,
     pub stats: Vec<StatMsg>,
+}
+
+#[cw_serde]
+pub struct MemberStatsRemoveMsg {
+    pub addr: String,
+    pub stats: Vec<StatsRemoveMsg>,
+}
+
+#[cw_serde]
+pub struct StatsRemoveMsg {
+    pub name: String,
+    pub height: u64,
 }
 
 #[cw_serde]
@@ -174,4 +197,10 @@ pub struct StatMsg {
 
 pub trait ToCompetitionExt<T> {
     fn to_competition_ext(&self, deps: Deps) -> StdResult<T>;
+}
+
+#[cw_serde]
+pub enum StatAggregationType {
+    Average,
+    Cumulative,
 }

@@ -1,8 +1,10 @@
 use crate::fees::FeeInformation;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, BlockInfo, Decimal, Int128, Timestamp, Uint128};
+use cosmwasm_std::{Addr, BlockInfo, Decimal, StdError, StdResult, Timestamp, Uint128};
 use cw_utils::Expiration;
 use std::fmt;
+
+use super::msg::StatAggregationType;
 
 #[cw_serde]
 #[derive(Default)]
@@ -120,7 +122,7 @@ pub struct Evidence {
 pub enum StatValueType {
     Bool,
     Decimal,
-    Int,
+    Uint,
 }
 
 #[cw_serde]
@@ -129,6 +131,7 @@ pub struct StatType {
     pub value_type: StatValueType,
     pub tie_breaker_priority: Option<u8>,
     pub is_beneficial: bool,
+    pub aggregation_type: Option<StatAggregationType>,
 }
 
 // Stats
@@ -137,5 +140,32 @@ pub struct StatType {
 pub enum StatValue {
     Bool(bool),
     Decimal(Decimal),
-    Int(Int128),
+    Uint(Uint128),
+}
+
+impl StatValue {
+    pub fn checked_add(self, other: StatValue) -> StdResult<StatValue> {
+        match (self, other) {
+            (StatValue::Bool(_), _) | (_, StatValue::Bool(_)) => Err(StdError::generic_err(
+                "Cannot perform arithmetic on boolean stats",
+            )),
+            (StatValue::Uint(a), StatValue::Uint(b)) => Ok(StatValue::Uint(a.checked_add(b)?)),
+            (StatValue::Decimal(a), StatValue::Decimal(b)) => {
+                Ok(StatValue::Decimal(a.checked_add(b)?))
+            }
+            _ => Err(StdError::generic_err("Cannot add different types of stats")),
+        }
+    }
+
+    pub fn checked_div(self, divisor: Decimal) -> StdResult<Decimal> {
+        match self {
+            StatValue::Bool(_) => Err(StdError::generic_err("Cannot divide boolean stats")),
+            StatValue::Uint(a) => Ok(Decimal::from_ratio(a, 1u128)
+                .checked_div(divisor)
+                .map_err(|x| StdError::generic_err(x.to_string()))?),
+            StatValue::Decimal(a) => Ok(a
+                .checked_div(divisor)
+                .map_err(|x| StdError::generic_err(x.to_string()))?),
+        }
+    }
 }
