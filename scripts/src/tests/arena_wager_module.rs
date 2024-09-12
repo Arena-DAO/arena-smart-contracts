@@ -933,22 +933,10 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
         .arena_wager_module
         .stats(user2.to_string(), Uint128::one())?;
 
-    assert_eq!(
-        user1_stats.as_ref().unwrap()[1].value,
-        StatValue::Uint(Uint128::one())
-    ); // wins
-    assert_eq!(
-        user1_stats.as_ref().unwrap()[0].value,
-        StatValue::Uint(Uint128::new(10))
-    ); // points
-    assert_eq!(
-        user2_stats.as_ref().unwrap()[1].value,
-        StatValue::Uint(Uint128::zero())
-    ); // wins
-    assert_eq!(
-        user2_stats.as_ref().unwrap()[0].value,
-        StatValue::Uint(Uint128::new(5))
-    ); // points
+    assert_eq!(user1_stats[1].value, StatValue::Uint(Uint128::one())); // wins
+    assert_eq!(user1_stats[0].value, StatValue::Uint(Uint128::new(10))); // points
+    assert_eq!(user2_stats[1].value, StatValue::Uint(Uint128::zero())); // wins
+    assert_eq!(user2_stats[0].value, StatValue::Uint(Uint128::new(5))); // points
 
     Ok(())
 }
@@ -1059,24 +1047,20 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
     let stats = arena
         .arena_wager_module
         .stats(user1.to_string(), Uint128::one())?;
-    let total_wins = stats
-        .as_ref()
-        .unwrap()
-        .iter()
-        .find(|s| s.name == "total_wins")
-        .unwrap();
-    let average_possession = stats
-        .as_ref()
-        .unwrap()
-        .iter()
-        .find(|s| s.name == "average_score")
-        .unwrap();
+    let total_wins = stats.iter().find(|s| s.name == "total_wins").unwrap();
+    let average_possession = stats.iter().find(|s| s.name == "average_score").unwrap();
 
     assert_eq!(total_wins.value, StatValue::Uint(Uint128::new(3)));
     assert_eq!(
         average_possession.value,
         StatValue::Decimal(Decimal::percent(20))
     );
+
+    // Check stats table
+    let stats_table = arena
+        .arena_wager_module
+        .stats_table(Uint128::one(), None, None)?;
+    assert_eq!(stats_table.len(), 1);
 
     Ok(())
 }

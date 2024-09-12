@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use crate::competition::state::{CompetitionResponse, CompetitionStatus, Config, Evidence};
 use crate::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
+use cosmwasm_std::{Addr, Binary, Deps, StdResult, Uint128};
 use cw_balance::Distribution;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
@@ -129,10 +129,16 @@ where
     PaymentRegistry {},
     #[returns(Option<Vec<StatType>>)]
     StatTypes { competition_id: Uint128 },
-    #[returns(Option<Vec<StatMsg>>)]
+    #[returns(Vec<StatMsg>)]
     Stats {
         competition_id: Uint128,
         addr: String,
+    },
+    #[returns(Vec<StatTableEntry>)]
+    StatsTable {
+        competition_id: Uint128,
+        start_after: Option<(String, String)>,
+        limit: Option<u32>,
     },
     #[returns(StatMsg)]
     Stat {
@@ -203,4 +209,10 @@ pub trait ToCompetitionExt<T> {
 pub enum StatAggregationType {
     Average,
     Cumulative,
+}
+
+#[cw_serde]
+pub struct StatTableEntry {
+    pub addr: Addr,
+    pub stats: Vec<StatMsg>,
 }

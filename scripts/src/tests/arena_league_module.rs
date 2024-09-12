@@ -1658,24 +1658,12 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
         let stats = arena
             .arena_league_module
             .stats(team.to_string(), league_id)?;
-        let total_goals = stats
-            .as_ref()
-            .unwrap()
-            .iter()
-            .find(|s| s.name == "total_goals")
-            .unwrap();
+        let total_goals = stats.iter().find(|s| s.name == "total_goals").unwrap();
         let average_possession = stats
-            .as_ref()
-            .unwrap()
             .iter()
             .find(|s| s.name == "average_possession")
             .unwrap();
-        let total_fouls = stats
-            .as_ref()
-            .unwrap()
-            .iter()
-            .find(|s| s.name == "total_fouls")
-            .unwrap();
+        let total_fouls = stats.iter().find(|s| s.name == "total_fouls").unwrap();
 
         if team == team1 {
             assert_eq!(total_goals.value, StatValue::Uint(Uint128::new(6)));

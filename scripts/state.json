@@ -16,11 +16,11 @@
         "arena_competition_enrollment": 6403,
         "arena_core": 6440,
         "arena_escrow": 6398,
-        "arena_league_module": 6630,
+        "arena_league_module": 6671,
         "arena_payment_registry": 6405,
         "arena_token_gateway": 6604,
-        "arena_tournament_module": 6631,
-        "arena_wager_module": 6629,
+        "arena_tournament_module": 6672,
+        "arena_wager_module": 6670,
         "dao_dao_core": 6611
       },
       "default": {}

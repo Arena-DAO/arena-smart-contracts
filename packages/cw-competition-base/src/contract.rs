@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{collections::HashMap, marker::PhantomData};
 
 use arena_interface::{
     competition::{
@@ -6,7 +6,7 @@ use arena_interface::{
         msg::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
             MemberStatsMsg, MemberStatsRemoveMsg, QueryBase, StatAggregationType, StatMsg,
-            ToCompetitionExt,
+            StatTableEntry, ToCompetitionExt,
         },
         state::{
             Competition, CompetitionResponse, CompetitionStatus, Config, Evidence, StatType,
@@ -1313,6 +1313,13 @@ impl<
                 competition_id,
                 addr,
             } => to_json_binary(&self.query_stats(deps, competition_id, addr)?),
+            QueryBase::StatsTable {
+                competition_id,
+                start_after,
+                limit,
+            } => {
+                to_json_binary(&self.query_stats_table(deps, competition_id, start_after, limit)?)
+            }
             QueryBase::Stat {
                 competition_id,
                 addr,
@@ -1321,6 +1328,65 @@ impl<
             } => to_json_binary(&self.query_stat(deps, competition_id, addr, stat, height)?),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
         }
+    }
+
+    pub fn query_stats_table(
+        &self,
+        deps: Deps,
+        competition_id: Uint128,
+        start_after: Option<(String, String)>,
+        limit: Option<u32>,
+    ) -> StdResult<Vec<StatTableEntry>> {
+        let limit = limit.unwrap_or(30).max(30);
+        let start_after = start_after
+            .map(|(addr_str, stat_name)| -> StdResult<_> {
+                let addr = deps.api.addr_validate(&addr_str)?;
+                Ok((addr, stat_name))
+            })
+            .transpose()?;
+
+        let mut addr_stats_map: HashMap<Addr, Vec<StatMsg>> = HashMap::new();
+
+        let result = self
+            .stats
+            .sub_prefix(competition_id.u128())
+            .range(
+                deps.storage,
+                start_after
+                    .as_ref()
+                    .map(|(addr, name)| Bound::exclusive((addr, name.as_str()))),
+                None,
+                Order::Ascending,
+            )
+            .take(limit as usize)
+            .collect::<StdResult<Vec<_>>>()?;
+
+        for ((addr, stat_name), stat_value) in result {
+            let stat_type = self
+                .stat_types
+                .load(deps.storage, (competition_id.u128(), stat_name.as_str()))?;
+
+            let stat_msg = if stat_type.aggregation_type.is_some() {
+                StatMsg {
+                    name: stat_name,
+                    value: self.inner_aggregate(deps, competition_id, &addr, &stat_type)?,
+                }
+            } else {
+                StatMsg {
+                    name: stat_name,
+                    value: stat_value,
+                }
+            };
+
+            addr_stats_map.entry(addr).or_default().push(stat_msg);
+        }
+
+        let stats_table = addr_stats_map
+            .into_iter()
+            .map(|(addr, stats)| StatTableEntry { addr, stats })
+            .collect();
+
+        Ok(stats_table)
     }
 
     pub fn inner_aggregate(
