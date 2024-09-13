@@ -1,16 +1,19 @@
-use std::{collections::HashMap, marker::PhantomData};
+use std::{
+    collections::{BTreeMap, HashMap},
+    marker::PhantomData,
+};
 
 use arena_interface::{
     competition::{
         migrate::CompetitionV182,
         msg::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
-            MemberStatsMsg, MemberStatsRemoveMsg, QueryBase, StatAggregationType, StatMsg,
-            StatTableEntry, ToCompetitionExt,
+            QueryBase, ToCompetitionExt,
         },
-        state::{
-            Competition, CompetitionResponse, CompetitionStatus, Config, Evidence, StatType,
-            StatValue, StatValueType,
+        state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
+        stats::{
+            MemberStatsMsg, MemberStatsRemoveMsg, StatAggregationType, StatMsg, StatTableEntry,
+            StatType, StatValue, StatValueType,
         },
     },
     core::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
@@ -1201,23 +1204,30 @@ impl<
         for update in stats {
             let addr = deps.api.addr_validate(&update.addr)?;
             for stat in update.stats {
-                // Check if the stat type exists
-                if !self
-                    .stat_types
-                    .has(deps.storage, (competition_id.u128(), &stat.name))
-                {
-                    return Err(CompetitionError::StatTypeNotFound {
-                        name: stat.name.clone(),
-                    });
-                }
+                match stat {
+                    StatMsg::InputStat { name, value } => {
+                        // Check if the stat type exists
+                        if !self
+                            .stat_types
+                            .has(deps.storage, (competition_id.u128(), &name))
+                        {
+                            return Err(CompetitionError::StatTypeNotFound { name: name.clone() });
+                        }
 
-                // Save the stat
-                self.stats.save(
-                    deps.storage,
-                    (competition_id.u128(), &addr, &stat.name),
-                    &stat.value,
-                    env.block.height,
-                )?;
+                        // Save the stat
+                        self.stats.save(
+                            deps.storage,
+                            (competition_id.u128(), &addr, &name),
+                            &value,
+                            env.block.height,
+                        )?;
+                    }
+                    _ => {
+                        return Err(CompetitionError::StdError(StdError::generic_err(
+                            "Only InputStat is allowed in execute_input_stats",
+                        )));
+                    }
+                }
             }
         }
 
@@ -1309,10 +1319,10 @@ impl<
             QueryBase::StatTypes { competition_id } => {
                 to_json_binary(&self.query_stat_types(deps, competition_id)?)
             }
-            QueryBase::Stats {
+            QueryBase::HistoricalStats {
                 competition_id,
                 addr,
-            } => to_json_binary(&self.query_stats(deps, competition_id, addr)?),
+            } => to_json_binary(&self.query_historical_stats(deps, env, competition_id, addr)?),
             QueryBase::StatsTable {
                 competition_id,
                 start_after,
@@ -1367,14 +1377,16 @@ impl<
                 .load(deps.storage, (competition_id.u128(), stat_name.as_str()))?;
 
             let stat_msg = if stat_type.aggregation_type.is_some() {
-                StatMsg {
+                StatMsg::StatWithAggregation {
                     name: stat_name,
                     value: self.inner_aggregate(deps, competition_id, &addr, &stat_type)?,
+                    aggregation_type: stat_type.aggregation_type,
                 }
             } else {
-                StatMsg {
+                StatMsg::StatWithAggregation {
                     name: stat_name,
                     value: stat_value,
+                    aggregation_type: None,
                 }
             };
 
@@ -1449,7 +1461,7 @@ impl<
         };
 
         if let Some(stat_value) = stat_value {
-            return Ok(Some(StatMsg {
+            return Ok(Some(StatMsg::InputStat {
                 name: stat,
                 value: stat_value,
             }));
@@ -1472,36 +1484,63 @@ impl<
         Ok(stat_types)
     }
 
-    pub fn query_stats(
+    pub fn query_historical_stats(
         &self,
         deps: Deps,
+        env: Env,
         competition_id: Uint128,
         addr: String,
-    ) -> StdResult<Vec<StatMsg>> {
+    ) -> StdResult<Vec<Vec<StatMsg>>> {
         let addr = deps.api.addr_validate(&addr)?;
         let stat_types = self.query_stat_types(deps, competition_id)?;
 
-        let mut stats = Vec::new();
+        // Use a BTreeMap to keep the heights in order
+        let mut height_to_stats: BTreeMap<u64, Vec<StatMsg>> = BTreeMap::new();
 
+        // Iterate over all stat_types
         for stat_type in &stat_types {
-            let value = if stat_type.aggregation_type.is_some() {
-                // Use inner_aggregate for aggregated stats
-                self.inner_aggregate(deps, competition_id, &addr, stat_type)?
-            } else {
-                // For non-aggregated stats, get the most recent value
-                self.stats.load(
+            let value = self.stats.load(
+                deps.storage,
+                (competition_id.u128(), &addr, &stat_type.name),
+            )?;
+            height_to_stats
+                .entry(env.block.height)
+                .or_default()
+                .push(StatMsg::HistoricalStat {
+                    name: stat_type.name.clone(),
+                    value,
+                    height: env.block.height,
+                });
+
+            // For each stat_type, iterate over its changelog entries
+            let changelog = self
+                .stats
+                .changelog()
+                .prefix((competition_id.u128(), &addr, stat_type.name.as_str()))
+                .range(deps.storage, None, None, Order::Ascending);
+
+            for entry in changelog {
+                let (height, _value) = entry?;
+
+                // Insert the stat_msg into the map
+                if let Some(value) = self.stats.may_load_at_height(
                     deps.storage,
                     (competition_id.u128(), &addr, &stat_type.name),
-                )?
-            };
-
-            stats.push(StatMsg {
-                name: stat_type.name.clone(),
-                value,
-            });
+                    height,
+                )? {
+                    height_to_stats
+                        .entry(height)
+                        .or_default()
+                        .push(StatMsg::HistoricalStat {
+                            name: stat_type.name.clone(),
+                            value,
+                            height,
+                        });
+                }
+            }
         }
 
-        Ok(stats)
+        Ok(height_to_stats.into_values().collect())
     }
 
     pub fn query_is_dao_member(&self, deps: Deps, addr: &Addr, height: u64) -> bool {

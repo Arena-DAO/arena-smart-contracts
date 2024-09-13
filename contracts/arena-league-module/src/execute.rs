@@ -1,4 +1,4 @@
-use arena_interface::{competition::state::StatValue, ratings::MemberResult};
+use arena_interface::{competition::stats::StatValue, ratings::MemberResult};
 use cosmwasm_std::{
     Addr, Decimal, DepsMut, MessageInfo, Order, Response, StdError, StdResult, Uint128, Uint64,
 };

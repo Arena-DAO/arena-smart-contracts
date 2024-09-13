@@ -4,14 +4,14 @@ use std::marker::PhantomData;
 use crate::competition::state::{CompetitionResponse, CompetitionStatus, Config, Evidence};
 use crate::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Addr, Binary, Deps, StdResult, Uint128};
+use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
 use cw_balance::Distribution;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use super::state::{StatType, StatValue};
+use super::stats::{MemberStatsMsg, MemberStatsRemoveMsg, StatMsg, StatTableEntry, StatType};
 
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
@@ -129,11 +129,13 @@ where
     PaymentRegistry {},
     #[returns(Option<Vec<StatType>>)]
     StatTypes { competition_id: Uint128 },
-    #[returns(Vec<StatMsg>)]
-    Stats {
+    /// Returns a user's historical stats for a competition
+    #[returns(Vec<Vec<StatMsg>>)]
+    HistoricalStats {
         competition_id: Uint128,
         addr: String,
     },
+    /// Returns all current stats for a competition
     #[returns(Vec<StatTableEntry>)]
     StatsTable {
         competition_id: Uint128,
@@ -177,42 +179,6 @@ pub enum HookDirection {
     Outgoing,
 }
 
-#[cw_serde]
-pub struct MemberStatsMsg {
-    pub addr: String,
-    pub stats: Vec<StatMsg>,
-}
-
-#[cw_serde]
-pub struct MemberStatsRemoveMsg {
-    pub addr: String,
-    pub stats: Vec<StatsRemoveMsg>,
-}
-
-#[cw_serde]
-pub struct StatsRemoveMsg {
-    pub name: String,
-    pub height: u64,
-}
-
-#[cw_serde]
-pub struct StatMsg {
-    pub name: String,
-    pub value: StatValue,
-}
-
 pub trait ToCompetitionExt<T> {
     fn to_competition_ext(&self, deps: Deps) -> StdResult<T>;
-}
-
-#[cw_serde]
-pub enum StatAggregationType {
-    Average,
-    Cumulative,
-}
-
-#[cw_serde]
-pub struct StatTableEntry {
-    pub addr: Addr,
-    pub stats: Vec<StatMsg>,
 }

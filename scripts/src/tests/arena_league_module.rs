@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
 use arena_interface::competition::msg::{
-    EscrowInstantiateInfo, ExecuteBaseFns as _, MemberStatsMsg, QueryBaseFns as _,
-    StatAggregationType, StatMsg,
+    EscrowInstantiateInfo, ExecuteBaseFns as _, QueryBaseFns as _,
 };
-use arena_interface::competition::state::{StatType, StatValue, StatValueType};
+use arena_interface::competition::stats::{
+    MemberStatsMsg, StatAggregationType, StatMsg, StatType, StatValue, StatValueType,
+};
 use arena_interface::core::QueryExtFns as _;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_league_module::msg::{
@@ -1126,11 +1127,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team1.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(2)),
                     },
@@ -1139,11 +1140,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team2.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(2)),
                     },
@@ -1152,11 +1153,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team3.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(4)),
                     },
@@ -1165,11 +1166,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team4.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(4)),
                     },
@@ -1199,11 +1200,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team1.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(3)),
                     },
@@ -1212,11 +1213,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team2.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(3)),
                     },
@@ -1225,11 +1226,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team3.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(5)),
                     },
@@ -1238,11 +1239,11 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team4.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(5)),
                     },
@@ -1258,15 +1259,15 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team1.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(3)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "fouls".to_string(),
                         value: StatValue::Uint(Uint128::new(5)),
                     },
@@ -1275,15 +1276,15 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team2.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(3)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "fouls".to_string(),
                         value: StatValue::Uint(Uint128::new(4)),
                     },
@@ -1292,15 +1293,15 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team3.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(5)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "fouls".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
@@ -1309,15 +1310,15 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             MemberStatsMsg {
                 addr: team4.to_string(),
                 stats: vec![
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goal_difference".to_string(),
                         value: StatValue::Uint(Uint128::new(0)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "goals_scored".to_string(),
                         value: StatValue::Uint(Uint128::new(5)),
                     },
-                    StatMsg {
+                    StatMsg::InputStat {
                         name: "fouls".to_string(),
                         value: StatValue::Uint(Uint128::new(1)),
                     },
@@ -1528,15 +1529,15 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                 MemberStatsMsg {
                     addr: team1.to_string(),
                     stats: vec![
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_goals".to_string(),
                             value: StatValue::Uint(Uint128::new(2)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "average_possession".to_string(),
                             value: StatValue::Decimal(Decimal::percent(55)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_fouls".to_string(),
                             value: StatValue::Uint(Uint128::new(3)),
                         },
@@ -1545,15 +1546,15 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                 MemberStatsMsg {
                     addr: team2.to_string(),
                     stats: vec![
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_goals".to_string(),
                             value: StatValue::Uint(Uint128::new(2)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "average_possession".to_string(),
                             value: StatValue::Decimal(Decimal::percent(50)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_fouls".to_string(),
                             value: StatValue::Uint(Uint128::new(2)),
                         },
@@ -1562,15 +1563,15 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                 MemberStatsMsg {
                     addr: team3.to_string(),
                     stats: vec![
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_goals".to_string(),
                             value: StatValue::Uint(Uint128::new(1)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "average_possession".to_string(),
                             value: StatValue::Decimal(Decimal::percent(60)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_fouls".to_string(),
                             value: StatValue::Uint(Uint128::new(1)),
                         },
@@ -1579,15 +1580,15 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                 MemberStatsMsg {
                     addr: team4.to_string(),
                     stats: vec![
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_goals".to_string(),
                             value: StatValue::Uint(Uint128::new(1)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "average_possession".to_string(),
                             value: StatValue::Decimal(Decimal::percent(45)),
                         },
-                        StatMsg {
+                        StatMsg::InputStat {
                             name: "total_fouls".to_string(),
                             value: StatValue::Uint(Uint128::new(4)),
                         },
@@ -1654,45 +1655,51 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
     assert_eq!(dao_balance, Uint128::new(200)); // 5% of 4000
 
     // Verify aggregated stats
+    let stats_table = arena
+        .arena_league_module
+        .stats_table(Uint128::one(), None, None)?;
     for team in [&team1, &team2, &team3, &team4] {
-        let stats = arena
-            .arena_league_module
-            .stats(team.to_string(), league_id)?;
-        let total_goals = stats.iter().find(|s| s.name == "total_goals").unwrap();
+        let stats = stats_table
+            .iter()
+            .find(|x| x.addr == team)
+            .unwrap()
+            .stats
+            .clone();
+        let total_goals = stats.iter().find(|s| s.name() == "total_goals").unwrap();
         let average_possession = stats
             .iter()
-            .find(|s| s.name == "average_possession")
+            .find(|s| s.name() == "average_possession")
             .unwrap();
-        let total_fouls = stats.iter().find(|s| s.name == "total_fouls").unwrap();
+        let total_fouls = stats.iter().find(|s| s.name() == "total_fouls").unwrap();
 
         if team == team1 {
-            assert_eq!(total_goals.value, StatValue::Uint(Uint128::new(6)));
+            assert_eq!(*total_goals.value(), StatValue::Uint(Uint128::new(6)));
             assert_eq!(
-                average_possession.value,
+                *average_possession.value(),
                 StatValue::Decimal(Decimal::percent(55))
             );
-            assert_eq!(total_fouls.value, StatValue::Uint(Uint128::new(9)));
+            assert_eq!(*total_fouls.value(), StatValue::Uint(Uint128::new(9)));
         } else if team == team2 {
-            assert_eq!(total_goals.value, StatValue::Uint(Uint128::new(6)));
+            assert_eq!(*total_goals.value(), StatValue::Uint(Uint128::new(6)));
             assert_eq!(
-                average_possession.value,
+                *average_possession.value(),
                 StatValue::Decimal(Decimal::percent(50))
             );
-            assert_eq!(total_fouls.value, StatValue::Uint(Uint128::new(6)));
+            assert_eq!(*total_fouls.value(), StatValue::Uint(Uint128::new(6)));
         } else if team == team3 {
-            assert_eq!(total_goals.value, StatValue::Uint(Uint128::new(3)));
+            assert_eq!(*total_goals.value(), StatValue::Uint(Uint128::new(3)));
             assert_eq!(
-                average_possession.value,
+                *average_possession.value(),
                 StatValue::Decimal(Decimal::percent(60))
             );
-            assert_eq!(total_fouls.value, StatValue::Uint(Uint128::new(3)));
+            assert_eq!(*total_fouls.value(), StatValue::Uint(Uint128::new(3)));
         } else if team == team4 {
-            assert_eq!(total_goals.value, StatValue::Uint(Uint128::new(3)));
+            assert_eq!(*total_goals.value(), StatValue::Uint(Uint128::new(3)));
             assert_eq!(
-                average_possession.value,
+                *average_possession.value(),
                 StatValue::Decimal(Decimal::percent(45))
             );
-            assert_eq!(total_fouls.value, StatValue::Uint(Uint128::new(12)));
+            assert_eq!(*total_fouls.value(), StatValue::Uint(Uint128::new(12)));
         }
     }
 
