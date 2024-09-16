@@ -1070,6 +1070,7 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
         *stats_table[0].stats[0].value(),
         StatValue::Decimal(Decimal::percent(20)),
     );
+    mock.next_block()?;
 
     Ok(())
 }

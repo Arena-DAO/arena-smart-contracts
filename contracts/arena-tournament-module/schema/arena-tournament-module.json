@@ -419,34 +419,6 @@
       {
         "type": "object",
         "required": [
-          "remove_stats"
-        ],
-        "properties": {
-          "remove_stats": {
-            "type": "object",
-            "required": [
-              "competition_id",
-              "stats"
-            ],
-            "properties": {
-              "competition_id": {
-                "$ref": "#/definitions/Uint128"
-              },
-              "stats": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/MemberStatsRemoveMsg"
-                }
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
           "update_stat_types"
         ],
         "properties": {
@@ -934,25 +906,6 @@
         },
         "additionalProperties": false
       },
-      "MemberStatsRemoveMsg": {
-        "type": "object",
-        "required": [
-          "addr",
-          "stats"
-        ],
-        "properties": {
-          "addr": {
-            "type": "string"
-          },
-          "stats": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/StatsRemoveMsg"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
       "MigrateMsg": {
         "oneOf": [
           {
@@ -998,13 +951,15 @@
           {
             "type": "object",
             "required": [
-              "height",
               "name",
               "value"
             ],
             "properties": {
               "height": {
-                "type": "integer",
+                "type": [
+                  "integer",
+                  "null"
+                ],
                 "format": "uint64",
                 "minimum": 0.0
               },
@@ -1130,24 +1085,6 @@
           "decimal",
           "uint"
         ]
-      },
-      "StatsRemoveMsg": {
-        "type": "object",
-        "required": [
-          "height",
-          "name"
-        ],
-        "properties": {
-          "height": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
       },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -2655,13 +2592,15 @@
             {
               "type": "object",
               "required": [
-                "height",
                 "name",
                 "value"
               ],
               "properties": {
                 "height": {
-                  "type": "integer",
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
                   "format": "uint64",
                   "minimum": 0.0
                 },
@@ -2933,13 +2872,15 @@
         {
           "type": "object",
           "required": [
-            "height",
             "name",
             "value"
           ],
           "properties": {
             "height": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint64",
               "minimum": 0.0
             },
@@ -3147,13 +3088,15 @@
             {
               "type": "object",
               "required": [
-                "height",
                 "name",
                 "value"
               ],
               "properties": {
                 "height": {
-                  "type": "integer",
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
                   "format": "uint64",
                   "minimum": 0.0
                 },

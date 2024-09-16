@@ -8,18 +8,6 @@ pub struct MemberStatsMsg {
 }
 
 #[cw_serde]
-pub struct MemberStatsRemoveMsg {
-    pub addr: String,
-    pub stats: Vec<StatsRemoveMsg>,
-}
-
-#[cw_serde]
-pub struct StatsRemoveMsg {
-    pub name: String,
-    pub height: u64,
-}
-
-#[cw_serde]
 #[serde(untagged)]
 pub enum StatMsg {
     // Variant for inputting stats
@@ -31,7 +19,7 @@ pub enum StatMsg {
     HistoricalStat {
         name: String,
         value: StatValue,
-        height: u64,
+        height: Option<u64>,
     },
     // Variant for querying stats table
     StatWithAggregation {

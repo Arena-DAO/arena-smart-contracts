@@ -11,7 +11,7 @@ use cw_utils::Expiration;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use super::stats::{MemberStatsMsg, MemberStatsRemoveMsg, StatMsg, StatTableEntry, StatType};
+use super::stats::{MemberStatsMsg, StatMsg, StatTableEntry, StatType};
 
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
@@ -80,10 +80,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
     InputStats {
         competition_id: Uint128,
         stats: Vec<MemberStatsMsg>,
-    },
-    RemoveStats {
-        competition_id: Uint128,
-        stats: Vec<MemberStatsRemoveMsg>,
     },
     UpdateStatTypes {
         competition_id: Uint128,

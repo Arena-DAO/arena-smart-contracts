@@ -12,8 +12,8 @@ use arena_interface::{
         },
         state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
         stats::{
-            MemberStatsMsg, MemberStatsRemoveMsg, StatAggregationType, StatMsg, StatTableEntry,
-            StatType, StatValue, StatValueType,
+            MemberStatsMsg, StatAggregationType, StatMsg, StatTableEntry, StatType, StatValue,
+            StatValueType,
         },
     },
     core::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
@@ -432,10 +432,6 @@ impl<
                 competition_id,
                 stats,
             } => self.execute_input_stats(deps, env, info, competition_id, stats),
-            ExecuteBase::RemoveStats {
-                competition_id,
-                stats,
-            } => self.execute_remove_stats(deps, env, info, competition_id, stats),
             ExecuteBase::ExecuteCompetitionHook {
                 competition_id: _,
                 distribution: _,
@@ -1236,47 +1232,6 @@ impl<
             .add_attribute("competition_id", competition_id.to_string()))
     }
 
-    pub fn execute_remove_stats(
-        &self,
-        deps: DepsMut,
-        _env: Env,
-        info: MessageInfo,
-        competition_id: Uint128,
-        stats: Vec<MemberStatsRemoveMsg>,
-    ) -> Result<Response, CompetitionError> {
-        // Check if the competition exists and the sender is authorized
-        let competition = self
-            .competitions
-            .load(deps.storage, competition_id.u128())?;
-        self.inner_validate_auth(&info.sender, &competition, false)?;
-
-        for update in stats {
-            let addr = deps.api.addr_validate(&update.addr)?;
-            for stat in update.stats {
-                // Check if the stat type exists
-                if !self
-                    .stat_types
-                    .has(deps.storage, (competition_id.u128(), &stat.name))
-                {
-                    return Err(CompetitionError::StatTypeNotFound {
-                        name: stat.name.clone(),
-                    });
-                }
-
-                // Remove the stat
-                self.stats.remove(
-                    deps.storage,
-                    (competition_id.u128(), &addr, &stat.name),
-                    stat.height,
-                )?;
-            }
-        }
-
-        Ok(Response::new()
-            .add_attribute("action", "remove_stats")
-            .add_attribute("competition_id", competition_id.to_string()))
-    }
-
     pub fn query(
         &self,
         deps: Deps,
@@ -1410,7 +1365,12 @@ impl<
     ) -> StdResult<StatValue> {
         let mut sum = self
             .stats
-            .load(deps.storage, (competition_id.u128(), addr, &stat_type.name))?;
+            .load(deps.storage, (competition_id.u128(), addr, &stat_type.name))
+            .unwrap_or(match stat_type.value_type {
+                StatValueType::Bool => StatValue::Bool(false),
+                StatValueType::Decimal => StatValue::Decimal(Decimal::zero()),
+                StatValueType::Uint => StatValue::Uint(Uint128::zero()),
+            });
         let mut count = 1u64;
 
         for item in self
@@ -1499,18 +1459,18 @@ impl<
 
         // Iterate over all stat_types
         for stat_type in &stat_types {
-            let value = self.stats.load(
+            if let Ok(value) = self.stats.load(
                 deps.storage,
                 (competition_id.u128(), &addr, &stat_type.name),
-            )?;
-            height_to_stats
-                .entry(env.block.height)
-                .or_default()
-                .push(StatMsg::HistoricalStat {
-                    name: stat_type.name.clone(),
-                    value,
-                    height: env.block.height,
-                });
+            ) {
+                height_to_stats.entry(env.block.height).or_default().push(
+                    StatMsg::HistoricalStat {
+                        name: stat_type.name.clone(),
+                        value,
+                        height: None,
+                    },
+                );
+            }
 
             // For each stat_type, iterate over its changelog entries
             let changelog = self
@@ -1534,7 +1494,7 @@ impl<
                         .push(StatMsg::HistoricalStat {
                             name: stat_type.name.clone(),
                             value,
-                            height,
+                            height: Some(height),
                         });
                 }
             }
