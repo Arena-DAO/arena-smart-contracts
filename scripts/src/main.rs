@@ -5,7 +5,8 @@ use orch_interface::{
     arena_core::ArenaCoreContract, arena_league_module::ArenaLeagueModuleContract,
     arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
-    arena_wager_module::ArenaWagerModuleContract, dao_dao_core::DaoDaoCoreContract,
+    arena_wager_module::ArenaWagerModuleContract, cw_abc::CwAbcContract,
+    dao_dao_core::DaoDaoCoreContract,
 };
 use std::env;
 
@@ -46,6 +47,7 @@ enum DeployComponent {
     TokenGateway,
     CompetitionModules,
     DaoCore,
+    Abc,
 }
 
 fn parse_command(args: &[String]) -> Command {
@@ -67,6 +69,7 @@ fn parse_command(args: &[String]) -> Command {
         "token_gateway" => DeployComponent::TokenGateway,
         "competition_modules" => DeployComponent::CompetitionModules,
         "dao_core" => DeployComponent::DaoCore,
+        "abc" => DeployComponent::Abc,
         _ => return Command::Unknown,
     };
 
@@ -87,6 +90,7 @@ fn deploy(network: Network, component: DeployComponent) -> anyhow::Result<()> {
         DeployComponent::TokenGateway => deploy_token_gateway(daemon)?,
         DeployComponent::CompetitionModules => deploy_competition_modules(daemon)?,
         DeployComponent::DaoCore => deploy_dao_core(daemon)?,
+        DeployComponent::Abc => deploy_cw_abc(daemon)?,
     }
 
     Ok(())
@@ -135,6 +139,12 @@ fn deploy_competition_modules(daemon: Daemon) -> anyhow::Result<()> {
 fn deploy_dao_core(daemon: Daemon) -> anyhow::Result<()> {
     let dao_core = DaoDaoCoreContract::new(daemon);
     dao_core.upload()?;
+    Ok(())
+}
+
+fn deploy_cw_abc(daemon: Daemon) -> anyhow::Result<()> {
+    let cw_abc = CwAbcContract::new(daemon);
+    cw_abc.upload()?;
     Ok(())
 }
 

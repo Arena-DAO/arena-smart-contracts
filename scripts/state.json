@@ -21,6 +21,7 @@
         "arena_token_gateway": 6604,
         "arena_tournament_module": 6761,
         "arena_wager_module": 6759,
+        "cw_abc": 6797,
         "dao_dao_core": 6611
       },
       "default": {}

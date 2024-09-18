@@ -19,7 +19,7 @@ dependencies = [
  "hex",
  "itertools 0.12.1",
  "log",
- "prost 0.12.3",
+ "prost 0.12.6",
  "schemars",
  "serde",
  "serde_json",
@@ -149,9 +149,9 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
  "serde",
  "thiserror",
 ]
@@ -168,9 +168,9 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
  "glicko_2",
  "serde",
  "thiserror",
@@ -209,9 +209,9 @@ dependencies = [
  "cw-utils 1.0.3",
  "cw20 1.1.2",
  "cw721 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dao-interface 2.5.0-callbacks",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
  "serde",
 ]
 
@@ -230,7 +230,7 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "itertools 0.13.0",
  "thiserror",
 ]
@@ -266,7 +266,7 @@ dependencies = [
  "cw-utils 1.0.3",
  "cw-vesting",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "serde",
  "serde_json",
  "thiserror",
@@ -287,7 +287,7 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "itertools 0.13.0",
  "thiserror",
 ]
@@ -589,18 +589,18 @@ dependencies = [
 
 [[package]]
 name = "btsg-ft-factory"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-orch 0.24.1",
  "cw-storage-plus 1.2.0",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "osmosis-std-derive",
- "prost 0.12.3",
- "prost-derive 0.12.3",
+ "prost 0.12.6",
+ "prost-derive 0.12.6",
  "prost-types 0.12.3",
  "schemars",
  "serde",
@@ -703,7 +703,7 @@ dependencies = [
  "itertools 0.12.1",
  "log",
  "num-bigint",
- "prost 0.12.3",
+ "prost 0.12.6",
  "rustc-serialize",
  "schemars",
  "serde",
@@ -772,7 +772,7 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32560304ab4c365791fd307282f76637213d8083c1a98490c35159cd67852237"
 dependencies = [
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
  "tendermint-proto 0.34.1",
  "tonic",
@@ -784,7 +784,7 @@ version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82e23f6ab56d5f031cde05b8b82a5fefd3a1a223595c79e32317a97189e612bc"
 dependencies = [
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
  "tendermint-proto 0.35.0",
 ]
@@ -1125,6 +1125,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-abc"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-address-like",
+ "cw-curves",
+ "cw-orch 0.24.1",
+ "cw-ownable",
+ "cw-paginate-storage 2.5.0",
+ "cw-storage-plus 1.2.0",
+ "cw-tokenfactory-issuer",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
+ "dao-interface 2.5.0",
+ "getrandom",
+ "thiserror",
+]
+
+[[package]]
 name = "cw-address-like"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1135,8 +1156,8 @@ dependencies = [
 
 [[package]]
 name = "cw-admin-factory"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1173,9 +1194,9 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
  "serde",
  "thiserror",
 ]
@@ -1291,6 +1312,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-curves"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "integer-cbrt",
+ "integer-sqrt",
+ "rust_decimal",
+]
+
+[[package]]
 name = "cw-denom"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1304,8 +1337,8 @@ dependencies = [
 
 [[package]]
 name = "cw-denom"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1315,19 +1348,19 @@ dependencies = [
 
 [[package]]
 name = "cw-fund-distributor"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-orch 0.24.1",
- "cw-paginate-storage 2.5.0-callbacks",
+ "cw-paginate-storage 2.5.0",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
  "cw20 1.1.2",
- "cw20-stake 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
+ "cw20-stake 2.5.0",
+ "dao-interface 2.5.0",
  "dao-voting-cw20-staked",
  "thiserror",
 ]
@@ -1346,8 +1379,8 @@ dependencies = [
 
 [[package]]
 name = "cw-hooks"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1480,7 +1513,7 @@ dependencies = [
  "lazy_static",
  "log",
  "once_cell",
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
  "rand_core 0.6.4",
  "reqwest",
@@ -1567,7 +1600,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5959ce29e9d8a52594b47933a0a2736ea94dd9bf5e29b220cbdbe2b097f07c3a"
 dependencies = [
  "cw-orch-core",
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
 ]
 
@@ -1578,7 +1611,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70e6b81dc282724c9c6334a499f4867e575458e69fe5b99034d4f962860f3357"
 dependencies = [
  "cw-orch-core",
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
 ]
 
@@ -1633,8 +1666,8 @@ dependencies = [
 
 [[package]]
 name = "cw-paginate-storage"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 1.2.0",
@@ -1643,12 +1676,12 @@ dependencies = [
 
 [[package]]
 name = "cw-payroll-factory"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-denom 2.5.0-callbacks",
+ "cw-denom 2.5.0",
  "cw-orch 0.24.1",
  "cw-ownable",
  "cw-storage-plus 1.2.0",
@@ -1686,8 +1719,8 @@ dependencies = [
 
 [[package]]
 name = "cw-stake-tracker"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1729,8 +1762,8 @@ dependencies = [
 
 [[package]]
 name = "cw-token-swap"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1744,8 +1777,8 @@ dependencies = [
 
 [[package]]
 name = "cw-tokenfactory-issuer"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1754,10 +1787,10 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-tokenfactory-types",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
- "osmosis-std",
- "prost 0.12.3",
- "prost-derive 0.12.3",
+ "dao-interface 2.5.0",
+ "osmosis-std 0.25.0",
+ "prost 0.12.6",
+ "prost-derive 0.12.6",
  "schemars",
  "serde",
  "thiserror",
@@ -1765,16 +1798,16 @@ dependencies = [
 
 [[package]]
 name = "cw-tokenfactory-types"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "dao-interface 2.5.0-callbacks",
- "osmosis-std",
+ "dao-interface 2.5.0",
+ "osmosis-std 0.25.0",
  "osmosis-std-derive",
- "prost 0.12.3",
- "prost-derive 0.12.3",
+ "prost 0.12.6",
+ "prost-derive 0.12.6",
  "prost-types 0.12.3",
  "schemars",
  "serde",
@@ -1825,12 +1858,12 @@ dependencies = [
 
 [[package]]
 name = "cw-vesting"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-denom 2.5.0-callbacks",
+ "cw-denom 2.5.0",
  "cw-orch 0.24.1",
  "cw-ownable",
  "cw-stake-tracker",
@@ -1846,8 +1879,8 @@ dependencies = [
 
 [[package]]
 name = "cw-wormhole"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1993,16 +2026,16 @@ dependencies = [
 
 [[package]]
 name = "cw20-stake"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-controllers 1.1.2",
- "cw-hooks 2.5.0-callbacks",
+ "cw-hooks 2.5.0",
  "cw-orch 0.24.1",
  "cw-ownable",
- "cw-paginate-storage 2.5.0-callbacks",
+ "cw-paginate-storage 2.5.0",
  "cw-storage-plus 1.2.0",
  "cw-utils 0.13.4",
  "cw-utils 1.0.3",
@@ -2011,14 +2044,14 @@ dependencies = [
  "cw20-base 1.1.2",
  "cw20-stake 0.2.6",
  "dao-hooks",
- "dao-voting 2.5.0-callbacks",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "cw20-stake-external-rewards"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2031,7 +2064,7 @@ dependencies = [
  "cw20 0.13.4",
  "cw20 1.1.2",
  "cw20-base 1.1.2",
- "cw20-stake 2.5.0-callbacks",
+ "cw20-stake 2.5.0",
  "dao-hooks",
  "stake-cw20-external-rewards",
  "thiserror",
@@ -2039,8 +2072,8 @@ dependencies = [
 
 [[package]]
 name = "cw20-stake-reward-distributor"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2051,7 +2084,7 @@ dependencies = [
  "cw2 1.1.2",
  "cw20 1.1.2",
  "cw20-base 1.1.2",
- "cw20-stake 2.5.0-callbacks",
+ "cw20-stake 2.5.0",
  "stake-cw20-reward-distributor",
  "thiserror",
 ]
@@ -2274,8 +2307,8 @@ dependencies = [
 
 [[package]]
 name = "cw721-controllers"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2286,8 +2319,8 @@ dependencies = [
 
 [[package]]
 name = "cw721-roles"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2307,11 +2340,12 @@ dependencies = [
 
 [[package]]
 name = "dao-cw-orch"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "btsg-ft-factory",
  "cosmwasm-std",
+ "cw-abc",
  "cw-admin-factory",
  "cw-fund-distributor",
  "cw-orch 0.24.1",
@@ -2319,13 +2353,13 @@ dependencies = [
  "cw-token-swap",
  "cw-tokenfactory-issuer",
  "cw-vesting",
- "cw20-stake 2.5.0-callbacks",
+ "cw20-stake 2.5.0",
  "cw20-stake-external-rewards",
  "cw20-stake-reward-distributor",
  "cw721-base 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw721-roles",
  "dao-dao-core",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "dao-migrator",
  "dao-pre-propose-approval-single",
  "dao-pre-propose-approver",
@@ -2349,8 +2383,8 @@ dependencies = [
 
 [[package]]
 name = "dao-cw721-extensions"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2361,20 +2395,20 @@ dependencies = [
 
 [[package]]
 name = "dao-dao-core"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-core",
- "cw-paginate-storage 2.5.0-callbacks",
+ "cw-paginate-storage 2.5.0",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
  "cw20 1.1.2",
  "cw721 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
  "thiserror",
 ]
 
@@ -2392,8 +2426,8 @@ dependencies = [
 
 [[package]]
 name = "dao-dao-macros"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "proc-macro2",
@@ -2403,15 +2437,15 @@ dependencies = [
 
 [[package]]
 name = "dao-hooks"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-hooks 2.5.0-callbacks",
+ "cw-hooks 2.5.0",
  "cw4 1.1.2",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
 ]
 
 [[package]]
@@ -2426,13 +2460,13 @@ dependencies = [
  "cw2 1.1.2",
  "cw20 1.1.2",
  "cw721 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "osmosis-std",
+ "osmosis-std 0.20.1",
 ]
 
 [[package]]
 name = "dao-interface"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2441,13 +2475,13 @@ dependencies = [
  "cw2 1.1.2",
  "cw20 1.1.2",
  "cw721 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "osmosis-std",
+ "osmosis-std 0.25.0",
 ]
 
 [[package]]
 name = "dao-migrator"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2463,15 +2497,15 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-base 1.1.2",
  "cw20-stake 0.2.6",
- "cw20-stake 2.5.0-callbacks",
+ "cw20-stake 2.5.0",
  "cw20-staked-balance-voting",
  "cw4 0.13.4",
  "cw4-voting",
  "dao-dao-core",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "dao-proposal-single",
  "dao-voting 0.1.0",
- "dao-voting 2.5.0-callbacks",
+ "dao-voting 2.5.0",
  "dao-voting-cw20-staked",
  "dao-voting-cw4",
  "thiserror",
@@ -2479,34 +2513,34 @@ dependencies = [
 
 [[package]]
 name = "dao-pre-propose-approval-single"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-paginate-storage 2.5.0-callbacks",
+ "cw-paginate-storage 2.5.0",
  "cw-storage-plus 1.2.0",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-pre-propose-approver"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "dao-pre-propose-approval-single",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
 ]
 
 [[package]]
@@ -2530,22 +2564,22 @@ dependencies = [
 
 [[package]]
 name = "dao-pre-propose-base"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-denom 2.4.1",
- "cw-denom 2.5.0-callbacks",
- "cw-hooks 2.5.0-callbacks",
+ "cw-denom 2.5.0",
+ "cw-hooks 2.5.0",
  "cw-orch 0.24.1",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "dao-pre-propose-base 2.4.1",
  "dao-voting 2.4.1",
- "dao-voting 2.5.0-callbacks",
+ "dao-voting 2.5.0",
  "semver",
  "serde",
  "thiserror",
@@ -2553,32 +2587,32 @@ dependencies = [
 
 [[package]]
 name = "dao-pre-propose-multiple"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw2 1.1.2",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
 ]
 
 [[package]]
 name = "dao-pre-propose-single"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw2 1.1.2",
- "dao-pre-propose-base 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-pre-propose-base 2.5.0",
+ "dao-voting 2.5.0",
 ]
 
 [[package]]
 name = "dao-proposal-condorcet"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2586,16 +2620,16 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-proposal-hook-counter"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2608,35 +2642,35 @@ dependencies = [
 
 [[package]]
 name = "dao-proposal-multiple"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-hooks 2.5.0-callbacks",
+ "cw-hooks 2.5.0",
  "cw-orch 0.24.1",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
  "cw20 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
  "dao-hooks",
- "dao-interface 2.5.0-callbacks",
- "dao-pre-propose-base 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-pre-propose-base 2.5.0",
  "dao-pre-propose-multiple",
  "dao-voting 0.1.0",
- "dao-voting 2.5.0-callbacks",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-proposal-single"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-hooks 2.5.0-callbacks",
+ "cw-hooks 2.5.0",
  "cw-orch 0.24.1",
  "cw-proposal-single",
  "cw-storage-plus 1.2.0",
@@ -2644,34 +2678,34 @@ dependencies = [
  "cw-utils 1.0.3",
  "cw2 1.1.2",
  "cw20 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
  "dao-hooks",
- "dao-interface 2.5.0-callbacks",
- "dao-pre-propose-base 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-pre-propose-base 2.5.0",
  "dao-voting 0.1.0",
- "dao-voting 2.5.0-callbacks",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-proposal-sudo"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-orch 0.24.1",
  "cw-storage-plus 1.2.0",
  "cw2 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-rewards-distributor"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2685,16 +2719,16 @@ dependencies = [
  "cw20-base 1.1.2",
  "cw4 1.1.2",
  "dao-hooks",
- "dao-interface 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-voting 2.5.0",
  "semver",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-test-custom-factory"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2706,9 +2740,9 @@ dependencies = [
  "cw2 1.1.2",
  "cw721 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw721-base 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
@@ -2743,24 +2777,24 @@ dependencies = [
 
 [[package]]
 name = "dao-voting"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-denom 2.5.0-callbacks",
+ "cw-denom 2.5.0",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw20 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-voting-cw20-balance"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2770,15 +2804,15 @@ dependencies = [
  "cw2 1.1.2",
  "cw20 1.1.2",
  "cw20-base 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-voting-cw20-staked"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2788,17 +2822,17 @@ dependencies = [
  "cw2 1.1.2",
  "cw20 1.1.2",
  "cw20-base 1.1.2",
- "cw20-stake 2.5.0-callbacks",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "cw20-stake 2.5.0",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-voting-cw4"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2808,15 +2842,15 @@ dependencies = [
  "cw2 1.1.2",
  "cw4 1.1.2",
  "cw4-group 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-voting-cw721-roles"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2830,20 +2864,20 @@ dependencies = [
  "cw721-base 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw721-controllers",
  "dao-cw721-extensions",
- "dao-dao-macros 2.5.0-callbacks",
- "dao-interface 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
+ "dao-interface 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-voting-cw721-staked"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-controllers 1.1.2",
- "cw-hooks 2.5.0-callbacks",
+ "cw-hooks 2.5.0",
  "cw-orch 0.24.1",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
@@ -2851,32 +2885,32 @@ dependencies = [
  "cw721 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw721-base 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw721-controllers",
- "dao-dao-macros 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
  "dao-hooks",
- "dao-interface 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
 [[package]]
 name = "dao-voting-token-staked"
-version = "2.5.0-callbacks"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-callbacks#e1b675a50e7877bd9fa4314febbfb8d6225313ff"
+version = "2.5.0"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-controllers 1.1.2",
- "cw-hooks 2.5.0-callbacks",
+ "cw-hooks 2.5.0",
  "cw-orch 0.24.1",
  "cw-ownable",
  "cw-storage-plus 1.2.0",
  "cw-tokenfactory-issuer",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "dao-dao-macros 2.5.0-callbacks",
+ "dao-dao-macros 2.5.0",
  "dao-hooks",
- "dao-interface 2.5.0-callbacks",
- "dao-voting 2.5.0-callbacks",
+ "dao-interface 2.5.0",
+ "dao-voting 2.5.0",
  "thiserror",
 ]
 
@@ -3716,6 +3750,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "integer-cbrt"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "151bce4481ba7da831c7d12c32353cc79c73bf79732e343b92786e4cbbb2948c"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "integer-sqrt"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3737,15 +3789,6 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
 dependencies = [
  "either",
 ]
@@ -4105,10 +4148,11 @@ dependencies = [
  "arena-tournament-module",
  "arena-wager-module",
  "cosmwasm-std",
+ "cw-abc",
  "cw-orch 0.24.1",
  "cw721-base 0.18.0 (git+https://github.com/AbstractSDK/cw-nfts?branch=main)",
  "dao-dao-core",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
 ]
 
 [[package]]
@@ -4122,6 +4166,22 @@ dependencies = [
  "osmosis-std-derive",
  "prost 0.11.9",
  "prost-types 0.11.9",
+ "schemars",
+ "serde",
+ "serde-cw-value",
+]
+
+[[package]]
+name = "osmosis-std"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca66dca7e8c9b11b995cd41a44c038134ccca4469894d663d8a9452d6e716241"
+dependencies = [
+ "chrono",
+ "cosmwasm-std",
+ "osmosis-std-derive",
+ "prost 0.12.6",
+ "prost-types 0.12.3",
  "schemars",
  "serde",
  "serde-cw-value",
@@ -4350,12 +4410,12 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.12.3"
+version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "146c289cda302b98a28d40c8b3b90498d6e526dd24ac2ecea73e4e491685b94a"
+checksum = "deb1435c188b76130da55f17a466d252ff7b1418b2ad3e037d127b94e3411f29"
 dependencies = [
  "bytes",
- "prost-derive 0.12.3",
+ "prost-derive 0.12.6",
 ]
 
 [[package]]
@@ -4373,12 +4433,12 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.12.3"
+version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efb6c9a1dd1def8e2124d17e83a20af56f1570d6c2d2bd9e266ccb768df3840e"
+checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.77",
@@ -4399,7 +4459,7 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "193898f59edcf43c26227dcd4c8427f00d99d61e95dcde58dabd49fa291d470e"
 dependencies = [
- "prost 0.12.3",
+ "prost 0.12.6",
 ]
 
 [[package]]
@@ -4869,10 +4929,10 @@ dependencies = [
  "cw-vesting",
  "cw4 1.1.2",
  "dao-cw-orch",
- "dao-interface 2.5.0-callbacks",
+ "dao-interface 2.5.0",
  "dao-proposal-single",
  "dao-proposal-sudo",
- "dao-voting 2.5.0-callbacks",
+ "dao-voting 2.5.0",
  "dao-voting-cw4",
  "dotenv",
  "itertools 0.13.0",
@@ -5354,7 +5414,7 @@ dependencies = [
  "k256",
  "num-traits",
  "once_cell",
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
  "ripemd",
  "serde",
@@ -5394,7 +5454,7 @@ dependencies = [
  "flex-error",
  "num-derive 0.3.3",
  "num-traits",
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
  "serde",
  "serde_bytes",
@@ -5412,7 +5472,7 @@ dependencies = [
  "flex-error",
  "num-derive 0.4.2",
  "num-traits",
- "prost 0.12.3",
+ "prost 0.12.6",
  "prost-types 0.12.3",
  "serde",
  "serde_bytes",
@@ -5654,7 +5714,7 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
- "prost 0.12.3",
+ "prost 0.12.6",
  "rustls",
  "rustls-native-certs",
  "rustls-pemfile",
