@@ -774,6 +774,22 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
         &[],
     )?;
 
+    // Ensure other person can propose a result
+    arena.arena_wager_module.call_as(&user1).jail_competition(
+        Uint128::one(),
+        "Jailed Wager".to_string(),
+        "This wager needs DAO resolution".to_string(),
+        None,
+        Some(Distribution {
+            member_percentages: vec![MemberPercentage {
+                addr: user1.to_string(),
+                percentage: Decimal::one(),
+            }],
+            remainder_addr: user1.to_string(),
+        }),
+        &[],
+    )?;
+
     // Check that the wager is jailed
     let wager = arena.arena_wager_module.competition(Uint128::one())?;
     assert_eq!(

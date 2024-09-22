@@ -229,15 +229,30 @@ pub fn propose(
         distribution.into_checked(deps.as_ref())?;
     }
 
+    // Check voting power to auto vote
+    let dao = PrePropose::default().dao.load(deps.storage)?;
+    let voting_power: dao_interface::voting::VotingPowerAtHeightResponse =
+        deps.querier.query_wasm_smart(
+            dao,
+            &dao_interface::voting::Query::VotingPowerAtHeight {
+                address: originator.to_string(),
+                height: None,
+            },
+        )?;
+
     // Construct message
     let msg =
         ProposeMessages::Propose(SingleChoiceProposeMsg {
             title: msg.title,
             description: msg.description,
-            vote: Some(SingleChoiceAutoVote {
-                vote: Vote::Yes,
-                rationale: None,
-            }),
+            vote: if voting_power.power.is_zero() {
+                None
+            } else {
+                Some(SingleChoiceAutoVote {
+                    vote: Vote::Yes,
+                    rationale: None,
+                })
+            },
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: info.sender.to_string(),
                 msg: to_json_binary(&arena_interface::competition::msg::ExecuteBase::<

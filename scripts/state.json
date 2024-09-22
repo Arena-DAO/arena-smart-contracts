@@ -2,19 +2,23 @@
   "neutron": {
     "neutron-1": {
       "code_ids": {
-        "arena_competition_enrollment": 1560,
-        "arena_core": 1564,
-        "arena_escrow": 1555,
-        "arena_league_module": 1558,
-        "arena_tournament_module": 1559,
-        "arena_wager_module": 1557
+        "arena_competition_enrollment": 2038,
+        "arena_core": 2034,
+        "arena_escrow": 2033,
+        "arena_league_module": 2036,
+        "arena_payment_registry": 2040,
+        "arena_token_gateway": 2039,
+        "arena_tournament_module": 2037,
+        "arena_wager_module": 2035,
+        "cw_abc": 2042,
+        "dao_dao_core": 2041
       },
       "default": {}
     },
     "pion-1": {
       "code_ids": {
         "arena_competition_enrollment": 6403,
-        "arena_core": 6440,
+        "arena_core": 6828,
         "arena_escrow": 6398,
         "arena_league_module": 6760,
         "arena_payment_registry": 6405,
