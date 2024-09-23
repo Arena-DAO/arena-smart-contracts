@@ -6,7 +6,7 @@ use orch_interface::{
     arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
     arena_wager_module::ArenaWagerModuleContract, cw_abc::CwAbcContract,
-    dao_dao_core::DaoDaoCoreContract,
+    cw_payroll_factory::DaoPayrollFactory,
 };
 use std::env;
 
@@ -46,7 +46,7 @@ enum DeployComponent {
     Enrollment,
     TokenGateway,
     CompetitionModules,
-    DaoCore,
+    PayrollFactory,
     Abc,
 }
 
@@ -68,7 +68,7 @@ fn parse_command(args: &[String]) -> Command {
         "enrollment" => DeployComponent::Enrollment,
         "token_gateway" => DeployComponent::TokenGateway,
         "competition_modules" => DeployComponent::CompetitionModules,
-        "dao_core" => DeployComponent::DaoCore,
+        "payroll_factory" => DeployComponent::PayrollFactory,
         "abc" => DeployComponent::Abc,
         _ => return Command::Unknown,
     };
@@ -89,7 +89,7 @@ fn deploy(network: Network, component: DeployComponent) -> anyhow::Result<()> {
         DeployComponent::Enrollment => deploy_enrollment(daemon)?,
         DeployComponent::TokenGateway => deploy_token_gateway(daemon)?,
         DeployComponent::CompetitionModules => deploy_competition_modules(daemon)?,
-        DeployComponent::DaoCore => deploy_dao_core(daemon)?,
+        DeployComponent::PayrollFactory => deploy_payroll_factory(daemon)?,
         DeployComponent::Abc => deploy_cw_abc(daemon)?,
     }
 
@@ -136,9 +136,9 @@ fn deploy_competition_modules(daemon: Daemon) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn deploy_dao_core(daemon: Daemon) -> anyhow::Result<()> {
-    let dao_core = DaoDaoCoreContract::new(daemon);
-    dao_core.upload()?;
+fn deploy_payroll_factory(daemon: Daemon) -> anyhow::Result<()> {
+    let payroll_factory = DaoPayrollFactory::new(daemon);
+    payroll_factory.upload()?;
     Ok(())
 }
 

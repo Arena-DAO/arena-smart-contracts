@@ -3,7 +3,7 @@ use arena_token_gateway::msg::{ApplyMsg, ExecuteMsg, ExecuteMsgFns as _, QueryMs
 use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, WasmMsg};
 use cw4::Member;
 use cw_orch::{anyhow, prelude::*};
-use cw_payroll_factory::msg::QueryMsgFns as _;
+use cw_payroll_factory::msg::{ExecuteMsgFns as _, QueryMsgFns as _};
 use dao_voting::{proposal::SingleChoiceProposeMsg, voting::SingleChoiceAutoVote};
 
 use super::{DENOM, PREFIX};
@@ -71,6 +71,13 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
         None,
     )?;
 
+    // Put the token gateway on the cw-vesting allowlist
+    arena
+        .dao_dao
+        .cw_payroll_factory
+        .call_as(&arena.dao_dao.dao_core.address()?)
+        .update_instantiate_allowlist(Some(vec![arena.arena_token_gateway.addr_str()?]), None)?;
+
     let applicant = mock.addr_make("applicant");
     arena.arena_token_gateway.set_sender(&applicant);
 
@@ -105,7 +112,7 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
                 msg: to_json_binary(&ExecuteMsg::AcceptApplication {
                     application_id: Uint128::one(),
                 })?,
-                funds: coins(100000, DENOM),
+                funds: coins(1000000, DENOM),
             })],
             proposer: None,
             vote: Some(SingleChoiceAutoVote {
@@ -115,12 +122,10 @@ fn test_apply_and_accept_application() -> anyhow::Result<()> {
         }),
         None,
     )?;
-    let res = arena.dao_dao.dao_proposal_single.execute(
+    arena.dao_dao.dao_proposal_single.execute(
         &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1 },
         None,
     )?;
-    dbg!(res.events);
-    dbg!(arena.dao_dao.cw_payroll_factory.address()?);
 
     // Query the application again
     let updated_application = arena.arena_token_gateway.application(1u128)?;

@@ -30,7 +30,7 @@ dependencies = [
 [[package]]
 name = "abstract-cw2"
 version = "1.2.2"
-source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#dcffacddc3689bd2a23d53bf0dce390798c2582d"
+source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#bb72f3aadecf37b40100776224fbb9d5c657707b"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -43,7 +43,7 @@ dependencies = [
 [[package]]
 name = "abstract-cw4"
 version = "1.2.2"
-source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#dcffacddc3689bd2a23d53bf0dce390798c2582d"
+source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#bb72f3aadecf37b40100776224fbb9d5c657707b"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -55,7 +55,7 @@ dependencies = [
 [[package]]
 name = "abstract-cw4-group"
 version = "3.0.0"
-source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#dcffacddc3689bd2a23d53bf0dce390798c2582d"
+source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#bb72f3aadecf37b40100776224fbb9d5c657707b"
 dependencies = [
  "abstract-cw2",
  "abstract-cw4",
@@ -72,18 +72,12 @@ dependencies = [
 
 [[package]]
 name = "addr2line"
-version = "0.22.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e4503c46a5c0c7844e948c9a4d6acd9f50cccb4de1c48eb9e291ea17470c678"
+checksum = "f5fb1d8e4442bd405fdfd1dacb42792696b0cf9cb15882e5d097b742a676d375"
 dependencies = [
- "gimli 0.29.0",
+ "gimli 0.31.0",
 ]
-
-[[package]]
-name = "adler"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
 name = "adler2"
@@ -128,9 +122,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.87"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10f00e1f6e58a40e807377c75c6a7f97bf9044fab57816f2414e6f5f4499d7b8"
+checksum = "86fdf8605db99b54d3cd748a44c6d04df638eb5dafb219b135d0149bd0db01f6"
 
 [[package]]
 name = "arena-competition-enrollment"
@@ -407,17 +401,17 @@ dependencies = [
 
 [[package]]
 name = "backtrace"
-version = "0.3.73"
+version = "0.3.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cc23269a4f8976d0a4d2e7109211a419fe30e8d88d677cd60b6bc79c5732e0a"
+checksum = "8d82cb332cdfaed17ae235a638438ac4d4839913cc2af585c3c6746e8f8bee1a"
 dependencies = [
  "addr2line",
- "cc",
  "cfg-if",
  "libc",
- "miniz_oxide 0.7.4",
+ "miniz_oxide",
  "object",
  "rustc-demangle",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -590,7 +584,7 @@ dependencies = [
 [[package]]
 name = "btsg-ft-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -601,7 +595,7 @@ dependencies = [
  "osmosis-std-derive",
  "prost 0.12.6",
  "prost-derive 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "schemars",
  "serde",
  "thiserror",
@@ -643,18 +637,18 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
-version = "1.7.1"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8318a53db07bb3f8dca91a600466bdb3f2eaadeedfdbcf02e1accbad9271ba50"
+checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "cc"
-version = "1.1.18"
+version = "1.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b62ac837cdb5cb22e10a256099b4fc502b1dfe560cb282963a974d7abd80e476"
+checksum = "07b1695e2c7e8fc85310cde85aeaab7e3097f593c91d209d3f9df76c928100f0"
 dependencies = [
  "shlex",
 ]
@@ -773,7 +767,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32560304ab4c365791fd307282f76637213d8083c1a98490c35159cd67852237"
 dependencies = [
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "tendermint-proto 0.34.1",
  "tonic",
 ]
@@ -785,7 +779,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82e23f6ab56d5f031cde05b8b82a5fefd3a1a223595c79e32317a97189e612bc"
 dependencies = [
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "tendermint-proto 0.35.0",
 ]
 
@@ -1127,7 +1121,7 @@ dependencies = [
 [[package]]
 name = "cw-abc"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1157,7 +1151,7 @@ dependencies = [
 [[package]]
 name = "cw-admin-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1233,7 +1227,7 @@ dependencies = [
 [[package]]
 name = "cw-controllers"
 version = "1.2.2"
-source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#dcffacddc3689bd2a23d53bf0dce390798c2582d"
+source = "git+https://github.com/AbstractSDK/cw-plus?branch=abstract_versions#bb72f3aadecf37b40100776224fbb9d5c657707b"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1314,7 +1308,7 @@ dependencies = [
 [[package]]
 name = "cw-curves"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1338,7 +1332,7 @@ dependencies = [
 [[package]]
 name = "cw-denom"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1349,7 +1343,7 @@ dependencies = [
 [[package]]
 name = "cw-fund-distributor"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1380,7 +1374,7 @@ dependencies = [
 [[package]]
 name = "cw-hooks"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1514,7 +1508,7 @@ dependencies = [
  "log",
  "once_cell",
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "rand_core 0.6.4",
  "reqwest",
  "ring",
@@ -1601,7 +1595,7 @@ checksum = "5959ce29e9d8a52594b47933a0a2736ea94dd9bf5e29b220cbdbe2b097f07c3a"
 dependencies = [
  "cw-orch-core",
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
 ]
 
 [[package]]
@@ -1612,7 +1606,7 @@ checksum = "70e6b81dc282724c9c6334a499f4867e575458e69fe5b99034d4f962860f3357"
 dependencies = [
  "cw-orch-core",
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
 ]
 
 [[package]]
@@ -1667,7 +1661,7 @@ dependencies = [
 [[package]]
 name = "cw-paginate-storage"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 1.2.0",
@@ -1677,13 +1671,14 @@ dependencies = [
 [[package]]
 name = "cw-payroll-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-denom 2.5.0",
  "cw-orch 0.24.1",
  "cw-ownable",
+ "cw-paginate-storage 2.5.0",
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw-vesting",
@@ -1720,7 +1715,7 @@ dependencies = [
 [[package]]
 name = "cw-stake-tracker"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1763,7 +1758,7 @@ dependencies = [
 [[package]]
 name = "cw-token-swap"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1778,7 +1773,7 @@ dependencies = [
 [[package]]
 name = "cw-tokenfactory-issuer"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1799,7 +1794,7 @@ dependencies = [
 [[package]]
 name = "cw-tokenfactory-types"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1808,7 +1803,7 @@ dependencies = [
  "osmosis-std-derive",
  "prost 0.12.6",
  "prost-derive 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "schemars",
  "serde",
  "serde-cw-value",
@@ -1859,7 +1854,7 @@ dependencies = [
 [[package]]
 name = "cw-vesting"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1880,7 +1875,7 @@ dependencies = [
 [[package]]
 name = "cw-wormhole"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2027,7 +2022,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2051,7 +2046,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake-external-rewards"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2073,7 +2068,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake-reward-distributor"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2308,7 +2303,7 @@ dependencies = [
 [[package]]
 name = "cw721-controllers"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2320,7 +2315,7 @@ dependencies = [
 [[package]]
 name = "cw721-roles"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2341,7 +2336,7 @@ dependencies = [
 [[package]]
 name = "dao-cw-orch"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "btsg-ft-factory",
  "cosmwasm-std",
@@ -2384,7 +2379,7 @@ dependencies = [
 [[package]]
 name = "dao-cw721-extensions"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2396,7 +2391,7 @@ dependencies = [
 [[package]]
 name = "dao-dao-core"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2427,7 +2422,7 @@ dependencies = [
 [[package]]
 name = "dao-dao-macros"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "proc-macro2",
@@ -2438,7 +2433,7 @@ dependencies = [
 [[package]]
 name = "dao-hooks"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2466,7 +2461,7 @@ dependencies = [
 [[package]]
 name = "dao-interface"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2481,7 +2476,7 @@ dependencies = [
 [[package]]
 name = "dao-migrator"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2514,7 +2509,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-approval-single"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2530,7 +2525,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-approver"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2565,7 +2560,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-base"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2588,7 +2583,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-multiple"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2600,7 +2595,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-single"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2612,7 +2607,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-condorcet"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2629,7 +2624,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-hook-counter"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2643,7 +2638,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-multiple"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2666,7 +2661,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-single"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2690,7 +2685,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-sudo"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2705,7 +2700,7 @@ dependencies = [
 [[package]]
 name = "dao-rewards-distributor"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2728,7 +2723,7 @@ dependencies = [
 [[package]]
 name = "dao-test-custom-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2778,7 +2773,7 @@ dependencies = [
 [[package]]
 name = "dao-voting"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2794,7 +2789,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw20-balance"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2812,7 +2807,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw20-staked"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2832,7 +2827,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw4"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2850,7 +2845,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw721-roles"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2872,7 +2867,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw721-staked"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2895,7 +2890,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-token-staked"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#f347345e778dc40962c7844c2d2d8a1a9b254875"
+source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -3297,7 +3292,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "324a1be68054ef05ad64b861cc9eaf1d623d2d8cb25b4bf2cb9cdd902b4bf253"
 dependencies = [
  "crc32fast",
- "miniz_oxide 0.8.0",
+ "miniz_oxide",
 ]
 
 [[package]]
@@ -3459,9 +3454,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.29.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
+checksum = "32085ea23f3234fc7846555e85283ba4de91e21016dc0455a16286d87a292d64"
 
 [[package]]
 name = "glicko_2"
@@ -3673,9 +3668,9 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.60"
+version = "0.1.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7ffbb5a1b541ea2561f8c41c087286cc091e21e556a4f09a8f6cbf17b69b141"
+checksum = "235e081f3925a06703c2d0117ea8b91f042756fd6e7a6e5d901e8ca1a996b220"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
@@ -3828,9 +3823,9 @@ dependencies = [
 
 [[package]]
 name = "k256"
-version = "0.13.3"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "956ff9b67e26e1a6a866cb758f12c6f8746208489e3e4a4b5580802f2f0a587b"
+checksum = "f6e3919bbaa2945715f0bb6d3934a173d1e9a59ac23767fbaaef277265a7411b"
 dependencies = [
  "cfg-if",
  "ecdsa",
@@ -3952,15 +3947,6 @@ name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
-
-[[package]]
-name = "miniz_oxide"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8a240ddb74feaf34a79a7add65a741f3167852fba007066dcac1ca548d89c08"
-dependencies = [
- "adler",
-]
 
 [[package]]
 name = "miniz_oxide"
@@ -4150,8 +4136,8 @@ dependencies = [
  "cosmwasm-std",
  "cw-abc",
  "cw-orch 0.24.1",
+ "cw-payroll-factory",
  "cw721-base 0.18.0 (git+https://github.com/AbstractSDK/cw-nfts?branch=main)",
- "dao-dao-core",
  "dao-interface 2.5.0",
 ]
 
@@ -4181,7 +4167,7 @@ dependencies = [
  "cosmwasm-std",
  "osmosis-std-derive",
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "schemars",
  "serde",
  "serde-cw-value",
@@ -4455,9 +4441,9 @@ dependencies = [
 
 [[package]]
 name = "prost-types"
-version = "0.12.3"
+version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "193898f59edcf43c26227dcd4c8427f00d99d61e95dcde58dabd49fa291d470e"
+checksum = "9091c90b0a32608e984ff2fa4091273cbdd755d54935c51d520887f4a1dbd5b0"
 dependencies = [
  "prost 0.12.6",
 ]
@@ -4555,9 +4541,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a908a6e00f1fdd0dfd9c0eb08ce85126f6d8bbda50017e74bc4a4b7d4a926a4"
+checksum = "0884ad60e090bf1345b93da0a5de8923c93884cd03f40dfcfddd3b4bee661853"
 dependencies = [
  "bitflags 2.6.0",
 ]
@@ -4792,9 +4778,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.36"
+version = "0.38.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f55e80d50763938498dd5ebb18647174e0c76dc38c5505294bb224624f30f36"
+checksum = "8acb788b847c24f28525660c4d7758620a7210875711f79e7f663cc152726811"
 dependencies = [
  "bitflags 2.6.0",
  "errno",
@@ -5005,9 +4991,9 @@ dependencies = [
 
 [[package]]
 name = "security-framework-sys"
-version = "2.11.1"
+version = "2.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75da29fe9b9b08fe9d6b22b5b4bcbc75d8db3aa31e639aa56bb62e9d46bfceaf"
+checksum = "ea4a292869320c0272d7bc55a5a6aafaff59b4f63404a003887b679a2e05b4b6"
 dependencies = [
  "core-foundation-sys",
  "libc",
@@ -5190,9 +5176,9 @@ dependencies = [
 
 [[package]]
 name = "simdutf8"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f27f6278552951f1f2b8cf9da965d10969b2efdea95a6ec47987ab46edfe263a"
+checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
 name = "slab"
@@ -5415,7 +5401,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "ripemd",
  "serde",
  "serde_bytes",
@@ -5455,7 +5441,7 @@ dependencies = [
  "num-derive 0.3.3",
  "num-traits",
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "serde",
  "serde_bytes",
  "subtle-encoding",
@@ -5473,7 +5459,7 @@ dependencies = [
  "num-derive 0.4.2",
  "num-traits",
  "prost 0.12.6",
- "prost-types 0.12.3",
+ "prost-types 0.12.6",
  "serde",
  "serde_bytes",
  "subtle-encoding",
@@ -5524,18 +5510,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.63"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0342370b38b6a11b6cc11d6a805569958d54cfa061a29969c3b5ce2ea405724"
+checksum = "d50af8abc119fb8bb6dbabcfa89656f46f84aa0ac7688088608076ad2b459a84"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.63"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4558b58466b9ad7ca0f102865eccc95938dca1a74a856f2b57b6629050da261"
+checksum = "08904e7672f5eb876eaaf87e0ce17857500934f4981c4a0ab2b4aa98baac7fc3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5687,9 +5673,9 @@ checksum = "0dd7358ecb8fc2f8d014bf86f6f638ce72ba252a2c3a2572f2a795f1d23efb41"
 
 [[package]]
 name = "toml_edit"
-version = "0.22.20"
+version = "0.22.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "583c44c02ad26b0c3f3066fe629275e50627026c51ac2e595cca4c230ce1ce1d"
+checksum = "3b072cee73c449a636ffd6f32bd8de3a9f7119139aff882f44943ce2986dc5cf"
 dependencies = [
  "indexmap 2.5.0",
  "toml_datetime",
@@ -5813,9 +5799,9 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "uid"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "281a11e4180ee68f8c06a7bf82d1be3c496e0debcadcc4576cc0b56132201edf"
+checksum = "7041bb797d82c5728d3a4a40432809095d8acc59bdd9e67426a2529b3b80c9be"
 
 [[package]]
 name = "unicode-bidi"
@@ -5825,24 +5811,24 @@ checksum = "08f95100a766bf4f8f28f90d77e0a5461bbdb219042e7679bebe79004fed8d75"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.12"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
+checksum = "e91b56cd4cadaeb79bbf1a5645f6b4f8dc5bde8834ad5894a8db35fda9efa1fe"
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.23"
+version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a56d1686db2308d901306f92a263857ef59ea39678a5458e7cb17f01415101f5"
+checksum = "5033c97c4262335cded6d6fc3e5c18ab755e1a3dc96376350f3d8e9f009ad956"
 dependencies = [
  "tinyvec",
 ]
 
 [[package]]
 name = "unicode-segmentation"
-version = "1.11.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4c87d22b6e3f4a18d4d40ef354e97c90fcb14dd91d7dc0aa9d8a1172ebf7202"
+checksum = "f6ccf251212114b54433ec949fd6a7841275f9ada20dddd2f29e9ceea4501493"
 
 [[package]]
 name = "untrusted"

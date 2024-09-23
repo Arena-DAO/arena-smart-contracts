@@ -9,4 +9,4 @@ pub mod arena_wager_module;
 pub mod cw4_group;
 pub mod cw721_base;
 pub mod cw_abc;
-pub mod dao_dao_core;
+pub mod cw_payroll_factory;

@@ -19,7 +19,7 @@ use cosmwasm_std::{
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_utils::parse_reply_instantiate_data;
-use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::CallbackMessages};
+use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::ModuleInstantiateCallback};
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-core";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -133,7 +133,7 @@ pub fn instantiate_extension(
 
     Ok(prepropose_response
         .add_messages(msgs)
-        .set_data(to_json_binary(&CallbackMessages {
+        .set_data(to_json_binary(&ModuleInstantiateCallback {
             msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: dao.to_string(),
                 msg: to_json_binary(&DAOCoreExecuteMsg::SetItem {
@@ -231,7 +231,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
             // Check for module instantiation callbacks
             let callback_msgs = match res.data {
-                Some(data) => from_json::<CallbackMessages>(&data)
+                Some(data) => from_json::<ModuleInstantiateCallback>(&data)
                     .map(|m| m.msgs)
                     .unwrap_or_else(|_| vec![]),
                 None => vec![],

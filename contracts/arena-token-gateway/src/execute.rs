@@ -5,7 +5,6 @@ use cosmwasm_std::{
 use cw_ownable::assert_owner;
 use cw_utils::one_coin;
 use cw_vesting::vesting::Schedule;
-use dao_interface::state::CallbackMessages;
 
 use crate::{
     helpers::get_payroll_address,
@@ -110,7 +109,7 @@ pub fn accept_application(
     ensure_eq!(
         payment,
         Coin {
-            amount: upfront_amount,
+            amount: application.requested_amount,
             denom: vesting_config.denom.clone()
         },
         ContractError::StdError(StdError::generic_err(
@@ -122,29 +121,27 @@ pub fn accept_application(
     let payroll_factory = get_payroll_address(deps.as_ref(), &env.block.chain_id)?;
 
     // Prepare the instantiate message for the vesting contract
-    let vesting_data = to_json_binary(&CallbackMessages {
-        msgs: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: payroll_factory.to_string(),
-            msg: to_json_binary(
-                &cw_payroll_factory::msg::ExecuteMsg::InstantiateNativePayrollContract {
-                    instantiate_msg: cw_vesting::msg::InstantiateMsg {
-                        owner: Some(info.sender.to_string()),
-                        recipient: application.applicant.to_string(),
-                        title: application.title.clone(),
-                        description: Some(application.description.clone()),
-                        total: vesting_amount,
-                        denom: cw_vesting::UncheckedDenom::Native(vesting_config.denom.clone()),
-                        schedule: Schedule::SaturatingLinear,
-                        start_time: Some(env.block.time),
-                        vesting_duration_seconds: vesting_config.vesting_time,
-                        unbonding_duration_seconds: 0,
-                    },
-                    label: format!("Arena Token Gateway {0}", application_id.u128()),
+    let vesting_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: payroll_factory.to_string(),
+        msg: to_json_binary(
+            &cw_payroll_factory::msg::ExecuteMsg::InstantiateNativePayrollContract {
+                instantiate_msg: cw_vesting::msg::InstantiateMsg {
+                    owner: Some(info.sender.to_string()),
+                    recipient: application.applicant.to_string(),
+                    title: application.title.clone(),
+                    description: Some(application.description.clone()),
+                    total: vesting_amount,
+                    denom: cw_vesting::UncheckedDenom::Native(vesting_config.denom.clone()),
+                    schedule: Schedule::SaturatingLinear,
+                    start_time: Some(env.block.time),
+                    vesting_duration_seconds: vesting_config.vesting_time,
+                    unbonding_duration_seconds: 0,
                 },
-            )?,
-            funds: coins(vesting_amount.u128(), vesting_config.denom.clone()),
-        })],
-    })?;
+                label: format!("Arena Token Gateway {0}", application_id.u128()),
+            },
+        )?,
+        funds: coins(vesting_amount.u128(), vesting_config.denom.clone()),
+    });
 
     // Prepare the send messsage for the upfront amount
     let send_msg = CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
@@ -153,7 +150,7 @@ pub fn accept_application(
     });
 
     Ok(Response::new()
-        .set_data(vesting_data)
+        .add_message(vesting_msg)
         .add_message(send_msg)
         .add_attribute("action", "accept_application")
         .add_attribute("application_id", application_id)

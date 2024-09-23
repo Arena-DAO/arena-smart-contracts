@@ -28,6 +28,7 @@ pub fn setup_vesting(
         &cw_payroll_factory::msg::InstantiateMsg {
             owner: Some(arena.dao_dao.dao_core.addr_str()?),
             vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
+            instantiate_allowlist: None,
         },
         Some(&arena.dao_dao.dao_core.address()?),
         None,
