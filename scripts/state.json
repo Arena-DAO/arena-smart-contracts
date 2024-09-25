@@ -7,7 +7,7 @@
         "arena_escrow": 2033,
         "arena_league_module": 2036,
         "arena_payment_registry": 2040,
-        "arena_token_gateway": 2051,
+        "arena_token_gateway": 2054,
         "arena_tournament_module": 2037,
         "arena_wager_module": 2035,
         "cw_abc": 2042,

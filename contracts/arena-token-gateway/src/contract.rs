@@ -29,9 +29,6 @@ pub fn instantiate(
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(&msg.owner))?;
 
-    // Ensure we have a payroll contract set up on the DAO
-    let _ = get_payroll_address(deps.as_ref(), &env.block.chain_id)?;
-
     APPLICATIONS_COUNT.save(deps.storage, &Uint128::zero())?;
 
     Ok(
