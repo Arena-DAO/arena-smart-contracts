@@ -105,7 +105,7 @@ fn test_create_league() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![admin.clone()]),
+                    members: teams_to_members(&[admin.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -1107,7 +1107,7 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![
+                    members: teams_to_members(&[
                         team1.clone(),
                         team2.clone(),
                         team3.clone(),
@@ -1532,7 +1532,7 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![
+                    members: teams_to_members(&[
                         team1.clone(),
                         team2.clone(),
                         team3.clone(),

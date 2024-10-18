@@ -1861,7 +1861,7 @@ impl<
                 extension,
                 fees: temp_competition.fees,
                 banner: temp_competition.banner,
-                group_contract: group_contract,
+                group_contract,
             },
         )?;
 

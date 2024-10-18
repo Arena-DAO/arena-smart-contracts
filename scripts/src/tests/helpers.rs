@@ -95,7 +95,7 @@ pub fn setup_voting_module(
     Ok(())
 }
 
-pub fn teams_to_members(teams: &Vec<Addr>) -> Option<Vec<AddMemberMsg>> {
+pub fn teams_to_members(teams: &[Addr]) -> Option<Vec<AddMemberMsg>> {
     Some(
         teams
             .iter()

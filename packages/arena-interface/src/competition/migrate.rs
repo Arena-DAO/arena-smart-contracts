@@ -42,7 +42,7 @@ impl<CompetitionExt: Clone> CompetitionV2<CompetitionExt> {
             extension: self.extension,
             fees: self.fees,
             banner: self.banner,
-            group_contract: group_contract,
+            group_contract,
         }
     }
 }

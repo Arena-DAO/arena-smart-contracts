@@ -44,7 +44,7 @@ fn test_create_wager() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -123,7 +123,7 @@ fn test_process_wager() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -250,7 +250,7 @@ fn test_wager_with_additional_fees() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -402,7 +402,7 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -567,7 +567,7 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -729,7 +729,7 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -894,7 +894,7 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -1048,7 +1048,7 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&vec![user1.clone()]),
+                    members: teams_to_members(&[user1.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
