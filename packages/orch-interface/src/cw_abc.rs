@@ -1,8 +1,6 @@
 use cw_orch::interface;
-#[cfg(not(target_arch = "wasm32"))]
 use cw_orch::prelude::*;
 
-#[allow(unused_imports)]
 use cw_abc::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub const CONTRACT_ID: &str = "cw_abc";
@@ -10,7 +8,6 @@ pub const CONTRACT_ID: &str = "cw_abc";
 #[interface(InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, id = CONTRACT_ID)]
 pub struct CwAbcContract;
 
-#[cfg(not(target_arch = "wasm32"))]
 impl<Chain> Uploadable for CwAbcContract<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(_chain: &ChainInfoOwned) -> WasmPath {

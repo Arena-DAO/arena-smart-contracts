@@ -1,6 +1,7 @@
-use arena_interface::{competition::stats::StatValue, ratings::MemberResult};
+use arena_interface::{competition::stats::StatValue, group, ratings::MemberResult};
 use cosmwasm_std::{
-    Addr, Decimal, DepsMut, MessageInfo, Order, Response, StdError, StdResult, Uint128, Uint64,
+    ensure_eq, Addr, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
+    Uint128, Uint64,
 };
 use cw_balance::{Distribution, MemberPercentage};
 use cw_competition_base::error::CompetitionError;
@@ -14,21 +15,31 @@ use crate::{
     ContractError,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn instantiate_rounds(
     deps: DepsMut,
-    response: Response,
-    teams: Vec<String>,
+    env: Env,
+    info: MessageInfo,
 ) -> Result<Response, ContractError> {
-    let league_id = CompetitionModule::default()
-        .competition_count
-        .load(deps.storage)?;
+    ensure_eq!(
+        info.sender,
+        env.contract.address,
+        ContractError::Unauthorized {}
+    );
+
+    let league_module = CompetitionModule::default();
+    let league_id = league_module.competition_count.load(deps.storage)?;
+    let league = league_module
+        .competitions
+        .load(deps.storage, league_id.u128())?;
 
     // Convert teams to addresses
-    let team_addresses: Vec<Addr> = teams
-        .iter()
-        .map(|x| deps.api.addr_validate(x))
-        .collect::<StdResult<_>>()?;
+    let teams: Vec<Addr> = deps.querier.query_wasm_smart(
+        league.group_contract.to_string(),
+        &group::QueryMsg::Members {
+            start_after: None,
+            limit: None,
+        },
+    )?;
 
     let team_count = teams.len();
 
@@ -68,8 +79,8 @@ pub fn instantiate_rounds(
                     deps.storage,
                     (league_id.u128(), round_number, match_number),
                     &Match {
-                        team_1: team_addresses[x[j] - 1].clone(), // adjust index for 0-based array
-                        team_2: team_addresses[y[j] - 1].clone(),
+                        team_1: teams[x[j] - 1].clone(), // adjust index for 0-based array
+                        team_2: teams[y[j] - 1].clone(),
                         result: None,
                         match_number: Uint128::from(match_number),
                     },
@@ -89,7 +100,8 @@ pub fn instantiate_rounds(
         round_number += 1;
     }
 
-    Ok(response
+    Ok(Response::default()
+        .add_attribute("action", "instantiate_rounds")
         .add_attribute("rounds", (round_number - 1).to_string())
         .add_attribute("matches", (match_number - 1).to_string())
         .add_attribute("teams", team_count.to_string()))

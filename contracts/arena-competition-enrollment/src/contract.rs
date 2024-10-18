@@ -53,6 +53,7 @@ pub fn execute(
             category_id,
             competition_info,
             competition_type,
+            group_contract_info,
         } => execute::create_enrollment(
             deps,
             env,
@@ -64,6 +65,7 @@ pub fn execute(
             category_id,
             competition_info,
             competition_type,
+            group_contract_info,
         ),
         ExecuteMsg::TriggerExpiration { id, escrow_id } => {
             execute::trigger_expiration(deps, env, info, id, escrow_id)
@@ -87,20 +89,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::EnrollmentCount {} => to_json_binary(&query::enrollment_count(deps)?),
-        QueryMsg::EnrollmentMembers {
-            enrollment_id,
-            start_after,
-            limit,
-        } => to_json_binary(&query::enrollment_members(
-            deps,
-            enrollment_id,
-            start_after,
-            limit,
-        )?),
-        QueryMsg::IsMember {
-            enrollment_id,
-            addr,
-        } => to_json_binary(&query::is_member(deps, enrollment_id, addr)?),
     }
 }
 

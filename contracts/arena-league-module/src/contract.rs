@@ -2,8 +2,8 @@ use arena_interface::competition::msg::{ExecuteBase, QueryBase};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    ensure_eq, to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response,
-    StdResult,
+    ensure_eq, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Reply,
+    Response, StdResult, WasmMsg,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
@@ -61,8 +61,9 @@ pub fn execute(
             rulesets,
             banner,
             instantiate_extension,
-        } => {
-            let response = CompetitionModule::default().execute_create_competition(
+            group_contract,
+        } => Ok(CompetitionModule::default()
+            .execute_create_competition(
                 &mut deps,
                 &env,
                 &info,
@@ -75,11 +76,16 @@ pub fn execute(
                 rules,
                 rulesets,
                 banner,
-                &instantiate_extension,
-            )?;
-
-            execute::instantiate_rounds(deps, response, instantiate_extension.teams)
-        }
+                group_contract,
+                instantiate_extension,
+            )?
+            .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address.to_string(),
+                msg: to_json_binary(&ExecuteMsg::Extension {
+                    msg: ExecuteExt::InstantiateRounds {},
+                })?,
+                funds: vec![],
+            }))),
         ExecuteBase::Extension { msg } => match msg {
             ExecuteExt::ProcessMatch {
                 league_id,
@@ -95,6 +101,7 @@ pub fn execute(
                 addr,
                 point_adjustments,
             } => execute::add_point_adjustments(deps, info, league_id, addr, point_adjustments),
+            ExecuteExt::InstantiateRounds {} => execute::instantiate_rounds(deps, env, info),
         },
         ExecuteBase::ProcessCompetition {
             competition_id,
@@ -157,7 +164,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(mut deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let competition_module = CompetitionModule::default();
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -166,9 +173,6 @@ pub fn migrate(mut deps: DepsMut, env: Env, _msg: MigrateMsg) -> Result<Response
     }
     if version.major == 1 && version.minor < 7 {
         competition_module.migrate_from_v1_6_to_v1_7(deps.branch())?;
-    }
-    if version.major == 1 && version.minor == 8 {
-        competition_module.migrate_from_v1_8_2_to_v2(deps.branch(), env)?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

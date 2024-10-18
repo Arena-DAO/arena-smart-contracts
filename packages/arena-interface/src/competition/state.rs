@@ -51,6 +51,27 @@ pub struct Competition<CompetitionExt> {
     pub fees: Option<Vec<FeeInformation<Addr>>>,
     /// A banner-image link for the competition
     pub banner: Option<String>,
+    pub group_contract: Addr,
+}
+
+#[cw_serde]
+pub struct TempCompetition<CompetitionInstantiateExt> {
+    pub id: Uint128,
+    pub category_id: Option<Uint128>,
+    pub admin_dao: Addr,
+    pub host: Addr,
+    pub escrow: Option<Addr>,
+    pub name: String,
+    pub description: String,
+    pub start_height: u64,
+    pub expiration: Expiration,
+    pub rulesets: Option<Vec<Uint128>>,
+    pub status: CompetitionStatus,
+    /// Additional layered fees
+    pub fees: Option<Vec<FeeInformation<Addr>>>,
+    /// A banner-image link for the competition
+    pub banner: Option<String>,
+    pub extension: CompetitionInstantiateExt,
 }
 
 /// CompetitionResponse extends the Competition by also returning rules, is_expired, and

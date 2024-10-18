@@ -7,6 +7,7 @@ use arena_interface::competition::stats::{
 };
 use arena_interface::core::QueryExtFns;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
+use arena_interface::group::{self, GroupContractInfo};
 use arena_interface::registry::ExecuteMsgFns as _;
 use arena_wager_module::msg::{MigrateMsg, WagerInstantiateExt};
 use cosmwasm_std::{coins, to_json_binary, Addr, Coin, Decimal, Uint128};
@@ -16,11 +17,12 @@ use cw_balance::{
 use cw_orch::{anyhow, prelude::*};
 use cw_orch_clone_testing::CloneTesting;
 use cw_utils::Expiration;
+use dao_interface::state::ModuleInstantiateInfo;
 use dao_interface::CoreQueryMsgFns;
 use networks::PION_1;
 
 use crate::arena::Arena;
-use crate::tests::helpers::{setup_arena, setup_voting_module};
+use crate::tests::helpers::{setup_arena, setup_voting_module, teams_to_members};
 
 use super::{DENOM, PREFIX};
 
@@ -38,9 +40,18 @@ fn test_create_wager() -> anyhow::Result<()> {
     let res = arena.arena_wager_module.create_competition(
         "A test wager".to_string(),
         Expiration::AtHeight(1000000),
-        WagerInstantiateExt {
-            registered_members: None,
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Test Wager".to_string(),
         None,
         Some(Uint128::one()),
@@ -108,9 +119,18 @@ fn test_process_wager() -> anyhow::Result<()> {
     let res = arena.arena_wager_module.create_competition(
         "A test wager".to_string(),
         Expiration::AtHeight(1000000),
-        WagerInstantiateExt {
-            registered_members: Some(vec![user1.to_string(), user2.to_string()]),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Test Wager".to_string(),
         None,
         Some(Uint128::one()),
@@ -226,9 +246,18 @@ fn test_wager_with_additional_fees() -> anyhow::Result<()> {
     let res = arena.arena_wager_module.create_competition(
         "Wager with fees".to_string(),
         Expiration::AtHeight(mock.block_info()?.height + 100),
-        WagerInstantiateExt {
-            registered_members: None,
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Fee Wager".to_string(),
         None,
         Some(Uint128::one()),
@@ -369,9 +398,18 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
     let res = arena.arena_wager_module.create_competition(
         "Wager with preset distributions".to_string(),
         Expiration::AtHeight(mock.block_info()?.height + 100),
-        WagerInstantiateExt {
-            registered_members: None,
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Preset Distribution Wager".to_string(),
         None,
         Some(Uint128::one()),
@@ -525,9 +563,18 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
     let res = arena.arena_wager_module.create_competition(
         "Wager with updated distribution".to_string(),
         Expiration::AtHeight(mock.block_info()?.height + 100),
-        WagerInstantiateExt {
-            registered_members: None,
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Updated Distribution Wager".to_string(),
         None,
         Some(Uint128::one()),
@@ -678,9 +725,18 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
     let res = arena.arena_wager_module.create_competition(
         "A test wager".to_string(),
         Expiration::AtHeight(100000),
-        WagerInstantiateExt {
-            registered_members: Some(vec![user1.to_string(), user2.to_string()]),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Test Wager".to_string(),
         None,
         Some(Uint128::one()),
@@ -743,7 +799,6 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
         Uint128::one(),
         "Jailed Wager".to_string(),
         "This wager needs DAO resolution".to_string(),
-        None,
         Some(Distribution {
             member_percentages: vec![MemberPercentage {
                 addr: user1.to_string(),
@@ -763,7 +818,6 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
         Uint128::one(),
         "Jailed Wager".to_string(),
         "This wager needs DAO resolution".to_string(),
-        None,
         Some(Distribution {
             member_percentages: vec![MemberPercentage {
                 addr: user1.to_string(),
@@ -779,7 +833,6 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
         Uint128::one(),
         "Jailed Wager".to_string(),
         "This wager needs DAO resolution".to_string(),
-        None,
         Some(Distribution {
             member_percentages: vec![MemberPercentage {
                 addr: user1.to_string(),
@@ -799,12 +852,18 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
 
     // Execute the jailed proposal after expiration
     mock.wait_blocks(100)?;
-    let res = mock.call_as(&admin).execute(
+    mock.call_as(&admin).execute(
         &dao_proposal_single::msg::ExecuteMsg::Execute { proposal_id: 1 },
         &[],
-        &arena.dao_dao.dao_core.proposal_modules(None, None)?[1].address,
+        &arena
+            .dao_dao
+            .dao_core
+            .proposal_modules(None, None)?
+            .iter()
+            .find(|x| x.prefix == "B")
+            .expect("Could not find the Arena Core's proposal module")
+            .address,
     )?;
-    dbg!(res);
 
     // Check the result
     let result = arena.arena_wager_module.result(Uint128::one())?;
@@ -831,9 +890,18 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
     let res = arena.arena_wager_module.create_competition(
         "A test wager with stats".to_string(),
         Expiration::AtHeight(1000000),
-        WagerInstantiateExt {
-            registered_members: Some(vec![user1.to_string(), user2.to_string()]),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Test Wager with Stats".to_string(),
         None,
         Some(Uint128::one()),
@@ -976,9 +1044,18 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
     let res = arena.arena_wager_module.create_competition(
         "A test wager with aggregate stats".to_string(),
         Expiration::AtHeight(1000000),
-        WagerInstantiateExt {
-            registered_members: None,
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![user1.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
         },
+        WagerInstantiateExt {},
         "Test Wager with Aggregate Stats".to_string(),
         None,
         Some(Uint128::one()),

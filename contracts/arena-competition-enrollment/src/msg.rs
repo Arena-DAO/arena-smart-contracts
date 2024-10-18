@@ -2,6 +2,7 @@ use arena_interface::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128, Uint64};
 use cw_utils::Expiration;
+use dao_interface::state::ModuleInstantiateInfo;
 
 use crate::state::{CompetitionType, EnrollmentEntryResponse};
 
@@ -26,6 +27,7 @@ pub enum ExecuteMsg {
         category_id: Option<Uint128>,
         competition_info: CompetitionInfoMsg,
         competition_type: CompetitionType,
+        group_contract_info: ModuleInstantiateInfo,
     },
     TriggerExpiration {
         id: Uint128,
@@ -71,17 +73,6 @@ pub enum QueryMsg {
     Enrollment { enrollment_id: Uint128 },
     #[returns(Uint128)]
     EnrollmentCount {},
-    #[returns(Vec<cosmwasm_std::Addr>)]
-    EnrollmentMembers {
-        enrollment_id: Uint128,
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
-    #[returns(bool)]
-    IsMember {
-        enrollment_id: Uint128,
-        addr: String,
-    },
 }
 
 #[cw_serde]

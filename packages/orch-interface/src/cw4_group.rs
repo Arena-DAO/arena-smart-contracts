@@ -1,20 +1,13 @@
-#[cfg(not(target_arch = "wasm32"))]
+use cw4_group::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_orch::environment::ChainInfoOwned;
 use cw_orch::interface;
-#[cfg(not(target_arch = "wasm32"))]
 use cw_orch::prelude::*;
-
-#[allow(unused_imports)]
-use cosmwasm_std::Empty;
-#[allow(unused_imports)]
-use cw4_group::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 pub const CONTRACT_ID: &str = "cw4_group";
 
-#[interface(InstantiateMsg, ExecuteMsg, QueryMsg, Empty, id = CONTRACT_ID)]
+#[interface(InstantiateMsg, ExecuteMsg, QueryMsg, cosmwasm_std::Empty, id = CONTRACT_ID)]
 pub struct Cw4Group;
 
-#[cfg(not(target_arch = "wasm32"))]
 impl<Chain> Uploadable for Cw4Group<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(_chain: &ChainInfoOwned) -> WasmPath {

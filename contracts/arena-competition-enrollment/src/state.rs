@@ -1,10 +1,10 @@
 use std::fmt;
 
-use arena_interface::{competition::state::CompetitionResponse, fees::FeeInformation};
+use arena_interface::{competition::state::CompetitionResponse, fees::FeeInformation, group};
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Coin, Decimal, Deps, Empty, StdResult, Uint128, Uint64};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 use cw_utils::Expiration;
 
 #[cw_serde]
@@ -19,6 +19,7 @@ pub struct EnrollmentEntry {
     pub host: Addr,
     pub category_id: Option<Uint128>,
     pub competition_module: Addr,
+    pub group_contract: Addr,
 }
 
 #[cw_serde]
@@ -36,6 +37,7 @@ pub struct EnrollmentEntryResponse {
     pub host: Addr,
     pub is_expired: bool,
     pub competition_module: Addr,
+    pub group_contract: Addr,
 }
 
 #[cw_serde]
@@ -57,9 +59,10 @@ impl EnrollmentEntry {
         block: &BlockInfo,
         id: Uint128,
     ) -> StdResult<EnrollmentEntryResponse> {
-        let current_members = ENROLLMENT_MEMBERS_COUNT
-            .may_load(deps.storage, id.u128())?
-            .unwrap_or_default();
+        let current_members: Uint64 = deps.querier.query_wasm_smart(
+            self.group_contract.to_string(),
+            &group::QueryMsg::MembersCount {},
+        )?;
         let is_expired = self.expiration.is_expired(block);
 
         Ok(EnrollmentEntryResponse {
@@ -78,6 +81,7 @@ impl EnrollmentEntry {
             host: self.host,
             is_expired,
             competition_module: self.competition_module,
+            group_contract: self.group_contract,
         })
     }
 }
@@ -206,8 +210,6 @@ pub fn enrollment_entries<'a>() -> IndexedMap<'a, u128, EnrollmentEntry, Enrollm
 pub const ENROLLMENT_COUNT: Item<Uint128> = Item::new("enrollment_count");
 /// Stores the module address and enrollment id to process in a reply
 pub const TEMP_ENROLLMENT_INFO: Item<EnrollmentInfo> = Item::new("temp_enrollment_info");
-pub const ENROLLMENT_MEMBERS_COUNT: Map<u128, Uint64> = Map::new("enrollment_members_count");
-pub const ENROLLMENT_MEMBERS: Map<(u128, &Addr), Empty> = Map::new("enrollment_members");
 
 #[cw_serde]
 pub struct EnrollmentInfo {

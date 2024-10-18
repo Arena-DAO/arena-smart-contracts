@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::Arena;
+use arena_interface::group::AddMemberMsg;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{to_json_binary, CosmosMsg, WasmMsg};
 use cw_orch::{anyhow, prelude::*};
@@ -92,6 +93,18 @@ pub fn setup_voting_module(
     mock.next_block()?;
 
     Ok(())
+}
+
+pub fn teams_to_members(teams: &Vec<Addr>) -> Option<Vec<AddMemberMsg>> {
+    Some(
+        teams
+            .iter()
+            .map(|x| AddMemberMsg {
+                addr: x.to_string(),
+                seed: None,
+            })
+            .collect(),
+    )
 }
 
 #[cw_serde]

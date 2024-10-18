@@ -4,10 +4,12 @@ use arena_competition_enrollment::msg::{
 use arena_competition_enrollment::state::CompetitionType;
 use arena_interface::competition::msg::QueryBaseFns as _;
 use arena_interface::escrow::ExecuteMsgFns as _;
+use arena_interface::group::{self, QueryMsgFns as _};
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
+use dao_interface::state::ModuleInstantiateInfo;
 use dao_proposal_sudo::msg::ExecuteMsgFns as _;
 
 use crate::tests::helpers::setup_arena;
@@ -64,6 +66,13 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
+        },
     };
 
     let res = arena
@@ -80,6 +89,11 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
         .enrollments(None, None, None)?;
     assert!(enrollments.len() == 1);
 
+    // Set group contract
+    arena
+        .arena_group
+        .set_address(&enrollments[0].group_contract);
+
     // Enroll a member
     arena.arena_competition_enrollment.set_sender(&teams[0]);
 
@@ -92,10 +106,7 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
             .any(|attr| attr.key == "action" && attr.value == "enroll")));
 
     // Query members
-    let members =
-        arena
-            .arena_competition_enrollment
-            .enrollment_members(Uint128::one(), None, None)?;
+    let members = arena.arena_group.members(None, None)?;
     assert!(members.len() == 1);
 
     // Try to enroll the same member again (should fail)
@@ -174,6 +185,13 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
+        },
     };
 
     let result = arena
@@ -234,6 +252,13 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
                 play_third_place_match: false,
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
+        },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
         },
     };
 
@@ -309,6 +334,13 @@ fn test_successful_tournament_creation() -> anyhow::Result<()> {
                 play_third_place_match: false,
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
+        },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
         },
     };
 
@@ -386,6 +418,13 @@ fn test_successful_wager_creation() -> anyhow::Result<()> {
             additional_layered_fees: None,
         },
         competition_type: CompetitionType::Wager {},
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
+        },
     };
 
     arena
@@ -475,6 +514,13 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
                 Decimal::percent(20),
             ],
         },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
+        },
     };
 
     arena
@@ -547,6 +593,13 @@ fn test_trigger_expiration_without_escrow() -> anyhow::Result<()> {
             additional_layered_fees: None,
         },
         competition_type: CompetitionType::Wager {},
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
+        },
     };
 
     arena
@@ -629,6 +682,13 @@ fn test_trigger_expiration_before_min_members() -> anyhow::Result<()> {
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
         },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
+        },
     };
 
     arena
@@ -704,6 +764,13 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
                 play_third_place_match: false,
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
+        },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
         },
     };
 
@@ -802,6 +869,13 @@ fn test_huge_tournament() -> anyhow::Result<()> {
                 play_third_place_match: false,
             },
             distribution: vec![Decimal::percent(60), Decimal::percent(40)],
+        },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
         },
     };
 

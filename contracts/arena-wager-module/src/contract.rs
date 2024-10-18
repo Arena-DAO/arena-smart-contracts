@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
-use arena_interface::ratings::MemberResult;
+use arena_interface::{group, ratings::MemberResult};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult, SubMsg,
+    Addr, Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
+    SubMsg, Uint64,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
@@ -63,7 +64,18 @@ fn post_processing(deps: DepsMut, competition: &Wager) -> Result<Option<SubMsg>,
     }
 
     if let Some(category_id) = competition.category_id {
-        if let Some(registered_members) = &competition.extension.registered_members {
+        let teams: Uint64 = deps.querier.query_wasm_smart(
+            competition.group_contract.to_string(),
+            &group::QueryMsg::MembersCount {},
+        )?;
+        if teams == Uint64::new(2) {
+            let registered_members: Vec<Addr> = deps.querier.query_wasm_smart(
+                competition.group_contract.to_string(),
+                &group::QueryMsg::Members {
+                    start_after: None,
+                    limit: None,
+                },
+            )?;
             // This will be in state
             let result = CompetitionModule::default()
                 .competition_result
@@ -144,7 +156,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(
     mut deps: DepsMut,
-    env: Env,
+    _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, CompetitionError> {
     let competition_module = CompetitionModule::default();
@@ -152,9 +164,6 @@ pub fn migrate(
 
     if version.major == 1 && version.minor < 7 {
         competition_module.migrate_from_v1_6_to_v1_7(deps.branch())?;
-    }
-    if version.major == 1 && version.minor == 8 {
-        competition_module.migrate_from_v1_8_2_to_v2(deps.branch(), env)?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

@@ -2,9 +2,9 @@ use std::marker::PhantomData;
 
 #[allow(unused_imports)]
 use crate::competition::state::{CompetitionResponse, CompetitionStatus, Config, Evidence};
-use crate::fees::FeeInformation;
+use crate::{fees::FeeInformation, group};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Binary, Deps, StdResult, Uint128};
+use cosmwasm_std::{Addr, Binary, Deps, StdResult, Uint128};
 use cw_balance::Distribution;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Expiration;
@@ -31,7 +31,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         title: String,
         description: String,
         distribution: Option<Distribution<String>>,
-        additional_layered_fees: Option<FeeInformation<String>>,
     },
     ActivateCompetition {},
     AddCompetitionHook {
@@ -57,6 +56,7 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         rules: Option<Vec<String>>,
         rulesets: Option<Vec<Uint128>>,
         banner: Option<String>,
+        group_contract: group::GroupContractInfo,
         instantiate_extension: CompetitionInstantiateExt,
     },
     SubmitEvidence {
@@ -176,5 +176,5 @@ pub enum HookDirection {
 }
 
 pub trait ToCompetitionExt<T> {
-    fn to_competition_ext(&self, deps: Deps) -> StdResult<T>;
+    fn to_competition_ext(&self, deps: Deps, group_contract: &Addr) -> StdResult<T>;
 }

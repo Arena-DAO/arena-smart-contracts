@@ -1,16 +1,12 @@
-use cw_orch::interface;
-#[cfg(not(target_arch = "wasm32"))]
-use cw_orch::prelude::*;
-
-#[allow(unused_imports)]
 use arena_interface::registry::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use cw_orch::interface;
+use cw_orch::prelude::*;
 
 pub const CONTRACT_ID: &str = "arena_payment_registry";
 
 #[interface(InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, id = CONTRACT_ID)]
 pub struct ArenaPaymentRegistryContract;
 
-#[cfg(not(target_arch = "wasm32"))]
 impl<Chain> Uploadable for ArenaPaymentRegistryContract<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(_chain: &ChainInfoOwned) -> WasmPath {

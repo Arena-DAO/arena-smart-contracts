@@ -1,21 +1,57 @@
 use arena_interface::fees::FeeInformation;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, CosmosMsg, Decimal, DepsMut, Empty, MessageInfo, Response,
+    to_json_binary, Addr, Binary, CosmosMsg, DepsMut, Empty, Env, MessageInfo, Order, Response,
     StdResult,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
-use cw_balance::{BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution};
+use cw_balance::{
+    BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution, MemberBalanceUnchecked,
+};
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
     query::is_locked,
     state::{
-        is_fully_funded, BALANCE, DEFERRED_FEES, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED,
-        TOTAL_BALANCE,
+        is_fully_funded, BALANCE, DUE, HAS_DISTRIBUTED, INITIAL_DUE, IS_LOCKED, TOTAL_BALANCE,
     },
     ContractError,
 };
+
+pub fn set_dues(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    dues: Vec<MemberBalanceUnchecked>,
+) -> Result<Response, ContractError> {
+    if info.sender != env.contract.address {
+        assert_owner(deps.storage, &info.sender)?;
+    }
+
+    if dues.is_empty() {
+        return Err(ContractError::InvalidDue {
+            msg: "None due".to_string(),
+        });
+    }
+
+    IS_LOCKED.save(deps.storage, &false)?;
+    for member_balance in dues {
+        let member_balance = member_balance.into_checked(deps.as_ref())?;
+
+        if INITIAL_DUE.has(deps.storage, &member_balance.addr) {
+            return Err(ContractError::StdError(
+                cosmwasm_std::StdError::GenericErr {
+                    msg: "Cannot have duplicate addresses in dues".to_string(),
+                },
+            ));
+        }
+
+        INITIAL_DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
+        DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
+    }
+
+    Ok(Response::new().add_attribute("action", "set_dues"))
+}
 
 pub fn withdraw(
     deps: DepsMut,
@@ -28,7 +64,7 @@ pub fn withdraw(
     }
 
     // Load and process balance for each address
-    let mut balance = BALANCE.load(deps.storage, &info.sender)?;
+    let balance = BALANCE.load(deps.storage, &info.sender)?;
 
     // Load the total balance
     let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
@@ -38,13 +74,6 @@ pub fn withdraw(
 
         vec![]
     } else {
-        // If the total balance has already been taxed, then deduct at the individual level
-        if let Some(fees) = DEFERRED_FEES.may_load(deps.storage)? {
-            for fee in fees {
-                balance = balance.checked_mul_floor(Decimal::one().checked_sub(fee)?)?;
-            }
-        }
-
         // Update total balance and related storage entries
         BALANCE.remove(deps.storage, &info.sender);
         total_balance = total_balance.checked_sub(&balance)?;
@@ -60,13 +89,6 @@ pub fn withdraw(
         // Update or remove total balance
         if total_balance.is_empty() {
             TOTAL_BALANCE.remove(deps.storage);
-
-            if let Some(has_distributed) = HAS_DISTRIBUTED.may_load(deps.storage)? {
-                if has_distributed {
-                    // Clean up state if the last user has withdrawn
-                    DEFERRED_FEES.remove(deps.storage);
-                }
-            }
         } else {
             TOTAL_BALANCE.save(deps.storage, &total_balance)?;
         }
@@ -214,20 +236,12 @@ pub fn distribute(
     let mut attrs = vec![];
 
     // Process layered fees if provided
-    if let Some(layered_fees) = layered_fees {
+    if let Some(layered_fees) = layered_fees.as_ref() {
         // Validate the tax info
         let validated_layered_fees: Vec<FeeInformation<Addr>> = layered_fees
             .iter()
             .map(|fee| fee.into_checked(deps.as_ref()))
             .collect::<StdResult<_>>()?;
-
-        // If funds will not be split, then we should have the fees available at withdrawal
-        if distribution.is_none() {
-            DEFERRED_FEES.save(
-                deps.storage,
-                &validated_layered_fees.iter().map(|x| x.tax).collect(),
-            )?;
-        }
 
         // Process each fee
         for fee in validated_layered_fees {
@@ -323,6 +337,20 @@ pub fn distribute(
                 )?;
             }
         }
+    } else {
+        for (addr, balance) in BALANCE
+            .range(deps.storage, None, None, Order::Ascending)
+            .collect::<StdResult<Vec<_>>>()?
+        {
+            let mut new_balance = balance.clone();
+            if let Some(layered_fees) = layered_fees.as_ref() {
+                for fee in layered_fees {
+                    new_balance = balance.checked_sub(&balance.checked_mul_floor(fee.tax)?)?;
+                }
+            }
+
+            BALANCE.save(deps.storage, &addr, &new_balance)?;
+        }
     }
 
     // Update contract state
@@ -331,7 +359,7 @@ pub fn distribute(
     DUE.clear(deps.storage);
 
     Ok(Response::new()
-        .add_attribute("action", "handle_competition_result")
+        .add_attribute("action", "distribute")
         .add_attributes(attrs)
         .add_messages(msgs))
 }
@@ -344,6 +372,6 @@ pub fn lock(deps: DepsMut, info: MessageInfo, value: bool) -> Result<Response, C
 
     // Build and return the response
     Ok(Response::new()
-        .add_attribute("action", "handle_competition_state_changed")
+        .add_attribute("action", "lock")
         .add_attribute("is_locked", value.to_string()))
 }

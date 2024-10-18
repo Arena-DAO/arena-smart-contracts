@@ -128,7 +128,7 @@ checksum = "86fdf8605db99b54d3cd748a44c6d04df638eb5dafb219b135d0149bd0db01f6"
 
 [[package]]
 name = "arena-competition-enrollment"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "arena-league-module",
@@ -143,16 +143,18 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
+ "cw4-group 1.1.2",
  "dao-interface 2.5.0",
  "dao-pre-propose-base 2.5.0",
  "dao-voting 2.5.0",
  "serde",
+ "sha2 0.10.8",
  "thiserror",
 ]
 
 [[package]]
 name = "arena-core"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -172,7 +174,7 @@ dependencies = [
 
 [[package]]
 name = "arena-escrow"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -191,8 +193,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "arena-group"
+version = "2.1.0"
+dependencies = [
+ "arena-interface",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-orch 0.24.1",
+ "cw-ownable",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
+ "itertools 0.13.0",
+ "thiserror",
+]
+
+[[package]]
 name = "arena-interface"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -211,7 +229,7 @@ dependencies = [
 
 [[package]]
 name = "arena-league-module"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -231,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "arena-payment-registry"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -248,7 +266,7 @@ dependencies = [
 
 [[package]]
 name = "arena-token-gateway"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -268,7 +286,7 @@ dependencies = [
 
 [[package]]
 name = "arena-tournament-module"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -288,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "arena-wager-module"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -584,7 +602,7 @@ dependencies = [
 [[package]]
 name = "btsg-ft-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1121,7 +1139,7 @@ dependencies = [
 [[package]]
 name = "cw-abc"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1151,7 +1169,7 @@ dependencies = [
 [[package]]
 name = "cw-admin-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1164,7 +1182,7 @@ dependencies = [
 
 [[package]]
 name = "cw-balance"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1177,7 +1195,7 @@ dependencies = [
 
 [[package]]
 name = "cw-competition-base"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -1192,6 +1210,7 @@ dependencies = [
  "dao-pre-propose-base 2.5.0",
  "dao-voting 2.5.0",
  "serde",
+ "sha2 0.10.8",
  "thiserror",
 ]
 
@@ -1308,7 +1327,7 @@ dependencies = [
 [[package]]
 name = "cw-curves"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1332,7 +1351,7 @@ dependencies = [
 [[package]]
 name = "cw-denom"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1343,7 +1362,7 @@ dependencies = [
 [[package]]
 name = "cw-fund-distributor"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1374,7 +1393,7 @@ dependencies = [
 [[package]]
 name = "cw-hooks"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1661,7 +1680,7 @@ dependencies = [
 [[package]]
 name = "cw-paginate-storage"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 1.2.0",
@@ -1671,7 +1690,7 @@ dependencies = [
 [[package]]
 name = "cw-payroll-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1715,7 +1734,7 @@ dependencies = [
 [[package]]
 name = "cw-stake-tracker"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1758,7 +1777,7 @@ dependencies = [
 [[package]]
 name = "cw-token-swap"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1773,7 +1792,7 @@ dependencies = [
 [[package]]
 name = "cw-tokenfactory-issuer"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1794,7 +1813,7 @@ dependencies = [
 [[package]]
 name = "cw-tokenfactory-types"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1854,7 +1873,7 @@ dependencies = [
 [[package]]
 name = "cw-vesting"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1875,7 +1894,7 @@ dependencies = [
 [[package]]
 name = "cw-wormhole"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2022,7 +2041,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2046,7 +2065,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake-external-rewards"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2068,7 +2087,7 @@ dependencies = [
 [[package]]
 name = "cw20-stake-reward-distributor"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2303,7 +2322,7 @@ dependencies = [
 [[package]]
 name = "cw721-controllers"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2315,7 +2334,7 @@ dependencies = [
 [[package]]
 name = "cw721-roles"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2336,7 +2355,7 @@ dependencies = [
 [[package]]
 name = "dao-cw-orch"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "btsg-ft-factory",
  "cosmwasm-std",
@@ -2379,7 +2398,7 @@ dependencies = [
 [[package]]
 name = "dao-cw721-extensions"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2391,7 +2410,7 @@ dependencies = [
 [[package]]
 name = "dao-dao-core"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2422,7 +2441,7 @@ dependencies = [
 [[package]]
 name = "dao-dao-macros"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "proc-macro2",
@@ -2433,7 +2452,7 @@ dependencies = [
 [[package]]
 name = "dao-hooks"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2461,7 +2480,7 @@ dependencies = [
 [[package]]
 name = "dao-interface"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2476,7 +2495,7 @@ dependencies = [
 [[package]]
 name = "dao-migrator"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2509,7 +2528,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-approval-single"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2525,7 +2544,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-approver"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2560,7 +2579,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-base"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2583,7 +2602,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-multiple"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2595,7 +2614,7 @@ dependencies = [
 [[package]]
 name = "dao-pre-propose-single"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2607,7 +2626,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-condorcet"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2624,7 +2643,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-hook-counter"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2638,7 +2657,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-multiple"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2661,7 +2680,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-single"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2685,7 +2704,7 @@ dependencies = [
 [[package]]
 name = "dao-proposal-sudo"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2700,7 +2719,7 @@ dependencies = [
 [[package]]
 name = "dao-rewards-distributor"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2723,7 +2742,7 @@ dependencies = [
 [[package]]
 name = "dao-test-custom-factory"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2773,7 +2792,7 @@ dependencies = [
 [[package]]
 name = "dao-voting"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2789,7 +2808,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw20-balance"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2807,7 +2826,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw20-staked"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2827,7 +2846,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw4"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2845,7 +2864,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw721-roles"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2867,7 +2886,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-cw721-staked"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2890,7 +2909,7 @@ dependencies = [
 [[package]]
 name = "dao-voting-token-staked"
 version = "2.5.0"
-source = "git+https://github.com/ismellike/dao-contracts?branch=fork/v2.5.0-arena#5e8116d1c1fe06cb5267483153dacb93d0c380f8"
+source = "git+https://github.com/Arena-DAO/dao-contracts?branch=fork/v2.5.0-arena#582bbdea50bbea1da3b620eb9d44638a528a0919"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -3460,7 +3479,7 @@ checksum = "32085ea23f3234fc7846555e85283ba4de91e21016dc0455a16286d87a292d64"
 
 [[package]]
 name = "glicko_2"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-interface",
  "cosmwasm-schema",
@@ -4121,12 +4140,13 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "orch-interface"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "abstract-cw4-group",
  "arena-competition-enrollment",
  "arena-core",
  "arena-escrow",
+ "arena-group",
  "arena-interface",
  "arena-league-module",
  "arena-payment-registry",
@@ -4894,7 +4914,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "scripts"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "arena-competition-enrollment",
  "arena-core",

@@ -8,6 +8,7 @@ use arena_interface::competition::stats::{
 };
 use arena_interface::core::QueryExtFns as _;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
+use arena_interface::group::{self, GroupContractInfo};
 use arena_league_module::msg::{
     ExecuteExtFns as _, LeagueInstantiateExt, LeagueQueryExtFns as _, MatchResultMsg,
 };
@@ -18,9 +19,10 @@ use cosmwasm_std::{
 use cw_balance::{BalanceUnchecked, BalanceVerified, MemberBalanceUnchecked};
 use cw_orch::{anyhow, prelude::*};
 use cw_utils::Expiration;
+use dao_interface::state::ModuleInstantiateInfo;
 use dao_proposal_sudo::msg::ExecuteMsgFns;
 
-use crate::tests::helpers::{setup_arena, setup_voting_module};
+use crate::tests::helpers::{setup_arena, setup_voting_module, teams_to_members};
 
 use super::{DENOM, PREFIX};
 
@@ -39,8 +41,18 @@ fn test_create_league() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "A test league".to_string(),
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -85,6 +97,38 @@ fn test_create_league() -> anyhow::Result<()> {
     let league = arena.arena_league_module.competition(Uint128::one())?;
     assert_eq!(league.name, "Test League");
 
+    // Error - attempt to create a league with only one team
+    let result = arena.arena_league_module.create_competition(
+        "Invalid league",
+        Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![admin.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
+        LeagueInstantiateExt {
+            match_win_points: Uint64::new(3),
+            match_draw_points: Uint64::new(1),
+            match_lose_points: Uint64::zero(),
+            distribution: vec![Decimal::percent(100)],
+        },
+        "Invalid League",
+        None,
+        Some(Uint128::one()),
+        None,
+        None,
+        Some(vec!["Invalid League Rule".to_string()]),
+        None,
+    );
+
+    assert!(result.is_err());
+
     Ok(())
 }
 
@@ -111,8 +155,18 @@ fn test_process_league_matches() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "A test league".to_string(),
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -293,8 +347,18 @@ fn test_add_point_adjustments() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "A test league".to_string(),
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -352,6 +416,16 @@ fn test_add_point_adjustments() -> anyhow::Result<()> {
         arena.arena_escrow.receive_native(&coins(1000, DENOM))?;
     }
 
+    // Get match
+    let round_response = arena
+        .arena_league_module
+        .round(Uint128::one(), Uint64::one())?;
+    let match_1 = round_response
+        .matches
+        .into_iter()
+        .find(|x| x.match_number == Uint128::one())
+        .expect("Could not get match number 1");
+
     // Process a match
     arena.arena_league_module.set_sender(&admin);
     arena.arena_league_module.process_match(
@@ -365,7 +439,7 @@ fn test_add_point_adjustments() -> anyhow::Result<()> {
 
     // Add point adjustment
     arena.arena_league_module.add_point_adjustments(
-        teams[0].to_string(),
+        match_1.team_1.to_string(),
         Uint128::one(),
         vec![PointAdjustment {
             description: "Penalty".to_string(),
@@ -398,8 +472,18 @@ fn test_create_league_with_odd_number_of_teams() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "Odd number league",
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -465,8 +549,18 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "Tie league",
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -647,8 +741,18 @@ fn test_update_distribution() -> anyhow::Result<()> {
     arena.arena_league_module.create_competition(
         "Distribution league",
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -717,56 +821,47 @@ fn test_update_distribution() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_create_league_with_invalid_team_count() -> anyhow::Result<()> {
+fn test_create_huge_league() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
 
     arena.arena_league_module.set_sender(&admin);
 
-    // Attempt to create a league with only one team
+    // Create a league with a ton of members
+    // This should create ~500*499/2 (124,750) matches
+    let teams: Vec<Addr> = (1..=500)
+        .map(|i| mock.addr_make(format!("team{}", i)))
+        .collect();
     let result = arena.arena_league_module.create_competition(
-        "Invalid league",
+        "Huge League",
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: vec!["team1".to_string()],
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
             distribution: vec![Decimal::percent(100)],
         },
-        "Invalid League",
+        "Huge League",
         None,
         Some(Uint128::one()),
         None,
         None,
-        Some(vec!["Invalid League Rule".to_string()]),
+        None,
         None,
     );
 
-    assert!(result.is_err());
-
-    // Attempt to create a league with too many teams (e.g., 101)
-    let many_teams: Vec<String> = (1..=101).map(|i| format!("team{}", i)).collect();
-    let result = arena.arena_league_module.create_competition(
-        "Too Many Teams League",
-        Expiration::AtHeight(1000000),
-        LeagueInstantiateExt {
-            teams: many_teams,
-            match_win_points: Uint64::new(3),
-            match_draw_points: Uint64::new(1),
-            match_lose_points: Uint64::zero(),
-            distribution: vec![Decimal::percent(100)],
-        },
-        "Too Many Teams League",
-        None,
-        Some(Uint128::one()),
-        None,
-        None,
-        Some(vec!["Too Many Teams League Rule".to_string()]),
-        None,
-    );
-
-    assert!(result.is_err());
+    assert!(result.is_ok());
 
     Ok(())
 }
@@ -785,8 +880,18 @@ fn test_process_matches_out_of_order() -> anyhow::Result<()> {
     arena.arena_league_module.create_competition(
         "Out of Order League",
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -858,8 +963,18 @@ fn test_multiple_point_adjustments() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "Multiple Adjustments League",
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&teams),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
-            teams: teams.iter().map(|team| team.to_string()).collect(),
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
@@ -988,16 +1103,26 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "Test League".to_string(),
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![
+                        team1.clone(),
+                        team2.clone(),
+                        team3.clone(),
+                        team4.clone(),
+                    ]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
-            teams: vec![
-                team1.to_string(),
-                team2.to_string(),
-                team3.to_string(),
-                team4.to_string(),
-            ],
             distribution: vec![
                 Decimal::percent(50),
                 Decimal::percent(30),
@@ -1403,16 +1528,26 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
     let res = arena.arena_league_module.create_competition(
         "Test League with Aggregates".to_string(),
         Expiration::AtHeight(1000000),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&vec![
+                        team1.clone(),
+                        team2.clone(),
+                        team3.clone(),
+                        team4.clone(),
+                    ]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
         LeagueInstantiateExt {
             match_win_points: Uint64::new(3),
             match_draw_points: Uint64::new(1),
             match_lose_points: Uint64::zero(),
-            teams: vec![
-                team1.to_string(),
-                team2.to_string(),
-                team3.to_string(),
-                team4.to_string(),
-            ],
             distribution: vec![
                 Decimal::percent(50),
                 Decimal::percent(30),

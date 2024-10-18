@@ -1,12 +1,8 @@
-#[cfg(not(target_arch = "wasm32"))]
 use cw_orch::environment::ChainInfoOwned;
 use cw_orch::interface;
-#[cfg(not(target_arch = "wasm32"))]
 use cw_orch::prelude::*;
 
-#[allow(unused_imports)]
 use cosmwasm_std::Empty;
-#[allow(unused_imports)]
 use cw721_base::msg::{ExecuteMsg as GenExecuteMsg, InstantiateMsg, QueryMsg as GenQueryMsg};
 use cw721_base::Extension;
 
@@ -18,7 +14,6 @@ pub const CONTRACT_ID: &str = "cw721_base";
 #[interface(InstantiateMsg, ExecuteMsg, QueryMsg, Empty, id = CONTRACT_ID)]
 pub struct Cw721Base;
 
-#[cfg(not(target_arch = "wasm32"))]
 impl<Chain> Uploadable for Cw721Base<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(_chain: &ChainInfoOwned) -> WasmPath {

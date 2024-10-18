@@ -2,8 +2,9 @@ use crate::contract::CompetitionModule;
 use crate::msg::{MatchResultMsg, Tournament};
 use crate::state::{EliminationType, Match, MatchResult, MATCHES};
 use crate::{ContractError, NestedArray};
+use arena_interface::group;
 use arena_interface::ratings::MemberResult;
-use cosmwasm_std::{Addr, Decimal, MessageInfo, StdError, Storage};
+use cosmwasm_std::{ensure_eq, Addr, Decimal, Env, MessageInfo, StdError, Storage};
 use cosmwasm_std::{DepsMut, Response, StdResult, Uint128};
 use cw_balance::{Distribution, MemberPercentage};
 use itertools::Itertools;
@@ -12,23 +13,34 @@ use std::iter::repeat;
 
 pub fn instantiate_tournament(
     deps: DepsMut,
-    response: Response,
-    teams: Vec<String>,
-    elimination_type: EliminationType,
+    env: Env,
+    info: MessageInfo,
 ) -> Result<Response, ContractError> {
+    ensure_eq!(
+        info.sender,
+        env.contract.address,
+        ContractError::Unauthorized {}
+    );
+
     let competition_module = CompetitionModule::default();
     let tournament_id = competition_module.competition_count.load(deps.storage)?;
+    let tournament = competition_module
+        .competitions
+        .load(deps.storage, tournament_id.u128())?;
 
     // Convert teams to addresses
-    let teams: Vec<Addr> = teams
-        .iter()
-        .map(|x| deps.api.addr_validate(x))
-        .collect::<StdResult<_>>()?;
+    let teams: Vec<Addr> = deps.querier.query_wasm_smart(
+        tournament.group_contract.to_string(),
+        &group::QueryMsg::Members {
+            start_after: None,
+            limit: None,
+        },
+    )?;
 
     // Single Elimination Bracket
     if let EliminationType::SingleElimination {
         play_third_place_match,
-    } = elimination_type
+    } = tournament.extension.elimination_type
     {
         generate_single_elimination_bracket(
             deps,
@@ -41,7 +53,7 @@ pub fn instantiate_tournament(
         generate_double_elimination_bracket(deps, &teams, tournament_id.u128())?;
     }
 
-    Ok(response
+    Ok(Response::default()
         .add_attribute("action", "instantiate_tournament")
         .add_attribute("tournament_id", tournament_id.to_string()))
 }

@@ -1,8 +1,6 @@
 use cw_orch::interface;
-#[cfg(not(target_arch = "wasm32"))]
 use cw_orch::prelude::*;
 
-#[allow(unused_imports)]
 use cw_payroll_factory::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub const CONTRACT_ID: &str = "cw_payroll_factory";
@@ -10,7 +8,6 @@ pub const CONTRACT_ID: &str = "cw_payroll_factory";
 #[interface(InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, id = CONTRACT_ID)]
 pub struct DaoPayrollFactory;
 
-#[cfg(not(target_arch = "wasm32"))]
 impl<Chain> Uploadable for DaoPayrollFactory<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(_chain: &ChainInfoOwned) -> WasmPath {

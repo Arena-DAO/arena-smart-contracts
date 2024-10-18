@@ -16,4 +16,7 @@ pub enum ContractError {
 
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 }

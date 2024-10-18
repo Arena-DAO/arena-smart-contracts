@@ -3,7 +3,7 @@ use arena_interface::competition::{
     state::{Competition, CompetitionResponse},
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Empty, StdError, StdResult};
+use cosmwasm_std::Empty;
 
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
@@ -31,15 +31,10 @@ pub enum MigrateMsg {
 }
 
 #[cw_serde]
-pub struct WagerInstantiateExt {
-    // This should be set if the match should update ratings
-    pub registered_members: Option<Vec<String>>,
-}
+pub struct WagerInstantiateExt {}
 
 #[cw_serde]
-pub struct WagerExt {
-    pub registered_members: Option<Vec<Addr>>,
-}
+pub struct WagerExt {}
 
 pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, WagerInstantiateExt>;
@@ -48,26 +43,11 @@ pub type Wager = Competition<WagerExt>;
 pub type WagerResponse = CompetitionResponse<WagerExt>;
 
 impl ToCompetitionExt<WagerExt> for WagerInstantiateExt {
-    fn to_competition_ext(&self, deps: cosmwasm_std::Deps) -> cosmwasm_std::StdResult<WagerExt> {
-        if let Some(registered_members) = &self.registered_members {
-            if registered_members.len() != 2 {
-                return Err(StdError::generic_err(
-                    "Registered members must be of length 2",
-                ));
-            }
-
-            return Ok(WagerExt {
-                registered_members: Some(
-                    registered_members
-                        .iter()
-                        .map(|x| deps.api.addr_validate(x))
-                        .collect::<StdResult<_>>()?,
-                ),
-            });
-        }
-
-        Ok(WagerExt {
-            registered_members: None,
-        })
+    fn to_competition_ext(
+        &self,
+        _deps: cosmwasm_std::Deps,
+        _group_contract: &cosmwasm_std::Addr,
+    ) -> cosmwasm_std::StdResult<WagerExt> {
+        Ok(WagerExt {})
     }
 }

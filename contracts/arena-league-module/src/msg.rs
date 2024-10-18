@@ -1,15 +1,19 @@
 use crate::state::{LeagueExt, Match, MatchResult, PointAdjustment};
-use arena_interface::competition::{
-    msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
-    state::{Competition, CompetitionResponse},
+use arena_interface::{
+    competition::{
+        msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
+        state::{Competition, CompetitionResponse},
+    },
+    group,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Empty, Int128, StdError, StdResult, Uint128, Uint64};
-use itertools::Itertools;
 
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteExt {
+    /// Callable only by the module to instantiate the rounds when creating a competition
+    InstantiateRounds {},
     ProcessMatch {
         league_id: Uint128,
         round_number: Uint64,
@@ -88,24 +92,25 @@ pub struct LeagueInstantiateExt {
     pub match_win_points: Uint64,
     pub match_draw_points: Uint64,
     pub match_lose_points: Uint64,
-    pub teams: Vec<String>,
     pub distribution: Vec<Decimal>,
 }
 
 impl ToCompetitionExt<LeagueExt> for LeagueInstantiateExt {
-    fn to_competition_ext(&self, _deps: cosmwasm_std::Deps) -> StdResult<LeagueExt> {
-        let team_count = self.teams.len();
-        if team_count < 2 {
+    fn to_competition_ext(
+        &self,
+        deps: cosmwasm_std::Deps,
+        group_contract: &Addr,
+    ) -> StdResult<LeagueExt> {
+        let team_count: Uint64 = deps.querier.query_wasm_smart(
+            group_contract.to_string(),
+            &group::QueryMsg::MembersCount {},
+        )?;
+        if team_count < Uint64::new(2) {
             return Err(StdError::GenericErr {
                 msg: "At least 2 teams should be provided".to_string(),
             });
         }
-        if self.teams.iter().unique().count() != team_count {
-            return Err(StdError::GenericErr {
-                msg: "Teams should not contain duplicates".to_string(),
-            });
-        }
-        if self.distribution.len() > team_count {
+        if Uint64::new(self.distribution.len() as u64) > team_count {
             return Err(StdError::GenericErr {
                 msg: "Cannot have a distribution size bigger than the teams size".to_string(),
             });
@@ -114,9 +119,9 @@ impl ToCompetitionExt<LeagueExt> for LeagueInstantiateExt {
             return Err(StdError::generic_err("The distribution must sum up to 1"));
         }
 
-        let matches = team_count * (team_count - 1) / 2;
-        let rounds = if team_count % 2 == 0 {
-            team_count - 1
+        let matches = team_count * (team_count - Uint64::one()) / Uint64::new(2);
+        let rounds = if team_count.u64() % 2 == 0 {
+            team_count - Uint64::one()
         } else {
             team_count
         };
@@ -125,9 +130,9 @@ impl ToCompetitionExt<LeagueExt> for LeagueInstantiateExt {
             match_win_points: self.match_win_points,
             match_draw_points: self.match_draw_points,
             match_lose_points: self.match_lose_points,
-            teams: Uint64::from(team_count as u64),
-            rounds: Uint64::from(rounds as u64),
-            matches: Uint128::from(matches as u128),
+            teams: team_count,
+            rounds,
+            matches: matches.into(),
             processed_matches: Uint128::zero(),
             distribution: self.distribution.clone(),
         })

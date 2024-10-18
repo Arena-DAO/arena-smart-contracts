@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError, Uint128, Uint64,
+    CheckedFromRatioError, DecimalRangeExceeded, Instantiate2AddressError, OverflowError, StdError,
+    Uint128, Uint64,
 };
 use cw_ownable::OwnershipError;
 use cw_utils::{Expiration, ParseReplyError, PaymentError};
@@ -28,6 +29,9 @@ pub enum ContractError {
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
 
+    #[error("{0}")]
+    Instantiate2AddressError(#[from] Instantiate2AddressError),
+
     #[error("UnknownReplyId")]
     UnknownReplyId { id: u64 },
 
@@ -37,7 +41,7 @@ pub enum ContractError {
     #[error("Already enrolled")]
     AlreadyEnrolled {},
 
-    #[error("Cannot trigger creation")]
+    #[error("Cannot trigger creation with {current_members} members")]
     TriggerFailed {
         max_members: Uint64,
         current_members: Uint64,
@@ -52,4 +56,7 @@ pub enum ContractError {
 
     #[error("Not enrolled")]
     NotEnrolled {},
+
+    #[error("Enrollment is at max members already")]
+    EnrollmentMaxMembers {},
 }

@@ -14,7 +14,7 @@ use dao_pre_propose_base::{
 use dao_voting::proposal::SingleChoiceProposeMsg;
 
 use crate::{
-    fees::{FeeInformation, TaxConfiguration},
+    fees::TaxConfiguration,
     ratings::{MemberResult, Rating},
 };
 
@@ -208,7 +208,6 @@ pub struct ProposeMessage {
     pub title: String,
     pub description: String,
     pub distribution: Option<Distribution<String>>,
-    pub additional_layered_fees: Option<FeeInformation<String>>,
     pub originator: String,
 }
 

@@ -1,22 +1,25 @@
 use arena_interface::{
     competition::msg::EscrowInstantiateInfo,
     core::{CompetitionModuleQuery, CompetitionModuleResponse},
+    group::{self, GroupContractInfo},
 };
 use arena_league_module::msg::LeagueInstantiateExt;
 use arena_tournament_module::{msg::TournamentInstantiateExt, state::EliminationType};
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo,
-    Order, Response, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
+    ensure, instantiate2_address, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
 };
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_utils::{must_pay, Expiration};
+use dao_interface::state::ModuleInstantiateInfo;
+use sha2::{Digest, Sha256};
 
 use crate::{
     msg::CompetitionInfoMsg,
     state::{
         enrollment_entries, CompetitionInfo, CompetitionType, EnrollmentEntry, EnrollmentInfo,
-        ENROLLMENT_COUNT, ENROLLMENT_MEMBERS, ENROLLMENT_MEMBERS_COUNT, TEMP_ENROLLMENT_INFO,
+        ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO,
     },
     ContractError,
 };
@@ -35,6 +38,7 @@ pub fn create_enrollment(
     category_id: Option<Uint128>,
     competition_info: CompetitionInfoMsg,
     competition_type: CompetitionType,
+    group_contract_info: ModuleInstantiateInfo,
 ) -> Result<Response, ContractError> {
     ensure!(
         !expiration.is_expired(&env.block),
@@ -134,7 +138,29 @@ pub fn create_enrollment(
             .collect::<StdResult<Vec<_>>>()?;
     }
 
-    let competition_id = ENROLLMENT_COUNT.load(deps.storage)? + Uint128::one();
+    let competition_id = ENROLLMENT_COUNT.update(deps.storage, |x| -> StdResult<_> {
+        Ok(x.checked_add(Uint128::one())?)
+    })?;
+
+    // Generate the group contract
+    let binding = format!("{}{}{}", info.sender, env.block.height, competition_id);
+    let salt: [u8; 32] = Sha256::digest(binding.as_bytes()).into();
+    let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+    let code_info = deps
+        .querier
+        .query_wasm_code_info(group_contract_info.code_id)?;
+    let canonical_addr = instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
+
+    let msg = CosmosMsg::Wasm(WasmMsg::Instantiate2 {
+        admin: Some(env.contract.address.to_string()),
+        code_id: group_contract_info.code_id,
+        label: group_contract_info.label,
+        msg: group_contract_info.msg,
+        funds: vec![],
+        salt: salt.into(),
+    });
+
+    let group_contract = deps.api.addr_humanize(&canonical_addr)?;
 
     enrollment_entries().save(
         deps.storage,
@@ -158,14 +184,14 @@ pub fn create_enrollment(
             host: info.sender,
             category_id,
             competition_module,
+            group_contract,
         },
     )?;
 
-    ENROLLMENT_COUNT.save(deps.storage, &competition_id)?;
-
     Ok(Response::new()
         .add_attribute("action", "create_enrollment")
-        .add_attribute("id", competition_id))
+        .add_attribute("id", competition_id)
+        .add_message(msg))
 }
 
 pub fn trigger_expiration(
@@ -185,7 +211,10 @@ pub fn trigger_expiration(
         ))
     );
 
-    let members_count = ENROLLMENT_MEMBERS_COUNT.load(deps.storage, id.u128())?;
+    let members_count: Uint64 = deps.querier.query_wasm_smart(
+        entry.group_contract.to_string(),
+        &group::QueryMsg::MembersCount {},
+    )?;
 
     // Check if we have met the minimum number of members
     let min_min_members = get_min_min_members(&entry.competition_type);
@@ -218,13 +247,6 @@ pub fn trigger_expiration(
         }
     );
 
-    // TODO: optimize this to handle a huge amount
-    let members = ENROLLMENT_MEMBERS
-        .prefix(id.u128())
-        .range(deps.storage, None, None, Order::Descending)
-        .map(|x| x.map(|y| y.0))
-        .collect::<StdResult<Vec<_>>>()?;
-
     let mut enrollment_info = EnrollmentInfo {
         enrollment_id: id.u128(),
         module_addr: entry.competition_module.clone(),
@@ -242,7 +264,10 @@ pub fn trigger_expiration(
             additional_layered_fees,
         } => Ok({
             let escrow = if let Some(entry_fee) = &entry.entry_fee {
-                let members_count = ENROLLMENT_MEMBERS_COUNT.load(deps.storage, id.u128())?;
+                let members_count: Uint64 = deps.querier.query_wasm_smart(
+                    entry.group_contract.to_string(),
+                    &group::QueryMsg::MembersCount {},
+                )?;
                 let total = Coin {
                     denom: entry_fee.denom.clone(),
                     amount: entry_fee.amount.checked_mul(members_count.into())?,
@@ -271,11 +296,6 @@ pub fn trigger_expiration(
 
             match entry.competition_type.clone() {
                 CompetitionType::Wager {} => {
-                    let registered_members = if members.len() == 2 {
-                        Some(members.iter().map(|x| x.to_string()).collect())
-                    } else {
-                        None
-                    };
                     to_json_binary(&arena_wager_module::msg::ExecuteMsg::CreateCompetition {
                         host: Some(entry.host.to_string()),
                         category_id: entry.category_id,
@@ -286,7 +306,10 @@ pub fn trigger_expiration(
                         rules,
                         rulesets,
                         banner,
-                        instantiate_extension: WagerInstantiateExt { registered_members },
+                        instantiate_extension: WagerInstantiateExt {},
+                        group_contract: GroupContractInfo::Existing {
+                            addr: entry.group_contract.to_string(),
+                        },
                     })?
                 }
                 CompetitionType::League {
@@ -308,8 +331,10 @@ pub fn trigger_expiration(
                         match_win_points,
                         match_draw_points,
                         match_lose_points,
-                        teams: members.iter().map(|x| x.to_string()).collect(),
                         distribution,
+                    },
+                    group_contract: GroupContractInfo::Existing {
+                        addr: entry.group_contract.to_string(),
                     },
                 })?,
                 CompetitionType::Tournament {
@@ -328,8 +353,10 @@ pub fn trigger_expiration(
                         banner,
                         instantiate_extension: TournamentInstantiateExt {
                             elimination_type,
-                            teams: members.iter().map(|x| x.to_string()).collect(),
                             distribution,
+                        },
+                        group_contract: GroupContractInfo::Existing {
+                            addr: entry.group_contract.to_string(),
                         },
                     },
                 )?,
@@ -369,10 +396,6 @@ pub fn enroll(
     info: MessageInfo,
     id: Uint128,
 ) -> Result<Response, ContractError> {
-    ensure!(
-        !ENROLLMENT_MEMBERS.has(deps.storage, (id.u128(), &info.sender)),
-        ContractError::AlreadyEnrolled {}
-    );
     let entry = enrollment_entries().load(deps.storage, id.u128())?;
 
     ensure!(
@@ -390,25 +413,32 @@ pub fn enroll(
         );
     }
 
-    let members_count = ENROLLMENT_MEMBERS_COUNT.update(
-        deps.storage,
-        id.u128(),
-        |x| -> Result<_, ContractError> {
-            let members_count = x.unwrap_or_default();
-
-            ensure!(
-                members_count < entry.max_members,
-                StdError::generic_err("Competition is at membership capacity")
-            );
-
-            Ok(members_count.checked_add(Uint64::one())?)
-        },
+    let member_count: Uint64 = deps.querier.query_wasm_smart(
+        entry.group_contract.to_string(),
+        &group::QueryMsg::MembersCount {},
     )?;
-    ENROLLMENT_MEMBERS.save(deps.storage, (id.u128(), &info.sender), &Empty {})?;
+
+    ensure!(
+        member_count < entry.max_members,
+        ContractError::EnrollmentMaxMembers {}
+    );
+
+    let msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: entry.group_contract.to_string(),
+        msg: to_json_binary(&group::ExecuteMsg::UpdateMembers {
+            to_add: Some(vec![group::AddMemberMsg {
+                addr: info.sender.to_string(),
+                seed: None,
+            }]),
+            to_remove: None,
+            to_update: None,
+        })?,
+        funds: vec![],
+    });
 
     Ok(Response::new()
         .add_attribute("action", "enroll")
-        .add_attribute("members_count", members_count.to_string()))
+        .add_message(msg))
 }
 
 pub fn withdraw(
@@ -417,12 +447,6 @@ pub fn withdraw(
     info: MessageInfo,
     id: Uint128,
 ) -> Result<Response, ContractError> {
-    // Check if the user is enrolled
-    ensure!(
-        ENROLLMENT_MEMBERS.has(deps.storage, (id.u128(), &info.sender)),
-        ContractError::NotEnrolled {}
-    );
-
     // Load the enrollment entry
     let entry = enrollment_entries().load(deps.storage, id.u128())?;
 
@@ -435,15 +459,6 @@ pub fn withdraw(
         ContractError::AlreadyExpired {}
     );
 
-    // Remove the member from the enrollment
-    ENROLLMENT_MEMBERS.remove(deps.storage, (id.u128(), &info.sender));
-
-    // Update the members count
-    let members_count =
-        ENROLLMENT_MEMBERS_COUNT.update(deps.storage, id.u128(), |count| -> StdResult<_> {
-            Ok(count.unwrap_or_default().checked_sub(Uint64::one())?)
-        })?;
-
     // Prepare the refund if there was an entry fee
     let refund_msg = if let Some(entry_fee) = &entry.entry_fee {
         vec![CosmosMsg::Bank(BankMsg::Send {
@@ -454,12 +469,21 @@ pub fn withdraw(
         vec![]
     };
 
+    let msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: entry.group_contract.to_string(),
+        msg: to_json_binary(&group::ExecuteMsg::UpdateMembers {
+            to_add: None,
+            to_update: None,
+            to_remove: Some(vec![info.sender.to_string()]),
+        })?,
+        funds: vec![],
+    });
+
     Ok(Response::new()
+        .add_message(msg)
         .add_messages(refund_msg)
         .add_attribute("action", "withdraw")
-        .add_attribute("id", id.to_string())
-        .add_attribute("withdrawing_member", info.sender)
-        .add_attribute("remaining_members", members_count.to_string()))
+        .add_attribute("id", id.to_string()))
 }
 
 fn get_min_min_members(competition_type: &CompetitionType) -> Uint64 {

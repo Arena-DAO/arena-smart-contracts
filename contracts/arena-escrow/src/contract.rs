@@ -22,24 +22,26 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    instantiate_contract(deps, info, msg.dues)?;
+    instantiate_contract(deps, &info, msg.dues)?;
+
     Ok(Response::default())
 }
 
 pub fn instantiate_contract(
     deps: DepsMut,
-    info: MessageInfo,
-    due: Vec<MemberBalanceUnchecked>,
+    info: &MessageInfo,
+    dues: Vec<MemberBalanceUnchecked>,
 ) -> Result<(), ContractError> {
-    if due.is_empty() {
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
+
+    if dues.is_empty() {
         return Err(ContractError::InvalidDue {
             msg: "None due".to_string(),
         });
     }
 
-    cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
     IS_LOCKED.save(deps.storage, &false)?;
-    for member_balance in due {
+    for member_balance in dues {
         let member_balance = member_balance.into_checked(deps.as_ref())?;
 
         if INITIAL_DUE.has(deps.storage, &member_balance.addr) {
@@ -116,9 +118,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    if version.major == 1 && version.minor == 3 {
-        migrate::from_v1_3_to_v1_4(deps.branch())?;
-    }
     if version.major == 1 && version.minor == 8 {
         migrate::from_v1_8_2_to_v2(deps.branch())?;
     }

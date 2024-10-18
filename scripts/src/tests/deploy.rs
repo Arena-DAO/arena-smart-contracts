@@ -30,15 +30,10 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
 
         // Prepare voting module info
         let voting_module_info = ModuleInstantiateInfo {
-            code_id: arena
-                .dao_dao
-                .dao_proposal_sudo
-                .code_id()
-                .expect("Failed to get dao_proposal_sudo code_id"),
+            code_id: arena.dao_dao.dao_proposal_sudo.code_id()?,
             msg: to_json_binary(&dao_proposal_sudo::msg::InstantiateMsg {
                 root: admin.to_string(),
-            })
-            .expect("Failed to serialize dao_proposal_sudo InstantiateMsg"),
+            })?,
             admin: Some(Admin::CoreModule {}),
             label: "sudo voting module".to_string(),
             funds: vec![],
@@ -199,14 +194,19 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
 
         // Configuration
         let proposal_modules = arena.dao_dao.dao_core.proposal_modules(None, None)?;
-        arena
-            .dao_dao
-            .dao_proposal_sudo
-            .set_address(&proposal_modules[2].address);
-        arena
-            .dao_dao
-            .dao_proposal_single
-            .set_address(&proposal_modules[0].address);
+        for proposal_module in proposal_modules {
+            match proposal_module.prefix.as_str() {
+                "A" => arena
+                    .dao_dao
+                    .dao_proposal_sudo
+                    .set_address(&proposal_module.address),
+                "C" => arena
+                    .dao_dao
+                    .dao_proposal_single
+                    .set_address(&proposal_module.address),
+                &_ => {}
+            };
+        }
 
         let get_item_response = arena.dao_dao.dao_core.get_item("Arena".to_string())?;
         arena

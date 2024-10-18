@@ -29,10 +29,10 @@ pub enum ContractError {
     #[error("Escrow is not fully funded")]
     NotFullyFunded {},
 
-    #[error("The distribution is invalid")]
+    #[error("The distribution is invalid: {msg}")]
     InvalidDistribution { msg: String },
 
-    #[error("Invalid due")]
+    #[error("Invalid due: {msg}")]
     InvalidDue { msg: String },
 
     #[error("Cannot provide an empty balance")]
@@ -40,4 +40,7 @@ pub enum ContractError {
 
     #[error("Already distributed")]
     AlreadyDistributed {},
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 }

@@ -1,11 +1,13 @@
 use crate::state::{EliminationType, MatchResult, TournamentExt};
-use arena_interface::competition::{
-    msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
-    state::{Competition, CompetitionResponse},
+use arena_interface::{
+    competition::{
+        msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
+        state::{Competition, CompetitionResponse},
+    },
+    group,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Empty, StdError, StdResult, Uint128};
-use itertools::Itertools;
+use cosmwasm_std::{Addr, Decimal, Empty, StdError, StdResult, Uint128, Uint64};
 
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
@@ -14,6 +16,7 @@ pub enum ExecuteExt {
         tournament_id: Uint128,
         match_results: Vec<MatchResultMsg>,
     },
+    InstantiateTournament {},
 }
 
 impl From<ExecuteExt> for ExecuteMsg {
@@ -64,22 +67,23 @@ pub struct SudoMsg {
 #[cw_serde]
 pub struct TournamentInstantiateExt {
     pub elimination_type: EliminationType, // Enum for single or double elimination
-    pub teams: Vec<String>,                // List of team addresses ordered by seeding
     pub distribution: Vec<Decimal>,
 }
 
 impl ToCompetitionExt<TournamentExt> for TournamentInstantiateExt {
-    fn to_competition_ext(&self, _deps: cosmwasm_std::Deps) -> StdResult<TournamentExt> {
-        let team_count = self.teams.len();
+    fn to_competition_ext(
+        &self,
+        deps: cosmwasm_std::Deps,
+        group_contract: &Addr,
+    ) -> StdResult<TournamentExt> {
+        let team_count: Uint64 = deps.querier.query_wasm_smart(
+            group_contract.to_string(),
+            &group::QueryMsg::MembersCount {},
+        )?;
 
-        if team_count < 2 {
+        if team_count < Uint64::new(2) {
             return Err(StdError::GenericErr {
                 msg: "At least 2 teams should be provided".to_string(),
-            });
-        }
-        if self.teams.iter().unique().count() != team_count {
-            return Err(StdError::GenericErr {
-                msg: "Teams should not contain duplicates".to_string(),
             });
         }
 
@@ -88,22 +92,22 @@ impl ToCompetitionExt<TournamentExt> for TournamentInstantiateExt {
                 play_third_place_match,
             } => {
                 if play_third_place_match {
-                    if team_count < 4 {
+                    if team_count < Uint64::new(4) {
                         return Err(StdError::GenericErr {
                             msg: "At least 4 teams should be provided for a 3rd place match"
                                 .to_string(),
                         });
                     }
 
-                    usize::min(team_count, 4)
+                    Uint64::min(team_count, Uint64::new(4))
                 } else {
-                    2
+                    Uint64::new(2)
                 }
             }
-            EliminationType::DoubleElimination => usize::min(team_count, 3),
+            EliminationType::DoubleElimination => Uint64::min(team_count, Uint64::new(3)),
         };
 
-        if self.distribution.len() > max_placements {
+        if Uint64::new(self.distribution.len() as u64) > max_placements {
             return Err(StdError::GenericErr {
                 msg: "Cannot have a distribution size bigger than the possible placements"
                     .to_string(),
@@ -117,15 +121,20 @@ impl ToCompetitionExt<TournamentExt> for TournamentInstantiateExt {
             play_third_place_match,
         } = self.elimination_type
         {
-            (team_count - 1) + if play_third_place_match { 1 } else { 0 }
+            (team_count - Uint64::one())
+                + if play_third_place_match {
+                    Uint64::one()
+                } else {
+                    Uint64::zero()
+                }
         } else {
-            2 * (team_count - 1) // + R (rebuttal match)
+            Uint64::new(2) * (team_count - Uint64::one()) // + R (rebuttal match)
         };
 
         Ok(TournamentExt {
             distribution: self.distribution.clone(),
             elimination_type: self.elimination_type.clone(),
-            total_matches: Uint128::from(total_matches as u128),
+            total_matches: total_matches.into(),
             processed_matches: Uint128::zero(),
         })
     }

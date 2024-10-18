@@ -4,6 +4,7 @@ use arena_interface::{
     competition::msg::EscrowInstantiateInfo,
     core::QueryExtFns as _,
     escrow::{ExecuteMsgFns as _, QueryMsgFns as _},
+    group::{self, AddMemberMsg, GroupContractInfo},
 };
 use arena_tournament_module::{
     msg::{
@@ -14,6 +15,7 @@ use arena_tournament_module::{
 use cosmwasm_std::{coins, to_json_binary, Decimal, Uint128};
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_orch::{environment::ChainState, prelude::*};
+use dao_interface::state::ModuleInstantiateInfo;
 use itertools::Itertools;
 
 use crate::{
@@ -48,7 +50,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(15u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
             ],
-        ),
+        )?,
         None,
     );
     assert!(result.is_err());
@@ -69,7 +71,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(5u128, 100u128),
                 Decimal::from_ratio(5u128, 100u128),
             ],
-        ),
+        )?,
         None,
     );
     assert!(result.is_err());
@@ -87,7 +89,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(100u128, 100u128),
                 Decimal::from_ratio(100u128, 100u128),
             ],
-        ),
+        )?,
         None,
     );
     assert!(result.is_err());
@@ -105,7 +107,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(10u128, 100u128),
                 Decimal::from_ratio(5u128, 100u128),
             ],
-        ),
+        )?,
         None,
     );
     assert!(result.is_err());
@@ -139,7 +141,7 @@ pub fn test_single_elimination_tournament() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(75u128, 100u128),
                 Decimal::from_ratio(25u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -306,7 +308,7 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(75u128, 100u128),
                 Decimal::from_ratio(25u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -460,7 +462,7 @@ pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(),
                 Decimal::from_ratio(10u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -611,7 +613,7 @@ pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchEr
                 Decimal::from_ratio(25u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -840,7 +842,7 @@ pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(25u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -1063,7 +1065,7 @@ pub fn test_single_elimination_6() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(25u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -1206,7 +1208,7 @@ pub fn test_double_elimination_many_teams() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(25u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -1238,7 +1240,7 @@ pub fn test_match_updates() -> Result<(), CwOrchError> {
                 Decimal::from_ratio(25u128, 100u128),
                 Decimal::from_ratio(10u128, 100u128),
             ],
-        ),
+        )?,
         None,
     )?;
     mock.next_block()?;
@@ -1371,8 +1373,8 @@ fn create_competition_msg<Chain: ChainState>(
     teams: &[Addr],
     elimination_type: EliminationType,
     distribution: Vec<Decimal>,
-) -> ExecuteMsg {
-    ExecuteMsg::CreateCompetition {
+) -> Result<ExecuteMsg, CwOrchError> {
+    Ok(ExecuteMsg::CreateCompetition {
         category_id,
         host: None,
         escrow: Some(EscrowInstantiateInfo {
@@ -1402,8 +1404,26 @@ fn create_competition_msg<Chain: ChainState>(
         banner: None,
         instantiate_extension: TournamentInstantiateExt {
             elimination_type,
-            teams: teams.iter().map(|x| x.to_string()).collect(),
             distribution,
         },
-    }
+        group_contract: GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: Some(
+                        teams
+                            .iter()
+                            .map(|x| AddMemberMsg {
+                                addr: x.to_string(),
+                                seed: None,
+                            })
+                            .collect(),
+                    ),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
+    })
 }

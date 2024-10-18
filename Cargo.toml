@@ -7,7 +7,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "2.0.0"
+version = "2.1.0"
 
 [profile.release]
 codegen-units = 1
@@ -47,6 +47,7 @@ semver = "1.0.23"
 rust_decimal = "1.36.0"
 rust_decimal_macros = "1.36.0"
 serde_json = "1.0.128"
+sha2 = "0.10.8"
 
 #arena_dao dependencies
 cw-competition-base = { path = "./packages/cw-competition-base" }
@@ -57,6 +58,7 @@ glicko_2 = { path = "./packages/glicko_2" }
 
 arena-core = { path = "./contracts/arena-core" }
 arena-escrow = { path = "./contracts/arena-escrow" }
+arena-group = { path = "./contracts/arena-group" }
 arena-wager-module = { path = "./contracts/arena-wager-module" }
 arena-league-module = { path = "./contracts/arena-league-module" }
 arena-tournament-module = { path = "./contracts/arena-tournament-module" }
@@ -65,36 +67,36 @@ arena-token-gateway = { path = "./contracts/arena-token-gateway" }
 arena-payment-registry = { path = "./contracts/arena-payment-registry" }
 
 #dao dependencies
-dao-interface = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena" }
-dao-cw-orch = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena" }
-cw-vesting = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-interface = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena" }
+dao-cw-orch = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena" }
+cw-vesting = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-cw-payroll-factory = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+cw-payroll-factory = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-dao-proposal-multiple = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-proposal-multiple = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-dao-proposal-single = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-proposal-single = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-dao-pre-propose-single = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-pre-propose-single = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-dao-voting = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena" }
-dao-voting-cw4 = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-voting = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena" }
+dao-voting-cw4 = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-dao-proposal-sudo = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-proposal-sudo = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-dao-pre-propose-base = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-pre-propose-base = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-dao-dao-core = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+dao-dao-core = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }
-cw-abc = { git = "https://github.com/ismellike/dao-contracts", branch = "fork/v2.5.0-arena", features = [
+cw-abc = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "fork/v2.5.0-arena", features = [
 	"library",
 ] }

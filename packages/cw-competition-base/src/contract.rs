@@ -5,12 +5,14 @@ use std::{
 
 use arena_interface::{
     competition::{
-        migrate::CompetitionV182,
+        migrate::CompetitionV2,
         msg::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
             QueryBase, ToCompetitionExt,
         },
-        state::{Competition, CompetitionResponse, CompetitionStatus, Config, Evidence},
+        state::{
+            Competition, CompetitionResponse, CompetitionStatus, Config, Evidence, TempCompetition,
+        },
         stats::{
             MemberStatsMsg, StatAggregationType, StatMsg, StatTableEntry, StatType, StatValue,
             StatValueType,
@@ -18,6 +20,7 @@ use arena_interface::{
     },
     core::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
     fees::FeeInformation,
+    group::GroupContractInfo,
     ratings::MemberResult,
 };
 use cosmwasm_schema::schemars::JsonSchema;
@@ -31,13 +34,16 @@ use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{
     Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, SnapshotMap, Strategy,
 };
+use cw_utils::parse_reply_instantiate_data;
 use serde::{de::DeserializeOwned, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::error::CompetitionError;
 
 pub const PROCESS_REPLY_ID: u64 = 1;
 pub const UPDATE_RATING_FAILED_REPLY_ID: u64 = 2;
 pub const MIGRATE_ESCROW_ERROR_REPLY_ID: u64 = 3;
+pub const GROUP_INSTANTIATE_REPLY_ID: u64 = 4;
 
 pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub status: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
@@ -57,19 +63,19 @@ impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
     }
 }
 
-pub struct CompetitionV182Indexes<'a, CompetitionExt> {
-    pub status: MultiIndex<'a, String, CompetitionV182<CompetitionExt>, u128>,
-    pub category: MultiIndex<'a, u128, CompetitionV182<CompetitionExt>, u128>,
-    pub host: MultiIndex<'a, String, CompetitionV182<CompetitionExt>, u128>,
+pub struct CompetitionV2Indexes<'a, CompetitionExt> {
+    pub status: MultiIndex<'a, String, CompetitionV2<CompetitionExt>, u128>,
+    pub category: MultiIndex<'a, u128, CompetitionV2<CompetitionExt>, u128>,
+    pub host: MultiIndex<'a, String, CompetitionV2<CompetitionExt>, u128>,
 }
 
 impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
-    IndexList<CompetitionV182<CompetitionExt>> for CompetitionV182Indexes<'a, CompetitionExt>
+    IndexList<CompetitionV2<CompetitionExt>> for CompetitionV2Indexes<'a, CompetitionExt>
 {
     fn get_indexes(
         &'_ self,
-    ) -> Box<dyn Iterator<Item = &'_ dyn Index<CompetitionV182<CompetitionExt>>> + '_> {
-        let v: Vec<&dyn Index<CompetitionV182<CompetitionExt>>> =
+    ) -> Box<dyn Iterator<Item = &'_ dyn Index<CompetitionV2<CompetitionExt>>> + '_> {
+        let v: Vec<&dyn Index<CompetitionV2<CompetitionExt>>> =
             vec![&self.status, &self.category, &self.host];
         Box::new(v.into_iter())
     }
@@ -81,7 +87,7 @@ pub struct CompetitionModuleContract<
     ExecuteExt,
     QueryExt,
     CompetitionExt: Serialize + Clone + DeserializeOwned,
-    CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
+    CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
 > {
     pub config: Item<'static, Config<InstantiateExt>>,
     pub competition_count: Item<'static, Uint128>,
@@ -91,18 +97,19 @@ pub struct CompetitionModuleContract<
         Competition<CompetitionExt>,
         CompetitionIndexes<'static, CompetitionExt>,
     >,
-    pub competitions_v182: IndexedMap<
+    pub competitions_v2: IndexedMap<
         'static,
         u128,
-        CompetitionV182<CompetitionExt>,
-        CompetitionV182Indexes<'static, CompetitionExt>,
+        CompetitionV2<CompetitionExt>,
+        CompetitionV2Indexes<'static, CompetitionExt>,
     >,
     pub competition_evidence: Map<'static, (u128, u128), Evidence>,
     pub competition_evidence_count: Map<'static, u128, Uint128>,
     pub competition_result: Map<'static, u128, Option<Distribution<Addr>>>,
     pub competition_rules: Map<'static, u128, Vec<String>>,
     pub escrows_to_competitions: Map<'static, &'a Addr, u128>,
-    pub temp_competition: Item<'static, u128>,
+    pub temp_competition: Item<'static, TempCompetition<CompetitionInstantiateExt>>,
+    pub temp_competition_id: Item<'static, u128>,
     pub competition_hooks: Map<'static, (u128, &'a Addr), HookDirection>,
     pub stats: SnapshotMap<'static, (u128, &'a Addr, &'a str), StatValue>,
     pub stat_types: Map<'a, (u128, &'a str), StatType>,
@@ -119,7 +126,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
+        CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
         'a,
@@ -140,6 +147,7 @@ impl<
         competitions_host_key: &'static str,
         escrows_to_competitions_key: &'static str,
         temp_competition_key: &'static str,
+        temp_competition_id_key: &'static str,
         competition_hooks_key: &'static str,
         competition_evidence_key: &'static str,
         competition_evidence_count_key: &'static str,
@@ -159,7 +167,7 @@ impl<
                 competitions_category_key,
                 competitions_host_key,
             ),
-            competitions_v182: Self::competitions_v182(
+            competitions_v2: Self::competitions_v2(
                 competitions_key,
                 competitions_status_key,
                 competitions_category_key,
@@ -167,6 +175,7 @@ impl<
             ),
             escrows_to_competitions: Map::new(escrows_to_competitions_key),
             temp_competition: Item::new(temp_competition_key),
+            temp_competition_id: Item::new(temp_competition_id_key),
             competition_hooks: Map::new(competition_hooks_key),
             competition_evidence: Map::new(competition_evidence_key),
             competition_evidence_count: Map::new(competition_evidence_count_key),
@@ -219,7 +228,7 @@ impl<
         IndexedMap::new(competitions_key, indexes)
     }
 
-    const fn competitions_v182(
+    const fn competitions_v2(
         competitions_key: &'static str,
         competitions_status_key: &'static str,
         competitions_category_key: &'static str,
@@ -227,24 +236,24 @@ impl<
     ) -> IndexedMap<
         'static,
         u128,
-        CompetitionV182<CompetitionExt>,
-        CompetitionV182Indexes<'static, CompetitionExt>,
+        CompetitionV2<CompetitionExt>,
+        CompetitionV2Indexes<'static, CompetitionExt>,
     > {
-        let indexes = CompetitionV182Indexes {
+        let indexes = CompetitionV2Indexes {
             status: MultiIndex::new(
-                |_x, d: &CompetitionV182<CompetitionExt>| d.status.to_string(),
+                |_x, d: &CompetitionV2<CompetitionExt>| d.status.to_string(),
                 competitions_key,
                 competitions_status_key,
             ),
             category: MultiIndex::new(
-                |_x, d: &CompetitionV182<CompetitionExt>| {
+                |_x, d: &CompetitionV2<CompetitionExt>| {
                     d.category_id.unwrap_or(Uint128::zero()).u128()
                 },
                 competitions_key,
                 competitions_category_key,
             ),
             host: MultiIndex::new(
-                |_x, d: &CompetitionV182<CompetitionExt>| d.host.to_string(),
+                |_x, d: &CompetitionV2<CompetitionExt>| d.host.to_string(),
                 competitions_key,
                 competitions_host_key,
             ),
@@ -259,7 +268,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
-        CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
+        CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     > Default
     for CompetitionModuleContract<
         'a,
@@ -280,6 +289,7 @@ impl<
             "competitions__host",
             "escrows_to_competitions",
             "temp_competition",
+            "temp_competition_id",
             "competition_hooks",
             "competition_evidence",
             "competition_evidence_count",
@@ -299,7 +309,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned + std::fmt::Debug,
-        CompetitionInstantiateExt: ToCompetitionExt<CompetitionExt>,
+        CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
         'a,
@@ -348,7 +358,6 @@ impl<
                 title,
                 description,
                 distribution,
-                additional_layered_fees,
             } => self.execute_jail_competition(
                 deps,
                 env,
@@ -357,7 +366,6 @@ impl<
                 title,
                 description,
                 distribution,
-                additional_layered_fees,
             ),
             ExecuteBase::CreateCompetition {
                 host,
@@ -369,6 +377,7 @@ impl<
                 rules,
                 rulesets,
                 banner,
+                group_contract,
                 instantiate_extension,
             } => self.execute_create_competition(
                 &mut deps,
@@ -383,7 +392,8 @@ impl<
                 rules,
                 rulesets,
                 banner,
-                &instantiate_extension,
+                group_contract,
+                instantiate_extension,
             ),
             ExecuteBase::ProcessCompetition {
                 competition_id,
@@ -674,7 +684,6 @@ impl<
         title: String,
         description: String,
         distribution: Option<Distribution<String>>,
-        additional_layered_fees: Option<FeeInformation<String>>,
     ) -> Result<Response, CompetitionError> {
         // Ensure Module has an owner
         let ownership = get_ownership(deps.storage)?;
@@ -716,7 +725,6 @@ impl<
                     title,
                     description,
                     distribution,
-                    additional_layered_fees,
                     originator: info.sender.to_string(),
                 },
             })?,
@@ -745,7 +753,8 @@ impl<
         rules: Option<Vec<String>>,
         rulesets: Option<Vec<Uint128>>,
         banner: Option<String>,
-        extension: &CompetitionInstantiateExt,
+        group_contract: GroupContractInfo,
+        extension: CompetitionInstantiateExt,
     ) -> Result<Response, CompetitionError> {
         // Validate expiration
         if expiration.is_expired(&env.block) {
@@ -794,18 +803,28 @@ impl<
         let mut msgs = vec![];
 
         // Handle escrow setup
-        let (escrow_addr, fees, status) = if let Some(escrow_info) = escrow {
-            let salt = env.block.height.to_ne_bytes();
+        let (escrow_addr, fees, status) = if let Some(escrow) = escrow {
+            let fees = escrow
+                .additional_layered_fees
+                .map(|fees| {
+                    fees.iter()
+                        .map(|fee| fee.into_checked(deps.as_ref()))
+                        .collect::<StdResult<Vec<_>>>()
+                })
+                .transpose()?;
+
+            let binding = format!("{}{}{}", info.sender, env.block.height, competition_id);
+            let salt: [u8; 32] = Sha256::digest(binding.as_bytes()).into();
             let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-            let code_info = deps.querier.query_wasm_code_info(escrow_info.code_id)?;
+            let code_info = deps.querier.query_wasm_code_info(escrow.code_id)?;
             let canonical_addr =
                 instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
 
             msgs.push(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
                 admin: Some(env.contract.address.to_string()),
-                code_id: escrow_info.code_id,
-                label: escrow_info.label,
-                msg: escrow_info.msg,
+                code_id: escrow.code_id,
+                label: escrow.label,
+                msg: escrow.msg,
                 funds: vec![],
                 salt: salt.into(),
             }));
@@ -816,15 +835,6 @@ impl<
                 &escrow_addr,
                 &competition_id.u128(),
             )?;
-
-            let fees = escrow_info
-                .additional_layered_fees
-                .map(|fees| {
-                    fees.iter()
-                        .map(|fee| fee.into_checked(deps.as_ref()))
-                        .collect::<StdResult<Vec<_>>>()
-                })
-                .transpose()?;
 
             (Some(escrow_addr), fees, CompetitionStatus::Pending)
         } else {
@@ -860,43 +870,86 @@ impl<
             }
         }
 
-        // Create competition
-        let competition = Competition {
-            id: competition_id,
-            category_id,
-            admin_dao,
-            host,
-            start_height: env.block.height,
-            escrow: escrow_addr,
-            name,
-            description,
-            expiration,
-            rulesets,
-            status,
-            extension: extension.to_competition_ext(deps.as_ref())?,
-            fees,
-            banner,
-        };
-
-        // Save competition data
+        // Save rules
         if let Some(rules) = rules {
             self.competition_rules
                 .save(deps.storage, competition_id.u128(), &rules)?;
         }
-        self.competitions
-            .save(deps.storage, competition_id.u128(), &competition)?;
 
-        Ok(Response::new()
+        // Construct response
+        let response = Response::new()
             .add_attribute("action", "create_competition")
             .add_attribute("competition_id", competition_id)
             .add_attribute(
                 "escrow_addr",
-                competition
-                    .escrow
+                escrow_addr
+                    .as_ref()
                     .map_or_else(|| "None".to_string(), |addr| addr.to_string()),
             )
-            .add_attribute("host", competition.host)
-            .add_messages(msgs))
+            .add_attribute("host", host.to_string())
+            .add_messages(msgs);
+
+        match group_contract {
+            GroupContractInfo::Existing { addr } => {
+                let group_contract = deps.api.addr_validate(&addr)?;
+
+                // Create competition
+                let competition = Competition {
+                    id: competition_id,
+                    category_id,
+                    admin_dao,
+                    host,
+                    start_height: env.block.height,
+                    escrow: escrow_addr,
+                    name,
+                    description,
+                    expiration,
+                    rulesets,
+                    status,
+                    extension: extension.to_competition_ext(deps.as_ref(), &group_contract)?,
+                    fees,
+                    banner,
+                    group_contract,
+                };
+
+                self.competitions
+                    .save(deps.storage, competition_id.u128(), &competition)?;
+
+                Ok(response)
+            }
+            GroupContractInfo::New { info } => {
+                self.temp_competition.save(
+                    deps.storage,
+                    &TempCompetition {
+                        id: competition_id,
+                        category_id,
+                        admin_dao,
+                        host,
+                        escrow: escrow_addr,
+                        name,
+                        description,
+                        start_height: env.block.height,
+                        expiration,
+                        rulesets,
+                        status,
+                        fees,
+                        banner,
+                        extension,
+                    },
+                )?;
+
+                Ok(response.add_submessage(SubMsg::reply_always(
+                    CosmosMsg::Wasm(WasmMsg::Instantiate {
+                        admin: Some(env.contract.address.to_string()),
+                        code_id: info.code_id,
+                        label: info.label,
+                        msg: info.msg,
+                        funds: vec![],
+                    }),
+                    GROUP_INSTANTIATE_REPLY_ID,
+                )))
+            }
+        }
     }
 
     #[allow(clippy::type_complexity)]
@@ -1067,7 +1120,7 @@ impl<
                         PROCESS_REPLY_ID,
                     );
 
-                    self.temp_competition
+                    self.temp_competition_id
                         .save(deps.storage, &competition.id.u128())?;
 
                     msgs.push(sub_msg);
@@ -1716,12 +1769,13 @@ impl<
             PROCESS_REPLY_ID => self.reply_process(deps, msg),
             UPDATE_RATING_FAILED_REPLY_ID => self.reply_update_rating_failed(deps, msg),
             MIGRATE_ESCROW_ERROR_REPLY_ID => self.reply_migrate_escrow_error(deps, msg),
+            GROUP_INSTANTIATE_REPLY_ID => self.reply_group_instantiate_reply(deps, msg),
             _ => Err(CompetitionError::UnknownReplyId { id: msg.id }),
         }
     }
 
     pub fn reply_process(&self, deps: DepsMut, _msg: Reply) -> Result<Response, CompetitionError> {
-        let id = self.temp_competition.load(deps.storage)?;
+        let id = self.temp_competition_id.load(deps.storage)?;
 
         self.competitions
             .update(deps.storage, id, |x| -> Result<_, CompetitionError> {
@@ -1776,53 +1830,60 @@ impl<
         Ok(())
     }
 
-    pub fn migrate_from_v1_8_2_to_v2(
+    fn reply_group_instantiate_reply(
+        &self,
+        deps: DepsMut<'_>,
+        msg: Reply,
+    ) -> Result<Response, CompetitionError> {
+        let instantiate_data = parse_reply_instantiate_data(msg)?;
+
+        let group_contract = deps.api.addr_validate(&instantiate_data.contract_address)?;
+        let temp_competition = self.temp_competition.load(deps.storage)?;
+        let extension = temp_competition
+            .extension
+            .to_competition_ext(deps.as_ref(), &group_contract)?;
+
+        self.competitions.save(
+            deps.storage,
+            temp_competition.id.u128(),
+            &Competition {
+                id: temp_competition.id,
+                category_id: temp_competition.category_id,
+                admin_dao: temp_competition.admin_dao,
+                host: temp_competition.host,
+                escrow: temp_competition.escrow,
+                name: temp_competition.name,
+                description: temp_competition.description,
+                start_height: temp_competition.start_height,
+                expiration: temp_competition.expiration,
+                rulesets: temp_competition.rulesets,
+                status: temp_competition.status,
+                extension,
+                fees: temp_competition.fees,
+                banner: temp_competition.banner,
+                group_contract: group_contract,
+            },
+        )?;
+
+        Ok(Response::default())
+    }
+
+    pub fn migrate_from_v2_to_v2_1(
         &self,
         deps: DepsMut,
-        env: Env,
+        _env: Env,
+        group_contract: Addr,
     ) -> Result<(), CompetitionError> {
-        // Competition status 'Active' and 'Jailed' now store the activation height for the payment registry
         // Not too many, so we can just do it in the migration
         let competition_range = self
-            .competitions_v182
-            .idx
-            .status
-            .prefix(
-                CompetitionStatus::Active {
-                    activation_height: 0u64,
-                }
-                .to_string(),
-            )
-            .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
-            .collect::<StdResult<Vec<_>>>()?;
-        let competition_range_jailed = self
-            .competitions_v182
-            .idx
-            .status
-            .prefix(
-                CompetitionStatus::Jailed {
-                    activation_height: 0u64,
-                }
-                .to_string(),
-            )
+            .competitions_v2
             .range(deps.storage, None, None, cosmwasm_std::Order::Descending)
             .collect::<StdResult<Vec<_>>>()?;
 
         for (competition_id, competition) in competition_range {
-            let new_competition = competition.into_competition(env.block.height);
+            let new_competition = competition.into_competition(group_contract.clone());
 
-            // Need to replace ().save() will attempt to parse into competition instead of competitionV182)
-            self.competitions.replace(
-                deps.storage,
-                competition_id,
-                Some(&new_competition),
-                Some(&new_competition),
-            )?;
-        }
-
-        for (competition_id, competition) in competition_range_jailed {
-            let new_competition = competition.into_competition(env.block.height);
-
+            // Need to replace, .save() will attempt to parse into competition instead of competitionV2
             self.competitions.replace(
                 deps.storage,
                 competition_id,
