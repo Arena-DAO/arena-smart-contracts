@@ -12,13 +12,20 @@ use cw_competition_base::{contract::CompetitionModuleContract, error::Competitio
 
 use crate::msg::{
     ExecuteExt, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryExt, QueryMsg, Wager, WagerExt,
-    WagerInstantiateExt,
+    WagerInstantiateExt, WagerV2Ext,
 };
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-wager-module";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-pub type CompetitionModule<'a> =
-    CompetitionModuleContract<'a, Empty, ExecuteExt, QueryExt, WagerExt, WagerInstantiateExt>;
+pub type CompetitionModule<'a> = CompetitionModuleContract<
+    'a,
+    Empty,
+    ExecuteExt,
+    QueryExt,
+    WagerExt,
+    WagerV2Ext,
+    WagerInstantiateExt,
+>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

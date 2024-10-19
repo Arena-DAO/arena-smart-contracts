@@ -6,6 +6,10 @@ use crate::fees::FeeInformation;
 
 use super::state::{Competition, CompetitionStatus};
 
+pub trait IntoCompetitionExt<CompetitionExt> {
+    fn into_competition_ext(self) -> CompetitionExt;
+}
+
 /// Used for migration
 #[cw_serde]
 pub struct CompetitionV2<CompetitionExt> {
@@ -25,8 +29,11 @@ pub struct CompetitionV2<CompetitionExt> {
     pub banner: Option<String>,
 }
 
-impl<CompetitionExt: Clone> CompetitionV2<CompetitionExt> {
-    pub fn into_competition(self, group_contract: Addr) -> Competition<CompetitionExt> {
+impl<T> CompetitionV2<T> {
+    pub fn into_competition<E>(self, group_contract: Addr) -> Competition<E>
+    where
+        T: IntoCompetitionExt<E>,
+    {
         Competition {
             id: self.id,
             category_id: self.category_id,
@@ -39,7 +46,7 @@ impl<CompetitionExt: Clone> CompetitionV2<CompetitionExt> {
             expiration: self.expiration,
             rulesets: self.rulesets,
             status: self.status,
-            extension: self.extension,
+            extension: self.extension.into_competition_ext(),
             fees: self.fees,
             banner: self.banner,
             group_contract,

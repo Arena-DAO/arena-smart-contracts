@@ -27,6 +27,7 @@ pub type CompetitionModule<'a> = CompetitionModuleContract<
     ExecuteExt,
     QueryExt,
     TournamentExt,
+    TournamentExt,
     TournamentInstantiateExt,
 >;
 

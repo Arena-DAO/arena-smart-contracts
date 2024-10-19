@@ -1,3 +1,4 @@
+use arena_interface::competition::migrate::IntoCompetitionExt;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::Map;
@@ -25,6 +26,12 @@ pub struct TournamentExt {
     pub distribution: Vec<Decimal>,
     pub total_matches: Uint128,
     pub processed_matches: Uint128,
+}
+
+impl IntoCompetitionExt<TournamentExt> for TournamentExt {
+    fn into_competition_ext(self) -> TournamentExt {
+        self
+    }
 }
 
 #[cw_serde]

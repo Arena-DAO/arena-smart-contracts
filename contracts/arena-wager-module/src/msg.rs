@@ -1,9 +1,10 @@
 use arena_interface::competition::{
+    migrate::IntoCompetitionExt,
     msg::{ExecuteBase, InstantiateBase, QueryBase, ToCompetitionExt},
     state::{Competition, CompetitionResponse},
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Empty;
+use cosmwasm_std::{Addr, Empty};
 
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
@@ -35,6 +36,17 @@ pub struct WagerInstantiateExt {}
 
 #[cw_serde]
 pub struct WagerExt {}
+
+#[cw_serde]
+pub struct WagerV2Ext {
+    pub registered_members: Option<Vec<Addr>>,
+}
+
+impl IntoCompetitionExt<WagerExt> for WagerV2Ext {
+    fn into_competition_ext(self) -> WagerExt {
+        WagerExt {}
+    }
+}
 
 pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, WagerInstantiateExt>;

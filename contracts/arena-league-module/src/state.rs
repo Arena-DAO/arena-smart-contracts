@@ -1,3 +1,4 @@
+use arena_interface::competition::migrate::IntoCompetitionExt;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Deps, Int128, StdResult, Uint128, Uint64};
 use cw_storage_plus::Map;
@@ -50,6 +51,12 @@ pub struct LeagueExt {
     pub teams: Uint64,
     pub processed_matches: Uint128,
     pub distribution: Vec<Decimal>,
+}
+
+impl IntoCompetitionExt<LeagueExt> for LeagueExt {
+    fn into_competition_ext(self) -> LeagueExt {
+        self
+    }
 }
 
 #[cw_serde]

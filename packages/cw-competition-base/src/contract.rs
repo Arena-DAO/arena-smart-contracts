@@ -5,7 +5,7 @@ use std::{
 
 use arena_interface::{
     competition::{
-        migrate::CompetitionV2,
+        migrate::{CompetitionV2, IntoCompetitionExt},
         msg::{
             CompetitionsFilter, EscrowInstantiateInfo, ExecuteBase, HookDirection, InstantiateBase,
             QueryBase, ToCompetitionExt,
@@ -87,6 +87,7 @@ pub struct CompetitionModuleContract<
     ExecuteExt,
     QueryExt,
     CompetitionExt: Serialize + Clone + DeserializeOwned,
+    CompetitionV2Ext: Serialize + Clone + DeserializeOwned + IntoCompetitionExt<CompetitionExt>,
     CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
 > {
     pub config: Item<'static, Config<InstantiateExt>>,
@@ -100,8 +101,8 @@ pub struct CompetitionModuleContract<
     pub competitions_v2: IndexedMap<
         'static,
         u128,
-        CompetitionV2<CompetitionExt>,
-        CompetitionV2Indexes<'static, CompetitionExt>,
+        CompetitionV2<CompetitionV2Ext>,
+        CompetitionV2Indexes<'static, CompetitionV2Ext>,
     >,
     pub competition_evidence: Map<'static, (u128, u128), Evidence>,
     pub competition_evidence_count: Map<'static, u128, Uint128>,
@@ -126,6 +127,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
+        CompetitionV2Ext: Serialize + Clone + DeserializeOwned + IntoCompetitionExt<CompetitionExt>,
         CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
@@ -134,6 +136,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt,
+        CompetitionV2Ext,
         CompetitionInstantiateExt,
     >
 {
@@ -236,24 +239,24 @@ impl<
     ) -> IndexedMap<
         'static,
         u128,
-        CompetitionV2<CompetitionExt>,
-        CompetitionV2Indexes<'static, CompetitionExt>,
+        CompetitionV2<CompetitionV2Ext>,
+        CompetitionV2Indexes<'static, CompetitionV2Ext>,
     > {
         let indexes = CompetitionV2Indexes {
             status: MultiIndex::new(
-                |_x, d: &CompetitionV2<CompetitionExt>| d.status.to_string(),
+                |_x, d: &CompetitionV2<CompetitionV2Ext>| d.status.to_string(),
                 competitions_key,
                 competitions_status_key,
             ),
             category: MultiIndex::new(
-                |_x, d: &CompetitionV2<CompetitionExt>| {
+                |_x, d: &CompetitionV2<CompetitionV2Ext>| {
                     d.category_id.unwrap_or(Uint128::zero()).u128()
                 },
                 competitions_key,
                 competitions_category_key,
             ),
             host: MultiIndex::new(
-                |_x, d: &CompetitionV2<CompetitionExt>| d.host.to_string(),
+                |_x, d: &CompetitionV2<CompetitionV2Ext>| d.host.to_string(),
                 competitions_key,
                 competitions_host_key,
             ),
@@ -268,6 +271,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned,
+        CompetitionV2Ext: Serialize + Clone + DeserializeOwned + IntoCompetitionExt<CompetitionExt>,
         CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     > Default
     for CompetitionModuleContract<
@@ -276,6 +280,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt,
+        CompetitionV2Ext,
         CompetitionInstantiateExt,
     >
 {
@@ -309,6 +314,7 @@ impl<
         ExecuteExt,
         QueryExt: JsonSchema,
         CompetitionExt: Serialize + Clone + DeserializeOwned + std::fmt::Debug,
+        CompetitionV2Ext: Serialize + Clone + DeserializeOwned + std::fmt::Debug + IntoCompetitionExt<CompetitionExt>,
         CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
@@ -317,6 +323,7 @@ impl<
         ExecuteExt,
         QueryExt,
         CompetitionExt,
+        CompetitionV2Ext,
         CompetitionInstantiateExt,
     >
 {
@@ -1881,7 +1888,8 @@ impl<
             .collect::<StdResult<Vec<_>>>()?;
 
         for (competition_id, competition) in competition_range {
-            let new_competition = competition.into_competition(group_contract.clone());
+            let new_competition =
+                competition.into_competition::<CompetitionExt>(group_contract.clone());
 
             // Need to replace, .save() will attempt to parse into competition instead of competitionV2
             self.competitions.replace(
