@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-tournament-module",
-  "contract_version": "2.0.0",
+  "contract_version": "2.1.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -48,16 +48,6 @@
               "title"
             ],
             "properties": {
-              "additional_layered_fees": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/FeeInformation_for_String"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
               "competition_id": {
                 "$ref": "#/definitions/Uint128"
               },
@@ -180,6 +170,7 @@
             "required": [
               "description",
               "expiration",
+              "group_contract",
               "instantiate_extension",
               "name"
             ],
@@ -215,6 +206,9 @@
               },
               "expiration": {
                 "$ref": "#/definitions/Expiration"
+              },
+              "group_contract": {
+                "$ref": "#/definitions/GroupContractInfo"
               },
               "host": {
                 "description": "The competition's host Defaults to info.sender This can only be overridden by valid competition enrollment modules",
@@ -517,9 +511,65 @@
           }
         ]
       },
+      "Admin": {
+        "description": "Information about the CosmWasm level admin of a contract. Used in conjunction with `ModuleInstantiateInfo` to instantiate modules.",
+        "oneOf": [
+          {
+            "description": "Set the admin to a specified address.",
+            "type": "object",
+            "required": [
+              "address"
+            ],
+            "properties": {
+              "address": {
+                "type": "object",
+                "required": [
+                  "addr"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Sets the admin as the core module address.",
+            "type": "object",
+            "required": [
+              "core_module"
+            ],
+            "properties": {
+              "core_module": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "Binary": {
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
+      },
+      "Coin": {
+        "type": "object",
+        "required": [
+          "amount",
+          "denom"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/definitions/Uint128"
+          },
+          "denom": {
+            "type": "string"
+          }
+        }
       },
       "CompetitionStatus": {
         "oneOf": [
@@ -762,6 +812,19 @@
               }
             },
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "instantiate_tournament"
+            ],
+            "properties": {
+              "instantiate_tournament": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           }
         ]
       },
@@ -848,6 +911,52 @@
         },
         "additionalProperties": false
       },
+      "GroupContractInfo": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "existing"
+            ],
+            "properties": {
+              "existing": {
+                "type": "object",
+                "required": [
+                  "addr"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "new"
+            ],
+            "properties": {
+              "new": {
+                "type": "object",
+                "required": [
+                  "info"
+                ],
+                "properties": {
+                  "info": {
+                    "$ref": "#/definitions/ModuleInstantiateInfo"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "MatchResult": {
         "type": "string",
         "enum": [
@@ -922,6 +1031,55 @@
             "additionalProperties": false
           }
         ]
+      },
+      "ModuleInstantiateInfo": {
+        "description": "Information needed to instantiate a module.",
+        "type": "object",
+        "required": [
+          "code_id",
+          "funds",
+          "label",
+          "msg"
+        ],
+        "properties": {
+          "admin": {
+            "description": "CosmWasm level admin of the instantiated contract. See: <https://docs.cosmwasm.com/docs/1.0/smart-contracts/migration>",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Admin"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "code_id": {
+            "description": "Code ID of the contract to be instantiated.",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "funds": {
+            "description": "Funds to be sent to the instantiated contract.",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Coin"
+            }
+          },
+          "label": {
+            "description": "Label for the instantiated contract.",
+            "type": "string"
+          },
+          "msg": {
+            "description": "Instantiate message to be used to create the contract.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "StatAggregationType": {
         "type": "string",
@@ -1098,8 +1256,7 @@
         "type": "object",
         "required": [
           "distribution",
-          "elimination_type",
-          "teams"
+          "elimination_type"
         ],
         "properties": {
           "distribution": {
@@ -1110,12 +1267,6 @@
           },
           "elimination_type": {
             "$ref": "#/definitions/EliminationType"
-          },
-          "teams": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
         },
         "additionalProperties": false
@@ -1674,6 +1825,27 @@
         "properties": {
           "from_compatible": {
             "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "with_group_address"
+        ],
+        "properties": {
+          "with_group_address": {
+            "type": "object",
+            "required": [
+              "group_contract"
+            ],
+            "properties": {
+              "group_contract": {
+                "type": "string"
+              }
+            },
             "additionalProperties": false
           }
         },

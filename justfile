@@ -22,7 +22,7 @@ optimize:
         -v "$(pwd)":/code \
         --mount type=volume,source=arena_cache,target=/code/target \
         --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-        cosmwasm/optimizer:0.16.0
+        cosmwasm/optimizer:0.16.1
 
 schema:
     ./scripts/schema.sh

@@ -1,5 +1,5 @@
 use arena_competition_enrollment::msg::{
-    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, QueryMsgFns as _,
+    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, MigrateMsg, QueryMsgFns as _,
 };
 use arena_competition_enrollment::state::CompetitionType;
 use arena_interface::competition::msg::QueryBaseFns as _;
@@ -8,10 +8,13 @@ use arena_interface::group::{self, QueryMsgFns as _};
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_std::{coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_orch::{anyhow, prelude::*};
+use cw_orch_clone_testing::CloneTesting;
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_proposal_sudo::msg::ExecuteMsgFns as _;
+use networks::PION_1;
 
+use crate::arena::Arena;
 use crate::tests::helpers::setup_arena;
 
 use super::{DENOM, PREFIX};
@@ -916,6 +919,35 @@ fn test_huge_tournament() -> anyhow::Result<()> {
     arena
         .arena_escrow
         .receive_native(coins(5000u128, DENOM).as_slice())?;
+
+    Ok(())
+}
+
+#[test]
+fn test_migration_v2_v2_1() -> anyhow::Result<()> {
+    let app = CloneTesting::new(PION_1)?;
+    let mut arena = Arena::new(app.clone());
+    const ARENA_DAO: &str = "neutron1ehkcl0n6s2jtdw75xsvfxm304mz4hs5z7jt6wn5mk0celpj0epqql4ulxk";
+    let arena_dao_addr = Addr::unchecked(ARENA_DAO);
+
+    arena.arena_group.upload()?;
+    arena.arena_competition_enrollment.upload()?;
+
+    arena
+        .arena_competition_enrollment
+        .set_address(&Addr::unchecked(
+            "neutron16gtf438zpdu09zft6wdttcg5x648xwv88ljfw3gxgr4rjmfxlrdq7n4sxy",
+        ));
+    arena
+        .arena_competition_enrollment
+        .set_sender(&arena_dao_addr);
+
+    arena.arena_competition_enrollment.migrate(
+        &MigrateMsg::WithGroupId {
+            group_id: arena.arena_group.code_id()?,
+        },
+        arena.arena_competition_enrollment.code_id()?,
+    )?;
 
     Ok(())
 }

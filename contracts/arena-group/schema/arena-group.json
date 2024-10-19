@@ -1,5 +1,5 @@
 {
-  "contract_name": "arena-escrow",
+  "contract_name": "arena-group",
   "contract_version": "2.1.0",
   "idl_version": "1.0.0",
   "instantiate": {

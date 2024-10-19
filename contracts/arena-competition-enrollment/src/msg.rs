@@ -78,6 +78,7 @@ pub enum QueryMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     FromCompatible {},
+    WithGroupId { group_id: u64 },
 }
 
 #[cw_serde]

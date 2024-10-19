@@ -4,7 +4,7 @@ use arena_interface::{competition::state::CompetitionResponse, fees::FeeInformat
 use arena_tournament_module::state::EliminationType;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Coin, Decimal, Deps, Empty, StdResult, Uint128, Uint64};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use cw_utils::Expiration;
 
 #[cw_serde]
@@ -20,6 +20,20 @@ pub struct EnrollmentEntry {
     pub category_id: Option<Uint128>,
     pub competition_module: Addr,
     pub group_contract: Addr,
+}
+
+#[cw_serde]
+pub struct EnrollmentEntryV2 {
+    pub min_members: Option<Uint64>,
+    pub max_members: Uint64,
+    pub entry_fee: Option<Coin>,
+    pub expiration: Expiration,
+    pub has_triggered_expiration: bool,
+    pub competition_info: CompetitionInfo,
+    pub competition_type: CompetitionType,
+    pub host: Addr,
+    pub category_id: Option<Uint128>,
+    pub competition_module: Addr,
 }
 
 #[cw_serde]
@@ -207,9 +221,40 @@ pub fn enrollment_entries<'a>() -> IndexedMap<'a, u128, EnrollmentEntry, Enrollm
     IndexedMap::new("enrollment_entries", indexes)
 }
 
+pub struct EnrollmentEntryV2Indexes<'a> {
+    pub category: MultiIndex<'a, u128, EnrollmentEntryV2, u128>,
+    pub host: MultiIndex<'a, String, EnrollmentEntryV2, u128>,
+}
+
+impl<'a> IndexList<EnrollmentEntryV2> for EnrollmentEntryV2Indexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<EnrollmentEntryV2>> + '_> {
+        let v: Vec<&dyn Index<EnrollmentEntryV2>> = vec![&self.host, &self.category];
+        Box::new(v.into_iter())
+    }
+}
+
+pub fn enrollment_entriesv2<'a>(
+) -> IndexedMap<'a, u128, EnrollmentEntryV2, EnrollmentEntryV2Indexes<'a>> {
+    let indexes = EnrollmentEntryV2Indexes {
+        category: MultiIndex::new(
+            |_x, d: &EnrollmentEntryV2| d.category_id.unwrap_or(Uint128::zero()).u128(),
+            "enrollment_entries",
+            "enrollment_entries__category",
+        ),
+        host: MultiIndex::new(
+            |_x, d: &EnrollmentEntryV2| d.host.to_string(),
+            "enrollment_entries",
+            "enrollment_entries__host",
+        ),
+    };
+    IndexedMap::new("enrollment_entries", indexes)
+}
+
 pub const ENROLLMENT_COUNT: Item<Uint128> = Item::new("enrollment_count");
 /// Stores the module address and enrollment id to process in a reply
 pub const TEMP_ENROLLMENT_INFO: Item<EnrollmentInfo> = Item::new("temp_enrollment_info");
+// Store this for migration - deleted after migration
+pub const ENROLLMENT_MEMBERS: Map<(u128, &Addr), Empty> = Map::new("enrollment_members");
 
 #[cw_serde]
 pub struct EnrollmentInfo {

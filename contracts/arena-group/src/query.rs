@@ -41,7 +41,7 @@ pub fn is_valid_distribution(deps: Deps, addrs: Vec<String>) -> StdResult<bool> 
 
     let addrs = addrs
         .iter()
-        .map(|x| deps.api.addr_validate(&x))
+        .map(|x| deps.api.addr_validate(x))
         .collect::<StdResult<Vec<_>>>()?;
 
     Ok(addrs.iter().all(|x| members_map().has(deps.storage, x)))

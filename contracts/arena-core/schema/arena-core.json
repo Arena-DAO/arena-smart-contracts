@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-core",
-  "contract_version": "2.0.0",
+  "contract_version": "2.1.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1309,42 +1309,6 @@
           }
         ]
       },
-      "FeeInformation_for_String": {
-        "type": "object",
-        "required": [
-          "receiver",
-          "tax"
-        ],
-        "properties": {
-          "cw20_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "cw721_msg": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "receiver": {
-            "type": "string"
-          },
-          "tax": {
-            "$ref": "#/definitions/Decimal"
-          }
-        },
-        "additionalProperties": false
-      },
       "MemberPercentage_for_String": {
         "type": "object",
         "required": [
@@ -1540,16 +1504,6 @@
           "title"
         ],
         "properties": {
-          "additional_layered_fees": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/FeeInformation_for_String"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "competition_id": {
             "$ref": "#/definitions/Uint128"
           },

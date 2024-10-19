@@ -8,6 +8,7 @@ use cw2::{ensure_from_older_version, set_contract_version};
 
 use crate::{
     execute::{self, TRIGGER_COMPETITION_REPLY_ID},
+    migrate,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
     state::{enrollment_entries, CompetitionInfo, ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO},
@@ -93,11 +94,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     let _version = ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    let msgs = match msg {
+        MigrateMsg::FromCompatible {} => {
+            vec![]
+        }
+        MigrateMsg::WithGroupId { group_id } => {
+            migrate::from_v2_to_v2_1(deps.branch(), &env, group_id)?
+        }
+    };
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    Ok(Response::default())
+    Ok(Response::default().add_messages(msgs))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
