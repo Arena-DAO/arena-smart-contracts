@@ -82,7 +82,15 @@ pub fn execute(
             distribution,
             layered_fees,
             activation_height,
-        } => execute::distribute(deps, info, distribution, layered_fees, activation_height),
+            group_contract,
+        } => execute::distribute(
+            deps,
+            info,
+            distribution,
+            layered_fees,
+            activation_height,
+            group_contract,
+        ),
         ExecuteMsg::Lock { value } => execute::lock(deps, info, value),
         ExecuteMsg::UpdateOwnership(action) => {
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
@@ -120,6 +128,10 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
 
     if version.major == 1 && version.minor == 8 {
         migrate::from_v1_8_2_to_v2(deps.branch())?;
+    }
+
+    if version.major == 2 && version.minor == 0 {
+        migrate::from_v2_to_v2_1(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

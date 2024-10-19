@@ -1120,6 +1120,7 @@ impl<
                                     distribution: distribution_msg,
                                     layered_fees,
                                     activation_height: Some(activation_height),
+                                    group_contract: competition.group_contract.to_string(),
                                 },
                             )?,
                             funds: vec![],

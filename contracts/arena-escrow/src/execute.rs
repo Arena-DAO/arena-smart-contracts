@@ -1,4 +1,6 @@
-use arena_interface::fees::FeeInformation;
+use std::iter;
+
+use arena_interface::{fees::FeeInformation, group};
 use cosmwasm_std::{
     to_json_binary, Addr, Binary, CosmosMsg, DepsMut, Empty, Env, MessageInfo, Order, Response,
     StdResult,
@@ -6,7 +8,8 @@ use cosmwasm_std::{
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
 use cw721::Cw721ReceiveMsg;
 use cw_balance::{
-    BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution, MemberBalanceUnchecked,
+    BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution, MemberBalanceChecked,
+    MemberBalanceUnchecked,
 };
 use cw_ownable::{assert_owner, get_ownership};
 
@@ -225,9 +228,13 @@ pub fn distribute(
     distribution: Option<Distribution<String>>,
     layered_fees: Option<Vec<FeeInformation<String>>>,
     activation_height: Option<u64>,
+    group_contract: String,
 ) -> Result<Response, ContractError> {
     // Ensure the sender is the owner
     assert_owner(deps.storage, &info.sender)?;
+
+    // Validate the group contract
+    let group_contract = deps.api.addr_validate(&group_contract)?;
 
     // Load the total balance available for distribution
     let mut total_balance = TOTAL_BALANCE.load(deps.storage)?;
@@ -266,8 +273,25 @@ pub fn distribute(
     }
 
     // Process distribution if provided
-    if let Some(distribution) = distribution {
+    let distributed_amounts = if let Some(distribution) = distribution {
         let distribution = distribution.into_checked(deps.as_ref())?;
+
+        // Validate distribution is valid
+        if !deps.querier.query_wasm_smart::<bool>(
+            group_contract.to_string(),
+            &group::QueryMsg::IsValidDistribution {
+                addrs: distribution
+                    .member_percentages
+                    .iter()
+                    .map(|x| x.addr.to_string())
+                    .chain(iter::once(distribution.remainder_addr.to_string()))
+                    .collect(),
+            },
+        )? {
+            return Err(ContractError::InvalidDistribution {
+                msg: "The distribution must contain only members of the competition".to_string(),
+            });
+        }
 
         // Calculate the distribution amounts based on the total balance and distribution
         let distributed_amounts = total_balance.split(&distribution)?;
@@ -275,69 +299,9 @@ pub fn distribute(
         // Clear existing balance storage
         BALANCE.clear(deps.storage);
 
-        // Query payment registry
-        let payment_registry: Option<String> = deps.querier.query_wasm_smart(
-            info.sender.to_string(),
-            &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::PaymentRegistry {}
-        )?;
-        let payment_registry = payment_registry
-            .map(|x| deps.api.addr_validate(&x))
-            .transpose()?;
-        let mut has_preset_distribution = false;
-
-        // Process each distributed amount
-        for distributed_amount in distributed_amounts {
-            if let Some(ref payment_registry) = payment_registry {
-                // Query preset distribution from payment registry
-                let preset_distribution: Option<Distribution<String>> =
-                    deps.querier.query_wasm_smart(
-                        payment_registry.to_string(),
-                        &arena_interface::registry::QueryMsg::GetDistribution {
-                            addr: distributed_amount.addr.to_string(),
-                            height: activation_height,
-                        },
-                    )?;
-
-                if let Some(preset_distribution) = preset_distribution {
-                    let preset_distribution = preset_distribution.into_checked(deps.as_ref())?;
-                    let new_balances = distributed_amount.balance.split(&preset_distribution)?;
-                    has_preset_distribution = true;
-
-                    // Update balances based on preset distribution
-                    for new_balance in new_balances {
-                        BALANCE.update(
-                            deps.storage,
-                            &new_balance.addr,
-                            |old_balance| -> Result<_, ContractError> {
-                                match old_balance {
-                                    Some(old_balance) => {
-                                        Ok(old_balance.checked_add(&new_balance.balance)?)
-                                    }
-                                    None => Ok(new_balance.balance),
-                                }
-                            },
-                        )?;
-                    }
-                }
-            }
-
-            if !has_preset_distribution {
-                // Update balance directly if no preset distribution
-                BALANCE.update(
-                    deps.storage,
-                    &distributed_amount.addr,
-                    |old_balance| -> Result<_, ContractError> {
-                        match old_balance {
-                            Some(old_balance) => {
-                                Ok(old_balance.checked_add(&distributed_amount.balance)?)
-                            }
-                            None => Ok(distributed_amount.balance),
-                        }
-                    },
-                )?;
-            }
-        }
+        distributed_amounts
     } else {
+        let mut distributed_amounts = vec![];
         for (addr, balance) in BALANCE
             .range(deps.storage, None, None, Order::Ascending)
             .collect::<StdResult<Vec<_>>>()?
@@ -349,7 +313,77 @@ pub fn distribute(
                 }
             }
 
-            BALANCE.save(deps.storage, &addr, &new_balance)?;
+            distributed_amounts.push(MemberBalanceChecked {
+                addr,
+                balance: new_balance,
+            });
+        }
+
+        // Clear existing balance storage
+        BALANCE.clear(deps.storage);
+
+        distributed_amounts
+    };
+
+    // Query payment registry
+    let payment_registry: Option<String> = deps.querier.query_wasm_smart(
+        info.sender.to_string(),
+        &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::PaymentRegistry {},
+    )?;
+    let payment_registry = payment_registry
+        .map(|x| deps.api.addr_validate(&x))
+        .transpose()?;
+    let mut has_preset_distribution = false;
+
+    // Process each distributed amount
+    for distributed_amount in distributed_amounts {
+        if let Some(ref payment_registry) = payment_registry {
+            // Query preset distribution from payment registry
+            let preset_distribution: Option<Distribution<String>> = deps.querier.query_wasm_smart(
+                payment_registry.to_string(),
+                &arena_interface::registry::QueryMsg::GetDistribution {
+                    addr: distributed_amount.addr.to_string(),
+                    height: activation_height,
+                },
+            )?;
+
+            if let Some(preset_distribution) = preset_distribution {
+                let preset_distribution = preset_distribution.into_checked(deps.as_ref())?;
+                let new_balances = distributed_amount.balance.split(&preset_distribution)?;
+                has_preset_distribution = true;
+
+                // Update balances based on preset distribution
+                for new_balance in new_balances {
+                    BALANCE.update(
+                        deps.storage,
+                        &new_balance.addr,
+                        |old_balance| -> Result<_, ContractError> {
+                            match old_balance {
+                                Some(old_balance) => {
+                                    Ok(old_balance.checked_add(&new_balance.balance)?)
+                                }
+                                None => Ok(new_balance.balance),
+                            }
+                        },
+                    )?;
+                }
+            }
+        }
+
+        if !has_preset_distribution {
+            // Update balance directly if no preset distribution
+            BALANCE.update(
+                deps.storage,
+                &distributed_amount.addr,
+                |old_balance| -> Result<_, ContractError> {
+                    match old_balance {
+                        Some(old_balance) => {
+                            Ok(old_balance.checked_add(&distributed_amount.balance)?)
+                        }
+                        None => Ok(distributed_amount.balance),
+                    }
+                },
+            )?;
         }
     }
 

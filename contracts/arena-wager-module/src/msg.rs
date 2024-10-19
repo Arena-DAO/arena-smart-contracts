@@ -29,6 +29,7 @@ impl From<QueryExt> for QueryMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     FromCompatible {},
+    WithGroupAddress { group_contract: String },
 }
 
 #[cw_serde]

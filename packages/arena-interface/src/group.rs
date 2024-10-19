@@ -43,6 +43,8 @@ pub enum QueryMsg {
     },
     #[returns(cosmwasm_std::Uint64)]
     MembersCount {},
+    #[returns(bool)]
+    IsValidDistribution { addrs: Vec<String> },
 }
 
 #[cw_serde]

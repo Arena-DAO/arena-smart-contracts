@@ -2,7 +2,7 @@ use crate::{execute, query, state::MEMBER_COUNT, ContractError};
 use arena_interface::group::{AddMemberMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, WasmMsg,
+    StdResult, Uint64, WasmMsg,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 
@@ -30,6 +30,8 @@ pub fn instantiate_contract(
     members: Option<Vec<AddMemberMsg>>,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
+
+    MEMBER_COUNT.save(deps.storage, &Uint64::zero())?;
 
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
@@ -71,6 +73,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::MembersCount {} => to_json_binary(&MEMBER_COUNT.load(deps.storage)?),
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
+        QueryMsg::IsValidDistribution { addrs } => {
+            to_json_binary(&query::is_valid_distribution(deps, addrs)?)
+        }
     }
 }
 

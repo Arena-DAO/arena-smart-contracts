@@ -33,6 +33,7 @@ pub enum ExecuteMsg {
         /// Each fee is calculated based off the available funds at its layer
         layered_fees: Option<Vec<FeeInformation<String>>>,
         activation_height: Option<u64>,
+        group_contract: String,
     },
     Lock {
         value: bool,

@@ -402,7 +402,7 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
             info: ModuleInstantiateInfo {
                 code_id: arena.arena_group.code_id()?,
                 msg: to_json_binary(&group::InstantiateMsg {
-                    members: teams_to_members(&[user1.clone(), user2.clone()]),
+                    members: teams_to_members(&[user1.clone(), user2.clone(), user3.clone()]),
                 })?,
                 admin: None,
                 funds: vec![],
@@ -526,6 +526,235 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
     // Check DAO balance
     let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
     assert_eq!(dao_balance, Uint128::new(100)); // 5% of 2000
+
+    Ok(())
+}
+
+#[test]
+fn test_wager_with_draw() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+
+    let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
+    let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
+
+    // Create a wager
+    arena.arena_wager_module.set_sender(&admin);
+    let res = arena.arena_wager_module.create_competition(
+        "Wager".to_string(),
+        Expiration::AtHeight(mock.block_info()?.height + 100),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
+        WagerInstantiateExt {},
+        "Wager".to_string(),
+        None,
+        Some(Uint128::one()),
+        Some(EscrowInstantiateInfo {
+            code_id: arena.arena_escrow.code_id()?,
+            msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
+                dues: vec![
+                    MemberBalanceUnchecked {
+                        addr: user1.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                    MemberBalanceUnchecked {
+                        addr: user2.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                ],
+            })?,
+            label: "Escrow".to_string(),
+            additional_layered_fees: None,
+        }),
+        None,
+        None,
+        None,
+    )?;
+
+    let escrow_addr = res
+        .events
+        .iter()
+        .find_map(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attr| attr.key == "escrow_addr")
+                .map(|attr| attr.value.clone())
+        })
+        .unwrap();
+
+    arena
+        .arena_escrow
+        .set_address(&Addr::unchecked(escrow_addr));
+
+    // Advance the block
+    mock.next_block()?;
+
+    // Fund the escrow
+    arena
+        .arena_escrow
+        .call_as(&user1)
+        .receive_native(&coins(1000, DENOM))?;
+    arena
+        .arena_escrow
+        .call_as(&user2)
+        .receive_native(&coins(1000, DENOM))?;
+
+    // Process the wager
+    arena
+        .arena_wager_module
+        .process_competition(Uint128::one(), None)?;
+
+    // Check escrow balances
+    let user1_balance = arena.arena_escrow.balance(user1.to_string())?;
+    let user2_balance = arena.arena_escrow.balance(user2.to_string())?;
+
+    // Calculate expected balances
+    // Total pot: 2000
+    // DAO fee: 5% of 2000 = 100
+    // Remaining: 1900
+    // user1 gets 1000 * 95%  = 950
+    // user2 gets 1000 * 95%  = 950
+
+    let expected_user1_balance = BalanceVerified {
+        native: Some(coins(950, DENOM)), // 1330 - 266 (20% to user3)
+        cw20: None,
+        cw721: None,
+    };
+    let expected_user2_balance = BalanceVerified {
+        native: Some(coins(950, DENOM)), // 570 - 171 (30% to user3)
+        cw20: None,
+        cw721: None,
+    };
+
+    assert_eq!(user1_balance, Some(expected_user1_balance));
+    assert_eq!(user2_balance, Some(expected_user2_balance));
+
+    // Check DAO balance
+    let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
+    assert_eq!(dao_balance, Uint128::new(100)); // 5% of 2000
+
+    Ok(())
+}
+
+#[test]
+fn test_wager_with_malicious_host() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+
+    let user1 = mock.addr_make_with_balance("user1", coins(10000, DENOM))?;
+    let user2 = mock.addr_make_with_balance("user2", coins(10000, DENOM))?;
+
+    // Create a wager
+    arena.arena_wager_module.set_sender(&admin);
+    let res = arena.arena_wager_module.create_competition(
+        "Wager".to_string(),
+        Expiration::AtHeight(mock.block_info()?.height + 100),
+        GroupContractInfo::New {
+            info: ModuleInstantiateInfo {
+                code_id: arena.arena_group.code_id()?,
+                msg: to_json_binary(&group::InstantiateMsg {
+                    members: teams_to_members(&[user1.clone(), user2.clone()]),
+                })?,
+                admin: None,
+                funds: vec![],
+                label: "Arena Group".to_string(),
+            },
+        },
+        WagerInstantiateExt {},
+        "Wager".to_string(),
+        None,
+        Some(Uint128::one()),
+        Some(EscrowInstantiateInfo {
+            code_id: arena.arena_escrow.code_id()?,
+            msg: to_json_binary(&arena_interface::escrow::InstantiateMsg {
+                dues: vec![
+                    MemberBalanceUnchecked {
+                        addr: user1.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                    MemberBalanceUnchecked {
+                        addr: user2.to_string(),
+                        balance: BalanceUnchecked {
+                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            cw20: None,
+                            cw721: None,
+                        },
+                    },
+                ],
+            })?,
+            label: "Escrow".to_string(),
+            additional_layered_fees: None,
+        }),
+        None,
+        None,
+        None,
+    )?;
+
+    let escrow_addr = res
+        .events
+        .iter()
+        .find_map(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attr| attr.key == "escrow_addr")
+                .map(|attr| attr.value.clone())
+        })
+        .unwrap();
+
+    arena
+        .arena_escrow
+        .set_address(&Addr::unchecked(escrow_addr));
+
+    // Advance the block
+    mock.next_block()?;
+
+    // Fund the escrow
+    arena
+        .arena_escrow
+        .call_as(&user1)
+        .receive_native(&coins(1000, DENOM))?;
+    arena
+        .arena_escrow
+        .call_as(&user2)
+        .receive_native(&coins(1000, DENOM))?;
+
+    // Process the wager
+    // The host is attempting to claim all of the money
+    let result = arena.arena_wager_module.process_competition(
+        Uint128::one(),
+        Some(Distribution {
+            member_percentages: vec![MemberPercentage {
+                addr: admin.to_string(),
+                percentage: Decimal::one(),
+            }],
+            remainder_addr: admin.to_string(),
+        }),
+    );
+
+    assert!(result.is_err());
 
     Ok(())
 }
@@ -1169,21 +1398,30 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_migration_v182_v2() -> anyhow::Result<()> {
+fn test_migration_v2_v2_1() -> anyhow::Result<()> {
     let app = CloneTesting::new(PION_1)?;
     let mut arena = Arena::new(app.clone());
+    const ARENA_DAO: &str = "neutron1ehkcl0n6s2jtdw75xsvfxm304mz4hs5z7jt6wn5mk0celpj0epqql4ulxk";
+    let arena_dao_addr = Addr::unchecked(ARENA_DAO);
 
+    arena.arena_group.upload()?;
     arena.arena_wager_module.upload()?;
+
+    arena.arena_group.instantiate(
+        &group::InstantiateMsg { members: None },
+        Some(&arena_dao_addr),
+        None,
+    )?;
 
     arena.arena_wager_module.set_address(&Addr::unchecked(
         "neutron16nl0tcwt9qujavdakft7ddyw4pwzh5nuzn35tke9m4yfu462z99q6yj66n",
     ));
-    arena.arena_wager_module.set_sender(&Addr::unchecked(
-        "neutron1ehkcl0n6s2jtdw75xsvfxm304mz4hs5z7jt6wn5mk0celpj0epqql4ulxk",
-    ));
+    arena.arena_wager_module.set_sender(&arena_dao_addr);
 
     arena.arena_wager_module.migrate(
-        &MigrateMsg::FromCompatible {},
+        &MigrateMsg::WithGroupAddress {
+            group_contract: arena.arena_group.addr_str()?,
+        },
         arena.arena_wager_module.code_id()?,
     )?;
 

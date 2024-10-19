@@ -10,7 +10,7 @@ use arena_interface::core::QueryExtFns as _;
 use arena_interface::escrow::{ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_interface::group::{self, GroupContractInfo};
 use arena_league_module::msg::{
-    ExecuteExtFns as _, LeagueInstantiateExt, LeagueQueryExtFns as _, MatchResultMsg,
+    ExecuteExtFns as _, LeagueInstantiateExt, LeagueQueryExtFns as _, MatchResultMsg, MigrateMsg,
 };
 use arena_league_module::state::{MatchResult, PointAdjustment};
 use cosmwasm_std::{
@@ -18,10 +18,13 @@ use cosmwasm_std::{
 };
 use cw_balance::{BalanceUnchecked, BalanceVerified, MemberBalanceUnchecked};
 use cw_orch::{anyhow, prelude::*};
+use cw_orch_clone_testing::CloneTesting;
 use cw_utils::Expiration;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_proposal_sudo::msg::ExecuteMsgFns;
+use networks::PION_1;
 
+use crate::arena::Arena;
 use crate::tests::helpers::{setup_arena, setup_voting_module, teams_to_members};
 
 use super::{DENOM, PREFIX};
@@ -1837,6 +1840,37 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
             assert_eq!(*total_fouls.value(), StatValue::Uint(Uint128::new(12)));
         }
     }
+
+    Ok(())
+}
+
+#[test]
+fn test_migration_v2_v2_1() -> anyhow::Result<()> {
+    let app = CloneTesting::new(PION_1)?;
+    let mut arena = Arena::new(app.clone());
+    const ARENA_DAO: &str = "neutron1ehkcl0n6s2jtdw75xsvfxm304mz4hs5z7jt6wn5mk0celpj0epqql4ulxk";
+    let arena_dao_addr = Addr::unchecked(ARENA_DAO);
+
+    arena.arena_group.upload()?;
+    arena.arena_league_module.upload()?;
+
+    arena.arena_group.instantiate(
+        &group::InstantiateMsg { members: None },
+        Some(&arena_dao_addr),
+        None,
+    )?;
+
+    arena.arena_league_module.set_address(&Addr::unchecked(
+        "neutron1pzh32kr9r4gl0fcgrp69f4us2he5zysfzta096lg932fu6qr4s6srk8atv",
+    ));
+    arena.arena_league_module.set_sender(&arena_dao_addr);
+
+    arena.arena_league_module.migrate(
+        &MigrateMsg::WithGroupAddress {
+            group_contract: arena.arena_group.addr_str()?,
+        },
+        arena.arena_league_module.code_id()?,
+    )?;
 
     Ok(())
 }

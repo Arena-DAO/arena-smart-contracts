@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Deps, Order, StdResult, Uint64};
 use cw_storage_plus::Bound;
 
-use crate::state::members as members_map;
+use crate::state::{members as members_map, MEMBER_COUNT};
 
 pub fn members(
     deps: Deps,
@@ -24,4 +24,25 @@ pub fn members(
         .map(|x| x.map(|(addr, _seed)| addr))
         .take(limit)
         .collect()
+}
+
+pub fn is_valid_distribution(deps: Deps, addrs: Vec<String>) -> StdResult<bool> {
+    if addrs.is_empty() {
+        return Ok(false);
+    }
+
+    if MEMBER_COUNT
+        .may_load(deps.storage)?
+        .unwrap_or_default()
+        .is_zero()
+    {
+        return Ok(true);
+    }
+
+    let addrs = addrs
+        .iter()
+        .map(|x| deps.api.addr_validate(&x))
+        .collect::<StdResult<Vec<_>>>()?;
+
+    Ok(addrs.iter().all(|x| members_map().has(deps.storage, x)))
 }

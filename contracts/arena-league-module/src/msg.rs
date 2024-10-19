@@ -77,6 +77,8 @@ impl From<LeagueQueryExt> for QueryMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     FromCompatible {},
+    // We want to provide an empty group contract to preserve the previous implementation.
+    WithGroupAddress { group_contract: String },
 }
 
 /// This is used to completely generate schema types
