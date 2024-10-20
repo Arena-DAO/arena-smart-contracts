@@ -1,3 +1,4 @@
+use arena_interface::group;
 use cosmwasm_std::{Deps, Env, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
@@ -47,4 +48,13 @@ pub fn enrollments(
 
 pub fn enrollment_count(deps: Deps) -> StdResult<Uint128> {
     Ok(ENROLLMENT_COUNT.may_load(deps.storage)?.unwrap_or_default())
+}
+
+pub fn is_member(deps: Deps, enrollment_id: Uint128, addr: String) -> StdResult<bool> {
+    let enrollment = enrollment_entries().load(deps.storage, enrollment_id.u128())?;
+
+    deps.querier.query_wasm_smart::<bool>(
+        enrollment.group_contract,
+        &group::QueryMsg::IsMember { addr },
+    )
 }

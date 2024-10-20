@@ -1,4 +1,8 @@
-use arena_interface::{competition::stats::StatValue, group, ratings::MemberResult};
+use arena_interface::{
+    competition::stats::StatValue,
+    group::{self, MemberMsg},
+    ratings::MemberResult,
+};
 use cosmwasm_std::{
     ensure_eq, Addr, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
     Uint128, Uint64,
@@ -33,13 +37,18 @@ pub fn instantiate_rounds(
         .load(deps.storage, league_id.u128())?;
 
     // Convert teams to addresses
-    let teams: Vec<Addr> = deps.querier.query_wasm_smart(
-        league.group_contract.to_string(),
-        &group::QueryMsg::Members {
-            start_after: None,
-            limit: None,
-        },
-    )?;
+    let teams: Vec<Addr> = deps
+        .querier
+        .query_wasm_smart::<Vec<MemberMsg<Addr>>>(
+            league.group_contract.to_string(),
+            &group::QueryMsg::Members {
+                start_after: None,
+                limit: None,
+            },
+        )?
+        .into_iter()
+        .map(|x| x.addr)
+        .collect();
 
     let team_count = teams.len();
 

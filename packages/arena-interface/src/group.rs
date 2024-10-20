@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint64;
+use cw_address_like::AddressLike;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use dao_interface::state::ModuleInstantiateInfo;
 
@@ -14,7 +15,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     UpdateMembers {
         to_add: Option<Vec<AddMemberMsg>>,
-        to_update: Option<Vec<MemberMsg>>,
+        to_update: Option<Vec<MemberMsg<String>>>,
         to_remove: Option<Vec<String>>,
     },
 }
@@ -27,8 +28,8 @@ pub struct AddMemberMsg {
 }
 
 #[cw_serde]
-pub struct MemberMsg {
-    pub addr: String,
+pub struct MemberMsg<T: AddressLike> {
+    pub addr: T,
     pub seed: Uint64,
 }
 
@@ -36,15 +37,17 @@ pub struct MemberMsg {
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum QueryMsg {
-    #[returns(Vec<cosmwasm_std::Addr>)]
+    #[returns(Vec<MemberMsg<cosmwasm_std::Addr>>)]
     Members {
-        start_after: Option<(Uint64, String)>,
+        start_after: Option<MemberMsg<String>>,
         limit: Option<u32>,
     },
     #[returns(cosmwasm_std::Uint64)]
     MembersCount {},
     #[returns(bool)]
     IsValidDistribution { addrs: Vec<String> },
+    #[returns(bool)]
+    IsMember { addr: String },
 }
 
 #[cw_serde]

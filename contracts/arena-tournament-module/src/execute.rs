@@ -2,7 +2,7 @@ use crate::contract::CompetitionModule;
 use crate::msg::{MatchResultMsg, Tournament};
 use crate::state::{EliminationType, Match, MatchResult, MATCHES};
 use crate::{ContractError, NestedArray};
-use arena_interface::group;
+use arena_interface::group::{self, MemberMsg};
 use arena_interface::ratings::MemberResult;
 use cosmwasm_std::{ensure_eq, Addr, Decimal, Env, MessageInfo, StdError, Storage};
 use cosmwasm_std::{DepsMut, Response, StdResult, Uint128};
@@ -29,13 +29,18 @@ pub fn instantiate_tournament(
         .load(deps.storage, tournament_id.u128())?;
 
     // Convert teams to addresses
-    let teams: Vec<Addr> = deps.querier.query_wasm_smart(
-        tournament.group_contract.to_string(),
-        &group::QueryMsg::Members {
-            start_after: None,
-            limit: None,
-        },
-    )?;
+    let teams: Vec<Addr> = deps
+        .querier
+        .query_wasm_smart::<Vec<MemberMsg<Addr>>>(
+            tournament.group_contract.to_string(),
+            &group::QueryMsg::Members {
+                start_after: None,
+                limit: None,
+            },
+        )?
+        .into_iter()
+        .map(|x| x.addr)
+        .collect();
 
     // Single Elimination Bracket
     if let EliminationType::SingleElimination {

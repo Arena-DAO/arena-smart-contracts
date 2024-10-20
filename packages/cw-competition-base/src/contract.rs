@@ -20,7 +20,7 @@ use arena_interface::{
     },
     core::{CompetitionModuleResponse, ProposeMessage, TaxConfigurationResponse},
     fees::FeeInformation,
-    group::GroupContractInfo,
+    group::{self, GroupContractInfo, MemberMsg},
     ratings::MemberResult,
 };
 use cosmwasm_schema::schemars::JsonSchema;
@@ -1352,8 +1352,30 @@ impl<
                 stat_name: stat,
                 height,
             } => to_json_binary(&self.query_stat(deps, competition_id, addr, stat, height)?),
+            QueryBase::Members {
+                competition_id,
+                start_after,
+                limit,
+            } => to_json_binary(&self.query_members(deps, competition_id, start_after, limit)?),
             QueryBase::_Phantom(_) => Ok(Binary::default()),
         }
+    }
+
+    pub fn query_members(
+        &self,
+        deps: Deps,
+        competition_id: Uint128,
+        start_after: Option<MemberMsg<String>>,
+        limit: Option<u32>,
+    ) -> StdResult<Vec<MemberMsg<Addr>>> {
+        let competition = self
+            .competitions
+            .load(deps.storage, competition_id.u128())?;
+
+        deps.querier.query_wasm_smart(
+            competition.group_contract,
+            &group::QueryMsg::Members { start_after, limit },
+        )
     }
 
     pub fn query_stats_table(

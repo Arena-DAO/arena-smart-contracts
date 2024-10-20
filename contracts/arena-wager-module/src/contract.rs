@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use arena_interface::{group, ratings::MemberResult};
+use arena_interface::{
+    group::{self, MemberMsg},
+    ratings::MemberResult,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -76,13 +79,19 @@ fn post_processing(deps: DepsMut, competition: &Wager) -> Result<Option<SubMsg>,
             &group::QueryMsg::MembersCount {},
         )?;
         if teams == Uint64::new(2) {
-            let registered_members: Vec<Addr> = deps.querier.query_wasm_smart(
-                competition.group_contract.to_string(),
-                &group::QueryMsg::Members {
-                    start_after: None,
-                    limit: None,
-                },
-            )?;
+            let registered_members: Vec<Addr> = deps
+                .querier
+                .query_wasm_smart::<Vec<MemberMsg<Addr>>>(
+                    competition.group_contract.to_string(),
+                    &group::QueryMsg::Members {
+                        start_after: None,
+                        limit: None,
+                    },
+                )?
+                .into_iter()
+                .map(|x| x.addr)
+                .collect();
+
             // This will be in state
             let result = CompetitionModule::default()
                 .competition_result

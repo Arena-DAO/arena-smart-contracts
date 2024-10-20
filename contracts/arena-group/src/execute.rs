@@ -12,7 +12,7 @@ pub fn update_members(
     env: Env,
     info: MessageInfo,
     to_add: Option<Vec<AddMemberMsg>>,
-    to_update: Option<Vec<MemberMsg>>,
+    to_update: Option<Vec<MemberMsg<String>>>,
     to_remove: Option<Vec<String>>,
 ) -> Result<Response, ContractError> {
     if info.sender != env.contract.address {

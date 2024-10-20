@@ -19,8 +19,6 @@ pub mod arena_wager_module;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cw4_group;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod cw721_base;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod cw_abc;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cw_payroll_factory;

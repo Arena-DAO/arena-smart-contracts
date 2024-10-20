@@ -76,6 +76,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsValidDistribution { addrs } => {
             to_json_binary(&query::is_valid_distribution(deps, addrs)?)
         }
+        QueryMsg::IsMember { addr } => to_json_binary(&query::is_member(deps, addr)?),
     }
 }
 

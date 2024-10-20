@@ -73,6 +73,11 @@ pub enum QueryMsg {
     Enrollment { enrollment_id: Uint128 },
     #[returns(Uint128)]
     EnrollmentCount {},
+    #[returns(bool)]
+    IsMember {
+        enrollment_id: Uint128,
+        addr: String,
+    },
 }
 
 #[cw_serde]

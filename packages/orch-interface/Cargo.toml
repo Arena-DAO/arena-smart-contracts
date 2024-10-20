@@ -26,4 +26,3 @@ arena-payment-registry = { workspace = true }
 cosmwasm-std = { workspace = true }
 
 cw4-group = { package = "abstract-cw4-group", git = "https://github.com/AbstractSDK/cw-plus", branch = "abstract_versions" }
-cw721-base = { git = "https://github.com/AbstractSDK/cw-nfts", branch = "main" }

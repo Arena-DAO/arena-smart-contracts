@@ -685,6 +685,31 @@
         "additionalProperties": false
       },
       {
+        "type": "object",
+        "required": [
+          "is_member"
+        ],
+        "properties": {
+          "is_member": {
+            "type": "object",
+            "required": [
+              "addr",
+              "enrollment_id"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              },
+              "enrollment_id": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Query the contract's ownership information",
         "type": "object",
         "required": [
@@ -1974,6 +1999,11 @@
           "type": "string"
         }
       }
+    },
+    "is_member": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Boolean",
+      "type": "boolean"
     },
     "ownership": {
       "$schema": "http://json-schema.org/draft-07/schema#",
