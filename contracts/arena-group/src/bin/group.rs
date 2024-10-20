@@ -1,4 +1,4 @@
-use arena_interface::escrow::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use arena_interface::group::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cosmwasm_schema::write_api;
 
 fn main() {
