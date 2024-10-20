@@ -143,7 +143,6 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "cw4-group 1.1.2",
  "dao-interface 2.5.0",
  "dao-pre-propose-base 2.5.0",
  "dao-voting 2.5.0",
@@ -204,7 +203,6 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "itertools 0.13.0",
  "thiserror",
 ]
 
@@ -243,7 +241,6 @@ dependencies = [
  "cw-utils 1.0.3",
  "cw2 1.1.2",
  "dao-interface 2.5.0",
- "itertools 0.13.0",
  "thiserror",
 ]
 

@@ -33,4 +33,3 @@ arena-tournament-module = { workspace = true, features = ["library"] }
 cw-ownable = { workspace = true }
 cw-orch = { workspace = true }
 cw-balance = { workspace = true }
-cw4-group = { workspace = true }
