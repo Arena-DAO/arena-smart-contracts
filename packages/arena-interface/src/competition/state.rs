@@ -92,6 +92,7 @@ pub struct CompetitionResponse<CompetitionExt> {
     pub expiration: Expiration,
     pub fees: Option<Vec<FeeInformation<Addr>>>,
     pub banner: Option<String>,
+    pub group_contract: Addr,
 }
 
 impl<CompetitionExt> Competition<CompetitionExt> {
@@ -118,6 +119,7 @@ impl<CompetitionExt> Competition<CompetitionExt> {
             expiration: self.expiration,
             fees: self.fees,
             banner: self.banner,
+            group_contract: self.group_contract,
         }
     }
 }

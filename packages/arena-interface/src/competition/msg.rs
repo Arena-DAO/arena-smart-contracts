@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use crate::competition::state::{CompetitionResponse, CompetitionStatus, Config, Evidence};
 use crate::{
     fees::FeeInformation,
-    group::{self, MemberMsg},
+    group::{self},
 };
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Deps, StdResult, Uint128};
@@ -147,12 +147,6 @@ where
         addr: String,
         stat_name: String,
         height: Option<u64>,
-    },
-    #[returns(Vec<crate::group::MemberMsg<Addr>>)]
-    Members {
-        competition_id: Uint128,
-        start_after: Option<MemberMsg<String>>,
-        limit: Option<u32>,
     },
     #[serde(skip)]
     #[returns(PhantomData<(InstantiateExt, CompetitionExt)>)]

@@ -1845,6 +1845,7 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
 }
 
 #[test]
+#[ignore = "RPC blocks"]
 fn test_migration_v2_v2_1() -> anyhow::Result<()> {
     let app = CloneTesting::new(PION_1)?;
     let mut arena = Arena::new(app.clone());
