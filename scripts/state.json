@@ -2,7 +2,7 @@
   "neutron": {
     "neutron-1": {
       "code_ids": {
-        "arena_competition_enrollment": 2221,
+        "arena_competition_enrollment": 2654,
         "arena_core": 2217,
         "arena_escrow": 2216,
         "arena_group": 2224,
@@ -18,7 +18,7 @@
     },
     "pion-1": {
       "code_ids": {
-        "arena_competition_enrollment": 7608,
+        "arena_competition_enrollment": 8475,
         "arena_core": 7599,
         "arena_escrow": 7598,
         "arena_group": 7607,

@@ -943,12 +943,14 @@ fn test_migration_v2_v2_1() -> anyhow::Result<()> {
         .arena_competition_enrollment
         .set_sender(&arena_dao_addr);
 
-    arena.arena_competition_enrollment.migrate(
-        &MigrateMsg::WithGroupId {
-            group_id: arena.arena_group.code_id()?,
-        },
-        arena.arena_competition_enrollment.code_id()?,
-    )?;
+    arena
+        .arena_competition_enrollment
+        .migrate(&MigrateMsg::FromCompatible {}, 8475)?;
+
+    let enrollments = arena
+        .arena_competition_enrollment
+        .enrollments(None, None, None)?;
+    dbg!(enrollments);
 
     Ok(())
 }
