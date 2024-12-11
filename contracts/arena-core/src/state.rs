@@ -42,7 +42,7 @@ pub struct CompetitionModuleIndexes<'a> {
     pub is_enabled: MultiIndex<'a, String, CompetitionModule, &'a Addr>,
 }
 
-impl<'a> IndexList<CompetitionModule> for CompetitionModuleIndexes<'a> {
+impl IndexList<CompetitionModule> for CompetitionModuleIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<CompetitionModule>> + '_> {
         let v: Vec<&dyn Index<CompetitionModule>> = vec![&self.is_enabled];
         Box::new(v.into_iter())
@@ -67,7 +67,7 @@ pub struct CompetitionCategoryIndexes<'a> {
     pub is_enabled: MultiIndex<'a, String, CompetitionCategory, u128>,
 }
 
-impl<'a> IndexList<CompetitionCategory> for CompetitionCategoryIndexes<'a> {
+impl IndexList<CompetitionCategory> for CompetitionCategoryIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<CompetitionCategory>> + '_> {
         let v: Vec<&dyn Index<CompetitionCategory>> = vec![&self.is_enabled];
         Box::new(v.into_iter())
@@ -96,7 +96,7 @@ pub struct RulesetIndexes<'a> {
     pub category_and_is_enabled: MultiIndex<'a, String, Ruleset, u128>,
 }
 
-impl<'a> IndexList<Ruleset> for RulesetIndexes<'a> {
+impl IndexList<Ruleset> for RulesetIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Ruleset>> + '_> {
         let v: Vec<&dyn Index<Ruleset>> = vec![&self.category_and_is_enabled];
         Box::new(v.into_iter())
@@ -120,7 +120,7 @@ pub struct RatingIndexes<'a> {
     pub rating: MultiIndex<'a, u128, Rating, (u128, &'a Addr)>, // We want to be able to sort by rating value
 }
 
-impl<'a> IndexList<Rating> for RatingIndexes<'a> {
+impl IndexList<Rating> for RatingIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Rating>> + '_> {
         let v: Vec<&dyn Index<Rating>> = vec![&self.rating];
         Box::new(v.into_iter())

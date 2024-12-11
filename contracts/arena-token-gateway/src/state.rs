@@ -40,7 +40,7 @@ pub struct ApplicationIndexes<'a> {
     pub applicant: MultiIndex<'a, Addr, ApplicationInfo, u128>,
 }
 
-impl<'a> IndexList<ApplicationInfo> for ApplicationIndexes<'a> {
+impl IndexList<ApplicationInfo> for ApplicationIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<ApplicationInfo>> + '_> {
         let v: Vec<&dyn Index<ApplicationInfo>> = vec![&self.status, &self.applicant];
         Box::new(v.into_iter())

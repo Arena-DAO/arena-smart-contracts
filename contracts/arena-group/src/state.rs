@@ -5,7 +5,7 @@ pub struct MemberIndexes<'a> {
     pub seed: MultiIndex<'a, u64, Uint64, &'a Addr>,
 }
 
-impl<'a> IndexList<Uint64> for MemberIndexes<'a> {
+impl IndexList<Uint64> for MemberIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Uint64>> + '_> {
         let v: Vec<&dyn Index<Uint64>> = vec![&self.seed];
         Box::new(v.into_iter())

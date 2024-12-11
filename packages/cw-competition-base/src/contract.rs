@@ -51,8 +51,8 @@ pub struct CompetitionIndexes<'a, CompetitionExt> {
     pub host: MultiIndex<'a, String, Competition<CompetitionExt>, u128>,
 }
 
-impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
-    IndexList<Competition<CompetitionExt>> for CompetitionIndexes<'a, CompetitionExt>
+impl<CompetitionExt: Serialize + Clone + DeserializeOwned> IndexList<Competition<CompetitionExt>>
+    for CompetitionIndexes<'_, CompetitionExt>
 {
     fn get_indexes(
         &'_ self,
@@ -69,8 +69,8 @@ pub struct CompetitionV2Indexes<'a, CompetitionExt> {
     pub host: MultiIndex<'a, String, CompetitionV2<CompetitionExt>, u128>,
 }
 
-impl<'a, CompetitionExt: Serialize + Clone + DeserializeOwned>
-    IndexList<CompetitionV2<CompetitionExt>> for CompetitionV2Indexes<'a, CompetitionExt>
+impl<CompetitionExt: Serialize + Clone + DeserializeOwned> IndexList<CompetitionV2<CompetitionExt>>
+    for CompetitionV2Indexes<'_, CompetitionExt>
 {
     fn get_indexes(
         &'_ self,
@@ -122,7 +122,6 @@ pub struct CompetitionModuleContract<
 }
 
 impl<
-        'a,
         InstantiateExt: Serialize + DeserializeOwned + Clone,
         ExecuteExt,
         QueryExt: JsonSchema,
@@ -131,7 +130,7 @@ impl<
         CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
-        'a,
+        '_,
         InstantiateExt,
         ExecuteExt,
         QueryExt,
@@ -266,7 +265,6 @@ impl<
 }
 
 impl<
-        'a,
         InstantiateExt: Serialize + DeserializeOwned + Clone,
         ExecuteExt,
         QueryExt: JsonSchema,
@@ -275,7 +273,7 @@ impl<
         CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     > Default
     for CompetitionModuleContract<
-        'a,
+        '_,
         InstantiateExt,
         ExecuteExt,
         QueryExt,
@@ -309,7 +307,6 @@ impl<
 }
 
 impl<
-        'a,
         InstantiateExt: Serialize + DeserializeOwned + Clone + std::fmt::Debug,
         ExecuteExt,
         QueryExt: JsonSchema,
@@ -318,7 +315,7 @@ impl<
         CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
     >
     CompetitionModuleContract<
-        'a,
+        '_,
         InstantiateExt,
         ExecuteExt,
         QueryExt,

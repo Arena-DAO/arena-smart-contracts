@@ -197,7 +197,7 @@ pub struct EnrollmentEntryIndexes<'a> {
     pub host: MultiIndex<'a, String, EnrollmentEntry, u128>,
 }
 
-impl<'a> IndexList<EnrollmentEntry> for EnrollmentEntryIndexes<'a> {
+impl IndexList<EnrollmentEntry> for EnrollmentEntryIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<EnrollmentEntry>> + '_> {
         let v: Vec<&dyn Index<EnrollmentEntry>> = vec![&self.host, &self.category];
         Box::new(v.into_iter())
@@ -226,7 +226,7 @@ pub struct EnrollmentEntryV2Indexes<'a> {
     pub host: MultiIndex<'a, String, EnrollmentEntryV2, u128>,
 }
 
-impl<'a> IndexList<EnrollmentEntryV2> for EnrollmentEntryV2Indexes<'a> {
+impl IndexList<EnrollmentEntryV2> for EnrollmentEntryV2Indexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<EnrollmentEntryV2>> + '_> {
         let v: Vec<&dyn Index<EnrollmentEntryV2>> = vec![&self.host, &self.category];
         Box::new(v.into_iter())
