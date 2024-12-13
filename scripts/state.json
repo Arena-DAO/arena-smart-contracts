@@ -20,6 +20,7 @@
       "code_ids": {
         "arena_competition_enrollment": 8475,
         "arena_core": 7599,
+        "arena_discord_identity": 8604,
         "arena_escrow": 7598,
         "arena_group": 7607,
         "arena_league_module": 7616,
