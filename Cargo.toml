@@ -57,6 +57,7 @@ orch-interface = { path = "./packages/orch-interface" }
 glicko_2 = { path = "./packages/glicko_2" }
 
 arena-core = { path = "./contracts/arena-core" }
+arena-discord-identity = { path = "./contracts/arena-discord-identity" }
 arena-escrow = { path = "./contracts/arena-escrow" }
 arena-group = { path = "./contracts/arena-group" }
 arena-wager-module = { path = "./contracts/arena-wager-module" }

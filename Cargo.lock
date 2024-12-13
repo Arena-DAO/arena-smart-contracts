@@ -172,6 +172,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "arena-discord-identity"
+version = "2.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-orch",
+ "cw-ownable",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
+ "thiserror",
+]
+
+[[package]]
 name = "arena-escrow"
 version = "2.1.0"
 dependencies = [
@@ -4199,6 +4212,7 @@ dependencies = [
  "abstract-cw4-group",
  "arena-competition-enrollment",
  "arena-core",
+ "arena-discord-identity",
  "arena-escrow",
  "arena-group",
  "arena-interface",

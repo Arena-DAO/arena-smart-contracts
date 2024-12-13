@@ -3,6 +3,8 @@ pub mod arena_competition_enrollment;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod arena_core;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod arena_discord_identity;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod arena_escrow;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod arena_group;

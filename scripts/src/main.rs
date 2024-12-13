@@ -2,8 +2,9 @@ use arena::Arena;
 use cw_orch::{anyhow, prelude::*};
 use orch_interface::{
     arena_competition_enrollment::ArenaCompetitionEnrollmentContract,
-    arena_core::ArenaCoreContract, arena_group::ArenaGroupContract,
-    arena_league_module::ArenaLeagueModuleContract, arena_token_gateway::ArenaTokenGatewayContract,
+    arena_core::ArenaCoreContract, arena_discord_identity::ArenaDiscordIdentityContract,
+    arena_group::ArenaGroupContract, arena_league_module::ArenaLeagueModuleContract,
+    arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
     arena_wager_module::ArenaWagerModuleContract, cw_abc::CwAbcContract,
     cw_payroll_factory::DaoPayrollFactory,
@@ -49,6 +50,7 @@ enum DeployComponent {
     PayrollFactory,
     Abc,
     Group,
+    Identity,
 }
 
 fn parse_command(args: &[String]) -> Command {
@@ -72,6 +74,7 @@ fn parse_command(args: &[String]) -> Command {
         "payroll_factory" => DeployComponent::PayrollFactory,
         "abc" => DeployComponent::Abc,
         "group" => DeployComponent::Group,
+        "identity" => DeployComponent::Identity,
         _ => return Command::Unknown,
     };
 
@@ -94,6 +97,7 @@ fn deploy(network: Network, component: DeployComponent) -> anyhow::Result<()> {
         DeployComponent::PayrollFactory => deploy_payroll_factory(daemon)?,
         DeployComponent::Abc => deploy_cw_abc(daemon)?,
         DeployComponent::Group => deploy_group(daemon)?,
+        DeployComponent::Identity => deploy_identity(daemon)?,
     }
 
     Ok(())
@@ -154,6 +158,12 @@ fn deploy_cw_abc(daemon: Daemon) -> anyhow::Result<()> {
 fn deploy_group(daemon: Daemon) -> anyhow::Result<()> {
     let group = ArenaGroupContract::new(daemon);
     group.upload()?;
+    Ok(())
+}
+
+fn deploy_identity(daemon: Daemon) -> anyhow::Result<()> {
+    let identity = ArenaDiscordIdentityContract::new(daemon);
+    identity.upload()?;
     Ok(())
 }
 
