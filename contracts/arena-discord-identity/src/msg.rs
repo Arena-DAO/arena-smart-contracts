@@ -15,7 +15,7 @@ pub enum ExecuteMsg {
         addr: String,
         discord_id: Uint64,
         username: String,
-        avatar_hash: String,
+        avatar_hash: Option<String>,
         connections: Option<Vec<DiscordConnection>>,
     },
     SetFaucetAmount {
@@ -44,7 +44,7 @@ pub struct DiscordProfile {
     pub user_id: Uint64,
     /// The discord username
     pub username: String,
-    pub avatar_hash: String,
+    pub avatar_hash: Option<String>,
     pub connections: Option<Vec<DiscordConnection>>,
 }
 
