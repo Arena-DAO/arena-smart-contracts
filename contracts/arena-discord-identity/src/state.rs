@@ -1,7 +1,29 @@
-use cosmwasm_std::{Addr, Coin, Uint64};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{Addr, Coin};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 
-/// Maps an address to discord user id
-pub const DISCORD_IDENTITY: Map<&Addr, Uint64> = Map::new("discord_identity");
-pub const REVERSE_IDENTITY_MAP: Map<u64, Addr> = Map::new("reverse_identity_map");
+use crate::msg::DiscordProfile;
+
+pub struct DiscordProfileIndexes<'a> {
+    pub discord_id: MultiIndex<'a, u64, DiscordProfile, &'a Addr>,
+}
+
+impl IndexList<DiscordProfile> for DiscordProfileIndexes<'_> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<DiscordProfile>> + '_> {
+        let v: Vec<&dyn Index<DiscordProfile>> = vec![&self.discord_id];
+        Box::new(v.into_iter())
+    }
+}
+
+pub fn discord_identity<'a>() -> IndexedMap<'a, &'a Addr, DiscordProfile, DiscordProfileIndexes<'a>>
+{
+    let indexes = DiscordProfileIndexes {
+        discord_id: MultiIndex::new(
+            |_, d: &DiscordProfile| d.user_id.u64(),
+            "discord_identity",
+            "discord_identity__discord_id",
+        ),
+    };
+    IndexedMap::new("discord_identity", indexes)
+}
+
 pub const FAUCET_AMOUNT: Item<Coin> = Item::new("faucet_amount");

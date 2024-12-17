@@ -11,8 +11,16 @@ pub struct InstantiateMsg {
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
-    SetProfile { addr: String, user_id: Uint64 },
-    SetFaucetAmount { amount: Coin },
+    SetProfile {
+        addr: String,
+        discord_id: Uint64,
+        username: String,
+        avatar_hash: String,
+        connections: Option<Vec<DiscordConnection>>,
+    },
+    SetFaucetAmount {
+        amount: Coin,
+    },
     Withdraw {},
 }
 
@@ -22,9 +30,28 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(Option<Uint64>)]
     UserId { addr: String },
+    #[returns(Vec<cosmwasm_std::Addr>)]
+    ConnectedWallets { discord_id: Uint64 },
 }
 
 #[cw_serde]
 pub enum MigrateMsg {
     FromCompatible {},
+}
+
+#[cw_serde]
+pub struct DiscordProfile {
+    pub user_id: Uint64,
+    /// The discord username
+    pub username: String,
+    pub avatar_hash: String,
+    pub connections: Option<Vec<DiscordConnection>>,
+}
+
+#[cw_serde]
+pub struct DiscordConnection {
+    /// The type of service connection
+    pub key: String,
+    /// The service's connection username
+    pub username: String,
 }

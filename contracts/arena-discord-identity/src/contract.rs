@@ -1,13 +1,13 @@
 use cosmwasm_std::{
-    entry_point, to_json_binary, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    entry_point, to_json_binary, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response,
     StdResult, WasmMsg,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_ownable::assert_owner;
 
 use crate::{
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    state::{DISCORD_IDENTITY, FAUCET_AMOUNT, REVERSE_IDENTITY_MAP},
+    msg::{DiscordProfile, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    state::{discord_identity, FAUCET_AMOUNT},
     ContractError,
 };
 
@@ -49,38 +49,76 @@ pub fn execute(
     }
 
     match msg {
-        ExecuteMsg::SetProfile { addr, user_id } => {
+        ExecuteMsg::SetProfile {
+            addr,
+            discord_id,
+            username,
+            avatar_hash,
+            connections,
+        } => {
+            let discord_identity = discord_identity();
             let user = deps.api.addr_validate(&addr)?;
             let mut msgs = vec![];
-            if !DISCORD_IDENTITY.has(deps.storage, &user)
-                && !REVERSE_IDENTITY_MAP.has(deps.storage, user_id.u64())
+            if !discord_identity.has(deps.storage, &user)
+                && discord_identity
+                    .idx
+                    .discord_id
+                    .prefix(discord_id.u64())
+                    .range(deps.storage, None, None, Order::Descending)
+                    .collect::<StdResult<Vec<_>>>()?
+                    .is_empty()
             {
-                let amount = vec![FAUCET_AMOUNT.load(deps.storage)?];
-                msgs.push(BankMsg::Send {
-                    to_address: user.to_string(),
-                    amount,
-                })
+                let faucet_amount = FAUCET_AMOUNT.load(deps.storage)?;
+
+                if deps
+                    .querier
+                    .query_balance(&user, &faucet_amount.denom)?
+                    .amount
+                    .is_zero()
+                {
+                    let amount = vec![faucet_amount];
+                    msgs.push(BankMsg::Send {
+                        to_address: user.to_string(),
+                        amount,
+                    })
+                }
             }
 
-            DISCORD_IDENTITY.save(deps.storage, &user, &user_id)?;
-            REVERSE_IDENTITY_MAP.save(deps.storage, user_id.u64(), &user)?;
+            discord_identity.save(
+                deps.storage,
+                &user,
+                &DiscordProfile {
+                    user_id: discord_id,
+                    username,
+                    avatar_hash,
+                    connections,
+                },
+            )?;
 
-            Ok(Response::new().add_messages(msgs))
+            Ok(Response::new()
+                .add_messages(msgs)
+                .add_attribute("action", "set_profile")
+                .add_attribute("address", user)
+                .add_attribute("discord_id", discord_id.to_string()))
         }
         ExecuteMsg::SetFaucetAmount { amount } => {
             FAUCET_AMOUNT.save(deps.storage, &amount)?;
 
-            Ok(Response::new())
+            Ok(Response::new()
+                .add_attribute("action", "set_faucet_amount")
+                .add_attribute("amount", amount.to_string()))
         }
         ExecuteMsg::Withdraw {} => {
             let funds = deps
                 .querier
                 .query_all_balances(env.contract.address.to_string())?;
 
-            Ok(Response::new().add_message(BankMsg::Send {
-                to_address: info.sender.to_string(),
-                amount: funds,
-            }))
+            Ok(Response::new()
+                .add_attribute("action", "withdraw")
+                .add_message(BankMsg::Send {
+                    to_address: info.sender.to_string(),
+                    amount: funds,
+                }))
         }
         ExecuteMsg::UpdateOwnership(action) => {
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
@@ -95,8 +133,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::UserId { addr } => {
             let addr = deps.api.addr_validate(&addr)?;
 
-            to_json_binary(&DISCORD_IDENTITY.may_load(deps.storage, &addr)?)
+            to_json_binary(&discord_identity().may_load(deps.storage, &addr)?)
         }
+        QueryMsg::ConnectedWallets { discord_id } => to_json_binary(
+            &discord_identity()
+                .idx
+                .discord_id
+                .prefix(discord_id.u64())
+                .keys(deps.storage, None, None, Order::Descending)
+                .collect::<StdResult<Vec<_>>>()?,
+        ),
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
     }
 }
