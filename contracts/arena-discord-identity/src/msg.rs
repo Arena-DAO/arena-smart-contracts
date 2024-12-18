@@ -13,10 +13,10 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     SetProfile {
         addr: String,
-        discord_id: Uint64,
-        username: String,
-        avatar_hash: Option<String>,
-        connections: Option<Vec<DiscordConnection>>,
+        discord_profile: DiscordProfile,
+    },
+    SetConnections {
+        connections: Vec<DiscordConnection>,
     },
     SetFaucetAmount {
         amount: Coin,
@@ -29,9 +29,11 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum QueryMsg {
     #[returns(Option<Uint64>)]
-    UserId { addr: String },
+    DiscordProfile { addr: String },
     #[returns(Vec<cosmwasm_std::Addr>)]
     ConnectedWallets { discord_id: Uint64 },
+    #[returns(Vec<DiscordConnection>)]
+    DiscordConnections { addr: String },
 }
 
 #[cw_serde]
@@ -45,7 +47,6 @@ pub struct DiscordProfile {
     /// The discord username
     pub username: String,
     pub avatar_hash: Option<String>,
-    pub connections: Option<Vec<DiscordConnection>>,
 }
 
 #[cw_serde]

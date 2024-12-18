@@ -6,8 +6,8 @@ use cw2::{ensure_from_older_version, set_contract_version};
 use cw_ownable::assert_owner;
 
 use crate::{
-    msg::{DiscordProfile, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    state::{discord_identity, FAUCET_AMOUNT},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    state::{discord_identity, DISCORD_CONNECTIONS, FAUCET_AMOUNT},
     ContractError,
 };
 
@@ -44,17 +44,21 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    if info.sender != env.contract.address {
+    if !matches!(msg, ExecuteMsg::SetConnections { .. }) && info.sender != env.contract.address {
         assert_owner(deps.storage, &info.sender)?;
     }
 
     match msg {
+        ExecuteMsg::SetConnections { connections } => {
+            let discord_profile = discord_identity().load(deps.storage, &info.sender)?;
+
+            DISCORD_CONNECTIONS.save(deps.storage, discord_profile.user_id.u64(), &connections)?;
+
+            Ok(Response::new().add_attribute("action", "set_connections"))
+        }
         ExecuteMsg::SetProfile {
             addr,
-            discord_id,
-            username,
-            avatar_hash,
-            connections,
+            discord_profile,
         } => {
             let discord_identity = discord_identity();
             let user = deps.api.addr_validate(&addr)?;
@@ -63,7 +67,7 @@ pub fn execute(
                 && discord_identity
                     .idx
                     .discord_id
-                    .prefix(discord_id.u64())
+                    .prefix(discord_profile.user_id.u64())
                     .range(deps.storage, None, None, Order::Descending)
                     .collect::<StdResult<Vec<_>>>()?
                     .is_empty()
@@ -84,22 +88,13 @@ pub fn execute(
                 }
             }
 
-            discord_identity.save(
-                deps.storage,
-                &user,
-                &DiscordProfile {
-                    user_id: discord_id,
-                    username,
-                    avatar_hash,
-                    connections,
-                },
-            )?;
+            discord_identity.save(deps.storage, &user, &discord_profile)?;
 
             Ok(Response::new()
                 .add_messages(msgs)
                 .add_attribute("action", "set_profile")
                 .add_attribute("address", user)
-                .add_attribute("discord_id", discord_id.to_string()))
+                .add_attribute("discord_id", discord_profile.user_id.to_string()))
         }
         ExecuteMsg::SetFaucetAmount { amount } => {
             FAUCET_AMOUNT.save(deps.storage, &amount)?;
@@ -130,7 +125,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::UserId { addr } => {
+        QueryMsg::DiscordProfile { addr } => {
             let addr = deps.api.addr_validate(&addr)?;
 
             to_json_binary(&discord_identity().may_load(deps.storage, &addr)?)
@@ -143,6 +138,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .keys(deps.storage, None, None, Order::Descending)
                 .collect::<StdResult<Vec<_>>>()?,
         ),
+        QueryMsg::DiscordConnections { addr } => {
+            let addr = deps.api.addr_validate(&addr)?;
+            let discord_id = discord_identity().load(deps.storage, &addr)?.user_id;
+            to_json_binary(
+                &DISCORD_CONNECTIONS
+                    .may_load(deps.storage, discord_id.u64())?
+                    .unwrap_or_default(),
+            )
+        }
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
     }
 }
