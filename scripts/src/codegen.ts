@@ -6,9 +6,9 @@ glob("../@(contracts)/**/schema").then((matches) => {
   let contracts: ContractFile[] = [];
 
   for (const x of matches) {
-    let split = x.split("\\");
+    let split = x.split("/");
     let name = split[split.length - 2];
-    let dir = join(__dirname, "..", x).replaceAll("\\", "/");
+    let dir = join(__dirname, "..", x);
 
     console.log(dir);
     console.log(name);

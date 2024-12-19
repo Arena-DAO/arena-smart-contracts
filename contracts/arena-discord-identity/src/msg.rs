@@ -28,7 +28,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum QueryMsg {
-    #[returns(Option<Uint64>)]
+    #[returns(Option<DiscordProfile>)]
     DiscordProfile { addr: String },
     #[returns(Vec<cosmwasm_std::Addr>)]
     ConnectedWallets { discord_id: Uint64 },
