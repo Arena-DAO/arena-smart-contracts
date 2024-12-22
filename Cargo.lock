@@ -146,6 +146,7 @@ dependencies = [
  "dao-interface 2.5.0",
  "dao-pre-propose-base 2.5.0",
  "dao-voting 2.5.0",
+ "itertools 0.13.0",
  "serde",
  "sha2 0.10.8",
  "thiserror",

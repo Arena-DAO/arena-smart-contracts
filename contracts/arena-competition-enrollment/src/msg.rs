@@ -40,6 +40,10 @@ pub enum ExecuteMsg {
     Withdraw {
         id: Uint128,
     },
+    ForceWithdraw {
+        id: Uint128,
+        members: Vec<String>,
+    },
 }
 
 #[cw_serde]

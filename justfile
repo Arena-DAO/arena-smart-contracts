@@ -1,3 +1,5 @@
+DOCKER_OPTIMIZER := "cosmwasm/optimizer:0.16.1"
+
 check:
     cargo +stable fmt --all -- --check
     cargo +stable clippy --all-targets -- -D warnings
@@ -26,7 +28,7 @@ optimize:
         -v "$(pwd)":/code \
         --mount type=volume,source=arena_cache,target=/code/target \
         --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-        "$DOCKER_OPTIMIZER"
+        {{DOCKER_OPTIMIZER}}
 
 schema:
     ./scripts/schema.sh

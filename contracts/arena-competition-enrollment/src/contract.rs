@@ -73,6 +73,9 @@ pub fn execute(
         }
         ExecuteMsg::Enroll { id } => execute::enroll(deps, env, info, id),
         ExecuteMsg::Withdraw { id } => execute::withdraw(deps, env, info, id),
+        ExecuteMsg::ForceWithdraw { id, members } => {
+            execute::force_withdraw(deps, env, info, id, members)
+        }
     }
 }
 

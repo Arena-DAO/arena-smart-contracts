@@ -7,12 +7,13 @@ use arena_league_module::msg::LeagueInstantiateExt;
 use arena_tournament_module::{msg::TournamentInstantiateExt, state::EliminationType};
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
-    ensure, instantiate2_address, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
+    ensure, instantiate2_address, to_json_binary, Addr, Attribute, BankMsg, Coin, CosmosMsg,
+    DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
 };
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_utils::{must_pay, Expiration};
 use dao_interface::state::ModuleInstantiateInfo;
+use itertools::Itertools as _;
 use sha2::{Digest, Sha256};
 
 use crate::{
@@ -392,14 +393,14 @@ pub fn trigger_expiration(
 
 pub fn enroll(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     id: Uint128,
 ) -> Result<Response, ContractError> {
     let entry = enrollment_entries().load(deps.storage, id.u128())?;
 
     ensure!(
-        !entry.has_triggered_expiration,
+        !entry.has_triggered_expiration || entry.expiration.is_expired(&env.block),
         ContractError::AlreadyExpired {}
     );
     if let Some(entry_fee) = &entry.entry_fee {
@@ -450,6 +451,42 @@ pub fn withdraw(
     // Load the enrollment entry
     let entry = enrollment_entries().load(deps.storage, id.u128())?;
 
+    Ok(_withdraw(entry, vec![info.sender], id)?.add_attribute("action", "withdraw"))
+}
+
+pub fn force_withdraw(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    id: Uint128,
+    members: Vec<String>,
+) -> Result<Response, ContractError> {
+    // Load the enrollment entry
+    let entry = enrollment_entries().load(deps.storage, id.u128())?;
+
+    ensure!(entry.host == info.sender, ContractError::Unauthorized {});
+
+    let members = members
+        .into_iter()
+        .unique()
+        .map(|x| deps.api.addr_validate(&x))
+        .collect::<StdResult<Vec<_>>>()?;
+
+    ensure!(
+        !members.is_empty(),
+        ContractError::StdError(StdError::generic_err(
+            "No members to force_withdraw provided"
+        ))
+    );
+
+    Ok(_withdraw(entry, members, id)?.add_attribute("action", "force_withdraw"))
+}
+
+pub fn _withdraw(
+    entry: EnrollmentEntry,
+    members: Vec<Addr>,
+    id: Uint128,
+) -> Result<Response, ContractError> {
     // Check if the competition is still in Pending state
     let is_pending = matches!(entry.competition_info, CompetitionInfo::Pending { .. });
 
@@ -459,31 +496,46 @@ pub fn withdraw(
         ContractError::AlreadyExpired {}
     );
 
-    // Prepare the refund if there was an entry fee
-    let refund_msg = if let Some(entry_fee) = &entry.entry_fee {
-        vec![CosmosMsg::Bank(BankMsg::Send {
-            to_address: info.sender.to_string(),
-            amount: vec![entry_fee.clone()],
-        })]
+    // If there's an entry fee, create refund messages for each member
+    let refund_msgs = if let Some(entry_fee) = &entry.entry_fee {
+        members
+            .iter()
+            .map(|member| {
+                CosmosMsg::Bank(BankMsg::Send {
+                    to_address: member.to_string(),
+                    amount: vec![entry_fee.clone()],
+                })
+            })
+            .collect::<Vec<_>>()
     } else {
         vec![]
     };
 
-    let msg = CosmosMsg::Wasm(WasmMsg::Execute {
+    // Create group update message to remove all members
+    let group_msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: entry.group_contract.to_string(),
         msg: to_json_binary(&group::ExecuteMsg::UpdateMembers {
             to_add: None,
             to_update: None,
-            to_remove: Some(vec![info.sender.to_string()]),
+            to_remove: Some(members.iter().map(|m| m.to_string()).collect()),
         })?,
         funds: vec![],
     });
 
+    // Create attributes for each withdrawn member
+    let member_attributes: Vec<Attribute> = members
+        .into_iter()
+        .map(|member| Attribute {
+            key: "withdrawn_member".to_string(),
+            value: member.to_string(),
+        })
+        .collect();
+
     Ok(Response::new()
-        .add_message(msg)
-        .add_messages(refund_msg)
-        .add_attribute("action", "withdraw")
-        .add_attribute("id", id.to_string()))
+        .add_message(group_msg)
+        .add_messages(refund_msgs)
+        .add_attribute("id", id.to_string())
+        .add_attributes(member_attributes))
 }
 
 fn get_min_min_members(competition_type: &CompetitionType) -> Uint64 {
