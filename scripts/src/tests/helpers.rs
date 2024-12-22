@@ -3,13 +3,12 @@ use std::collections::HashMap;
 use crate::Arena;
 use arena_interface::group::AddMemberMsg;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_json_binary, CosmosMsg, WasmMsg};
+use cosmwasm_std::to_json_binary;
 use cw_orch::{anyhow, prelude::*};
 use dao_interface::{
     state::{Admin, ModuleInstantiateInfo},
     CoreExecuteMsgFns as _, CoreQueryMsgFns as _,
 };
-use dao_proposal_sudo::msg::ExecuteMsgFns as _;
 use dao_voting_cw4::msg::GroupContract;
 
 pub fn setup_arena(mock: &MockBech32) -> anyhow::Result<(Arena<MockBech32>, Addr)> {
@@ -19,6 +18,7 @@ pub fn setup_arena(mock: &MockBech32) -> anyhow::Result<(Arena<MockBech32>, Addr
     Ok((arena, admin))
 }
 
+#[cfg(feature = "abc")]
 pub fn setup_vesting(
     arena: &Arena<MockBech32>,
     chain_id: String,
@@ -29,7 +29,6 @@ pub fn setup_vesting(
         &cw_payroll_factory::msg::InstantiateMsg {
             owner: Some(arena.dao_dao.dao_core.addr_str()?),
             vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
-            instantiate_allowlist: None,
         },
         Some(&arena.dao_dao.dao_core.address()?),
         None,

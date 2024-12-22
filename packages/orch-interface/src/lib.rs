@@ -20,7 +20,8 @@ pub mod arena_tournament_module;
 pub mod arena_wager_module;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cw4_group;
+#[cfg(feature = "abc")]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cw_abc;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod cw_payroll_factory;
+pub mod dao_dao_core;

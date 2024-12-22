@@ -187,6 +187,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                 voting_module_instantiate_info: voting_module_info,
                 proposal_modules_instantiate_info: proposal_modules,
                 initial_items: None,
+                initial_dao_actions: None,
             },
             None,
             None,

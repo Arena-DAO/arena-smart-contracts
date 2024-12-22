@@ -13,7 +13,8 @@
         "arena_tournament_module": 2220,
         "arena_wager_module": 2218,
         "cw_abc": 2042,
-        "cw_payroll_factory": 2052
+        "cw_payroll_factory": 2052,
+        "dao_dao_core": 2852
       },
       "default": {}
     },
@@ -30,7 +31,8 @@
         "arena_tournament_module": 7617,
         "arena_wager_module": 7615,
         "cw_abc": 6824,
-        "cw_payroll_factory": 6832
+        "cw_payroll_factory": 6832,
+        "dao_dao_core": 8679
       },
       "default": {}
     }

@@ -5,6 +5,9 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[features]
+abc = []
+
 [dependencies]
 cw-orch = { workspace = true, features = ["daemon"] }
 arena-tournament-module = { workspace = true }

@@ -6,8 +6,7 @@ use orch_interface::{
     arena_group::ArenaGroupContract, arena_league_module::ArenaLeagueModuleContract,
     arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
-    arena_wager_module::ArenaWagerModuleContract, cw_abc::CwAbcContract,
-    cw_payroll_factory::DaoPayrollFactory,
+    arena_wager_module::ArenaWagerModuleContract, dao_dao_core::DaoDaoCoreContract,
 };
 use std::env;
 
@@ -47,10 +46,9 @@ enum DeployComponent {
     Enrollment,
     TokenGateway,
     CompetitionModules,
-    PayrollFactory,
-    Abc,
     Group,
     Identity,
+    DaoCore,
 }
 
 fn parse_command(args: &[String]) -> Command {
@@ -67,12 +65,11 @@ fn parse_command(args: &[String]) -> Command {
     let component = match args[3].as_str() {
         "all" => DeployComponent::All,
         "core" => DeployComponent::Core,
+        "dao_core" => DeployComponent::DaoCore,
         "tournament" => DeployComponent::Tournament,
         "enrollment" => DeployComponent::Enrollment,
         "token_gateway" => DeployComponent::TokenGateway,
         "competition_modules" => DeployComponent::CompetitionModules,
-        "payroll_factory" => DeployComponent::PayrollFactory,
-        "abc" => DeployComponent::Abc,
         "group" => DeployComponent::Group,
         "identity" => DeployComponent::Identity,
         _ => return Command::Unknown,
@@ -90,12 +87,11 @@ fn deploy(network: Network, component: DeployComponent) -> anyhow::Result<()> {
     match component {
         DeployComponent::All => deploy_all(daemon)?,
         DeployComponent::Core => deploy_core(daemon)?,
+        DeployComponent::DaoCore => deploy_dao_core(daemon)?,
         DeployComponent::Tournament => deploy_tournament(daemon)?,
         DeployComponent::Enrollment => deploy_enrollment(daemon)?,
         DeployComponent::TokenGateway => deploy_token_gateway(daemon)?,
         DeployComponent::CompetitionModules => deploy_competition_modules(daemon)?,
-        DeployComponent::PayrollFactory => deploy_payroll_factory(daemon)?,
-        DeployComponent::Abc => deploy_cw_abc(daemon)?,
         DeployComponent::Group => deploy_group(daemon)?,
         DeployComponent::Identity => deploy_identity(daemon)?,
     }
@@ -112,6 +108,12 @@ fn deploy_all(daemon: Daemon) -> anyhow::Result<()> {
 fn deploy_core(daemon: Daemon) -> anyhow::Result<()> {
     let core = ArenaCoreContract::new(daemon);
     core.upload()?;
+    Ok(())
+}
+
+fn deploy_dao_core(daemon: Daemon) -> anyhow::Result<()> {
+    let dao_core = DaoDaoCoreContract::new(daemon);
+    dao_core.upload()?;
     Ok(())
 }
 
@@ -140,18 +142,6 @@ fn deploy_competition_modules(daemon: Daemon) -> anyhow::Result<()> {
     league_module.upload()?;
     let tournament_module = ArenaTournamentModuleContract::new(daemon);
     tournament_module.upload()?;
-    Ok(())
-}
-
-fn deploy_payroll_factory(daemon: Daemon) -> anyhow::Result<()> {
-    let payroll_factory = DaoPayrollFactory::new(daemon);
-    payroll_factory.upload()?;
-    Ok(())
-}
-
-fn deploy_cw_abc(daemon: Daemon) -> anyhow::Result<()> {
-    let cw_abc = CwAbcContract::new(daemon);
-    cw_abc.upload()?;
     Ok(())
 }
 

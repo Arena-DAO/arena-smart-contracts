@@ -1,14 +1,13 @@
 use cw_orch::interface;
 use cw_orch::prelude::*;
+use dao_interface::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
-use cw_payroll_factory::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-
-pub const CONTRACT_ID: &str = "cw_payroll_factory";
+pub const CONTRACT_ID: &str = "dao_dao_core";
 
 #[interface(InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, id = CONTRACT_ID)]
-pub struct DaoPayrollFactory;
+pub struct DaoDaoCoreContract;
 
-impl<Chain> Uploadable for DaoPayrollFactory<Chain> {
+impl<Chain> Uploadable for DaoDaoCoreContract<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(_chain: &ChainInfoOwned) -> WasmPath {
         artifacts_dir_from_workspace!()
@@ -19,12 +18,12 @@ impl<Chain> Uploadable for DaoPayrollFactory<Chain> {
     fn wrapper() -> Box<dyn MockContract<Empty>> {
         Box::new(
             ContractWrapper::new_with_empty(
-                cw_payroll_factory::contract::execute,
-                cw_payroll_factory::contract::instantiate,
-                cw_payroll_factory::contract::query,
+                dao_dao_core::contract::execute,
+                dao_dao_core::contract::instantiate,
+                dao_dao_core::contract::query,
             )
-            .with_reply(cw_payroll_factory::contract::reply)
-            .with_migrate(cw_payroll_factory::contract::migrate),
+            .with_migrate(dao_dao_core::contract::migrate)
+            .with_reply(dao_dao_core::contract::reply),
         )
     }
 }

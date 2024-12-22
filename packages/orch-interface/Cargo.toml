@@ -5,13 +5,16 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[features]
+abc = []
+
 [lib]
 doctest = false
 
 [dependencies]
 cw-orch = { workspace = true }
-cw-abc = { workspace = true }
 cw-payroll-factory = { workspace = true }
+dao-dao-core = { workspace = true }
 dao-interface = { workspace = true }
 arena-group = { workspace = true }
 arena-wager-module = { workspace = true }
