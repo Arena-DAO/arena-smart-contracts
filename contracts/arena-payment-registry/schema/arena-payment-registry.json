@@ -36,6 +36,30 @@
       {
         "type": "object",
         "required": [
+          "set_distribution_remainder_self"
+        ],
+        "properties": {
+          "set_distribution_remainder_self": {
+            "type": "object",
+            "required": [
+              "member_percentages"
+            ],
+            "properties": {
+              "member_percentages": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/MemberPercentage_for_String"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
           "remove_distribution"
         ],
         "properties": {

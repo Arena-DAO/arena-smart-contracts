@@ -3,6 +3,7 @@ use arena_interface::registry::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{ensure_from_older_version, set_contract_version};
+use cw_balance::Distribution;
 
 use crate::{execute, query};
 
@@ -25,6 +26,14 @@ pub fn instantiate(
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::SetDistribution { distribution } => {
+            execute::set_distribution(deps, env, info, distribution)
+        }
+        ExecuteMsg::SetDistributionRemainderSelf { member_percentages } => {
+            let distribution = Distribution {
+                remainder_addr: info.sender.to_string(),
+                member_percentages,
+            };
+
             execute::set_distribution(deps, env, info, distribution)
         }
         ExecuteMsg::RemoveDistribution {} => execute::remove_distribution(deps, env, info),

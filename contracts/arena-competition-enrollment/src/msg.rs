@@ -88,6 +88,7 @@ pub enum QueryMsg {
 pub enum MigrateMsg {
     FromCompatible {},
     WithGroupId { group_id: u64 },
+    RemoveThirdPlaceMatch { enrollment_id: Uint128 },
 }
 
 #[cw_serde]

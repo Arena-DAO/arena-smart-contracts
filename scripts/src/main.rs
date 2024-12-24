@@ -4,6 +4,7 @@ use orch_interface::{
     arena_competition_enrollment::ArenaCompetitionEnrollmentContract,
     arena_core::ArenaCoreContract, arena_discord_identity::ArenaDiscordIdentityContract,
     arena_group::ArenaGroupContract, arena_league_module::ArenaLeagueModuleContract,
+    arena_payment_registry::ArenaPaymentRegistryContract,
     arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
     arena_wager_module::ArenaWagerModuleContract, dao_dao_core::DaoDaoCoreContract,
@@ -49,6 +50,7 @@ enum DeployComponent {
     Group,
     Identity,
     DaoCore,
+    Registry,
 }
 
 fn parse_command(args: &[String]) -> Command {
@@ -72,6 +74,7 @@ fn parse_command(args: &[String]) -> Command {
         "competition_modules" => DeployComponent::CompetitionModules,
         "group" => DeployComponent::Group,
         "identity" => DeployComponent::Identity,
+        "registry" => DeployComponent::Registry,
         _ => return Command::Unknown,
     };
 
@@ -94,6 +97,7 @@ fn deploy(network: Network, component: DeployComponent) -> anyhow::Result<()> {
         DeployComponent::CompetitionModules => deploy_competition_modules(daemon)?,
         DeployComponent::Group => deploy_group(daemon)?,
         DeployComponent::Identity => deploy_identity(daemon)?,
+        DeployComponent::Registry => deploy_registry(daemon)?,
     }
 
     Ok(())
@@ -154,6 +158,12 @@ fn deploy_group(daemon: Daemon) -> anyhow::Result<()> {
 fn deploy_identity(daemon: Daemon) -> anyhow::Result<()> {
     let identity = ArenaDiscordIdentityContract::new(daemon);
     identity.upload()?;
+    Ok(())
+}
+
+fn deploy_registry(daemon: Daemon) -> anyhow::Result<()> {
+    let registry = ArenaPaymentRegistryContract::new(daemon);
+    registry.upload()?;
     Ok(())
 }
 

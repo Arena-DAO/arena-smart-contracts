@@ -2,13 +2,13 @@
   "neutron": {
     "neutron-1": {
       "code_ids": {
-        "arena_competition_enrollment": 2851,
+        "arena_competition_enrollment": 2871,
         "arena_core": 2217,
         "arena_discord_identity": 2819,
         "arena_escrow": 2216,
         "arena_group": 2224,
         "arena_league_module": 2219,
-        "arena_payment_registry": 2223,
+        "arena_payment_registry": 2868,
         "arena_token_gateway": 2222,
         "arena_tournament_module": 2220,
         "arena_wager_module": 2218,
@@ -26,7 +26,7 @@
         "arena_escrow": 7598,
         "arena_group": 7607,
         "arena_league_module": 7616,
-        "arena_payment_registry": 7605,
+        "arena_payment_registry": 8686,
         "arena_token_gateway": 7604,
         "arena_tournament_module": 7617,
         "arena_wager_module": 7615,

@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cw_balance::Distribution;
+use cw_balance::{Distribution, MemberPercentage};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -7,7 +7,12 @@ pub struct InstantiateMsg {}
 #[cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum ExecuteMsg {
-    SetDistribution { distribution: Distribution<String> },
+    SetDistribution {
+        distribution: Distribution<String>,
+    },
+    SetDistributionRemainderSelf {
+        member_percentages: Vec<MemberPercentage<String>>,
+    },
     RemoveDistribution {},
 }
 

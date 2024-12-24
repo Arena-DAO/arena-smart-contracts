@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use arena_tournament_module::state::EliminationType;
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply,
     Response, StdError, StdResult, SubMsgResult, Uint128, WasmMsg,
@@ -11,7 +12,10 @@ use crate::{
     migrate,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{enrollment_entries, CompetitionInfo, ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO},
+    state::{
+        enrollment_entries, CompetitionInfo, CompetitionType, ENROLLMENT_COUNT,
+        TEMP_ENROLLMENT_INFO,
+    },
     ContractError,
 };
 
@@ -110,6 +114,40 @@ pub fn migrate(mut deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response,
         }
         MigrateMsg::WithGroupId { group_id } => {
             migrate::from_v2_to_v2_1(deps.branch(), &env, group_id)?
+        }
+        MigrateMsg::RemoveThirdPlaceMatch { enrollment_id } => {
+            enrollment_entries().update(
+                deps.storage,
+                enrollment_id.u128(),
+                |x| -> StdResult<_> {
+                    if let Some(mut enrollment) = x {
+                        match &enrollment.competition_type {
+                            CompetitionType::Tournament {
+                                elimination_type,
+                                distribution,
+                            } => match elimination_type {
+                                EliminationType::SingleElimination {
+                                    play_third_place_match: _,
+                                } => {
+                                    enrollment.competition_type = CompetitionType::Tournament {
+                                        distribution: distribution.clone(),
+                                        elimination_type: EliminationType::SingleElimination {
+                                            play_third_place_match: false,
+                                        },
+                                    }
+                                }
+                                _ => {}
+                            },
+                            _ => {}
+                        }
+
+                        Ok(enrollment)
+                    } else {
+                        return Err(StdError::generic_err("Enrollment not found"));
+                    }
+                },
+            )?;
+            vec![]
         }
     };
 
