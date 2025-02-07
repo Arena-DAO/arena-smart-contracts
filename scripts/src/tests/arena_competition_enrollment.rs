@@ -1,13 +1,13 @@
 use arena_competition_enrollment::msg::{
     CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, MigrateMsg, QueryMsgFns as _,
 };
-use arena_competition_enrollment::state::CompetitionType;
 use arena_interface::competition::msg::{EscrowContractInfo, ExecuteBaseFns as _, QueryBaseFns};
+use arena_interface::competition::types::CompetitionType;
 use arena_interface::escrow::{self, ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_interface::fees::FeeInformation;
 use arena_interface::group::{self, QueryMsgFns as _};
-use arena_tournament_module::msg::{ExecuteExtFns, MatchResultMsg};
-use arena_tournament_module::state::{EliminationType, MatchResult};
+use arena_tournament_module::msg::{EliminationType, ExecuteExtFns, MatchResultMsg};
+use arena_tournament_module::state::MatchResult;
 use cosmwasm_std::{coin, coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_balance::{BalanceVerified, Distribution, MemberPercentage};
 use cw_orch::{anyhow, prelude::*};

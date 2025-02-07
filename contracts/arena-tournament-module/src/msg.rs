@@ -1,8 +1,9 @@
-use crate::state::{EliminationType, MatchResult, TournamentExt};
+use crate::state::MatchResult;
+pub use arena_interface::competition::types::{EliminationType, TournamentExt};
 use arena_interface::{
     competition::{
         msg::{ExecuteBase, InstantiateBase, MigrateBase, QueryBase, ToCompetitionExt},
-        state::{Competition, CompetitionResponse},
+        state::Competition,
     },
     group,
 };
@@ -145,4 +146,3 @@ pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, TournamentInstantiateExt>;
 pub type QueryMsg = QueryBase<Empty, QueryExt, TournamentExt>;
 pub type Tournament = Competition<TournamentExt>;
-pub type TournamentResponse = CompetitionResponse<TournamentExt>;

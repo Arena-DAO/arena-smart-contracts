@@ -1,8 +1,9 @@
-use crate::state::{LeagueExt, Match, MatchResult, PointAdjustment};
+use crate::state::{Match, MatchResult, PointAdjustment};
+pub use arena_interface::competition::types::LeagueExt;
 use arena_interface::{
     competition::{
         msg::{ExecuteBase, InstantiateBase, MigrateBase, QueryBase, ToCompetitionExt},
-        state::{Competition, CompetitionResponse},
+        state::Competition,
     },
     group,
 };
@@ -169,4 +170,3 @@ pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, LeagueInstantiateExt>;
 pub type QueryMsg = QueryBase<Empty, LeagueQueryExt, LeagueExt>;
 pub type League = Competition<LeagueExt>;
-pub type LeagueResponse = CompetitionResponse<LeagueExt>;

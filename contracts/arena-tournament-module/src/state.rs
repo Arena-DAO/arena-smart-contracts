@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::Map;
 
 #[cw_serde]
@@ -17,21 +17,6 @@ pub struct Match {
 pub enum MatchResult {
     Team1,
     Team2,
-}
-
-#[cw_serde]
-pub struct TournamentExt {
-    pub elimination_type: EliminationType, // Enum for single or double elimination
-    pub distribution: Vec<Decimal>,
-    pub total_matches: Uint128,
-    pub processed_matches: Uint128,
-}
-
-#[cw_serde]
-#[derive(Copy)]
-pub enum EliminationType {
-    SingleElimination { play_third_place_match: bool },
-    DoubleElimination,
 }
 
 /// (Tournament Id, Match Number)

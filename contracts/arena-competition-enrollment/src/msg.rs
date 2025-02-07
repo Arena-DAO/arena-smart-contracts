@@ -1,9 +1,13 @@
-use arena_interface::{competition::msg::EscrowContractInfo, group::MemberMsg};
+use arena_interface::{
+    competition::{
+        msg::EscrowContractInfo,
+        types::{CompetitionType, EnrollmentEntryResponse},
+    },
+    group::MemberMsg,
+};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Timestamp, Uint128, Uint64};
 use dao_interface::state::ModuleInstantiateInfo;
-
-use crate::state::{CompetitionType, EnrollmentEntryResponse};
 
 #[cw_serde]
 pub struct InstantiateMsg {

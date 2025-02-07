@@ -1,6 +1,7 @@
+pub use arena_interface::competition::types::WagerExt;
 use arena_interface::competition::{
     msg::{ExecuteBase, InstantiateBase, MigrateBase, QueryBase, ToCompetitionExt},
-    state::{Competition, CompetitionResponse},
+    state::Competition,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Empty;
@@ -34,14 +35,10 @@ pub enum MigrateMsg {
 #[cw_serde]
 pub struct WagerInstantiateExt {}
 
-#[cw_serde]
-pub struct WagerExt {}
-
 pub type InstantiateMsg = InstantiateBase<Empty>;
 pub type ExecuteMsg = ExecuteBase<ExecuteExt, WagerInstantiateExt>;
 pub type QueryMsg = QueryBase<Empty, QueryExt, WagerExt>;
 pub type Wager = Competition<WagerExt>;
-pub type WagerResponse = CompetitionResponse<WagerExt>;
 
 impl ToCompetitionExt<WagerExt> for WagerInstantiateExt {
     fn to_competition_ext(

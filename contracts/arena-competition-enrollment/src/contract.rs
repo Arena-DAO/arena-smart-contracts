@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
-use arena_interface::escrow::{self, TransferEscrowOwnershipMsg};
-use arena_tournament_module::state::EliminationType;
+use arena_interface::{
+    competition::types::{CompetitionType, EliminationType},
+    escrow::{self, TransferEscrowOwnershipMsg},
+};
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdError, StdResult, SubMsgResult, Uint128, WasmMsg,
@@ -13,10 +15,7 @@ use crate::{
     migrate,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query,
-    state::{
-        enrollment_entries, CompetitionInfo, CompetitionType, ENROLLMENT_COUNT,
-        TEMP_ENROLLMENT_INFO,
-    },
+    state::{enrollment_entries, CompetitionInfo, ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO},
     ContractError,
 };
 

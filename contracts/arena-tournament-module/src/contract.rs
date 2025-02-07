@@ -11,12 +11,10 @@ use cw_competition_base::{contract::CompetitionModuleContract, error::Competitio
 use crate::{
     execute,
     msg::{
-        ExecuteExt, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryExt, QueryMsg,
+        ExecuteExt, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryExt, QueryMsg, TournamentExt,
         TournamentInstantiateExt,
     },
-    query,
-    state::TournamentExt,
-    ContractError,
+    query, ContractError,
 };
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-tournament-module";
