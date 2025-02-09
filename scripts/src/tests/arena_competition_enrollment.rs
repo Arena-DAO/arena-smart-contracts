@@ -1,8 +1,9 @@
 use arena_competition_enrollment::msg::{
-    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, MigrateMsg, QueryMsgFns as _,
+    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, MigrateMsg,
 };
 use arena_interface::competition::msg::{EscrowContractInfo, ExecuteBaseFns as _, QueryBaseFns};
 use arena_interface::competition::types::CompetitionType;
+use arena_interface::enrollments::QueryMsgFns as _;
 use arena_interface::escrow::{self, ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_interface::fees::FeeInformation;
 use arena_interface::group::{self, QueryMsgFns as _};

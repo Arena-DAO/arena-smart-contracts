@@ -1,4 +1,5 @@
-use arena_competition_enrollment::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use arena_competition_enrollment::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
+use arena_interface::enrollments::QueryMsg;
 use cw_orch::interface;
 use cw_orch::prelude::*;
 

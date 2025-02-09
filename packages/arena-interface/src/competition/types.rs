@@ -112,10 +112,10 @@ pub struct CompetitionInfoResponse {
 // Core Competition
 
 #[cw_serde]
-#[serde(untagged)]
-pub enum CoreCompetition {
-    Wager(WagerResponse),
-    League(LeagueResponse),
-    Tournament(TournamentResponse),
-    Enrollment(EnrollmentEntryResponse),
+#[derive(Default)]
+pub struct CoreCompetitionsResponse {
+    pub wagers: Vec<WagerResponse>,
+    pub leagues: Vec<LeagueResponse>,
+    pub tournaments: Vec<TournamentResponse>,
+    pub enrollments: Vec<EnrollmentEntryResponse>,
 }

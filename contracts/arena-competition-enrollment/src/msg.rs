@@ -5,7 +5,7 @@ use arena_interface::{
     },
     group::MemberMsg,
 };
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Timestamp, Uint128, Uint64};
 use dao_interface::state::ModuleInstantiateInfo;
 
@@ -70,33 +70,6 @@ pub struct CompetitionInfoMsg {
     pub rules: Option<Vec<String>>,
     pub rulesets: Option<Vec<Uint128>>,
     pub banner: Option<String>,
-}
-
-#[cw_serde]
-pub enum EnrollmentFilter {
-    Category { category_id: Option<Uint128> },
-    Host(String),
-}
-
-#[cw_ownable::cw_ownable_query]
-#[cw_serde]
-#[derive(QueryResponses, cw_orch::QueryFns)]
-pub enum QueryMsg {
-    #[returns(Vec<EnrollmentEntryResponse>)]
-    Enrollments {
-        start_after: Option<Uint128>,
-        limit: Option<u32>,
-        filter: Option<EnrollmentFilter>,
-    },
-    #[returns(EnrollmentEntryResponse)]
-    Enrollment { enrollment_id: Uint128 },
-    #[returns(Uint128)]
-    EnrollmentCount {},
-    #[returns(bool)]
-    IsMember {
-        enrollment_id: Uint128,
-        addr: String,
-    },
 }
 
 #[cw_serde]

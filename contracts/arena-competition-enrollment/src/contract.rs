@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use arena_interface::{
     competition::types::{CompetitionType, EliminationType},
+    enrollments::QueryMsg,
     escrow::{self, TransferEscrowOwnershipMsg},
 };
 use cosmwasm_std::{
@@ -13,7 +14,7 @@ use cw2::{ensure_from_older_version, set_contract_version};
 use crate::{
     execute::{self, FINALIZE_COMPETITION_REPLY_ID},
     migrate,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg},
     query,
     state::{enrollment_entries, CompetitionInfo, ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO},
     ContractError,
