@@ -3,7 +3,7 @@
     "neutron-1": {
       "code_ids": {
         "arena_competition_enrollment": 2945,
-        "arena_core": 2919,
+        "arena_core": 3130,
         "arena_discord_identity": 2926,
         "arena_escrow": 2928,
         "arena_group": 2925,
@@ -32,7 +32,7 @@
     "pion-1": {
       "code_ids": {
         "arena_competition_enrollment": 8782,
-        "arena_core": 8726,
+        "arena_core": 10739,
         "arena_discord_identity": 8604,
         "arena_escrow": 8735,
         "arena_group": 8733,
