@@ -1,5 +1,8 @@
 use arena_interface::{
-    competition::msg::EscrowContractInfo,
+    competition::{
+        msg::EscrowContractInfo,
+        types::{CompetitionType, EliminationType},
+    },
     core::{CompetitionModuleQuery, CompetitionModuleResponse},
     escrow::{self},
     fees::FeeInformation,
@@ -7,7 +10,7 @@ use arena_interface::{
     helpers::is_expired,
 };
 use arena_league_module::msg::LeagueInstantiateExt;
-use arena_tournament_module::{msg::TournamentInstantiateExt, state::EliminationType};
+use arena_tournament_module::msg::TournamentInstantiateExt;
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
     ensure, instantiate2_address, to_json_binary, Addr, Attribute, BlockInfo, Coin, CosmosMsg,
@@ -22,8 +25,8 @@ use sha2::{Digest, Sha256};
 use crate::{
     msg::CompetitionInfoMsg,
     state::{
-        enrollment_entries, CompetitionInfo, CompetitionType, EnrollmentEntry, EnrollmentInfo,
-        ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO,
+        enrollment_entries, CompetitionInfo, EnrollmentEntry, EnrollmentInfo, ENROLLMENT_COUNT,
+        TEMP_ENROLLMENT_INFO,
     },
     ContractError,
 };

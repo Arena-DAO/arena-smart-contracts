@@ -8,9 +8,10 @@ use arena_interface::{
 };
 use arena_tournament_module::{
     msg::{
-        ExecuteExtFns as _, ExecuteMsg, MatchResultMsg, QueryExtFns as _, TournamentInstantiateExt,
+        EliminationType, ExecuteExtFns as _, ExecuteMsg, MatchResultMsg, QueryExtFns as _,
+        TournamentInstantiateExt,
     },
-    state::{EliminationType, MatchResult},
+    state::MatchResult,
 };
 use cosmwasm_std::{coins, to_json_binary, Decimal, Timestamp, Uint128};
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};

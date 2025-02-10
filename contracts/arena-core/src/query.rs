@@ -1,12 +1,23 @@
-use crate::state::{
-    competition_categories, get_rulesets_category_and_is_enabled_idx, ratings, CompetitionModule,
-    ARENA_TAX_CONFIG, ENROLLMENT_MODULES, KEYS, TAX,
+use crate::{
+    contract::{LEAGUES_KEY, TOURNAMENTS_KEY, WAGERS_KEY},
+    state::{
+        competition_categories, get_rulesets_category_and_is_enabled_idx, ratings,
+        CompetitionModule, ARENA_TAX_CONFIG, ENROLLMENT_MODULES, KEYS, TAX,
+    },
 };
 use arena_interface::{
+    competition::{
+        msg::CompetitionsFilter,
+        types::{
+            CoreCompetitionsResponse, EnrollmentEntryResponse, LeagueResponse, TournamentResponse,
+            WagerResponse,
+        },
+    },
     core::{
         CompetitionCategory, CompetitionModuleQuery, CompetitionModuleResponse, DumpStateResponse,
         RatingResponse, Ruleset, TaxConfigurationResponse,
     },
+    enrollments::{self, EnrollmentFilter},
     ratings::Rating,
 };
 use cosmwasm_std::{Decimal, Deps, Empty, Env, StdResult, Uint128};
@@ -292,4 +303,80 @@ pub fn is_valid_enrollment_module(deps: Deps, addr: String) -> StdResult<bool> {
     let addr = deps.api.addr_validate(&addr)?;
 
     Ok(ENROLLMENT_MODULES.has(deps.storage, &addr))
+}
+
+pub fn competitions(
+    deps: Deps,
+    filter: Option<CompetitionsFilter>,
+    enrollment_module: Option<String>,
+) -> StdResult<CoreCompetitionsResponse> {
+    let mut core_competitions = CoreCompetitionsResponse::default();
+    let competition_modules = competition_modules(deps, None, None, None)?;
+
+    for competition_module in competition_modules {
+        match competition_module.key.as_str() {
+            WAGERS_KEY => {
+                let wagers: Vec<WagerResponse> = deps.querier.query_wasm_smart(
+                    competition_module.addr,
+                    &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::Competitions {
+                        start_after: None,
+                        limit: None,
+                        filter: filter.clone(),
+                    },
+                )?;
+
+                core_competitions.wagers = wagers;
+            }
+            TOURNAMENTS_KEY => {
+                let tournaments: Vec<TournamentResponse> = deps.querier.query_wasm_smart(
+                    competition_module.addr,
+                    &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::Competitions {
+                        start_after: None,
+                        limit: None,
+                        filter: filter.clone(),
+                    },
+                )?;
+
+                core_competitions.tournaments = tournaments;
+            }
+            LEAGUES_KEY => {
+                let leagues: Vec<LeagueResponse> = deps.querier.query_wasm_smart(
+                    competition_module.addr,
+                    &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::Competitions {
+                        start_after: None,
+                        limit: None,
+                        filter: filter.clone(),
+                    },
+                )?;
+
+                core_competitions.leagues = leagues;
+            }
+            _ => {}
+        };
+    }
+
+    if let Some(enrollment_module) = enrollment_module {
+        let enrollments_filter = match filter {
+            Some(filter) => match filter {
+                CompetitionsFilter::CompetitionStatus { status: _ } => None,
+                CompetitionsFilter::Category { id } => {
+                    Some(EnrollmentFilter::Category { category_id: id })
+                }
+                CompetitionsFilter::Host(host) => Some(EnrollmentFilter::Host(host)),
+            },
+            None => None,
+        };
+
+        let enrollments: Vec<EnrollmentEntryResponse> = deps.querier.query_wasm_smart(
+            enrollment_module,
+            &enrollments::QueryMsg::Enrollments {
+                start_after: None,
+                limit: None,
+                filter: enrollments_filter,
+            },
+        )?;
+        core_competitions.enrollments = enrollments;
+    }
+
+    Ok(core_competitions)
 }

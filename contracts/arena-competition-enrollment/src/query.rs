@@ -1,11 +1,10 @@
-use arena_interface::group;
+use arena_interface::{
+    competition::types::EnrollmentEntryResponse, enrollments::EnrollmentFilter, group,
+};
 use cosmwasm_std::{Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
-use crate::{
-    msg::EnrollmentFilter,
-    state::{enrollment_entries, EnrollmentEntryResponse, ENROLLMENT_COUNT},
-};
+use crate::state::{enrollment_entries, ENROLLMENT_COUNT};
 
 pub fn enrollments(
     deps: Deps,
