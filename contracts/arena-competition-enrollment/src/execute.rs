@@ -238,94 +238,6 @@ pub fn create_enrollment(
         }
     };
 
-    // DAO host
-    let host = if let Some(ref dao_config) = use_dao_host {
-        // Generate predictable DAO address
-        let dao_binding = format!("dao_{}{}{}", info.sender, env.block.height, competition_id);
-        let dao_salt: [u8; 32] = Sha256::digest(dao_binding.as_bytes()).into();
-        let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-        let dao_code_info = deps.querier.query_wasm_code_info(dao_config.dao_code_id)?;
-        let dao_canonical_addr =
-            instantiate2_address(&dao_code_info.checksum, &canonical_creator, &dao_salt)?;
-        let dao_addr = deps.api.addr_humanize(&dao_canonical_addr)?;
-
-        // 1. Instantiate cw4-group voting module
-        let voting_instantiate = ModuleInstantiateInfo {
-            admin: Some(Admin::CoreModule {}),
-            code_id: dao_config.cw4_voting_code_id,
-            label: format!("Cw4Voting_{}", competition_id),
-            msg: to_json_binary(&dao_voting_cw4::msg::InstantiateMsg {
-                group_contract: dao_voting_cw4::msg::GroupContract::Existing {
-                    address: group_contract.to_string(),
-                },
-            })?,
-            funds: vec![],
-        };
-
-        // 2. Instantiate proposal module
-        let proposal_instantiate = ModuleInstantiateInfo {
-            admin: Some(Admin::CoreModule {}),
-            code_id: dao_config.proposal_single_code_id,
-            label: format!("ProposalSingle_{}", competition_id),
-            msg: to_json_binary(&dao_proposal_single::msg::InstantiateMsg {
-                min_voting_period: None,
-                max_voting_period: dao_config.max_voting_period,
-                only_members_execute: true,
-                allow_revoting: false,
-                threshold: dao_config.threshold.clone(),
-                pre_propose_info: dao_voting::pre_propose::PreProposeInfo::ModuleMayPropose {
-                    info: ModuleInstantiateInfo {
-                        code_id: dao_config.prepropose_single_code_id,
-                        msg: to_json_binary(&dao_pre_propose_single::InstantiateMsg {
-                            deposit_info: None,
-                            submission_policy:
-                                dao_voting::pre_propose::PreProposeSubmissionPolicy::Specific {
-                                    dao_members: true,
-                                    allowlist: vec![],
-                                    denylist: vec![],
-                                },
-                            extension: Empty {},
-                        })?,
-                        admin: Some(Admin::CoreModule {}),
-                        funds: vec![],
-                        label: format!("PreProposeSingle_{}", competition_id),
-                    },
-                },
-                close_proposal_on_execution_failure: true,
-                veto: None,
-            })?,
-            funds: vec![],
-        };
-
-        // 3. Instantiate DAO core
-        let dao_instantiate = WasmMsg::Instantiate2 {
-            admin: Some(dao_addr.to_string()),
-            code_id: dao_config.dao_code_id,
-            label: format!("dao_{}", competition_id),
-            msg: to_json_binary(&dao_interface::msg::InstantiateMsg {
-                admin: None,
-                name: format!("Competition DAO {}", competition_id),
-                description: format!("DAO for competition {}", competition_id),
-                automatically_add_cw20s: false,
-                automatically_add_cw721s: false,
-                voting_module_instantiate_info: voting_instantiate,
-                proposal_modules_instantiate_info: vec![proposal_instantiate],
-                image_url: None,
-                initial_items: None,
-                dao_uri: None,
-                initial_dao_actions: None,
-            })?,
-            funds: vec![],
-            salt: dao_salt.into(),
-        };
-
-        msgs.push(CosmosMsg::Wasm(dao_instantiate));
-
-        dao_addr
-    } else {
-        info.sender.clone()
-    };
-
     enrollment_entries().save(
         deps.storage,
         competition_id.u128(),
@@ -348,7 +260,7 @@ pub fn create_enrollment(
                 group_contract,
             },
             competition_type,
-            host,
+            host: info.sender,
             category_id,
             competition_module,
             required_team_size,
@@ -446,6 +358,95 @@ pub fn finalize(
         }
     );
 
+    // DAO host
+    let mut msgs = vec![];
+    let host = if let Some(ref dao_config) = enrollment.use_dao_host {
+        // Generate predictable DAO address
+        let dao_binding = format!("dao_{}{}{}", info.sender, env.block.height, id);
+        let dao_salt: [u8; 32] = Sha256::digest(dao_binding.as_bytes()).into();
+        let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+        let dao_code_info = deps.querier.query_wasm_code_info(dao_config.dao_code_id)?;
+        let dao_canonical_addr =
+            instantiate2_address(&dao_code_info.checksum, &canonical_creator, &dao_salt)?;
+        let dao_addr = deps.api.addr_humanize(&dao_canonical_addr)?;
+
+        // 1. Instantiate cw4-group voting module
+        let voting_instantiate = ModuleInstantiateInfo {
+            admin: Some(Admin::CoreModule {}),
+            code_id: dao_config.cw4_voting_code_id,
+            label: format!("Cw4Voting_{}", id),
+            msg: to_json_binary(&dao_voting_cw4::msg::InstantiateMsg {
+                group_contract: dao_voting_cw4::msg::GroupContract::Existing {
+                    address: group_contract.to_string(),
+                },
+            })?,
+            funds: vec![],
+        };
+
+        // 2. Instantiate proposal module
+        let proposal_instantiate = ModuleInstantiateInfo {
+            admin: Some(Admin::CoreModule {}),
+            code_id: dao_config.proposal_single_code_id,
+            label: format!("ProposalSingle_{}", id),
+            msg: to_json_binary(&dao_proposal_single::msg::InstantiateMsg {
+                min_voting_period: None,
+                max_voting_period: dao_config.max_voting_period,
+                only_members_execute: true,
+                allow_revoting: false,
+                threshold: dao_config.threshold.clone(),
+                pre_propose_info: dao_voting::pre_propose::PreProposeInfo::ModuleMayPropose {
+                    info: ModuleInstantiateInfo {
+                        code_id: dao_config.prepropose_single_code_id,
+                        msg: to_json_binary(&dao_pre_propose_single::InstantiateMsg {
+                            deposit_info: None,
+                            submission_policy:
+                                dao_voting::pre_propose::PreProposeSubmissionPolicy::Specific {
+                                    dao_members: true,
+                                    allowlist: vec![],
+                                    denylist: vec![],
+                                },
+                            extension: Empty {},
+                        })?,
+                        admin: Some(Admin::CoreModule {}),
+                        funds: vec![],
+                        label: format!("PreProposeSingle_{}", id),
+                    },
+                },
+                close_proposal_on_execution_failure: true,
+                veto: None,
+            })?,
+            funds: vec![],
+        };
+
+        // 3. Instantiate DAO core
+        let dao_instantiate = WasmMsg::Instantiate2 {
+            admin: Some(dao_addr.to_string()),
+            code_id: dao_config.dao_code_id,
+            label: format!("dao_{}", id),
+            msg: to_json_binary(&dao_interface::msg::InstantiateMsg {
+                admin: None,
+                name: format!("Competition DAO {}", id),
+                description: format!("DAO for competition {}", id),
+                automatically_add_cw20s: false,
+                automatically_add_cw721s: false,
+                voting_module_instantiate_info: voting_instantiate,
+                proposal_modules_instantiate_info: vec![proposal_instantiate],
+                image_url: None,
+                initial_items: None,
+                dao_uri: None,
+                initial_dao_actions: None,
+            })?,
+            funds: vec![],
+            salt: dao_salt.into(),
+        };
+
+        msgs.push(CosmosMsg::Wasm(dao_instantiate));
+
+        dao_addr
+    } else {
+        enrollment.host.clone()
+    };
+
     // Create competition message based on competition type
     let creation_msg = match &enrollment.competition_info {
         CompetitionInfo::Pending {
@@ -486,7 +487,7 @@ pub fn finalize(
             match &enrollment.competition_type {
                 CompetitionType::Wager {} => {
                     to_json_binary(&arena_wager_module::msg::ExecuteMsg::CreateCompetition {
-                        host: Some(enrollment.host.to_string()),
+                        host: Some(host.to_string()),
                         category_id: enrollment.category_id,
                         escrow: escrow_info.clone(),
                         name: name.clone(),
@@ -506,7 +507,7 @@ pub fn finalize(
                     match_lose_points,
                     distribution,
                 } => to_json_binary(&arena_league_module::msg::ExecuteMsg::CreateCompetition {
-                    host: Some(enrollment.host.to_string()),
+                    host: Some(host.to_string()),
                     category_id: enrollment.category_id,
                     escrow: escrow_info.clone(),
                     name: name.clone(),
@@ -529,7 +530,7 @@ pub fn finalize(
                     distribution,
                 } => to_json_binary(
                     &arena_tournament_module::msg::ExecuteMsg::CreateCompetition {
-                        host: Some(enrollment.host.to_string()),
+                        host: Some(host.to_string()),
                         category_id: enrollment.category_id,
                         escrow: escrow_info.clone(),
                         name: name.clone(),
@@ -582,6 +583,7 @@ pub fn finalize(
         .add_attribute("action", "finalize")
         .add_attribute("competition_module", enrollment.competition_module)
         .add_attribute("id", id.to_string())
+        .add_messages(msgs)
         .add_submessage(submsg))
 }
 
