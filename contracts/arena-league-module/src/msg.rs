@@ -104,7 +104,7 @@ impl ToCompetitionExt<LeagueExt> for LeagueInstantiateExt {
     ) -> StdResult<LeagueExt> {
         let team_count: Uint64 = deps.querier.query_wasm_smart(
             group_contract.to_string(),
-            &group::QueryMsg::MembersCount {},
+            &group::QueryMsg::Custom(group::CustomQueryMsg::MembersCount {}),
         )?;
         if team_count < Uint64::new(2) {
             return Err(StdError::GenericErr {

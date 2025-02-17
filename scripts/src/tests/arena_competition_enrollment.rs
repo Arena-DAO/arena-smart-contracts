@@ -6,7 +6,7 @@ use arena_interface::competition::types::CompetitionType;
 use arena_interface::enrollments::QueryMsgFns as _;
 use arena_interface::escrow::{self, ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_interface::fees::FeeInformation;
-use arena_interface::group::{self, QueryMsgFns as _};
+use arena_interface::group::{self, CustomQueryMsgFns as _};
 use arena_tournament_module::msg::{EliminationType, ExecuteExtFns, MatchResultMsg};
 use arena_tournament_module::state::MatchResult;
 use cosmwasm_std::{coin, coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
@@ -102,6 +102,7 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     let res = arena
@@ -225,6 +226,7 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     let result = arena
@@ -282,6 +284,7 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -354,6 +357,7 @@ fn test_tournament() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -474,6 +478,7 @@ fn test_wager() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info,
+        use_dao_host: None,
     };
 
     arena
@@ -606,6 +611,7 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -680,6 +686,7 @@ fn test_finalize_before_min_members() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -789,6 +796,7 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -884,6 +892,7 @@ fn test_huge_tournament() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena

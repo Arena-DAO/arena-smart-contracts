@@ -1,5 +1,7 @@
-use crate::{execute, query, state::MEMBER_COUNT, ContractError};
-use arena_interface::group::{AddMemberMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::{cw4, execute, query, state::MEMBER_COUNT, ContractError};
+use arena_interface::group::{
+    AddMemberMsg, CustomQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
     StdResult, Uint64, WasmMsg,
@@ -31,7 +33,7 @@ pub fn instantiate_contract(
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
 
-    MEMBER_COUNT.save(deps.storage, &Uint64::zero())?;
+    MEMBER_COUNT.save(deps.storage, &Uint64::zero(), env.block.height)?;
 
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
@@ -68,15 +70,32 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Members { start_after, limit } => {
-            to_json_binary(&query::members(deps, start_after, limit)?)
-        }
-        QueryMsg::MembersCount {} => to_json_binary(&MEMBER_COUNT.load(deps.storage)?),
-        QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
-        QueryMsg::IsValidDistribution { addrs } => {
-            to_json_binary(&query::is_valid_distribution(deps, addrs)?)
-        }
-        QueryMsg::IsMember { addr } => to_json_binary(&query::is_member(deps, addr)?),
+        QueryMsg::Custom(msg) => match msg {
+            CustomQueryMsg::Members { start_after, limit } => {
+                to_json_binary(&query::members(deps, start_after, limit)?)
+            }
+            CustomQueryMsg::MembersCount {} => to_json_binary(&MEMBER_COUNT.load(deps.storage)?),
+            CustomQueryMsg::Ownership {} => {
+                to_json_binary(&cw_ownable::get_ownership(deps.storage)?)
+            }
+            CustomQueryMsg::IsValidDistribution { addrs } => {
+                to_json_binary(&query::is_valid_distribution(deps, addrs)?)
+            }
+            CustomQueryMsg::IsMember { addr } => to_json_binary(&query::is_member(deps, addr)?),
+        },
+        QueryMsg::CW4(msg) => match msg {
+            cw4_group::msg::QueryMsg::Admin {} => unimplemented!(),
+            cw4_group::msg::QueryMsg::TotalWeight { at_height } => {
+                to_json_binary(&cw4::total_weight(deps, at_height)?)
+            }
+            cw4_group::msg::QueryMsg::ListMembers { start_after, limit } => {
+                cw4::list_members(deps, start_after, limit)
+            }
+            cw4_group::msg::QueryMsg::Member { addr, at_height } => {
+                to_json_binary(&cw4::member(deps, addr, at_height)?)
+            }
+            cw4_group::msg::QueryMsg::Hooks {} => unimplemented!(),
+        },
     }
 }
 

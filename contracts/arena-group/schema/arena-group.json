@@ -22,11 +22,15 @@
       "AddMemberMsg": {
         "type": "object",
         "required": [
-          "addr"
+          "addr",
+          "power"
         ],
         "properties": {
           "addr": {
             "type": "string"
+          },
+          "power": {
+            "$ref": "#/definitions/Uint64"
           },
           "seed": {
             "description": "If None, then the seed will be set as the members count at the time of insertion",
@@ -163,11 +167,15 @@
       "AddMemberMsg": {
         "type": "object",
         "required": [
-          "addr"
+          "addr",
+          "power"
         ],
         "properties": {
           "addr": {
             "type": "string"
+          },
+          "power": {
+            "$ref": "#/definitions/Uint64"
           },
           "seed": {
             "description": "If None, then the seed will be set as the members count at the time of insertion",
@@ -230,18 +238,34 @@
           }
         ]
       },
+      "MemberData": {
+        "type": "object",
+        "required": [
+          "power",
+          "seed"
+        ],
+        "properties": {
+          "power": {
+            "$ref": "#/definitions/Uint64"
+          },
+          "seed": {
+            "$ref": "#/definitions/Uint64"
+          }
+        },
+        "additionalProperties": false
+      },
       "MemberMsg_for_String": {
         "type": "object",
         "required": [
           "addr",
-          "seed"
+          "data"
         ],
         "properties": {
           "addr": {
             "type": "string"
           },
-          "seed": {
-            "$ref": "#/definitions/Uint64"
+          "data": {
+            "$ref": "#/definitions/MemberData"
           }
         },
         "additionalProperties": false
@@ -267,32 +291,11 @@
       {
         "type": "object",
         "required": [
-          "members"
+          "c_w4"
         ],
         "properties": {
-          "members": {
-            "type": "object",
-            "properties": {
-              "limit": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
-                "format": "uint32",
-                "minimum": 0.0
-              },
-              "start_after": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/MemberMsg_for_String"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "additionalProperties": false
+          "c_w4": {
+            "$ref": "#/definitions/QueryMsg"
           }
         },
         "additionalProperties": false
@@ -300,92 +303,269 @@
       {
         "type": "object",
         "required": [
-          "members_count"
+          "custom"
         ],
         "properties": {
-          "members_count": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
-          "is_valid_distribution"
-        ],
-        "properties": {
-          "is_valid_distribution": {
-            "type": "object",
-            "required": [
-              "addrs"
-            ],
-            "properties": {
-              "addrs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "required": [
-          "is_member"
-        ],
-        "properties": {
-          "is_member": {
-            "type": "object",
-            "required": [
-              "addr"
-            ],
-            "properties": {
-              "addr": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "description": "Query the contract's ownership information",
-        "type": "object",
-        "required": [
-          "ownership"
-        ],
-        "properties": {
-          "ownership": {
-            "type": "object",
-            "additionalProperties": false
+          "custom": {
+            "$ref": "#/definitions/CustomQueryMsg"
           }
         },
         "additionalProperties": false
       }
     ],
     "definitions": {
-      "MemberMsg_for_String": {
+      "CustomQueryMsg": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "members"
+            ],
+            "properties": {
+              "members": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint32",
+                    "minimum": 0.0
+                  },
+                  "start_after": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/MemberMsg_for_String"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "members_count"
+            ],
+            "properties": {
+              "members_count": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "is_valid_distribution"
+            ],
+            "properties": {
+              "is_valid_distribution": {
+                "type": "object",
+                "required": [
+                  "addrs"
+                ],
+                "properties": {
+                  "addrs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "is_member"
+            ],
+            "properties": {
+              "is_member": {
+                "type": "object",
+                "required": [
+                  "addr"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Query the contract's ownership information",
+            "type": "object",
+            "required": [
+              "ownership"
+            ],
+            "properties": {
+              "ownership": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "MemberData": {
         "type": "object",
         "required": [
-          "addr",
+          "power",
           "seed"
         ],
         "properties": {
-          "addr": {
-            "type": "string"
+          "power": {
+            "$ref": "#/definitions/Uint64"
           },
           "seed": {
             "$ref": "#/definitions/Uint64"
           }
         },
         "additionalProperties": false
+      },
+      "MemberMsg_for_String": {
+        "type": "object",
+        "required": [
+          "addr",
+          "data"
+        ],
+        "properties": {
+          "addr": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/definitions/MemberData"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryMsg": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "admin"
+            ],
+            "properties": {
+              "admin": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "total_weight"
+            ],
+            "properties": {
+              "total_weight": {
+                "type": "object",
+                "properties": {
+                  "at_height": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "list_members"
+            ],
+            "properties": {
+              "list_members": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint32",
+                    "minimum": 0.0
+                  },
+                  "start_after": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "member"
+            ],
+            "properties": {
+              "member": {
+                "type": "object",
+                "required": [
+                  "addr"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  },
+                  "at_height": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Shows all registered hooks.",
+            "type": "object",
+            "required": [
+              "hooks"
+            ],
+            "properties": {
+              "hooks": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "Uint64": {
         "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
@@ -414,6 +594,38 @@
   },
   "sudo": null,
   "responses": {
+    "admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AdminResponse",
+      "description": "Returned from Admin.query_admin()",
+      "type": "object",
+      "properties": {
+        "admin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "hooks": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HooksResponse",
+      "type": "object",
+      "required": [
+        "hooks"
+      ],
+      "properties": {
+        "hooks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "is_member": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Boolean",
@@ -423,6 +635,60 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Boolean",
       "type": "boolean"
+    },
+    "list_members": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MemberListResponse",
+      "type": "object",
+      "required": [
+        "members"
+      ],
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Member"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Member": {
+          "description": "A group member has a weight associated with them. This may all be equal, or may have meaning in the app that makes use of the group (eg. voting power)",
+          "type": "object",
+          "required": [
+            "addr",
+            "weight"
+          ],
+          "properties": {
+            "addr": {
+              "type": "string"
+            },
+            "weight": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "member": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MemberResponse",
+      "type": "object",
+      "properties": {
+        "weight": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
     },
     "members": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -436,18 +702,34 @@
           "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
           "type": "string"
         },
+        "MemberData": {
+          "type": "object",
+          "required": [
+            "power",
+            "seed"
+          ],
+          "properties": {
+            "power": {
+              "$ref": "#/definitions/Uint64"
+            },
+            "seed": {
+              "$ref": "#/definitions/Uint64"
+            }
+          },
+          "additionalProperties": false
+        },
         "MemberMsg_for_Addr": {
           "type": "object",
           "required": [
             "addr",
-            "seed"
+            "data"
           ],
           "properties": {
             "addr": {
               "$ref": "#/definitions/Addr"
             },
-            "seed": {
-              "$ref": "#/definitions/Uint64"
+            "data": {
+              "$ref": "#/definitions/MemberData"
             }
           },
           "additionalProperties": false
@@ -558,6 +840,22 @@
           "type": "string"
         }
       }
+    },
+    "total_weight": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TotalWeightResponse",
+      "type": "object",
+      "required": [
+        "weight"
+      ],
+      "properties": {
+        "weight": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

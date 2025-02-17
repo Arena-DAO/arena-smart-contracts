@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{OverflowError, StdError};
 use cw_ownable::OwnershipError;
 use thiserror::Error;
 
@@ -9,6 +9,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
+
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
 
     #[error("Unauthorized")]
     Unauthorized {},

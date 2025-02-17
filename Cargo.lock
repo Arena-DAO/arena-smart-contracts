@@ -146,6 +146,8 @@ dependencies = [
  "cw4 1.1.2",
  "dao-interface",
  "dao-pre-propose-base",
+ "dao-pre-propose-single",
+ "dao-proposal-single",
  "dao-voting 2.6.0",
  "dao-voting-cw4",
  "itertools 0.14.0",
@@ -219,6 +221,8 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
+ "cw4 1.1.2",
+ "cw4-group 1.1.2",
  "thiserror",
 ]
 
@@ -234,6 +238,7 @@ dependencies = [
  "cw-ownable",
  "cw-utils 1.0.3",
  "cw20 1.1.2",
+ "cw4-group 1.1.2",
  "cw721 0.18.0",
  "dao-interface",
  "dao-pre-propose-base",

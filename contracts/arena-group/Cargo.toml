@@ -24,3 +24,5 @@ thiserror = { workspace = true }
 cw-ownable = { workspace = true }
 cw-orch = { workspace = true }
 arena-interface = { workspace = true }
+cw4-group = { workspace = true }
+cw4 = { workspace = true }

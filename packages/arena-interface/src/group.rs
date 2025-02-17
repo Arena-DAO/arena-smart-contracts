@@ -21,8 +21,15 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+pub struct MemberData {
+    pub seed: Uint64,
+    pub power: Uint64,
+}
+
+#[cw_serde]
 pub struct AddMemberMsg {
     pub addr: String,
+    pub power: Uint64,
     /// If None, then the seed will be set as the members count at the time of insertion
     pub seed: Option<Uint64>,
 }
@@ -30,13 +37,23 @@ pub struct AddMemberMsg {
 #[cw_serde]
 pub struct MemberMsg<T: AddressLike> {
     pub addr: T,
-    pub seed: Uint64,
+    pub data: MemberData,
+}
+
+#[cw_serde]
+#[derive(QueryResponses)]
+#[query_responses(nested)]
+pub enum QueryMsg {
+    #[serde(untagged)]
+    CW4(cw4_group::msg::QueryMsg),
+    #[serde(untagged)]
+    Custom(CustomQueryMsg),
 }
 
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
-pub enum QueryMsg {
+pub enum CustomQueryMsg {
     #[returns(Vec<MemberMsg<cosmwasm_std::Addr>>)]
     Members {
         start_after: Option<MemberMsg<String>>,
@@ -48,6 +65,18 @@ pub enum QueryMsg {
     IsValidDistribution { addrs: Vec<String> },
     #[returns(bool)]
     IsMember { addr: String },
+}
+
+impl From<CustomQueryMsg> for QueryMsg {
+    fn from(value: CustomQueryMsg) -> Self {
+        Self::Custom(value)
+    }
+}
+
+impl From<cw4_group::msg::QueryMsg> for QueryMsg {
+    fn from(value: cw4_group::msg::QueryMsg) -> Self {
+        Self::CW4(value)
+    }
 }
 
 #[cw_serde]

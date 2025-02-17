@@ -41,10 +41,10 @@ pub fn instantiate_rounds(
         .querier
         .query_wasm_smart::<Vec<MemberMsg<Addr>>>(
             league.group_contract.to_string(),
-            &group::QueryMsg::Members {
+            &group::QueryMsg::Custom(group::CustomQueryMsg::Members {
                 start_after: None,
                 limit: None,
-            },
+            }),
         )?
         .into_iter()
         .map(|x| x.addr)
