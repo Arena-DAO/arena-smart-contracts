@@ -316,10 +316,10 @@ pub fn distribute(
         let distribution = distribution.unwrap_or({
             let members: Vec<MemberMsg<String>> = deps.querier.query_wasm_smart(
                 group_contract.to_string(),
-                &group::QueryMsg::Custom(group::CustomQueryMsg::Members {
+                &group::QueryMsg::Members {
                     start_after: None,
                     limit: None,
-                }),
+                },
             )?;
             let percentage = Decimal::from_ratio(1u128, members.len() as u128);
             let remainder_addr = members[0].addr.clone();
@@ -340,14 +340,14 @@ pub fn distribute(
         // Validate distribution is valid
         if !deps.querier.query_wasm_smart::<bool>(
             group_contract.to_string(),
-            &group::QueryMsg::Custom(group::CustomQueryMsg::IsValidDistribution {
+            &group::QueryMsg::IsValidDistribution {
                 addrs: distribution
                     .member_percentages
                     .iter()
                     .map(|x| x.addr.to_string())
                     .chain(iter::once(distribution.remainder_addr.to_string()))
                     .collect(),
-            }),
+            },
         )? {
             return Err(ContractError::InvalidDistribution {
                 msg: "The distribution must contain only members of the competition".to_string(),

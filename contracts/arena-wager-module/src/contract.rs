@@ -70,17 +70,17 @@ fn post_processing(deps: DepsMut, competition: &Wager) -> Result<Option<SubMsg>,
     if let Some(category_id) = competition.category_id {
         let teams: Uint64 = deps.querier.query_wasm_smart(
             competition.group_contract.to_string(),
-            &group::QueryMsg::Custom(group::CustomQueryMsg::MembersCount {}),
+            &group::QueryMsg::MembersCount {},
         )?;
         if teams == Uint64::new(2) {
             let registered_members: Vec<Addr> = deps
                 .querier
                 .query_wasm_smart::<Vec<MemberMsg<Addr>>>(
                     competition.group_contract.to_string(),
-                    &group::QueryMsg::Custom(group::CustomQueryMsg::Members {
+                    &group::QueryMsg::Members {
                         start_after: None,
                         limit: None,
-                    }),
+                    },
                 )?
                 .into_iter()
                 .map(|x| x.addr)

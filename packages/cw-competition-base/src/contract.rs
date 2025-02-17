@@ -445,9 +445,9 @@ impl<
         ensure!(
             deps.querier.query_wasm_smart::<bool>(
                 competition.group_contract.to_string(),
-                &group::QueryMsg::Custom(group::CustomQueryMsg::IsMember {
+                &group::QueryMsg::IsMember {
                     addr: info.sender.to_string()
-                })
+                }
             )?,
             CompetitionError::Unauthorized {}
         );

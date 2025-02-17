@@ -33,10 +33,10 @@ pub fn instantiate_tournament(
         .querier
         .query_wasm_smart::<Vec<MemberMsg<Addr>>>(
             tournament.group_contract.to_string(),
-            &group::QueryMsg::Custom(group::CustomQueryMsg::Members {
+            &group::QueryMsg::Members {
                 start_after: None,
                 limit: None,
-            }),
+            },
         )?
         .into_iter()
         .map(|x| x.addr)

@@ -49,7 +49,7 @@ impl EnrollmentEntry {
             .into_response(deps, &self.competition_module)?;
         let current_members: Uint64 = deps.querier.query_wasm_smart(
             competition_info.group_contract.to_string(),
-            &group::QueryMsg::Custom(group::CustomQueryMsg::MembersCount {}),
+            &group::QueryMsg::MembersCount {},
         )?;
 
         Ok(EnrollmentEntryResponse {

@@ -28,4 +28,4 @@ cw-orch = { workspace = true }
 cw-ownable = { workspace = true }
 cw20 = { workspace = true }
 cw721 = { workspace = true }
-cw4-group = { workspace = true }
+cw4 = { workspace = true }

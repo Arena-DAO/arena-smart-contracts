@@ -40,20 +40,10 @@ pub struct MemberMsg<T: AddressLike> {
     pub data: MemberData,
 }
 
-#[cw_serde]
-#[derive(QueryResponses)]
-#[query_responses(nested)]
-pub enum QueryMsg {
-    #[serde(untagged)]
-    CW4(cw4_group::msg::QueryMsg),
-    #[serde(untagged)]
-    Custom(CustomQueryMsg),
-}
-
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
-pub enum CustomQueryMsg {
+pub enum QueryMsg {
     #[returns(Vec<MemberMsg<cosmwasm_std::Addr>>)]
     Members {
         start_after: Option<MemberMsg<String>>,
@@ -65,18 +55,18 @@ pub enum CustomQueryMsg {
     IsValidDistribution { addrs: Vec<String> },
     #[returns(bool)]
     IsMember { addr: String },
-}
-
-impl From<CustomQueryMsg> for QueryMsg {
-    fn from(value: CustomQueryMsg) -> Self {
-        Self::Custom(value)
-    }
-}
-
-impl From<cw4_group::msg::QueryMsg> for QueryMsg {
-    fn from(value: cw4_group::msg::QueryMsg) -> Self {
-        Self::CW4(value)
-    }
+    #[returns(cw4::TotalWeightResponse)]
+    TotalWeight { at_height: Option<u64> },
+    #[returns(cw4::MemberListResponse)]
+    ListMembers {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    #[returns(cw4::MemberResponse)]
+    Member {
+        addr: String,
+        at_height: Option<u64>,
+    },
 }
 
 #[cw_serde]

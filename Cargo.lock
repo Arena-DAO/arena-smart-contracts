@@ -222,7 +222,6 @@ dependencies = [
  "cw-utils 1.0.3",
  "cw2 1.1.2",
  "cw4 1.1.2",
- "cw4-group 1.1.2",
  "thiserror",
 ]
 
@@ -238,7 +237,7 @@ dependencies = [
  "cw-ownable",
  "cw-utils 1.0.3",
  "cw20 1.1.2",
- "cw4-group 1.1.2",
+ "cw4 1.1.2",
  "cw721 0.18.0",
  "dao-interface",
  "dao-pre-propose-base",

@@ -55,8 +55,6 @@ pub fn is_member(deps: Deps, enrollment_id: Uint128, addr: String) -> StdResult<
         .into_response(deps, &enrollment.competition_module)?
         .group_contract;
 
-    deps.querier.query_wasm_smart::<bool>(
-        group_contract,
-        &group::QueryMsg::Custom(group::CustomQueryMsg::IsMember { addr }),
-    )
+    deps.querier
+        .query_wasm_smart::<bool>(group_contract, &group::QueryMsg::IsMember { addr })
 }

@@ -307,7 +307,7 @@ pub fn finalize(
     // Query current member count
     let members_count: Uint64 = deps.querier.query_wasm_smart(
         group_contract.to_string(),
-        &group::QueryMsg::Custom(group::CustomQueryMsg::MembersCount {}),
+        &group::QueryMsg::MembersCount {},
     )?;
 
     // Check member requirements and expiration
@@ -627,7 +627,7 @@ pub fn enroll(
 
     let member_count: Uint64 = deps.querier.query_wasm_smart(
         group_contract.to_string(),
-        &group::QueryMsg::Custom(group::CustomQueryMsg::MembersCount {}),
+        &group::QueryMsg::MembersCount {},
     )?;
 
     ensure!(

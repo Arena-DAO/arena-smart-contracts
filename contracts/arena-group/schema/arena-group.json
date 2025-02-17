@@ -291,11 +291,32 @@
       {
         "type": "object",
         "required": [
-          "c_w4"
+          "members"
         ],
         "properties": {
-          "c_w4": {
-            "$ref": "#/definitions/QueryMsg"
+          "members": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/MemberMsg_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -303,126 +324,158 @@
       {
         "type": "object",
         "required": [
-          "custom"
+          "members_count"
         ],
         "properties": {
-          "custom": {
-            "$ref": "#/definitions/CustomQueryMsg"
+          "members_count": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "is_valid_distribution"
+        ],
+        "properties": {
+          "is_valid_distribution": {
+            "type": "object",
+            "required": [
+              "addrs"
+            ],
+            "properties": {
+              "addrs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "is_member"
+        ],
+        "properties": {
+          "is_member": {
+            "type": "object",
+            "required": [
+              "addr"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "total_weight"
+        ],
+        "properties": {
+          "total_weight": {
+            "type": "object",
+            "properties": {
+              "at_height": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "list_members"
+        ],
+        "properties": {
+          "list_members": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "member"
+        ],
+        "properties": {
+          "member": {
+            "type": "object",
+            "required": [
+              "addr"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              },
+              "at_height": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Query the contract's ownership information",
+        "type": "object",
+        "required": [
+          "ownership"
+        ],
+        "properties": {
+          "ownership": {
+            "type": "object",
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
       }
     ],
     "definitions": {
-      "CustomQueryMsg": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "members"
-            ],
-            "properties": {
-              "members": {
-                "type": "object",
-                "properties": {
-                  "limit": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
-                    "format": "uint32",
-                    "minimum": 0.0
-                  },
-                  "start_after": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/definitions/MemberMsg_for_String"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "members_count"
-            ],
-            "properties": {
-              "members_count": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "is_valid_distribution"
-            ],
-            "properties": {
-              "is_valid_distribution": {
-                "type": "object",
-                "required": [
-                  "addrs"
-                ],
-                "properties": {
-                  "addrs": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "is_member"
-            ],
-            "properties": {
-              "is_member": {
-                "type": "object",
-                "required": [
-                  "addr"
-                ],
-                "properties": {
-                  "addr": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Query the contract's ownership information",
-            "type": "object",
-            "required": [
-              "ownership"
-            ],
-            "properties": {
-              "ownership": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
       "MemberData": {
         "type": "object",
         "required": [
@@ -455,118 +508,6 @@
         },
         "additionalProperties": false
       },
-      "QueryMsg": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "admin"
-            ],
-            "properties": {
-              "admin": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "total_weight"
-            ],
-            "properties": {
-              "total_weight": {
-                "type": "object",
-                "properties": {
-                  "at_height": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
-                    "format": "uint64",
-                    "minimum": 0.0
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "list_members"
-            ],
-            "properties": {
-              "list_members": {
-                "type": "object",
-                "properties": {
-                  "limit": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
-                    "format": "uint32",
-                    "minimum": 0.0
-                  },
-                  "start_after": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "member"
-            ],
-            "properties": {
-              "member": {
-                "type": "object",
-                "required": [
-                  "addr"
-                ],
-                "properties": {
-                  "addr": {
-                    "type": "string"
-                  },
-                  "at_height": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
-                    "format": "uint64",
-                    "minimum": 0.0
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Shows all registered hooks.",
-            "type": "object",
-            "required": [
-              "hooks"
-            ],
-            "properties": {
-              "hooks": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
       "Uint64": {
         "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
         "type": "string"
@@ -594,38 +535,6 @@
   },
   "sudo": null,
   "responses": {
-    "admin": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AdminResponse",
-      "description": "Returned from Admin.query_admin()",
-      "type": "object",
-      "properties": {
-        "admin": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "hooks": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "HooksResponse",
-      "type": "object",
-      "required": [
-        "hooks"
-      ],
-      "properties": {
-        "hooks": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
     "is_member": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Boolean",
