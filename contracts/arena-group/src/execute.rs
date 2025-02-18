@@ -1,5 +1,5 @@
 use arena_interface::group::{AddMemberMsg, MemberMsg};
-use cosmwasm_std::{ensure, DepsMut, Env, MessageInfo, Response, StdError, Uint64};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint64};
 use cw_ownable::assert_owner;
 
 use crate::{
