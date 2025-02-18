@@ -57,7 +57,6 @@ pub fn update_members(
         }
     }
 
-    ensure!(!member_count.is_zero(), ContractError::NoMembers {});
     MEMBER_COUNT.save(deps.storage, &member_count)?;
 
     Ok(Response::new()
