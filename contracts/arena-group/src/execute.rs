@@ -1,5 +1,5 @@
 use arena_interface::group::{AddMemberMsg, MemberMsg};
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint64};
+use cosmwasm_std::{ensure, DepsMut, Env, MessageInfo, Response, StdError, Uint64};
 use cw_ownable::assert_owner;
 
 use crate::{
@@ -57,6 +57,7 @@ pub fn update_members(
         }
     }
 
+    ensure!(!member_count.is_zero(), ContractError::NoMembers {});
     MEMBER_COUNT.save(deps.storage, &member_count)?;
 
     Ok(Response::new()
