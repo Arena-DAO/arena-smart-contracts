@@ -778,34 +778,28 @@
         },
         "additionalProperties": false
       },
-      "MemberData": {
-        "type": "object",
-        "required": [
-          "power",
-          "seed"
-        ],
-        "properties": {
-          "power": {
-            "$ref": "#/definitions/Uint64"
-          },
-          "seed": {
-            "$ref": "#/definitions/Uint64"
-          }
-        },
-        "additionalProperties": false
-      },
       "MemberMsg_for_String": {
         "type": "object",
         "required": [
           "addr",
-          "data"
+          "seed"
         ],
         "properties": {
           "addr": {
             "type": "string"
           },
-          "data": {
-            "$ref": "#/definitions/MemberData"
+          "power": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Uint64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "seed": {
+            "$ref": "#/definitions/Uint64"
           }
         },
         "additionalProperties": false

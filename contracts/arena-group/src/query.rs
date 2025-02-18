@@ -11,10 +11,22 @@ pub fn members(
 ) -> StdResult<Vec<MemberMsg<Addr>>> {
     let binding = start_after
         .as_ref()
-        .map(|MemberMsg { addr, data: _ }| deps.api.addr_validate(addr))
+        .map(
+            |MemberMsg {
+                 addr,
+                 seed: _,
+                 power: _,
+             }| deps.api.addr_validate(addr),
+        )
         .transpose()?;
     let start_after = start_after
-        .map(|MemberMsg { addr: _, data }| (data.seed.u64(), binding.as_ref().unwrap()))
+        .map(
+            |MemberMsg {
+                 addr: _,
+                 seed,
+                 power: _,
+             }| (seed.u64(), binding.as_ref().unwrap()),
+        )
         .map(Bound::exclusive);
     let limit = limit.map(|x| x as usize).unwrap_or(usize::MAX);
 
@@ -22,7 +34,13 @@ pub fn members(
         .idx
         .seed
         .range(deps.storage, start_after, None, Order::Ascending)
-        .map(|x| x.map(|(addr, data)| MemberMsg { addr, data }))
+        .map(|x| {
+            x.map(|(addr, data)| MemberMsg {
+                addr,
+                seed: data.seed,
+                power: Some(data.power),
+            })
+        })
         .take(limit)
         .collect()
 }

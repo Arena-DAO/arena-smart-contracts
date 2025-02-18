@@ -1,9 +1,9 @@
-use arena_interface::group::{AddMemberMsg, MemberData, MemberMsg};
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint64};
+use arena_interface::group::{AddMemberMsg, MemberMsg};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint64};
 use cw_ownable::assert_owner;
 
 use crate::{
-    state::{members, MEMBER_COUNT, TOTAL_POWER},
+    state::{members, MemberData, MEMBER_COUNT, TOTAL_POWER},
     ContractError,
 };
 
@@ -44,16 +44,27 @@ pub fn update_members(
     }
 
     if let Some(update_list) = to_update {
-        for MemberMsg { addr, data } in update_list {
+        for MemberMsg { addr, seed, power } in update_list {
             let addr = deps.api.addr_validate(&addr)?;
 
             if let Some(old_data) = members().may_load(deps.storage, &addr)? {
                 // Subtract old power and add new power
-                total_power = total_power.checked_sub(old_data.power)?;
-                total_power = total_power.checked_add(data.power)?;
+                if let Some(power) = power {
+                    total_power = total_power.checked_sub(old_data.power)?;
+                    total_power = total_power.checked_add(power)?;
+                }
 
-                members()
-                    .update::<_, StdError>(deps.storage, &addr, env.block.height, |_| Ok(data))?;
+                let data = MemberData {
+                    seed,
+                    power: power.unwrap_or(old_data.power),
+                };
+                members().replace(
+                    deps.storage,
+                    &addr,
+                    Some(&data),
+                    Some(&old_data),
+                    env.block.height,
+                )?;
             } else {
                 return Err(ContractError::NotMember { member: addr });
             }

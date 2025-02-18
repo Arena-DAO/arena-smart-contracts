@@ -37,7 +37,8 @@ pub struct AddMemberMsg {
 #[cw_serde]
 pub struct MemberMsg<T: AddressLike> {
     pub addr: T,
-    pub data: MemberData,
+    pub seed: Uint64,
+    pub power: Option<Uint64>,
 }
 
 #[cw_ownable_query]

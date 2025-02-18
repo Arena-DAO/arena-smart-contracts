@@ -1,6 +1,12 @@
-use arena_interface::group::MemberData;
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Uint64};
 use cw_storage_plus::{Index, IndexList, IndexedSnapshotMap, MultiIndex, SnapshotItem};
+
+#[cw_serde]
+pub struct MemberData {
+    pub seed: Uint64,
+    pub power: Uint64,
+}
 
 pub struct MemberIndexes<'a> {
     pub seed: MultiIndex<'a, u64, MemberData, &'a Addr>,
