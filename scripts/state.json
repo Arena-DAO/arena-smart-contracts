@@ -2,11 +2,11 @@
   "neutron": {
     "neutron-1": {
       "code_ids": {
-        "arena_competition_enrollment": 2945,
+        "arena_competition_enrollment": 3185,
         "arena_core": 3130,
         "arena_discord_identity": 2926,
         "arena_escrow": 2928,
-        "arena_group": 2925,
+        "arena_group": 3186,
         "arena_league_module": 2943,
         "arena_payment_registry": 2927,
         "arena_token_gateway": 2222,
