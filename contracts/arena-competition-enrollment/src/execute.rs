@@ -74,11 +74,7 @@ pub fn create_enrollment(
         ))
     );
     ensure!(
-        !is_enrollment_expired(
-            &env.block,
-            &competition_info.date,
-            competition_info.duration
-        ),
+        !is_enrollment_expired(&env.block, &competition_info.date, duration_before),
         ContractError::StdError(StdError::generic_err("Cannot create expired enrollment"))
     );
 

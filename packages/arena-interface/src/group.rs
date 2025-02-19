@@ -21,12 +21,6 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-pub struct MemberData {
-    pub seed: Uint64,
-    pub power: Uint64,
-}
-
-#[cw_serde]
 pub struct AddMemberMsg {
     pub addr: String,
     pub power: Uint64,
