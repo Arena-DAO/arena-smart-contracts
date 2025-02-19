@@ -62,6 +62,7 @@ pub fn execute(
             group_contract_info,
             required_team_size,
             escrow_contract_info,
+            use_dao_host,
         } => execute::create_enrollment(
             deps,
             env,
@@ -76,6 +77,7 @@ pub fn execute(
             group_contract_info,
             required_team_size,
             escrow_contract_info,
+            use_dao_host,
         ),
         ExecuteMsg::SetRankings { id, rankings } => {
             execute::set_rankings(deps, env, info, id, rankings)

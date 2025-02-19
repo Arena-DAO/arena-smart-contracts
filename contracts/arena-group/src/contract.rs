@@ -1,4 +1,4 @@
-use crate::{execute, query, state::MEMBER_COUNT, ContractError};
+use crate::{cw4, execute, query, state::MEMBER_COUNT, ContractError};
 use arena_interface::group::{AddMemberMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
@@ -31,7 +31,7 @@ pub fn instantiate_contract(
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
 
-    MEMBER_COUNT.save(deps.storage, &Uint64::zero())?;
+    MEMBER_COUNT.save(deps.storage, &Uint64::zero(), env.block.height)?;
 
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
@@ -77,6 +77,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&query::is_valid_distribution(deps, addrs)?)
         }
         QueryMsg::IsMember { addr } => to_json_binary(&query::is_member(deps, addr)?),
+        QueryMsg::TotalWeight { at_height } => to_json_binary(&cw4::total_weight(deps, at_height)?),
+        QueryMsg::ListMembers { start_after, limit } => cw4::list_members(deps, start_after, limit),
+        QueryMsg::Member { addr, at_height } => {
+            to_json_binary(&cw4::member(deps, addr, at_height)?)
+        }
     }
 }
 

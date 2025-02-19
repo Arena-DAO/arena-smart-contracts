@@ -1,7 +1,7 @@
 use arena_interface::{
     competition::{
         state::CompetitionResponse,
-        types::{CompetitionInfoResponse, CompetitionType, EnrollmentEntryResponse},
+        types::{CompetitionInfoResponse, CompetitionType, DaoConfig, EnrollmentEntryResponse},
     },
     fees::FeeInformation,
     group,
@@ -39,6 +39,7 @@ pub struct EnrollmentEntry {
     pub category_id: Option<Uint128>,
     pub competition_module: Addr,
     pub required_team_size: Option<u32>,
+    pub use_dao_host: Option<DaoConfig>,
 }
 
 impl EnrollmentEntry {
@@ -65,6 +66,7 @@ impl EnrollmentEntry {
             host: self.host,
             competition_module: self.competition_module,
             required_team_size: self.required_team_size,
+            use_dao_host: self.use_dao_host,
         })
     }
 }

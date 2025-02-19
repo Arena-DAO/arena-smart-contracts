@@ -2,6 +2,8 @@ use std::fmt;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128, Uint64};
+use cw_utils::Duration;
+use dao_voting::threshold::Threshold;
 
 use crate::fees::FeeInformation;
 
@@ -92,6 +94,17 @@ pub struct EnrollmentEntryResponse {
     pub host: Addr,
     pub competition_module: Addr,
     pub required_team_size: Option<u32>,
+    pub use_dao_host: Option<DaoConfig>,
+}
+
+#[cw_serde]
+pub struct DaoConfig {
+    pub dao_code_id: u64,
+    pub cw4_voting_code_id: u64,
+    pub proposal_single_code_id: u64,
+    pub prepropose_single_code_id: u64,
+    pub threshold: Threshold,
+    pub max_voting_period: Duration,
 }
 
 #[cw_serde]

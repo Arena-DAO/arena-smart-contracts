@@ -1,7 +1,7 @@
 use arena_interface::{
     competition::{
         msg::EscrowContractInfo,
-        types::{CompetitionType, EnrollmentEntryResponse},
+        types::{CompetitionType, DaoConfig, EnrollmentEntryResponse},
     },
     group::MemberMsg,
 };
@@ -34,6 +34,7 @@ pub enum ExecuteMsg {
         group_contract_info: ModuleInstantiateInfo,
         required_team_size: Option<u32>,
         escrow_contract_info: EscrowContractInfo,
+        use_dao_host: Option<DaoConfig>,
     },
     Finalize {
         id: Uint128,

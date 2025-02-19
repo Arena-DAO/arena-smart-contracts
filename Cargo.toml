@@ -7,7 +7,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
 repository = "https://github.com/Arena-DAO/arena-smart-contracts"
-version = "2.3.1"
+version = "2.4.0"
 
 [workspace.metadata]
 documentation = "https://docs.arenadao.org"
