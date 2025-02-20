@@ -1,7 +1,8 @@
+use arena_interface::competition::types::APIProcessing;
 use cosmwasm_std::{ensure_eq, DepsMut, MessageInfo, Response, StdError, Uint128};
 use cw_competition_base::error::CompetitionError;
 
-use crate::{contract::CompetitionModule, msg::APIProcessing};
+use crate::contract::CompetitionModule;
 
 pub fn process_competition_api(
     deps: DepsMut,
