@@ -23,8 +23,8 @@ use dao_voting::{
 use crate::{
     state::{
         competition_categories, competition_modules, ratings, rulesets,
-        COMPETITION_CATEGORIES_COUNT, ENROLLMENT_MODULES, PAYMENT_REGISTRY, RATING_PERIOD,
-        RULESETS_COUNT, TAX,
+        COMPETITION_CATEGORIES_COUNT, DISCORD_IDENTITY, ENROLLMENT_MODULES, PAYMENT_REGISTRY,
+        RATING_PERIOD, RULESETS_COUNT, TAX,
     },
     ContractError,
 };
@@ -514,5 +514,15 @@ pub fn set_payment_registry(deps: DepsMut, addr: String) -> Result<Response, Con
 
     Ok(Response::new()
         .add_attribute("action", "set_payment_registry")
+        .add_attribute("addr", addr))
+}
+
+pub fn set_discord_identity(deps: DepsMut, addr: String) -> Result<Response, ContractError> {
+    let addr = deps.api.addr_validate(&addr)?;
+
+    DISCORD_IDENTITY.save(deps.storage, &addr)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "set_discord_identity")
         .add_attribute("addr", addr))
 }

@@ -38,6 +38,7 @@ pub enum ExecuteMsg {
     },
     Finalize {
         id: Uint128,
+        additional_info: Option<AdditionalInfo>,
     },
     #[cw_orch(payable)]
     Enroll {
@@ -60,6 +61,16 @@ pub enum ExecuteMsg {
         id: Uint128,
         rankings: Vec<MemberMsg<String>>,
     },
+}
+
+#[cw_serde]
+pub enum AdditionalInfo {
+    Wager(AdditionalWagerInfo),
+}
+
+#[cw_serde]
+pub enum AdditionalWagerInfo {
+    Yunite { tournament_id: String, avs: String },
 }
 
 #[cw_serde]

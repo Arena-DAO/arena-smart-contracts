@@ -82,7 +82,10 @@ pub fn execute(
         ExecuteMsg::SetRankings { id, rankings } => {
             execute::set_rankings(deps, env, info, id, rankings)
         }
-        ExecuteMsg::Finalize { id } => execute::finalize(deps, env, info, id),
+        ExecuteMsg::Finalize {
+            id,
+            additional_info,
+        } => execute::finalize(deps, env, info, id, additional_info),
         ExecuteMsg::Enroll { id, team } => execute::enroll(deps, env, info, id, team),
         ExecuteMsg::Withdraw { id, team } => execute::withdraw(deps, env, info, id, team),
         ExecuteMsg::ForceWithdraw { id, members } => {

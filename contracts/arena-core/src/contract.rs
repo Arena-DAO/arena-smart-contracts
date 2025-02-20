@@ -3,7 +3,8 @@ use crate::{
     migrate, query,
     state::{
         competition_modules, rulesets, CompetitionModule, ARENA_TAX_CONFIG,
-        COMPETITION_CATEGORIES_COUNT, KEYS, PAYMENT_REGISTRY, RATING_PERIOD, RULESETS_COUNT,
+        COMPETITION_CATEGORIES_COUNT, DISCORD_IDENTITY, KEYS, PAYMENT_REGISTRY, RATING_PERIOD,
+        RULESETS_COUNT,
     },
     ContractError,
 };
@@ -131,6 +132,19 @@ pub fn instantiate_extension(
         }));
     }
 
+    // Set Discord Identity
+    if let Some(discord_identity) = extension.discord_identity {
+        msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_json_binary(&ExecuteMsg::Extension {
+                msg: ExecuteExt::SetDiscordIdentity {
+                    addr: discord_identity,
+                },
+            })?,
+            funds: vec![],
+        }));
+    }
+
     Ok(prepropose_response
         .add_messages(msgs)
         .set_data(to_json_binary(&ModuleInstantiateCallback {
@@ -188,6 +202,9 @@ pub fn execute(
                 }
                 ExecuteExt::SetPaymentRegistry { addr } => {
                     execute::set_payment_registry(deps, addr)
+                }
+                ExecuteExt::SetDiscordIdentity { addr } => {
+                    execute::set_discord_identity(deps, addr)
                 }
             }
         }
@@ -324,6 +341,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             QueryExt::RatingPeriod {} => to_json_binary(&RATING_PERIOD.may_load(deps.storage)?),
             QueryExt::PaymentRegistry {} => {
                 to_json_binary(&PAYMENT_REGISTRY.may_load(deps.storage)?)
+            }
+            QueryExt::DiscordIdentity {} => {
+                to_json_binary(&DISCORD_IDENTITY.may_load(deps.storage)?)
             }
         },
         _ => PrePropose::default().query(deps, env, msg),

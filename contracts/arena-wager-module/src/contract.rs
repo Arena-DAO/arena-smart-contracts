@@ -14,9 +14,12 @@ use cosmwasm_std::{
 use cw2::{ensure_from_older_version, set_contract_version};
 use cw_competition_base::{contract::CompetitionModuleContract, error::CompetitionError};
 
-use crate::msg::{
-    ExecuteExt, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryExt, QueryMsg, Wager, WagerExt,
-    WagerInstantiateExt,
+use crate::{
+    execute,
+    msg::{
+        ExecuteExt, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryExt, QueryMsg, Wager, WagerExt,
+        WagerInstantiateExt,
+    },
 };
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-wager-module";
@@ -54,6 +57,12 @@ pub fn execute(
             distribution,
             Some(post_processing),
         ),
+        ExecuteMsg::Extension { msg } => match msg {
+            ExecuteExt::ProcessCompetitionAPI {
+                competition_id,
+                result,
+            } => execute::process_competition_api(deps, info, competition_id, result),
+        },
         _ => CompetitionModule::default().execute(deps, env, info, msg),
     }
 }

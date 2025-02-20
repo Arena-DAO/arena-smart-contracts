@@ -1,7 +1,7 @@
 use arena_interface::{
     competition::{
         msg::EscrowContractInfo,
-        types::{CompetitionType, DaoConfig, EliminationType},
+        types::{APIProcessing, CompetitionType, DaoConfig, EliminationType, WagerAPIProcessing},
     },
     core::{CompetitionModuleQuery, CompetitionModuleResponse},
     escrow::{self},
@@ -26,7 +26,7 @@ use itertools::Itertools as _;
 use sha2::{Digest, Sha256};
 
 use crate::{
-    msg::CompetitionInfoMsg,
+    msg::{AdditionalInfo, AdditionalWagerInfo, CompetitionInfoMsg},
     state::{
         enrollment_entries, CompetitionInfo, EnrollmentEntry, EnrollmentInfo, ENROLLMENT_COUNT,
         TEMP_ENROLLMENT_INFO,
@@ -275,6 +275,7 @@ pub fn finalize(
     env: Env,
     info: MessageInfo,
     id: Uint128,
+    additional_info: Option<AdditionalInfo>,
 ) -> Result<Response, ContractError> {
     // Load enrollment entry from storage
     let enrollment = enrollment_entries().load(deps.storage, id.u128())?;
@@ -481,7 +482,36 @@ pub fn finalize(
 
             // Create appropriate competition message based on type
             match &enrollment.competition_type {
-                CompetitionType::Wager {} => {
+                CompetitionType::Wager { api_processing } => {
+                    let extension = if let Some(api_processing) = api_processing {
+                        match api_processing {
+                            WagerAPIProcessing::Yunite { guild_id } => {
+                                let additional_info = additional_info.ok_or(StdError::generic_err("Additional information should be provided when the wager has api processing"))?;
+
+                                match additional_info {
+                                    AdditionalInfo::Wager(additional_wager_info) => {
+                                        match additional_wager_info {
+                                            AdditionalWagerInfo::Yunite { tournament_id, avs } => {
+                                                let avs = deps.api.addr_validate(&avs)?;
+                                                WagerInstantiateExt {
+                                                    api_processing: Some(APIProcessing::Yunite {
+                                                        guild_id: guild_id.clone(),
+                                                        tournament_id,
+                                                        avs,
+                                                    }),
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        WagerInstantiateExt {
+                            api_processing: None,
+                        }
+                    };
+
                     to_json_binary(&arena_wager_module::msg::ExecuteMsg::CreateCompetition {
                         host: Some(host.to_string()),
                         category_id: enrollment.category_id,
@@ -493,7 +523,7 @@ pub fn finalize(
                         rules: rules.clone(),
                         rulesets: rulesets.clone(),
                         banner: banner.clone(),
-                        instantiate_extension: WagerInstantiateExt {},
+                        instantiate_extension: extension,
                         group_contract: group_info.clone(),
                     })?
                 }
@@ -816,7 +846,7 @@ pub fn _withdraw(
 
 fn get_min_min_members(competition_type: &CompetitionType) -> Uint64 {
     match competition_type {
-        CompetitionType::Wager {} => Uint64::new(2),
+        CompetitionType::Wager { .. } => Uint64::new(2),
         CompetitionType::League { distribution, .. } => {
             Uint64::new(std::cmp::max(distribution.len(), 2) as u64)
         }

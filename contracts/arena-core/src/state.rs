@@ -28,6 +28,7 @@ pub const KEYS: SnapshotMap<String, Addr> = SnapshotMap::new(
 pub const RATING_PERIOD: Item<Duration> = Item::new("rating_period");
 pub const ENROLLMENT_MODULES: Map<&Addr, Empty> = Map::new("enrollment_modules");
 pub const PAYMENT_REGISTRY: Item<Addr> = Item::new("payment_registry");
+pub const DISCORD_IDENTITY: Item<Addr> = Item::new("discord_identity");
 
 // Competition Modules
 

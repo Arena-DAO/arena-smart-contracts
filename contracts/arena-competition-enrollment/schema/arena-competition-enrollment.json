@@ -126,6 +126,16 @@
               "id"
             ],
             "properties": {
+              "additional_info": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/AdditionalInfo"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "id": {
                 "$ref": "#/definitions/Uint128"
               }
@@ -313,6 +323,47 @@
           }
         ]
       },
+      "AdditionalInfo": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "wager"
+            ],
+            "properties": {
+              "wager": {
+                "$ref": "#/definitions/AdditionalWagerInfo"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "AdditionalWagerInfo": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "yunite"
+            ],
+            "properties": {
+              "yunite": {
+                "type": "object",
+                "required": [
+                  "tournament_id"
+                ],
+                "properties": {
+                  "tournament_id": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "Admin": {
         "description": "Information about the CosmWasm level admin of a contract. Used in conjunction with `ModuleInstantiateInfo` to instantiate modules.",
         "oneOf": [
@@ -433,6 +484,18 @@
             "properties": {
               "wager": {
                 "type": "object",
+                "properties": {
+                  "api_processing": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/WagerAPIProcessing"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
                 "additionalProperties": false
               }
             },
@@ -975,6 +1038,31 @@
       "Uint64": {
         "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
         "type": "string"
+      },
+      "WagerAPIProcessing": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "yunite"
+            ],
+            "properties": {
+              "yunite": {
+                "type": "object",
+                "required": [
+                  "guild_id"
+                ],
+                "properties": {
+                  "guild_id": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       }
     }
   },
@@ -1330,6 +1418,18 @@
             "properties": {
               "wager": {
                 "type": "object",
+                "properties": {
+                  "api_processing": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/WagerAPIProcessing"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
                 "additionalProperties": false
               }
             },
@@ -1762,6 +1862,31 @@
       "Uint64": {
         "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
         "type": "string"
+      },
+      "WagerAPIProcessing": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "yunite"
+            ],
+            "properties": {
+              "yunite": {
+                "type": "object",
+                "required": [
+                  "guild_id"
+                ],
+                "properties": {
+                  "guild_id": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       }
     }
   },
@@ -1972,6 +2097,18 @@
               "properties": {
                 "wager": {
                   "type": "object",
+                  "properties": {
+                    "api_processing": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/definitions/WagerAPIProcessing"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
                   "additionalProperties": false
                 }
               },
@@ -2310,6 +2447,31 @@
         "Uint64": {
           "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
+        },
+        "WagerAPIProcessing": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "yunite"
+              ],
+              "properties": {
+                "yunite": {
+                  "type": "object",
+                  "required": [
+                    "guild_id"
+                  ],
+                  "properties": {
+                    "guild_id": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         }
       }
     },
@@ -2437,6 +2599,18 @@
               "properties": {
                 "wager": {
                   "type": "object",
+                  "properties": {
+                    "api_processing": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/definitions/WagerAPIProcessing"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
                   "additionalProperties": false
                 }
               },
@@ -2869,6 +3043,31 @@
         "Uint64": {
           "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
+        },
+        "WagerAPIProcessing": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "yunite"
+              ],
+              "properties": {
+                "yunite": {
+                  "type": "object",
+                  "required": [
+                    "guild_id"
+                  ],
+                  "properties": {
+                    "guild_id": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         }
       }
     },

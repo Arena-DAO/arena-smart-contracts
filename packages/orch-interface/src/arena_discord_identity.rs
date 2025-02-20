@@ -18,11 +18,11 @@ impl<Chain> Uploadable for ArenaDiscordIdentityContract<Chain> {
     fn wrapper() -> Box<dyn MockContract<Empty>> {
         Box::new(
             ContractWrapper::new_with_empty(
-                arena_escrow::contract::execute,
-                arena_escrow::contract::instantiate,
-                arena_escrow::contract::query,
+                arena_discord_identity::contract::execute,
+                arena_discord_identity::contract::instantiate,
+                arena_discord_identity::contract::query,
             )
-            .with_migrate(arena_escrow::contract::migrate),
+            .with_migrate(arena_discord_identity::contract::migrate),
         )
     }
 }

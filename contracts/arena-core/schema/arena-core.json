@@ -243,6 +243,12 @@
               "$ref": "#/definitions/ModuleInstantiateInfo"
             }
           },
+          "discord_identity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "payment_registry": {
             "type": [
               "string",
@@ -1246,6 +1252,27 @@
             ],
             "properties": {
               "set_payment_registry": {
+                "type": "object",
+                "required": [
+                  "addr"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "set_discord_identity"
+            ],
+            "properties": {
+              "set_discord_identity": {
                 "type": "object",
                 "required": [
                   "addr"
@@ -2416,6 +2443,19 @@
             ],
             "properties": {
               "payment_registry": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "discord_identity"
+            ],
+            "properties": {
+              "discord_identity": {
                 "type": "object",
                 "additionalProperties": false
               }

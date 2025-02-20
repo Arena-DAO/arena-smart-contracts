@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty};
+use cosmwasm_std::{to_json_binary, Addr, Decimal, Empty, Uint128};
 use cw_orch::prelude::*;
 use cw_utils::Duration;
 use dao_interface::{
@@ -14,6 +14,8 @@ use arena_interface::{
 };
 
 use crate::Arena;
+
+use super::DENOM;
 
 impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
     type Error = CwOrchError;
@@ -46,8 +48,22 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             None,
         )?;
 
+        // Instantiate discord identity
+        arena.arena_discord_identity.instantiate(
+            &arena_discord_identity::msg::InstantiateMsg {
+                owner: admin.to_string(),
+                faucet_amount: Coin {
+                    denom: DENOM.to_owned(),
+                    amount: Uint128::new(1000),
+                },
+            },
+            None,
+            None,
+        )?;
+
         // Prepare proposal modules
-        let proposal_modules = vec![
+        let proposal_modules =
+            vec![
             ModuleInstantiateInfo {
                 code_id: arena.dao_dao.dao_proposal_sudo.code_id()?,
                 msg: to_json_binary(&dao_proposal_sudo::msg::InstantiateMsg {
@@ -140,6 +156,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                     payment_registry: Some(
                                         arena.arena_payment_registry.addr_str()?,
                                     ),
+                                    discord_identity: Some(arena.arena_discord_identity.addr_str()?)
                                 },
                             })?,
                             admin: Some(Admin::CoreModule {}),

@@ -16,6 +16,7 @@ arena-league-module = { workspace = true }
 arena-core = { workspace = true }
 arena-interface = { workspace = true }
 arena-escrow = { workspace = true }
+arena-discord-identity = { workspace = true }
 cosmwasm-std = { workspace = true }
 orch-interface = { workspace = true }
 cw-utils = { workspace = true }

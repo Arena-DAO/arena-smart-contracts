@@ -331,6 +331,7 @@ dependencies = [
  "cw-competition-base",
  "cw-orch",
  "cw2 1.1.2",
+ "serde_json",
 ]
 
 [[package]]
@@ -4846,6 +4847,7 @@ version = "2.4.0"
 dependencies = [
  "arena-competition-enrollment",
  "arena-core",
+ "arena-discord-identity",
  "arena-escrow",
  "arena-interface",
  "arena-league-module",
