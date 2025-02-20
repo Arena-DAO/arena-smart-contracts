@@ -1070,7 +1070,7 @@ fn test_dao_host_config() -> anyhow::Result<()> {
 
     let res = arena
         .arena_competition_enrollment
-        .finalize(Uint128::one())?;
+        .finalize(Uint128::one(), None)?;
 
     assert!(res.events.iter().any(|e| e.ty == "wasm"
         && e.attributes
