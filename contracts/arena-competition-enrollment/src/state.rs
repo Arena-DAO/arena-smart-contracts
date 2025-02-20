@@ -1,9 +1,13 @@
-use std::fmt;
-
-use arena_interface::{competition::state::CompetitionResponse, fees::FeeInformation, group};
-use arena_tournament_module::state::EliminationType;
+use arena_interface::{
+    competition::{
+        state::CompetitionResponse,
+        types::{CompetitionInfoResponse, CompetitionType, DaoConfig, EnrollmentEntryResponse},
+    },
+    fees::FeeInformation,
+    group,
+};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Deps, Empty, StdResult, Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Addr, Coin, Deps, Empty, StdResult, Timestamp, Uint128, Uint64};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use cw_utils::Expiration;
 
@@ -35,38 +39,7 @@ pub struct EnrollmentEntry {
     pub category_id: Option<Uint128>,
     pub competition_module: Addr,
     pub required_team_size: Option<u32>,
-}
-
-#[cw_serde]
-pub struct EnrollmentEntryResponse {
-    pub category_id: Option<Uint128>,
-    pub id: Uint128,
-    pub current_members: Uint64,
-    pub min_members: Option<Uint64>,
-    pub max_members: Uint64,
-    pub entry_fee: Option<Coin>,
-    pub duration_before: u64,
-    pub has_finalized: bool,
-    pub competition_info: CompetitionInfoResponse,
-    pub competition_type: CompetitionType,
-    pub host: Addr,
-    pub competition_module: Addr,
-    pub required_team_size: Option<u32>,
-}
-
-#[cw_serde]
-pub struct CompetitionInfoResponse {
-    pub name: String,
-    pub description: String,
-    pub date: Timestamp,
-    pub duration: u64,
-    pub rules: Option<Vec<String>>,
-    pub rulesets: Option<Vec<Uint128>>,
-    pub banner: Option<String>,
-    pub additional_layered_fees: Option<Vec<FeeInformation<Addr>>>,
-    pub competition_id: Option<Uint128>,
-    pub escrow: Addr,
-    pub group_contract: Addr,
+    pub use_dao_host: Option<DaoConfig>,
 }
 
 impl EnrollmentEntry {
@@ -93,40 +66,8 @@ impl EnrollmentEntry {
             host: self.host,
             competition_module: self.competition_module,
             required_team_size: self.required_team_size,
+            use_dao_host: self.use_dao_host,
         })
-    }
-}
-
-#[cw_serde]
-pub enum WagerAPIProcessing {
-    Yunite { guild_id: String },
-}
-
-#[cw_serde]
-pub enum CompetitionType {
-    Wager {
-        api_processing: Option<WagerAPIProcessing>,
-    },
-    League {
-        match_win_points: Uint64,
-        match_draw_points: Uint64,
-        match_lose_points: Uint64,
-        distribution: Vec<Decimal>,
-    },
-    Tournament {
-        elimination_type: EliminationType,
-        distribution: Vec<Decimal>,
-    },
-}
-
-impl fmt::Display for CompetitionType {
-    /// This value should match up the module key
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CompetitionType::Wager { .. } => write!(f, "Wagers"),
-            CompetitionType::League { .. } => write!(f, "Leagues"),
-            CompetitionType::Tournament { .. } => write!(f, "Tournaments"),
-        }
     }
 }
 

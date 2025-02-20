@@ -14,6 +14,7 @@ use dao_pre_propose_base::{
 use dao_voting::proposal::SingleChoiceProposeMsg;
 
 use crate::{
+    competition::{msg::CompetitionsFilter, types::CoreCompetitionsResponse},
     fees::TaxConfiguration,
     ratings::{MemberResult, Rating},
 };
@@ -76,6 +77,11 @@ impl From<ExecuteExt> for ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses, cw_orch::QueryFns)]
 pub enum QueryExt {
+    #[returns(CoreCompetitionsResponse)]
+    Competitions {
+        filter: Option<CompetitionsFilter>,
+        enrollment_module: Option<String>,
+    },
     #[returns(Vec<CompetitionModuleResponse<Addr>>)]
     CompetitionModules {
         start_after: Option<String>,

@@ -36,3 +36,5 @@ cw-balance = { workspace = true }
 itertools = { workspace = true }
 dao-voting-cw4 = { workspace = true }
 cw4 = { workspace = true }
+dao-proposal-single = { workspace = true }
+dao-pre-propose-single = { workspace = true }

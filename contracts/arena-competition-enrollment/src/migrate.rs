@@ -59,6 +59,7 @@ pub fn migrate_from_v2_3_to_v2_3_1(deps: DepsMut, env: Env) -> Result<(), Contra
             category_id: enrollment.category_id,
             competition_module: enrollment.competition_module,
             required_team_size: enrollment.required_team_size,
+            use_dao_host: None,
         };
 
         enrollment_entries().replace(

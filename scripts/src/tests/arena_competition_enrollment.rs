@@ -1,19 +1,22 @@
 use arena_competition_enrollment::msg::{
-    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, MigrateMsg, QueryMsgFns as _,
+    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, MigrateMsg,
 };
-use arena_competition_enrollment::state::CompetitionType;
 use arena_interface::competition::msg::{EscrowContractInfo, ExecuteBaseFns as _, QueryBaseFns};
+use arena_interface::competition::types::CompetitionType;
+use arena_interface::enrollments::QueryMsgFns as _;
 use arena_interface::escrow::{self, ExecuteMsgFns as _, QueryMsgFns as _};
 use arena_interface::fees::FeeInformation;
 use arena_interface::group::{self, QueryMsgFns as _};
-use arena_tournament_module::msg::{ExecuteExtFns, MatchResultMsg};
-use arena_tournament_module::state::{EliminationType, MatchResult};
+use arena_tournament_module::msg::{EliminationType, ExecuteExtFns, MatchResultMsg};
+use arena_tournament_module::state::MatchResult;
 use cosmwasm_std::{coin, coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_balance::{BalanceVerified, Distribution, MemberPercentage};
 use cw_orch::{anyhow, prelude::*};
 use cw_orch_clone_testing::CloneTesting;
 use dao_interface::state::ModuleInstantiateInfo;
+use dao_interface::CoreQueryMsgFns as _;
 use dao_proposal_sudo::msg::ExecuteMsgFns as _;
+use dao_voting_cw4::msg::QueryMsgFns as _;
 use networks::PION_1;
 
 use crate::arena::Arena;
@@ -101,6 +104,7 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     let res = arena
@@ -224,6 +228,7 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     let result = arena
@@ -281,6 +286,7 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -353,6 +359,7 @@ fn test_tournament() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -475,6 +482,7 @@ fn test_wager() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info,
+        use_dao_host: None,
     };
 
     arena
@@ -607,6 +615,7 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -681,6 +690,7 @@ fn test_finalize_before_min_members() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -790,6 +800,7 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -885,6 +896,7 @@ fn test_huge_tournament() -> anyhow::Result<()> {
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
     };
 
     arena
@@ -967,6 +979,117 @@ fn test_migration_v2_v2_1() -> anyhow::Result<()> {
         .arena_competition_enrollment
         .enrollments(None, None, None)?;
     dbg!(enrollments);
+
+    Ok(())
+}
+
+#[test]
+fn test_dao_host_config() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+
+    // Set up teams
+    let mut teams = vec![];
+    for i in 0..4 {
+        teams.push(mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?);
+    }
+
+    // Register the enrollment module
+    register_competition_enrollment_module(&arena, &admin)?;
+
+    // Create an enrollment with DAO host configuration
+    arena.arena_competition_enrollment.set_sender(&admin);
+    let create_enrollment_msg = ExecuteMsg::CreateEnrollment {
+        min_members: Some(Uint64::new(4)),
+        max_members: Uint64::new(4),
+        entry_fee: Some(coins(1000, DENOM)[0].clone()),
+        duration_before: 86400,
+        category_id: Some(Uint128::new(1)),
+        competition_info: CompetitionInfoMsg {
+            name: "DAO Hosted Competition".to_string(),
+            description: "A competition with DAO governance".to_string(),
+            date: mock.block_info()?.time.plus_seconds(86400),
+            duration: 86400,
+            rules: Some(vec!["Rule 1".to_string()]),
+            rulesets: None,
+            banner: None,
+        },
+        competition_type: CompetitionType::Tournament {
+            elimination_type: EliminationType::SingleElimination {
+                play_third_place_match: false,
+            },
+            distribution: vec![Decimal::percent(60), Decimal::percent(40)],
+        },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Arena Group".to_string(),
+        },
+        required_team_size: None,
+        escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: Some(arena_interface::competition::types::DaoConfig {
+            dao_code_id: arena.dao_dao.dao_core.code_id()?,
+            proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
+            cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
+            prepropose_single_code_id: arena.dao_dao.dao_preproprose_single.code_id()?,
+            max_voting_period: cw_utils::Duration::Time(86400),
+            threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
+                percentage: dao_voting::threshold::PercentageThreshold::Majority {},
+            },
+        }),
+    };
+
+    arena
+        .arena_competition_enrollment
+        .execute(&create_enrollment_msg, None)?;
+
+    // Enroll all members
+    for team in &teams {
+        arena.arena_competition_enrollment.set_sender(team);
+        arena
+            .arena_competition_enrollment
+            .enroll(Uint128::one(), None, &coins(1000, DENOM))?;
+    }
+
+    // Get enrollment to verify DAO configuration
+    let enrollment = arena
+        .arena_competition_enrollment
+        .enrollment(Uint128::one())?;
+
+    // Verify the host is the sender until the DAO is created on finalize
+    assert_eq!(enrollment.host, admin);
+
+    // Verify the DAO config is stored
+    assert!(enrollment.use_dao_host.is_some());
+
+    // Trigger expiration and finalize
+    arena.arena_competition_enrollment.set_sender(&admin);
+    mock.wait_blocks(1000000)?;
+
+    let res = arena
+        .arena_competition_enrollment
+        .finalize(Uint128::one())?;
+
+    assert!(res.events.iter().any(|e| e.ty == "wasm"
+        && e.attributes
+            .iter()
+            .any(|attr| attr.key == "result" && attr.value == "competition_created")));
+    mock.next_block()?;
+
+    // Get the tournament config
+    let tournament = arena.arena_tournament_module.competition(Uint128::one())?;
+
+    // Query the DAO's voting module to verify setup
+    let dao_addr = tournament.host;
+    arena.dao_dao.dao_core.set_address(&dao_addr);
+
+    // Verify the voting module is properly configured
+    let voting_module = arena.dao_dao.dao_core.voting_module()?;
+    arena.dao_dao.dao_voting_cw4.set_address(&voting_module);
+    let group_contract = arena.dao_dao.dao_voting_cw4.group_contract()?;
+    assert_eq!(group_contract, enrollment.competition_info.group_contract);
 
     Ok(())
 }

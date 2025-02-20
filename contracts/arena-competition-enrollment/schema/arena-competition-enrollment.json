@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-competition-enrollment",
-  "contract_version": "2.3.1",
+  "contract_version": "2.4.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -97,6 +97,16 @@
                 ],
                 "format": "uint32",
                 "minimum": 0.0
+              },
+              "use_dao_host": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/DaoConfig"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -557,9 +567,83 @@
           }
         ]
       },
+      "DaoConfig": {
+        "type": "object",
+        "required": [
+          "cw4_voting_code_id",
+          "dao_code_id",
+          "max_voting_period",
+          "prepropose_single_code_id",
+          "proposal_single_code_id",
+          "threshold"
+        ],
+        "properties": {
+          "cw4_voting_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "dao_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "max_voting_period": {
+            "$ref": "#/definitions/Duration"
+          },
+          "prepropose_single_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "proposal_single_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "threshold": {
+            "$ref": "#/definitions/Threshold"
+          }
+        },
+        "additionalProperties": false
+      },
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
         "type": "string"
+      },
+      "Duration": {
+        "description": "Duration is a delta of time. You can add it to a BlockInfo or Expiration to move that further in the future. Note that an height-based Duration and a time-based Expiration cannot be combined",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "height"
+            ],
+            "properties": {
+              "height": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Time in seconds",
+            "type": "object",
+            "required": [
+              "time"
+            ],
+            "properties": {
+              "time": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "EliminationType": {
         "oneOf": [
@@ -767,6 +851,16 @@
           "addr": {
             "type": "string"
           },
+          "power": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Uint64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "seed": {
             "$ref": "#/definitions/Uint64"
           }
@@ -821,6 +915,113 @@
           }
         },
         "additionalProperties": false
+      },
+      "PercentageThreshold": {
+        "description": "A percentage of voting power that must vote yes for a proposal to pass. An example of why this is needed:\n\nIf a user specifies a 60% passing threshold, and there are 10 voters they likely expect that proposal to pass when there are 6 yes votes. This implies that the condition for passing should be `vote_weights >= total_votes * threshold`.\n\nWith this in mind, how should a user specify that they would like proposals to pass if the majority of voters choose yes? Selecting a 50% passing threshold with those rules doesn't properly cover that case as 5 voters voting yes out of 10 would pass the proposal. Selecting 50.0001% or or some variation of that also does not work as a very small yes vote which technically makes the majority yes may not reach that threshold.\n\nTo handle these cases we provide both a majority and percent option for all percentages. If majority is selected passing will be determined by `yes > total_votes * 0.5`. If percent is selected passing is determined by `yes >= total_votes * percent`.\n\nIn both of these cases a proposal with only abstain votes must fail. This requires a special case passing logic.",
+        "oneOf": [
+          {
+            "description": "The majority of voters must vote yes for the proposal to pass.",
+            "type": "object",
+            "required": [
+              "majority"
+            ],
+            "properties": {
+              "majority": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "A percentage of voting power >= percent must vote yes for the proposal to pass.",
+            "type": "object",
+            "required": [
+              "percent"
+            ],
+            "properties": {
+              "percent": {
+                "$ref": "#/definitions/Decimal"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Threshold": {
+        "description": "The ways a proposal may reach its passing / failing threshold.",
+        "oneOf": [
+          {
+            "description": "Declares a percentage of the total weight that must cast Yes votes in order for a proposal to pass.  See `ThresholdResponse::AbsolutePercentage` in the cw3 spec for details.",
+            "type": "object",
+            "required": [
+              "absolute_percentage"
+            ],
+            "properties": {
+              "absolute_percentage": {
+                "type": "object",
+                "required": [
+                  "percentage"
+                ],
+                "properties": {
+                  "percentage": {
+                    "$ref": "#/definitions/PercentageThreshold"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Declares a `quorum` of the total votes that must participate in the election in order for the vote to be considered at all. See `ThresholdResponse::ThresholdQuorum` in the cw3 spec for details.",
+            "type": "object",
+            "required": [
+              "threshold_quorum"
+            ],
+            "properties": {
+              "threshold_quorum": {
+                "type": "object",
+                "required": [
+                  "quorum",
+                  "threshold"
+                ],
+                "properties": {
+                  "quorum": {
+                    "$ref": "#/definitions/PercentageThreshold"
+                  },
+                  "threshold": {
+                    "$ref": "#/definitions/PercentageThreshold"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "An absolute number of votes needed for something to cross the threshold. Useful for multisig style voting.",
+            "type": "object",
+            "required": [
+              "absolute_count"
+            ],
+            "properties": {
+              "absolute_count": {
+                "type": "object",
+                "required": [
+                  "threshold"
+                ],
+                "properties": {
+                  "threshold": {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -1300,9 +1501,83 @@
           }
         ]
       },
+      "DaoConfig": {
+        "type": "object",
+        "required": [
+          "cw4_voting_code_id",
+          "dao_code_id",
+          "max_voting_period",
+          "prepropose_single_code_id",
+          "proposal_single_code_id",
+          "threshold"
+        ],
+        "properties": {
+          "cw4_voting_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "dao_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "max_voting_period": {
+            "$ref": "#/definitions/Duration"
+          },
+          "prepropose_single_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "proposal_single_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "threshold": {
+            "$ref": "#/definitions/Threshold"
+          }
+        },
+        "additionalProperties": false
+      },
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
         "type": "string"
+      },
+      "Duration": {
+        "description": "Duration is a delta of time. You can add it to a BlockInfo or Expiration to move that further in the future. Note that an height-based Duration and a time-based Expiration cannot be combined",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "height"
+            ],
+            "properties": {
+              "height": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Time in seconds",
+            "type": "object",
+            "required": [
+              "time"
+            ],
+            "properties": {
+              "time": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "EliminationType": {
         "oneOf": [
@@ -1415,6 +1690,16 @@
             ],
             "format": "uint32",
             "minimum": 0.0
+          },
+          "use_dao_host": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/DaoConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -1454,6 +1739,113 @@
           }
         },
         "additionalProperties": false
+      },
+      "PercentageThreshold": {
+        "description": "A percentage of voting power that must vote yes for a proposal to pass. An example of why this is needed:\n\nIf a user specifies a 60% passing threshold, and there are 10 voters they likely expect that proposal to pass when there are 6 yes votes. This implies that the condition for passing should be `vote_weights >= total_votes * threshold`.\n\nWith this in mind, how should a user specify that they would like proposals to pass if the majority of voters choose yes? Selecting a 50% passing threshold with those rules doesn't properly cover that case as 5 voters voting yes out of 10 would pass the proposal. Selecting 50.0001% or or some variation of that also does not work as a very small yes vote which technically makes the majority yes may not reach that threshold.\n\nTo handle these cases we provide both a majority and percent option for all percentages. If majority is selected passing will be determined by `yes > total_votes * 0.5`. If percent is selected passing is determined by `yes >= total_votes * percent`.\n\nIn both of these cases a proposal with only abstain votes must fail. This requires a special case passing logic.",
+        "oneOf": [
+          {
+            "description": "The majority of voters must vote yes for the proposal to pass.",
+            "type": "object",
+            "required": [
+              "majority"
+            ],
+            "properties": {
+              "majority": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "A percentage of voting power >= percent must vote yes for the proposal to pass.",
+            "type": "object",
+            "required": [
+              "percent"
+            ],
+            "properties": {
+              "percent": {
+                "$ref": "#/definitions/Decimal"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Threshold": {
+        "description": "The ways a proposal may reach its passing / failing threshold.",
+        "oneOf": [
+          {
+            "description": "Declares a percentage of the total weight that must cast Yes votes in order for a proposal to pass.  See `ThresholdResponse::AbsolutePercentage` in the cw3 spec for details.",
+            "type": "object",
+            "required": [
+              "absolute_percentage"
+            ],
+            "properties": {
+              "absolute_percentage": {
+                "type": "object",
+                "required": [
+                  "percentage"
+                ],
+                "properties": {
+                  "percentage": {
+                    "$ref": "#/definitions/PercentageThreshold"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Declares a `quorum` of the total votes that must participate in the election in order for the vote to be considered at all. See `ThresholdResponse::ThresholdQuorum` in the cw3 spec for details.",
+            "type": "object",
+            "required": [
+              "threshold_quorum"
+            ],
+            "properties": {
+              "threshold_quorum": {
+                "type": "object",
+                "required": [
+                  "quorum",
+                  "threshold"
+                ],
+                "properties": {
+                  "quorum": {
+                    "$ref": "#/definitions/PercentageThreshold"
+                  },
+                  "threshold": {
+                    "$ref": "#/definitions/PercentageThreshold"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "An absolute number of votes needed for something to cross the threshold. Useful for multisig style voting.",
+            "type": "object",
+            "required": [
+              "absolute_count"
+            ],
+            "properties": {
+              "absolute_count": {
+                "type": "object",
+                "required": [
+                  "threshold"
+                ],
+                "properties": {
+                  "threshold": {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -1581,6 +1973,16 @@
           ],
           "format": "uint32",
           "minimum": 0.0
+        },
+        "use_dao_host": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DaoConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1778,9 +2180,83 @@
             }
           ]
         },
+        "DaoConfig": {
+          "type": "object",
+          "required": [
+            "cw4_voting_code_id",
+            "dao_code_id",
+            "max_voting_period",
+            "prepropose_single_code_id",
+            "proposal_single_code_id",
+            "threshold"
+          ],
+          "properties": {
+            "cw4_voting_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "dao_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "max_voting_period": {
+              "$ref": "#/definitions/Duration"
+            },
+            "prepropose_single_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "proposal_single_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "threshold": {
+              "$ref": "#/definitions/Threshold"
+            }
+          },
+          "additionalProperties": false
+        },
         "Decimal": {
           "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
           "type": "string"
+        },
+        "Duration": {
+          "description": "Duration is a delta of time. You can add it to a BlockInfo or Expiration to move that further in the future. Note that an height-based Duration and a time-based Expiration cannot be combined",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "height"
+              ],
+              "properties": {
+                "height": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Time in seconds",
+              "type": "object",
+              "required": [
+                "time"
+              ],
+              "properties": {
+                "time": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "EliminationType": {
           "oneOf": [
@@ -1848,6 +2324,113 @@
             }
           },
           "additionalProperties": false
+        },
+        "PercentageThreshold": {
+          "description": "A percentage of voting power that must vote yes for a proposal to pass. An example of why this is needed:\n\nIf a user specifies a 60% passing threshold, and there are 10 voters they likely expect that proposal to pass when there are 6 yes votes. This implies that the condition for passing should be `vote_weights >= total_votes * threshold`.\n\nWith this in mind, how should a user specify that they would like proposals to pass if the majority of voters choose yes? Selecting a 50% passing threshold with those rules doesn't properly cover that case as 5 voters voting yes out of 10 would pass the proposal. Selecting 50.0001% or or some variation of that also does not work as a very small yes vote which technically makes the majority yes may not reach that threshold.\n\nTo handle these cases we provide both a majority and percent option for all percentages. If majority is selected passing will be determined by `yes > total_votes * 0.5`. If percent is selected passing is determined by `yes >= total_votes * percent`.\n\nIn both of these cases a proposal with only abstain votes must fail. This requires a special case passing logic.",
+          "oneOf": [
+            {
+              "description": "The majority of voters must vote yes for the proposal to pass.",
+              "type": "object",
+              "required": [
+                "majority"
+              ],
+              "properties": {
+                "majority": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "A percentage of voting power >= percent must vote yes for the proposal to pass.",
+              "type": "object",
+              "required": [
+                "percent"
+              ],
+              "properties": {
+                "percent": {
+                  "$ref": "#/definitions/Decimal"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Threshold": {
+          "description": "The ways a proposal may reach its passing / failing threshold.",
+          "oneOf": [
+            {
+              "description": "Declares a percentage of the total weight that must cast Yes votes in order for a proposal to pass.  See `ThresholdResponse::AbsolutePercentage` in the cw3 spec for details.",
+              "type": "object",
+              "required": [
+                "absolute_percentage"
+              ],
+              "properties": {
+                "absolute_percentage": {
+                  "type": "object",
+                  "required": [
+                    "percentage"
+                  ],
+                  "properties": {
+                    "percentage": {
+                      "$ref": "#/definitions/PercentageThreshold"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Declares a `quorum` of the total votes that must participate in the election in order for the vote to be considered at all. See `ThresholdResponse::ThresholdQuorum` in the cw3 spec for details.",
+              "type": "object",
+              "required": [
+                "threshold_quorum"
+              ],
+              "properties": {
+                "threshold_quorum": {
+                  "type": "object",
+                  "required": [
+                    "quorum",
+                    "threshold"
+                  ],
+                  "properties": {
+                    "quorum": {
+                      "$ref": "#/definitions/PercentageThreshold"
+                    },
+                    "threshold": {
+                      "$ref": "#/definitions/PercentageThreshold"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "An absolute number of votes needed for something to cross the threshold. Useful for multisig style voting.",
+              "type": "object",
+              "required": [
+                "absolute_count"
+              ],
+              "properties": {
+                "absolute_count": {
+                  "type": "object",
+                  "required": [
+                    "threshold"
+                  ],
+                  "properties": {
+                    "threshold": {
+                      "$ref": "#/definitions/Uint128"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "Timestamp": {
           "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -2099,9 +2682,83 @@
             }
           ]
         },
+        "DaoConfig": {
+          "type": "object",
+          "required": [
+            "cw4_voting_code_id",
+            "dao_code_id",
+            "max_voting_period",
+            "prepropose_single_code_id",
+            "proposal_single_code_id",
+            "threshold"
+          ],
+          "properties": {
+            "cw4_voting_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "dao_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "max_voting_period": {
+              "$ref": "#/definitions/Duration"
+            },
+            "prepropose_single_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "proposal_single_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "threshold": {
+              "$ref": "#/definitions/Threshold"
+            }
+          },
+          "additionalProperties": false
+        },
         "Decimal": {
           "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
           "type": "string"
+        },
+        "Duration": {
+          "description": "Duration is a delta of time. You can add it to a BlockInfo or Expiration to move that further in the future. Note that an height-based Duration and a time-based Expiration cannot be combined",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "height"
+              ],
+              "properties": {
+                "height": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Time in seconds",
+              "type": "object",
+              "required": [
+                "time"
+              ],
+              "properties": {
+                "time": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "EliminationType": {
           "oneOf": [
@@ -2214,6 +2871,16 @@
               ],
               "format": "uint32",
               "minimum": 0.0
+            },
+            "use_dao_host": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DaoConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "additionalProperties": false
@@ -2253,6 +2920,113 @@
             }
           },
           "additionalProperties": false
+        },
+        "PercentageThreshold": {
+          "description": "A percentage of voting power that must vote yes for a proposal to pass. An example of why this is needed:\n\nIf a user specifies a 60% passing threshold, and there are 10 voters they likely expect that proposal to pass when there are 6 yes votes. This implies that the condition for passing should be `vote_weights >= total_votes * threshold`.\n\nWith this in mind, how should a user specify that they would like proposals to pass if the majority of voters choose yes? Selecting a 50% passing threshold with those rules doesn't properly cover that case as 5 voters voting yes out of 10 would pass the proposal. Selecting 50.0001% or or some variation of that also does not work as a very small yes vote which technically makes the majority yes may not reach that threshold.\n\nTo handle these cases we provide both a majority and percent option for all percentages. If majority is selected passing will be determined by `yes > total_votes * 0.5`. If percent is selected passing is determined by `yes >= total_votes * percent`.\n\nIn both of these cases a proposal with only abstain votes must fail. This requires a special case passing logic.",
+          "oneOf": [
+            {
+              "description": "The majority of voters must vote yes for the proposal to pass.",
+              "type": "object",
+              "required": [
+                "majority"
+              ],
+              "properties": {
+                "majority": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "A percentage of voting power >= percent must vote yes for the proposal to pass.",
+              "type": "object",
+              "required": [
+                "percent"
+              ],
+              "properties": {
+                "percent": {
+                  "$ref": "#/definitions/Decimal"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Threshold": {
+          "description": "The ways a proposal may reach its passing / failing threshold.",
+          "oneOf": [
+            {
+              "description": "Declares a percentage of the total weight that must cast Yes votes in order for a proposal to pass.  See `ThresholdResponse::AbsolutePercentage` in the cw3 spec for details.",
+              "type": "object",
+              "required": [
+                "absolute_percentage"
+              ],
+              "properties": {
+                "absolute_percentage": {
+                  "type": "object",
+                  "required": [
+                    "percentage"
+                  ],
+                  "properties": {
+                    "percentage": {
+                      "$ref": "#/definitions/PercentageThreshold"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Declares a `quorum` of the total votes that must participate in the election in order for the vote to be considered at all. See `ThresholdResponse::ThresholdQuorum` in the cw3 spec for details.",
+              "type": "object",
+              "required": [
+                "threshold_quorum"
+              ],
+              "properties": {
+                "threshold_quorum": {
+                  "type": "object",
+                  "required": [
+                    "quorum",
+                    "threshold"
+                  ],
+                  "properties": {
+                    "quorum": {
+                      "$ref": "#/definitions/PercentageThreshold"
+                    },
+                    "threshold": {
+                      "$ref": "#/definitions/PercentageThreshold"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "An absolute number of votes needed for something to cross the threshold. Useful for multisig style voting.",
+              "type": "object",
+              "required": [
+                "absolute_count"
+              ],
+              "properties": {
+                "absolute_count": {
+                  "type": "object",
+                  "required": [
+                    "threshold"
+                  ],
+                  "properties": {
+                    "threshold": {
+                      "$ref": "#/definitions/Uint128"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "Timestamp": {
           "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",

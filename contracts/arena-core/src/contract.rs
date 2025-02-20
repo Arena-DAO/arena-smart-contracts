@@ -268,6 +268,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let binary_result = match msg {
         QueryMsg::QueryExtension { msg } => match msg {
+            QueryExt::Competitions {
+                filter,
+                enrollment_module,
+            } => to_json_binary(&query::competitions(deps, filter, enrollment_module)?),
             QueryExt::CompetitionModules {
                 start_after,
                 limit,

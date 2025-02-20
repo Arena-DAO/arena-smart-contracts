@@ -23,6 +23,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub struct AddMemberMsg {
     pub addr: String,
+    pub power: Uint64,
     /// If None, then the seed will be set as the members count at the time of insertion
     pub seed: Option<Uint64>,
 }
@@ -31,6 +32,7 @@ pub struct AddMemberMsg {
 pub struct MemberMsg<T: AddressLike> {
     pub addr: T,
     pub seed: Uint64,
+    pub power: Option<Uint64>,
 }
 
 #[cw_ownable_query]
@@ -48,6 +50,18 @@ pub enum QueryMsg {
     IsValidDistribution { addrs: Vec<String> },
     #[returns(bool)]
     IsMember { addr: String },
+    #[returns(cw4::TotalWeightResponse)]
+    TotalWeight { at_height: Option<u64> },
+    #[returns(cw4::MemberListResponse)]
+    ListMembers {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    #[returns(cw4::MemberResponse)]
+    Member {
+        addr: String,
+        at_height: Option<u64>,
+    },
 }
 
 #[cw_serde]

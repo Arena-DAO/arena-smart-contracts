@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::Arena;
 use arena_interface::group::AddMemberMsg;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::to_json_binary;
+use cosmwasm_std::{to_json_binary, Uint64};
 use cw_orch::{anyhow, prelude::*};
 use dao_interface::{
     state::{Admin, ModuleInstantiateInfo},
@@ -101,6 +101,7 @@ pub fn teams_to_members(teams: &[Addr]) -> Option<Vec<AddMemberMsg>> {
             .map(|x| AddMemberMsg {
                 addr: x.to_string(),
                 seed: None,
+                power: Uint64::new(1000),
             })
             .collect(),
     )

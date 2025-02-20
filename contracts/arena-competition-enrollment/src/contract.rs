@@ -1,7 +1,10 @@
 use std::str::FromStr;
 
-use arena_interface::escrow::{self, TransferEscrowOwnershipMsg};
-use arena_tournament_module::state::EliminationType;
+use arena_interface::{
+    competition::types::{CompetitionType, EliminationType},
+    enrollments::QueryMsg,
+    escrow::{self, TransferEscrowOwnershipMsg},
+};
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdError, StdResult, SubMsgResult, Uint128, WasmMsg,
@@ -11,12 +14,9 @@ use cw2::{ensure_from_older_version, set_contract_version};
 use crate::{
     execute::{self, FINALIZE_COMPETITION_REPLY_ID},
     migrate,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg},
     query,
-    state::{
-        enrollment_entries, CompetitionInfo, CompetitionType, ENROLLMENT_COUNT,
-        TEMP_ENROLLMENT_INFO,
-    },
+    state::{enrollment_entries, CompetitionInfo, ENROLLMENT_COUNT, TEMP_ENROLLMENT_INFO},
     ContractError,
 };
 
@@ -62,6 +62,7 @@ pub fn execute(
             group_contract_info,
             required_team_size,
             escrow_contract_info,
+            use_dao_host,
         } => execute::create_enrollment(
             deps,
             env,
@@ -76,6 +77,7 @@ pub fn execute(
             group_contract_info,
             required_team_size,
             escrow_contract_info,
+            use_dao_host,
         ),
         ExecuteMsg::SetRankings { id, rankings } => {
             execute::set_rankings(deps, env, info, id, rankings)

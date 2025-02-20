@@ -11,10 +11,22 @@ pub fn members(
 ) -> StdResult<Vec<MemberMsg<Addr>>> {
     let binding = start_after
         .as_ref()
-        .map(|MemberMsg { addr, seed: _ }| deps.api.addr_validate(addr))
+        .map(
+            |MemberMsg {
+                 addr,
+                 seed: _,
+                 power: _,
+             }| deps.api.addr_validate(addr),
+        )
         .transpose()?;
     let start_after = start_after
-        .map(|MemberMsg { addr: _, seed }| (seed.u64(), binding.as_ref().unwrap()))
+        .map(
+            |MemberMsg {
+                 addr: _,
+                 seed,
+                 power: _,
+             }| (seed.u64(), binding.as_ref().unwrap()),
+        )
         .map(Bound::exclusive);
     let limit = limit.map(|x| x as usize).unwrap_or(usize::MAX);
 
@@ -22,7 +34,13 @@ pub fn members(
         .idx
         .seed
         .range(deps.storage, start_after, None, Order::Ascending)
-        .map(|x| x.map(|(addr, seed)| MemberMsg { addr, seed }))
+        .map(|x| {
+            x.map(|(addr, data)| MemberMsg {
+                addr,
+                seed: data.seed,
+                power: Some(data.power),
+            })
+        })
         .take(limit)
         .collect()
 }
@@ -45,11 +63,15 @@ pub fn is_valid_distribution(deps: Deps, addrs: Vec<String>) -> StdResult<bool> 
         .map(|x| deps.api.addr_validate(&x))
         .collect::<StdResult<Vec<_>>>()?;
 
-    Ok(addrs
-        .into_iter()
-        .all(|x| members_map().has(deps.storage, &x)))
+    Ok(addrs.into_iter().all(|x| {
+        members_map()
+            .may_load(deps.storage, &x)
+            .is_ok_and(|y| y.is_some())
+    }))
 }
 
 pub fn is_member(deps: Deps, addr: String) -> StdResult<bool> {
-    Ok(members_map().has(deps.storage, &deps.api.addr_validate(&addr)?))
+    Ok(members_map()
+        .may_load(deps.storage, &deps.api.addr_validate(&addr)?)?
+        .is_some())
 }

@@ -8,11 +8,12 @@ use arena_interface::{
 };
 use arena_tournament_module::{
     msg::{
-        ExecuteExtFns as _, ExecuteMsg, MatchResultMsg, QueryExtFns as _, TournamentInstantiateExt,
+        EliminationType, ExecuteExtFns as _, ExecuteMsg, MatchResultMsg, QueryExtFns as _,
+        TournamentInstantiateExt,
     },
-    state::{EliminationType, MatchResult},
+    state::MatchResult,
 };
-use cosmwasm_std::{coins, to_json_binary, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{coins, to_json_binary, Decimal, Timestamp, Uint128, Uint64};
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
 use cw_orch::{environment::ChainState, prelude::*};
 use dao_interface::state::ModuleInstantiateInfo;
@@ -1411,6 +1412,7 @@ fn create_competition_msg<Chain: ChainState>(
                             .map(|x| AddMemberMsg {
                                 addr: x.to_string(),
                                 seed: None,
+                                power: Uint64::new(1000),
                             })
                             .collect(),
                     ),

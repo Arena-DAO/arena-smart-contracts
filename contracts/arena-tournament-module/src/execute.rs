@@ -1,6 +1,6 @@
 use crate::contract::CompetitionModule;
-use crate::msg::{MatchResultMsg, Tournament};
-use crate::state::{EliminationType, Match, MatchResult, MATCHES};
+use crate::msg::{EliminationType, MatchResultMsg, Tournament};
+use crate::state::{Match, MatchResult, MATCHES};
 use crate::{ContractError, NestedArray};
 use arena_interface::group::{self, MemberMsg};
 use arena_interface::ratings::MemberResult;
