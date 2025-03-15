@@ -1,11 +1,10 @@
 use arena_interface::{
-    competition::stats::StatValue,
     group::{self, MemberMsg},
     ratings::MemberResult,
 };
 use cosmwasm_std::{
-    ensure_eq, Addr, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
-    Uint128, Uint64,
+    ensure_eq, Addr, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
+    Uint64,
 };
 use cw_balance::{Distribution, MemberPercentage};
 use cw_competition_base::error::CompetitionError;
@@ -250,57 +249,8 @@ fn process_final_results(
 ) -> Result<Response, CompetitionError> {
     let mut leaderboard = query::leaderboard(deps.as_ref(), league_id, None)?;
 
-    // Fetch and sort stat types by priority
-    let mut stat_types: Vec<_> = CompetitionModule::default()
-        .stat_types
-        .prefix(league_id.u128())
-        .range(deps.storage, None, None, Order::Ascending)
-        .collect::<StdResult<Vec<_>>>()?;
-
-    stat_types.sort_by(|a, b| {
-        a.1.tie_breaker_priority
-            .unwrap_or(u8::MAX)
-            .cmp(&b.1.tie_breaker_priority.unwrap_or(u8::MAX))
-    });
-
     // Define a comparison function that considers both points and stats
-    let compare_members = |a: &MemberPoints, b: &MemberPoints| {
-        b.points.cmp(&a.points).then_with(|| {
-            for (_, stat_type) in &stat_types {
-                let (a_stat, b_stat) = match &stat_type.aggregation_type {
-                    Some(_) => (
-                        CompetitionModule::default()
-                            .inner_aggregate(deps.as_ref(), league_id, &a.member, stat_type)
-                            .ok(),
-                        CompetitionModule::default()
-                            .inner_aggregate(deps.as_ref(), league_id, &b.member, stat_type)
-                            .ok(),
-                    ),
-                    None => (
-                        CompetitionModule::default()
-                            .stats
-                            .may_load(deps.storage, (league_id.u128(), &a.member, &stat_type.name))
-                            .ok()
-                            .flatten(),
-                        CompetitionModule::default()
-                            .stats
-                            .may_load(deps.storage, (league_id.u128(), &b.member, &stat_type.name))
-                            .ok()
-                            .flatten(),
-                    ),
-                };
-                dbg!(a_stat.clone());
-                dbg!(b_stat.clone());
-                if let (Some(a_val), Some(b_val)) = (a_stat, b_stat) {
-                    let cmp = compare_stat_values(&a_val, &b_val, stat_type.is_beneficial);
-                    if cmp != std::cmp::Ordering::Equal {
-                        return cmp;
-                    }
-                }
-            }
-            std::cmp::Ordering::Equal
-        })
-    };
+    let compare_members = |a: &MemberPoints, b: &MemberPoints| b.points.cmp(&a.points);
 
     // Sort the leaderboard using the comparison function
     leaderboard.sort_by(compare_members);
@@ -371,21 +321,6 @@ fn process_final_results(
             remainder_addr: leaderboard[0].member.clone(),
         }),
     )
-}
-
-// Helper function to compare stat values
-fn compare_stat_values(a: &StatValue, b: &StatValue, is_beneficial: bool) -> std::cmp::Ordering {
-    let ord = match (a, b) {
-        (StatValue::Bool(a), StatValue::Bool(b)) => a.cmp(b),
-        (StatValue::Decimal(a), StatValue::Decimal(b)) => a.cmp(b),
-        (StatValue::Uint(a), StatValue::Uint(b)) => a.cmp(b),
-        _ => std::cmp::Ordering::Equal,
-    };
-    if is_beneficial {
-        ord.reverse()
-    } else {
-        ord
-    }
 }
 
 pub fn update_distribution(

@@ -13,8 +13,6 @@ use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use super::stats::{MemberStatsMsg, StatMsg, StatTableEntry, StatType};
-
 #[cw_serde]
 pub struct InstantiateBase<InstantiateExt> {
     pub key: String, //this is used to map a key (wager, tournament, league) to a module
@@ -71,15 +69,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         escrow_code_id: u64,
         escrow_migrate_msg: crate::escrow::MigrateMsg,
     },
-    InputStats {
-        competition_id: Uint128,
-        stats: Vec<MemberStatsMsg>,
-    },
-    UpdateStatTypes {
-        competition_id: Uint128,
-        to_add: Vec<StatType>,
-        to_remove: Vec<String>,
-    },
     Execute {
         msgs: Vec<CosmosMsg>,
     },
@@ -120,28 +109,6 @@ where
     QueryExtension { msg: QueryExt },
     #[returns(Option<String>)]
     PaymentRegistry {},
-    #[returns(Option<Vec<StatType>>)]
-    StatTypes { competition_id: Uint128 },
-    /// Returns a user's historical stats for a competition
-    #[returns(Vec<Vec<StatMsg>>)]
-    HistoricalStats {
-        competition_id: Uint128,
-        addr: String,
-    },
-    /// Returns all current stats for a competition
-    #[returns(Vec<StatTableEntry>)]
-    StatsTable {
-        competition_id: Uint128,
-        start_after: Option<(String, String)>,
-        limit: Option<u32>,
-    },
-    #[returns(StatMsg)]
-    Stat {
-        competition_id: Uint128,
-        addr: String,
-        stat_name: String,
-        height: Option<u64>,
-    },
     #[serde(skip)]
     #[returns(PhantomData<(InstantiateExt, CompetitionExt)>)]
     _Phantom(PhantomData<(InstantiateExt, CompetitionExt)>),
