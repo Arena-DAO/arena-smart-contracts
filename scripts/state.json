@@ -2,7 +2,7 @@
   "neutron": {
     "neutron-1": {
       "code_ids": {
-        "arena_competition_enrollment": 3357,
+        "arena_competition_enrollment": 3358,
         "arena_core": 3187,
         "arena_discord_identity": 2926,
         "arena_escrow": 2928,
