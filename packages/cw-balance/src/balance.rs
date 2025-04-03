@@ -140,6 +140,7 @@ impl BalanceVerified {
         }
     }
 
+    #[allow(clippy::unnecessary_map_or)]
     pub fn is_empty(&self) -> bool {
         self.native.as_ref().map_or(true, Vec::is_empty)
             && self.cw20.as_ref().map_or(true, Vec::is_empty)

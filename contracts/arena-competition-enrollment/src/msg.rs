@@ -60,6 +60,18 @@ pub enum ExecuteMsg {
         id: Uint128,
         rankings: Vec<MemberMsg<String>>,
     },
+    EditEnrollment {
+        id: Uint128,
+        name: Option<String>,
+        description: Option<String>,
+        date: Option<Timestamp>,
+        duration: Option<u64>,
+        banner: Option<String>,
+        min_members: Option<Uint64>,
+        max_members: Option<Uint64>,
+        use_dao_host: Option<DaoConfig>,
+        required_team_size: Option<u32>,
+    },
 }
 
 #[cw_serde]

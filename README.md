@@ -23,7 +23,7 @@ The project is organized into several directories:
 
 This project uses `just` as a command runner to simplify common tasks. Below are the available scripts:
 
-### `check`
+### `lint`
 Runs formatting and linting checks to ensure code quality:
 
 - **Format check**: Ensures the code formatting adheres to the standard Rust format using `cargo fmt`.

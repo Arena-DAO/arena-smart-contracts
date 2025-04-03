@@ -1,6 +1,6 @@
 DOCKER_OPTIMIZER := "cosmwasm/optimizer:0.16.1"
 
-check:
+lint:
     cargo +stable fmt --all -- --check
     cargo +stable clippy --all-targets -- -D warnings
 

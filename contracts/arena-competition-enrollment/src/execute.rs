@@ -869,3 +869,152 @@ pub fn set_rankings(
         .add_attribute("action", "set_rankings")
         .add_message(msg))
 }
+
+/// Edit basic enrollment information
+/// The admin DAO can edit at any time
+/// The host can edit only if there are 0 enrollments
+#[allow(clippy::too_many_arguments)]
+pub fn edit_enrollment(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    id: Uint128,
+    name: Option<String>,
+    description: Option<String>,
+    date: Option<Timestamp>,
+    duration: Option<u64>,
+    banner: Option<String>,
+    min_members: Option<Uint64>,
+    max_members: Option<Uint64>,
+    use_dao_host: Option<DaoConfig>,
+    required_team_size: Option<u32>,
+) -> Result<Response, ContractError> {
+    // Load the enrollment entry
+    let mut enrollment = enrollment_entries()
+        .load(deps.storage, id.u128())
+        .map_err(|_| {
+            ContractError::StdError(StdError::not_found(format!("Enrollment {} not found", id)))
+        })?;
+
+    // Ensure the enrollment is still pending (i.e., not finalized)
+    match enrollment.competition_info {
+        CompetitionInfo::Existing { .. } => return Err(ContractError::AlreadyFinalized {}),
+        CompetitionInfo::Pending { .. } => {} // Continue execution
+    }
+
+    // Get DAO admin address
+    let ownership = cw_ownable::get_ownership(deps.storage)?;
+    let arena_core = ownership.owner.ok_or(ContractError::OwnershipError(
+        cw_ownable::OwnershipError::NoOwner,
+    ))?;
+    let dao: Addr = deps
+        .querier
+        .query_wasm_smart(arena_core, &arena_interface::core::QueryMsg::Dao {})?;
+
+    let is_admin = info.sender == dao;
+    let is_host = info.sender == enrollment.host;
+
+    // Authorize if sender is admin or host
+    if !is_admin && !is_host {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // If the sender is the host (but not admin), check if members are enrolled
+    if is_host && !is_admin {
+        if let CompetitionInfo::Pending {
+            ref group_contract, ..
+        } = enrollment.competition_info
+        {
+            let member_count: Uint64 = deps.querier.query_wasm_smart(
+                group_contract.to_string(),
+                &group::QueryMsg::MembersCount {},
+            )?;
+            if !member_count.is_zero() {
+                return Err(ContractError::Unauthorized {});
+            }
+        } else {
+            return Err(ContractError::AlreadyFinalized {});
+        }
+    }
+
+    // Validate date - it cannot be in the past
+    if let Some(new_date) = &date {
+        if new_date < &env.block.time {
+            return Err(ContractError::StdError(StdError::generic_err(
+                "Cannot set a past date for the competition",
+            )));
+        }
+    }
+
+    // Validate `min_members` and `max_members` relationship
+    if let (Some(min), Some(max)) = (min_members.as_ref(), max_members.as_ref()) {
+        if min > max {
+            return Err(ContractError::StdError(StdError::generic_err(
+                "min_members cannot be greater than max_members",
+            )));
+        }
+    } else if let Some(min) = min_members {
+        if min > enrollment.max_members {
+            return Err(ContractError::StdError(StdError::generic_err(
+                "min_members cannot be greater than the existing max_members",
+            )));
+        }
+    } else if let Some(max) = max_members {
+        if let Some(existing_min) = enrollment.min_members {
+            if existing_min > max {
+                return Err(ContractError::StdError(StdError::generic_err(
+                    "max_members cannot be less than the existing min_members",
+                )));
+            }
+        }
+    }
+
+    // Update enrollment only if it's pending
+    if let CompetitionInfo::Pending {
+        name: ref mut current_name,
+        description: ref mut current_description,
+        date: ref mut current_date,
+        duration: ref mut current_duration,
+        banner: ref mut current_banner,
+        ..
+    } = enrollment.competition_info
+    {
+        if let Some(new_name) = name {
+            *current_name = new_name.clone();
+        }
+        if let Some(new_description) = description {
+            *current_description = new_description.clone();
+        }
+        if let Some(new_date) = date {
+            *current_date = new_date;
+        }
+        if let Some(new_duration) = duration {
+            *current_duration = new_duration;
+        }
+        if let Some(new_banner) = banner {
+            *current_banner = Some(new_banner);
+        }
+    }
+
+    // Update membership limits and DAO hosting configuration
+    if let Some(new_min) = min_members {
+        enrollment.min_members = Some(new_min);
+    }
+    if let Some(new_max) = max_members {
+        enrollment.max_members = new_max;
+    }
+    if let Some(new_use_dao_host) = use_dao_host {
+        enrollment.use_dao_host = Some(new_use_dao_host);
+    }
+    if let Some(new_required_team_size) = required_team_size {
+        enrollment.required_team_size = Some(new_required_team_size);
+    }
+
+    // Save the updated enrollment entry
+    enrollment_entries().save(deps.storage, id.u128(), &enrollment)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "edit_enrollment")
+        .add_attribute("id", id.to_string())
+        .add_attribute("sender", if is_admin { "admin" } else { "host" }))
+}

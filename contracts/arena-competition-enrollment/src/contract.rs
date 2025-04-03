@@ -88,6 +88,32 @@ pub fn execute(
         ExecuteMsg::ForceWithdraw { id, members } => {
             execute::force_withdraw(deps, env, info, id, members)
         }
+        ExecuteMsg::EditEnrollment {
+            id,
+            name,
+            description,
+            date,
+            duration,
+            banner,
+            min_members,
+            max_members,
+            use_dao_host,
+            required_team_size,
+        } => execute::edit_enrollment(
+            deps,
+            env,
+            info,
+            id,
+            name,
+            description,
+            date,
+            duration,
+            banner,
+            min_members,
+            max_members,
+            use_dao_host,
+            required_team_size,
+        ),
     }
 }
 
