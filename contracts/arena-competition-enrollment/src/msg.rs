@@ -72,6 +72,9 @@ pub enum ExecuteMsg {
         use_dao_host: Option<DaoConfig>,
         required_team_size: Option<u32>,
     },
+    Revert {
+        id: Uint128,
+    },
 }
 
 #[cw_serde]

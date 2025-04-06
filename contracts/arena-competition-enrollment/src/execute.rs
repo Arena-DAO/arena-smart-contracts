@@ -17,6 +17,7 @@ use cosmwasm_std::{
     DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, SubMsg, Timestamp, Uint128,
     Uint64, WasmMsg,
 };
+use cw_ownable::get_ownership;
 use cw_utils::must_pay;
 use dao_interface::{
     state::{Admin, ModuleInstantiateInfo},
@@ -280,10 +281,18 @@ pub fn finalize(
     let enrollment = enrollment_entries().load(deps.storage, id.u128())?;
 
     // Authorization checks
-    ensure!(
-        enrollment.host == info.sender,
-        ContractError::Unauthorized {}
-    );
+    // First, check if the sender is the host.
+    if info.sender != enrollment.host {
+        let arena_core = get_ownership(deps.storage)?.owner.expect("No owner is set");
+
+        // If the sender is not the host, query the DAO to check if the sender is the DAO.
+        let dao: Addr = deps
+            .querier
+            .query_wasm_smart(arena_core, &arena_interface::core::QueryMsg::Dao {})?;
+
+        // Ensure that the sender is the DAO.
+        ensure!(info.sender == dao, ContractError::Unauthorized {});
+    }
     ensure!(
         !enrollment.has_finalized,
         ContractError::AlreadyFinalized {}
@@ -846,10 +855,19 @@ pub fn set_rankings(
 ) -> Result<Response, ContractError> {
     let enrollment = enrollment_entries().load(deps.storage, id.u128())?;
 
-    ensure!(
-        enrollment.host == info.sender,
-        ContractError::Unauthorized {}
-    );
+    // First, check if the sender is the host.
+    if info.sender != enrollment.host {
+        let arena_core = get_ownership(deps.storage)?.owner.expect("No owner is set");
+
+        // If the sender is not the host, query the DAO to check if the sender is the DAO.
+        let dao: Addr = deps
+            .querier
+            .query_wasm_smart(arena_core, &arena_interface::core::QueryMsg::Dao {})?;
+
+        // Ensure that the sender is the DAO.
+        ensure!(info.sender == dao, ContractError::Unauthorized {});
+    }
+
     let group_contract = match &enrollment.competition_info {
         CompetitionInfo::Pending { group_contract, .. } => group_contract,
         CompetitionInfo::Existing { .. } => return Err(ContractError::AlreadyFinalized {}),
@@ -867,6 +885,52 @@ pub fn set_rankings(
 
     Ok(Response::new()
         .add_attribute("action", "set_rankings")
+        .add_message(msg))
+}
+
+/// This is a helper method to use when a competition has failed to generate, and we want to recover it safely.
+pub fn revert(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    id: Uint128,
+) -> Result<Response, ContractError> {
+    let enrollment = enrollment_entries().load(deps.storage, id.u128())?;
+
+    let arena_core = get_ownership(deps.storage)?.owner.expect("No owner is set");
+
+    let dao: Addr = deps
+        .querier
+        .query_wasm_smart(arena_core, &arena_interface::core::QueryMsg::Dao {})?;
+
+    // Ensure that the sender is the DAO.
+    ensure!(info.sender == dao, ContractError::Unauthorized {});
+
+    let msg = match &enrollment.competition_info {
+        CompetitionInfo::Pending { escrow, .. } => WasmMsg::Execute {
+            contract_addr: escrow.to_string(),
+            msg: to_json_binary(&escrow::ExecuteMsg::Lock {
+                value: true,
+                transfer_ownership: None,
+            })?,
+            funds: vec![],
+        },
+        CompetitionInfo::Existing { .. } => return Err(ContractError::AlreadyFinalized {}),
+    };
+
+    let new_enrollment = EnrollmentEntry {
+        has_finalized: false,
+        ..enrollment.clone()
+    };
+    enrollment_entries().replace(
+        deps.storage,
+        id.u128(),
+        Some(&new_enrollment),
+        Some(&enrollment),
+    )?;
+
+    Ok(Response::default()
+        .add_attribute("action", "revert")
         .add_message(msg))
 }
 

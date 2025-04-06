@@ -1091,3 +1091,88 @@ fn test_dao_host_config() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_finalize_only_allowed_after_expiration_with_min_members() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, admin) = setup_arena(&mock)?;
+
+    // Set up exactly min_members teams (7)
+    let min_members = 7u64;
+    let mut teams = vec![];
+    for i in 0..min_members {
+        teams.push(mock.addr_make_with_balance(format!("team {}", i), coins(100_000u128, DENOM))?);
+    }
+
+    register_competition_enrollment_module(&arena, &admin)?;
+
+    // Create enrollment with min_members = 7, max_members = 8, duration_before = 30 minutes (1800 seconds)
+    arena.arena_competition_enrollment.set_sender(&admin);
+    let create_enrollment_msg = ExecuteMsg::CreateEnrollment {
+        min_members: Some(Uint64::new(min_members)),
+        max_members: Uint64::new(8),
+        entry_fee: Some(coins(1000, DENOM)[0].clone()),
+        duration_before: 1800, // 30 minutes
+        category_id: Some(Uint128::new(1)),
+        competition_info: CompetitionInfoMsg {
+            name: "Edge Case Tournament".to_string(),
+            description: "Test for finalize edge case".to_string(),
+            date: mock.block_info()?.time.plus_seconds(86400), // starts in 1 day
+            duration: 86400,                                   // 1 day
+            rules: Some(vec!["Rule A".to_string()]),
+            rulesets: None,
+            banner: None,
+        },
+        competition_type: CompetitionType::Tournament {
+            elimination_type: EliminationType::SingleElimination {
+                play_third_place_match: true,
+            },
+            distribution: vec![Decimal::percent(100)],
+        },
+        group_contract_info: ModuleInstantiateInfo {
+            code_id: arena.arena_group.code_id()?,
+            msg: to_json_binary(&group::InstantiateMsg { members: None })?,
+            admin: None,
+            funds: vec![],
+            label: "Edge Group".to_string(),
+        },
+        required_team_size: None,
+        escrow_contract_info: default_escrow_contract_info(&arena)?,
+        use_dao_host: None,
+    };
+
+    arena
+        .arena_competition_enrollment
+        .execute(&create_enrollment_msg, None)?;
+
+    // Enroll exactly 7 members
+    for team in &teams {
+        arena.arena_competition_enrollment.set_sender(team);
+        arena
+            .arena_competition_enrollment
+            .enroll(Uint128::one(), None, &coins(1000, DENOM))?;
+    }
+
+    // Try to finalize BEFORE expiration — should fail
+    arena.arena_competition_enrollment.set_sender(&admin);
+    let result = arena.arena_competition_enrollment.finalize(Uint128::one());
+    assert!(result.is_err(), "Finalize should fail before expiration.");
+
+    // Advance block time to simulate expiration (15 minutes before the competition date)
+    mock.wait_seconds(85500)?; // simulate time passing 15 minutes before the competition date (30 minutes - 15 minutes)
+
+    // Now, try to finalize after expiration — should succeed
+    let finalize_result = arena
+        .arena_competition_enrollment
+        .finalize(Uint128::one())?;
+
+    assert!(
+        finalize_result.events.iter().any(|e| e.ty == "wasm"
+            && e.attributes
+                .iter()
+                .any(|attr| attr.key == "result" && attr.value == "competition_created")),
+        "Competition should have been created after expiration"
+    );
+
+    Ok(())
+}

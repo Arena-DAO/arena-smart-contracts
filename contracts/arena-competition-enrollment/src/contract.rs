@@ -51,6 +51,7 @@ pub fn execute(
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
             Ok(Response::new().add_attributes(ownership.into_attributes()))
         }
+        ExecuteMsg::Revert { id } => execute::revert(deps, env, info, id),
         ExecuteMsg::CreateEnrollment {
             min_members,
             max_members,
