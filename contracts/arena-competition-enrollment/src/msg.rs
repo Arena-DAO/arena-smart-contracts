@@ -3,6 +3,7 @@ use arena_interface::{
         msg::EscrowContractInfo,
         types::{CompetitionType, DaoConfig, EnrollmentEntryResponse},
     },
+    escrow,
     group::MemberMsg,
 };
 use cosmwasm_schema::cw_serde;
@@ -74,6 +75,12 @@ pub enum ExecuteMsg {
     },
     Revert {
         id: Uint128,
+    },
+    MigrateEscrow {
+        id: Uint128,
+        escrow: String,
+        escrow_code_id: u64,
+        msg: escrow::MigrateMsg,
     },
 }
 

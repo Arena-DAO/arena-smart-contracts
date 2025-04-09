@@ -7,9 +7,8 @@ use arena_interface::ratings::MemberResult;
 use cosmwasm_std::{ensure_eq, Addr, Decimal, Env, MessageInfo, StdError, Storage};
 use cosmwasm_std::{DepsMut, Response, StdResult, Uint128};
 use cw_balance::{Distribution, MemberPercentage};
-use itertools::Itertools;
+use itertools::{repeat_n, Itertools};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::iter::repeat;
 
 pub fn instantiate_tournament(
     deps: DepsMut,
@@ -309,8 +308,7 @@ fn generate_double_elimination_bracket(
         let layer_matches = layer_map[&layer].len();
         let n = layer_matches.next_power_of_two();
         let mut adjusted_matches = NestedArray::Single(
-            repeat(0u128)
-                .take(n - layer_matches)
+            repeat_n(0u128, n - layer_matches)
                 .interleave(layer_map[&layer].iter().rev().cloned())
                 .collect_vec(),
         )

@@ -313,27 +313,30 @@ pub fn distribute(
         }
 
         // Create a distribution of all members if not provided
-        let distribution = distribution.unwrap_or({
-            let members: Vec<MemberMsg<String>> = deps.querier.query_wasm_smart(
-                group_contract.to_string(),
-                &group::QueryMsg::Members {
-                    start_after: None,
-                    limit: None,
-                },
-            )?;
-            let percentage = Decimal::from_ratio(1u128, members.len() as u128);
-            let remainder_addr = members[0].addr.clone();
-            Distribution {
-                member_percentages: members
-                    .into_iter()
-                    .map(|x| MemberPercentage {
-                        addr: x.addr,
-                        percentage,
-                    })
-                    .collect(),
-                remainder_addr,
+        let distribution = match distribution {
+            Some(dist) => dist,
+            None => {
+                let members: Vec<MemberMsg<String>> = deps.querier.query_wasm_smart(
+                    group_contract.to_string(),
+                    &group::QueryMsg::Members {
+                        start_after: None,
+                        limit: None,
+                    },
+                )?;
+                let percentage = Decimal::from_ratio(1u128, members.len() as u128);
+                let remainder_addr = members[0].addr.clone();
+                Distribution {
+                    member_percentages: members
+                        .into_iter()
+                        .map(|x| MemberPercentage {
+                            addr: x.addr,
+                            percentage,
+                        })
+                        .collect(),
+                    remainder_addr,
+                }
             }
-        });
+        };
 
         let distribution = distribution.into_checked(deps.as_ref())?;
 

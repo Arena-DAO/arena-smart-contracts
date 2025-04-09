@@ -13,9 +13,9 @@ use arena_league_module::msg::LeagueInstantiateExt;
 use arena_tournament_module::msg::TournamentInstantiateExt;
 use arena_wager_module::msg::WagerInstantiateExt;
 use cosmwasm_std::{
-    ensure, instantiate2_address, to_json_binary, Addr, Attribute, BlockInfo, Coin, CosmosMsg,
-    DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, SubMsg, Timestamp, Uint128,
-    Uint64, WasmMsg,
+    ensure, ensure_eq, instantiate2_address, to_json_binary, Addr, Attribute, BlockInfo, Coin,
+    CosmosMsg, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, SubMsg, Timestamp,
+    Uint128, Uint64, WasmMsg,
 };
 use cw_ownable::get_ownership;
 use cw_utils::must_pay;
@@ -954,11 +954,7 @@ pub fn edit_enrollment(
     required_team_size: Option<u32>,
 ) -> Result<Response, ContractError> {
     // Load the enrollment entry
-    let mut enrollment = enrollment_entries()
-        .load(deps.storage, id.u128())
-        .map_err(|_| {
-            ContractError::StdError(StdError::not_found(format!("Enrollment {} not found", id)))
-        })?;
+    let mut enrollment = enrollment_entries().load(deps.storage, id.u128())?;
 
     // Ensure the enrollment is still pending (i.e., not finalized)
     match enrollment.competition_info {
@@ -1081,4 +1077,48 @@ pub fn edit_enrollment(
         .add_attribute("action", "edit_enrollment")
         .add_attribute("id", id.to_string())
         .add_attribute("sender", if is_admin { "admin" } else { "host" }))
+}
+
+/// Escrows did not have their contract-level admin updated, so we need a method to migrate escrows here.
+pub fn migrate_escrow(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    id: Uint128,
+    escrow: String,
+    escrow_code_id: u64,
+    msg: escrow::MigrateMsg,
+) -> Result<Response, ContractError> {
+    let _ = deps.api.addr_validate(&escrow)?;
+    let enrollment = enrollment_entries().load(deps.storage, id.u128())?;
+
+    let ownership = cw_ownable::get_ownership(deps.storage)?;
+    let arena_core = ownership.owner.ok_or(ContractError::OwnershipError(
+        cw_ownable::OwnershipError::NoOwner,
+    ))?;
+    let dao: Addr = deps
+        .querier
+        .query_wasm_smart(arena_core, &arena_interface::core::QueryMsg::Dao {})?;
+
+    ensure_eq!(dao, info.sender, ContractError::Unauthorized {});
+
+    let mut msgs = vec![WasmMsg::Migrate {
+        contract_addr: escrow.clone(),
+        new_code_id: escrow_code_id,
+        msg: to_json_binary(&msg)?,
+    }];
+
+    if matches!(
+        enrollment.competition_info,
+        CompetitionInfo::Existing { .. }
+    ) {
+        msgs.push(WasmMsg::UpdateAdmin {
+            contract_addr: escrow,
+            admin: enrollment.competition_module.to_string(),
+        });
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "migrate_escrow")
+        .add_messages(msgs))
 }

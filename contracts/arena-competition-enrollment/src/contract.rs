@@ -115,6 +115,12 @@ pub fn execute(
             use_dao_host,
             required_team_size,
         ),
+        ExecuteMsg::MigrateEscrow {
+            id,
+            escrow,
+            escrow_code_id,
+            msg,
+        } => execute::migrate_escrow(deps, env, info, id, escrow, escrow_code_id, msg),
     }
 }
 
@@ -224,6 +230,10 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                             },
                         )?;
 
+                        let update_msg = WasmMsg::UpdateAdmin {
+                            contract_addr: enrollment_info.escrow_addr.to_string(),
+                            admin: enrollment_info.module_addr.to_string(),
+                        };
                         let escrow_msg = WasmMsg::Execute {
                             contract_addr: enrollment_info.escrow_addr.to_string(),
                             msg: to_json_binary(&escrow::ExecuteMsg::Lock {
@@ -239,6 +249,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                         Ok(Response::new()
                             .add_attribute("reply", "reply_finalize")
                             .add_attribute("result", "competition_created")
+                            .add_message(update_msg)
                             .add_message(escrow_msg))
                     } else {
                         Err(ContractError::StdError(StdError::generic_err(
