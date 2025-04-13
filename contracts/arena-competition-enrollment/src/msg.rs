@@ -67,6 +67,7 @@ pub enum ExecuteMsg {
         description: Option<String>,
         date: Option<Timestamp>,
         duration: Option<u64>,
+        duration_before: Option<u64>,
         banner: Option<String>,
         min_members: Option<Uint64>,
         max_members: Option<Uint64>,

@@ -952,6 +952,7 @@ pub fn edit_enrollment(
     max_members: Option<Uint64>,
     use_dao_host: Option<DaoConfig>,
     required_team_size: Option<u32>,
+    duration_before: Option<u64>,
 ) -> Result<Response, ContractError> {
     // Load the enrollment entry
     let mut enrollment = enrollment_entries().load(deps.storage, id.u128())?;
@@ -1068,6 +1069,9 @@ pub fn edit_enrollment(
     }
     if let Some(new_required_team_size) = required_team_size {
         enrollment.required_team_size = Some(new_required_team_size);
+    }
+    if let Some(new_duration_before) = duration_before {
+        enrollment.duration_before = new_duration_before;
     }
 
     // Save the updated enrollment entry

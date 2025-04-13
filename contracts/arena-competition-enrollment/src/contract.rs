@@ -95,6 +95,7 @@ pub fn execute(
             description,
             date,
             duration,
+            duration_before,
             banner,
             min_members,
             max_members,
@@ -114,6 +115,7 @@ pub fn execute(
             max_members,
             use_dao_host,
             required_team_size,
+            duration_before,
         ),
         ExecuteMsg::MigrateEscrow {
             id,
