@@ -415,10 +415,7 @@ impl<
 
         let mut messages: Vec<SubMsg> = vec![];
 
-        for competition in competitions
-            .into_iter()
-            .filter(|x| !matches!(x.status, CompetitionStatus::Inactive))
-        {
+        for competition in competitions.into_iter() {
             let msg = WasmMsg::Migrate {
                 contract_addr: competition.escrow.to_string(),
                 new_code_id: escrow_code_id,

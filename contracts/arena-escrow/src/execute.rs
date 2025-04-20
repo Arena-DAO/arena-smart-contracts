@@ -14,7 +14,7 @@ use cw721::Cw721ReceiveMsg;
 use cw_balance::{
     BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution, MemberPercentage,
 };
-use cw_ownable::{assert_owner, get_ownership, Ownership};
+use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
     query::is_locked,
@@ -471,15 +471,10 @@ pub fn claw(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError>
     let owner_addr = owner.ok_or(ContractError::Unauthorized {})?;
 
     // Query the owner of the owner (DAO) using cw_ownable
-    let owner_ownership: Ownership<Addr> = deps.querier.query_wasm_smart(
+    let dao_addr: Addr = deps.querier.query_wasm_smart(
         owner_addr.to_string(),
-        &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::Ownership {},
+        &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::DAO {},
     )?;
-
-    // Ensure DAO exists
-    let dao_addr = owner_ownership
-        .owner
-        .ok_or(ContractError::Unauthorized {})?;
 
     // Verify that the sender is the DAO
     if info.sender != dao_addr {
