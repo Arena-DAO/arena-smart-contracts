@@ -14,7 +14,7 @@ use cw721::Cw721ReceiveMsg;
 use cw_balance::{
     BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution, MemberPercentage,
 };
-use cw_ownable::{assert_owner, get_ownership};
+use cw_ownable::{assert_owner, get_ownership, Ownership};
 
 use crate::{
     query::is_locked,
@@ -461,4 +461,52 @@ pub fn lock(
     }
 
     Ok(res)
+}
+
+pub fn claw(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    // Get the direct owner of this contract
+    let owner = get_ownership(deps.storage)?.owner;
+
+    // Ensure owner exists
+    let owner_addr = owner.ok_or(ContractError::Unauthorized {})?;
+
+    // Query the owner of the owner (DAO) using cw_ownable
+    let owner_ownership: Ownership<Addr> = deps.querier.query_wasm_smart(
+        owner_addr.to_string(),
+        &arena_interface::competition::msg::QueryBase::<Empty, Empty, Empty>::Ownership {},
+    )?;
+
+    // Ensure DAO exists
+    let dao_addr = owner_ownership
+        .owner
+        .ok_or(ContractError::Unauthorized {})?;
+
+    // Verify that the sender is the DAO
+    if info.sender != dao_addr {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Load the total balance to be clawed back
+    let total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
+    if total_balance.is_empty() {
+        return Err(ContractError::EmptyBalance {});
+    }
+
+    // Generate messages to transmit all balances to the DAO
+    let msgs = total_balance.transmit_all(
+        deps.as_ref(),
+        &dao_addr,
+        None, // No special cw20 message
+        None, // No special cw721 message
+    )?;
+
+    // Clear all balances
+    BALANCE.clear(deps.storage);
+    TOTAL_BALANCE.remove(deps.storage);
+
+    Ok(Response::new()
+        .add_attribute("action", "claw")
+        .add_attribute("dao", dao_addr.to_string())
+        .add_attribute("amount", total_balance.to_string())
+        .add_messages(msgs))
 }

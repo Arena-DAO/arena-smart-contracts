@@ -102,6 +102,7 @@ pub fn execute(
             let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
             Ok(Response::new().add_attributes(ownership.into_attributes()))
         }
+        ExecuteMsg::Claw {} => execute::claw(deps, info),
     }
 }
 

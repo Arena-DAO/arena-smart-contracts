@@ -48,6 +48,8 @@ pub enum ExecuteMsg {
         value: bool,
         transfer_ownership: Option<TransferEscrowOwnershipMsg>,
     },
+    /// Admin function to retrieve funds in case of error or need to disburse through other means
+    Claw {},
 }
 
 #[cw_ownable_query]
