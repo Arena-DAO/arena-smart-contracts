@@ -260,9 +260,13 @@
             ],
             "properties": {
               "banner": {
-                "type": [
-                  "string",
-                  "null"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/FieldAction_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
                 ]
               },
               "date": {
@@ -313,7 +317,7 @@
               "min_members": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/Uint64"
+                    "$ref": "#/definitions/FieldAction_for_Uint64"
                   },
                   {
                     "type": "null"
@@ -327,12 +331,14 @@
                 ]
               },
               "required_team_size": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
-                "format": "uint32",
-                "minimum": 0.0
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/FieldAction_for_uint32"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "use_dao_host": {
                 "anyOf": [
@@ -936,6 +942,74 @@
           }
         },
         "additionalProperties": false
+      },
+      "FieldAction_for_String": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "remove"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "update"
+            ],
+            "properties": {
+              "update": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "FieldAction_for_Uint64": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "remove"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "update"
+            ],
+            "properties": {
+              "update": {
+                "$ref": "#/definitions/Uint64"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "FieldAction_for_uint32": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "remove"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "update"
+            ],
+            "properties": {
+              "update": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "MemberMsg_for_String": {
         "type": "object",

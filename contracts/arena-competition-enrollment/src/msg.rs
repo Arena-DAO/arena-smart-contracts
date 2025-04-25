@@ -68,11 +68,11 @@ pub enum ExecuteMsg {
         date: Option<Timestamp>,
         duration: Option<u64>,
         duration_before: Option<u64>,
-        banner: Option<String>,
-        min_members: Option<Uint64>,
+        banner: Option<FieldAction<String>>,
+        min_members: Option<FieldAction<Uint64>>,
         max_members: Option<Uint64>,
         use_dao_host: Option<DaoConfig>,
-        required_team_size: Option<u32>,
+        required_team_size: Option<FieldAction<u32>>,
     },
     Revert {
         id: Uint128,
@@ -83,6 +83,12 @@ pub enum ExecuteMsg {
         escrow_code_id: u64,
         msg: escrow::MigrateMsg,
     },
+}
+
+#[cw_serde]
+pub enum FieldAction<T> {
+    Update(T),
+    Remove,
 }
 
 #[cw_serde]

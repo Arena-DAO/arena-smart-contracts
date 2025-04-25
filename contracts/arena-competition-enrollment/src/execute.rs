@@ -27,7 +27,7 @@ use itertools::Itertools as _;
 use sha2::{Digest, Sha256};
 
 use crate::{
-    msg::CompetitionInfoMsg,
+    msg::{CompetitionInfoMsg, FieldAction},
     state::{
         enrollment_entries, CompetitionInfo, EnrollmentEntry, EnrollmentInfo, ENROLLMENT_COUNT,
         TEMP_ENROLLMENT_INFO,
@@ -936,7 +936,7 @@ pub fn revert(
 
 /// Edit basic enrollment information
 /// The admin DAO can edit at any time
-/// The host can edit only if there are 0 enrollments
+/// The host can edit only if there are 0 enrollment members
 #[allow(clippy::too_many_arguments)]
 pub fn edit_enrollment(
     deps: DepsMut,
@@ -947,11 +947,11 @@ pub fn edit_enrollment(
     description: Option<String>,
     date: Option<Timestamp>,
     duration: Option<u64>,
-    banner: Option<String>,
-    min_members: Option<Uint64>,
+    banner: Option<FieldAction<String>>,
+    min_members: Option<FieldAction<Uint64>>,
     max_members: Option<Uint64>,
     use_dao_host: Option<DaoConfig>,
-    required_team_size: Option<u32>,
+    required_team_size: Option<FieldAction<u32>>,
     duration_before: Option<u64>,
 ) -> Result<Response, ContractError> {
     // Load the enrollment entry
@@ -1007,26 +1007,25 @@ pub fn edit_enrollment(
         }
     }
 
-    // Validate `min_members` and `max_members` relationship
-    if let (Some(min), Some(max)) = (min_members.as_ref(), max_members.as_ref()) {
-        if min > max {
-            return Err(ContractError::StdError(StdError::generic_err(
-                "min_members cannot be greater than max_members",
-            )));
-        }
-    } else if let Some(min) = min_members {
-        if min > enrollment.max_members {
+    // Handle min_members and max_members relationship validation
+    let new_min = match &min_members {
+        Some(FieldAction::Update(min)) => Some(*min),
+        Some(FieldAction::Remove) => None,
+        None => enrollment.min_members,
+    };
+
+    // Validate min/max relationship
+    if let Some(min) = new_min {
+        if let Some(max) = max_members {
+            if min > max {
+                return Err(ContractError::StdError(StdError::generic_err(
+                    "min_members cannot be greater than max_members",
+                )));
+            }
+        } else if min > enrollment.max_members {
             return Err(ContractError::StdError(StdError::generic_err(
                 "min_members cannot be greater than the existing max_members",
             )));
-        }
-    } else if let Some(max) = max_members {
-        if let Some(existing_min) = enrollment.min_members {
-            if existing_min > max {
-                return Err(ContractError::StdError(StdError::generic_err(
-                    "max_members cannot be less than the existing min_members",
-                )));
-            }
         }
     }
 
@@ -1041,10 +1040,10 @@ pub fn edit_enrollment(
     } = enrollment.competition_info
     {
         if let Some(new_name) = name {
-            *current_name = new_name.clone();
+            *current_name = new_name;
         }
         if let Some(new_description) = description {
-            *current_description = new_description.clone();
+            *current_description = new_description;
         }
         if let Some(new_date) = date {
             *current_date = new_date;
@@ -1052,24 +1051,39 @@ pub fn edit_enrollment(
         if let Some(new_duration) = duration {
             *current_duration = new_duration;
         }
-        if let Some(new_banner) = banner {
-            *current_banner = Some(new_banner);
+
+        // Handle FieldAction fields
+        if let Some(banner_action) = banner {
+            match banner_action {
+                FieldAction::Update(new_banner) => *current_banner = Some(new_banner),
+                FieldAction::Remove => *current_banner = None,
+            }
         }
     }
 
     // Update membership limits and DAO hosting configuration
-    if let Some(new_min) = min_members {
-        enrollment.min_members = Some(new_min);
+    if let Some(min_action) = min_members {
+        match min_action {
+            FieldAction::Update(new_min) => enrollment.min_members = Some(new_min),
+            FieldAction::Remove => enrollment.min_members = None,
+        }
     }
+
     if let Some(new_max) = max_members {
         enrollment.max_members = new_max;
     }
+
     if let Some(new_use_dao_host) = use_dao_host {
         enrollment.use_dao_host = Some(new_use_dao_host);
     }
-    if let Some(new_required_team_size) = required_team_size {
-        enrollment.required_team_size = Some(new_required_team_size);
+
+    if let Some(team_size_action) = required_team_size {
+        match team_size_action {
+            FieldAction::Update(new_size) => enrollment.required_team_size = Some(new_size),
+            FieldAction::Remove => enrollment.required_team_size = None,
+        }
     }
+
     if let Some(new_duration_before) = duration_before {
         enrollment.duration_before = new_duration_before;
     }
