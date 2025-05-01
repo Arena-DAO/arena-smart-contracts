@@ -45,7 +45,7 @@ fn test_create_wager() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -53,7 +53,7 @@ fn test_create_wager() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -71,7 +71,8 @@ fn test_create_wager() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -126,7 +127,7 @@ fn test_process_wager() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -134,7 +135,7 @@ fn test_process_wager() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -152,7 +153,8 @@ fn test_process_wager() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -263,7 +265,8 @@ fn test_escrow_receive_extra() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -324,7 +327,7 @@ fn test_wager_with_additional_fees() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -332,7 +335,7 @@ fn test_wager_with_additional_fees() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -355,7 +358,8 @@ fn test_wager_with_additional_fees() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -478,7 +482,7 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -486,7 +490,7 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -504,7 +508,8 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone(), user3.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -625,7 +630,7 @@ fn test_wager_with_draw() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -633,7 +638,7 @@ fn test_wager_with_draw() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -651,7 +656,8 @@ fn test_wager_with_draw() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -751,7 +757,7 @@ fn test_wager_with_malicious_host() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -759,7 +765,7 @@ fn test_wager_with_malicious_host() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -777,7 +783,8 @@ fn test_wager_with_malicious_host() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -878,7 +885,7 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -886,7 +893,7 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -904,7 +911,8 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -1042,7 +1050,7 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1050,7 +1058,7 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1068,7 +1076,8 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -1209,7 +1218,7 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1217,7 +1226,7 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1235,7 +1244,8 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone(), user2.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -1364,7 +1374,7 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
                 dues: vec![MemberBalanceUnchecked {
                     addr: user1.to_string(),
                     balance: BalanceUnchecked {
-                        native: Some(vec![Coin::new(1000, DENOM)]),
+                        native: Some(vec![Coin::new(1000u128, DENOM)]),
                         cw20: None,
                         cw721: None,
                     },
@@ -1381,7 +1391,8 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
                     members: teams_to_members(&[user1.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },

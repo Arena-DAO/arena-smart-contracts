@@ -3,7 +3,7 @@ use std::str::FromStr;
 use arena_interface::{
     competition::msg::EscrowContractInfo,
     core::QueryExtFns as _,
-    escrow::{self, ExecuteMsgFns as _, QueryMsgFns as _},
+    escrow::{ExecuteMsgFns as _, QueryMsgFns as _},
     group::{self, AddMemberMsg, GroupContractInfo},
 };
 use arena_tournament_module::{
@@ -15,8 +15,7 @@ use arena_tournament_module::{
 };
 use cosmwasm_std::{coins, to_json_binary, Decimal, Timestamp, Uint128, Uint64};
 use cw_balance::{BalanceUnchecked, MemberBalanceUnchecked};
-use cw_orch::{anyhow, daemon::networks::NEUTRON_1, environment::ChainState, prelude::*};
-use cw_orch_clone_testing::CloneTesting;
+use cw_orch::{environment::ChainState, prelude::*};
 use dao_interface::state::ModuleInstantiateInfo;
 use itertools::Itertools;
 
@@ -54,7 +53,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     );
     assert!(result.is_err());
 
@@ -76,7 +75,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     );
     assert!(result.is_err());
 
@@ -95,7 +94,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     );
     assert!(result.is_err());
 
@@ -114,7 +113,7 @@ pub fn test_tournament_instantiate() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     );
     assert!(result.is_err());
 
@@ -149,7 +148,7 @@ pub fn test_single_elimination_tournament() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -317,7 +316,7 @@ pub fn test_ratings() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -472,7 +471,7 @@ pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(),
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -624,7 +623,7 @@ pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchEr
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -854,7 +853,7 @@ pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -1078,7 +1077,7 @@ pub fn test_single_elimination_6() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -1222,7 +1221,7 @@ pub fn test_double_elimination_many_teams() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -1255,7 +1254,7 @@ pub fn test_match_updates() -> Result<(), CwOrchError> {
             ],
             mock.block_info()?.time.plus_seconds(86400),
         )?,
-        None,
+        &[],
     )?;
     mock.next_block()?;
 
@@ -1381,44 +1380,6 @@ pub fn test_match_updates() -> Result<(), CwOrchError> {
     Ok(())
 }
 
-#[test]
-#[ignore = "RPC blocks"]
-fn test_migration_process_competition() -> anyhow::Result<()> {
-    let app = CloneTesting::new(NEUTRON_1)?;
-    let mut arena = Arena::new(app.clone());
-    const HOST: &str = "neutron1tn4gf2xtagc8vhvxkzxxcr0e9nallawmndhmjt";
-    let host_addr = Addr::unchecked(HOST);
-
-    arena.arena_tournament_module.set_address(&Addr::unchecked(
-        "neutron1yfsr8h06eg6dyglqp6ls02ah4u2z5gt7fm5khuy98tzmnrw2vu6s7hp8qg",
-    ));
-    arena.arena_tournament_module.set_sender(&host_addr);
-
-    arena.arena_escrow.upload()?;
-    arena.arena_escrow.set_address(&Addr::unchecked(
-        "neutron1lndywljps82gvjghk33cd5p9k6az685xa0mpqccc5g2d69jl2ztsc3rcr8",
-    ));
-    arena
-        .arena_escrow
-        .call_as(&Addr::unchecked(
-            "neutron1zj7yjvj0epy79wtazr84h347jhysz7c0jxp6ys64z7eawah76vksjlgl7c",
-        ))
-        .migrate(
-            &escrow::MigrateMsg::FromCompatible {},
-            arena.arena_escrow.code_id()?,
-        )?;
-
-    arena.arena_tournament_module.process_match(
-        vec![MatchResultMsg {
-            match_number: Uint128::new(6),
-            match_result: MatchResult::Team1,
-        }],
-        Uint128::new(4),
-    )?;
-
-    Ok(())
-}
-
 fn create_competition_msg<Chain: ChainState>(
     arena: &Arena<Chain>,
     category_id: Option<Uint128>,
@@ -1457,7 +1418,8 @@ fn create_competition_msg<Chain: ChainState>(
                     ),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },

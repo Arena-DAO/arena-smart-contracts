@@ -319,7 +319,7 @@ pub fn finalize(
     // Check member requirements and expiration
     let min_min_members = get_min_min_members(&enrollment.competition_type);
     let min_members = enrollment.min_members.unwrap_or(min_min_members);
-    let is_expired = is_enrollment_expired(&env.block, &date, enrollment.duration_before);
+    let is_expired = is_enrollment_expired(&env.block, date, enrollment.duration_before);
 
     // Create updated entry with finalized status
     let new_enrollment = EnrollmentEntry {
