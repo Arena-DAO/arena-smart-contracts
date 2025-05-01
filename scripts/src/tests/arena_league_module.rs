@@ -49,7 +49,7 @@ fn test_create_league() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -67,7 +67,8 @@ fn test_create_league() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -119,7 +120,8 @@ fn test_create_league() -> anyhow::Result<()> {
                     members: teams_to_members(&[admin.clone()]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -174,7 +176,7 @@ fn test_process_league_matches() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -192,7 +194,8 @@ fn test_process_league_matches() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -291,21 +294,30 @@ fn test_process_league_matches() -> anyhow::Result<()> {
 
     // Check final balances in the escrow
     let total_prize = Uint128::new(4000); // 1000 stake per team * 4 teams
-    let after_tax = total_prize * Decimal::percent(95); // 5% tax
+    let after_tax = total_prize.mul_floor(Decimal::percent(95)); // 5% tax
 
     let expected_balances = [
         Some(BalanceVerified {
-            native: Some(coins((after_tax * Decimal::percent(50)).u128(), DENOM)),
+            native: Some(coins(
+                (after_tax.mul_floor(Decimal::percent(50))).u128(),
+                DENOM,
+            )),
             cw20: None,
             cw721: None,
         }),
         Some(BalanceVerified {
-            native: Some(coins((after_tax * Decimal::percent(30)).u128(), DENOM)),
+            native: Some(coins(
+                (after_tax.mul_floor(Decimal::percent(30))).u128(),
+                DENOM,
+            )),
             cw20: None,
             cw721: None,
         }),
         Some(BalanceVerified {
-            native: Some(coins((after_tax * Decimal::percent(20)).u128(), DENOM)),
+            native: Some(coins(
+                (after_tax.mul_floor(Decimal::percent(20))).u128(),
+                DENOM,
+            )),
             cw20: None,
             cw721: None,
         }),
@@ -368,7 +380,7 @@ fn test_add_point_adjustments() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -386,7 +398,8 @@ fn test_add_point_adjustments() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -495,7 +508,7 @@ fn test_create_league_with_odd_number_of_teams() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -513,7 +526,8 @@ fn test_create_league_with_odd_number_of_teams() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                salt: None,
+                funds: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -574,7 +588,7 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -592,7 +606,8 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -698,12 +713,12 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
 
     // Check final balances in the escrow
     let total_prize = Uint128::new(4000); // 1000 stake per team * 4 teams
-    let after_tax = total_prize * Decimal::percent(95); // 5% tax
+    let after_tax = total_prize.mul_floor(Decimal::percent(95)); // 5% tax
 
     let expected_balances = [
         Some(BalanceVerified {
             native: Some(coins(
-                (after_tax * Decimal::from_str("0.275")?).u128(),
+                (after_tax.mul_floor(Decimal::from_str("0.275")?)).u128(),
                 DENOM,
             )), // (40% + 15%) / 2
             cw20: None,
@@ -711,7 +726,7 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
         }),
         Some(BalanceVerified {
             native: Some(coins(
-                (after_tax * Decimal::from_str("0.275")?).u128(),
+                (after_tax.mul_floor(Decimal::from_str("0.275")?)).u128(),
                 DENOM,
             )), // (40% + 15%) / 2
             cw20: None,
@@ -719,7 +734,7 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
         }),
         Some(BalanceVerified {
             native: Some(coins(
-                (after_tax * Decimal::from_str("0.225")?).u128(),
+                (after_tax.mul_floor(Decimal::from_str("0.225")?)).u128(),
                 DENOM,
             )), // (30% + 15%) / 2
             cw20: None,
@@ -727,7 +742,7 @@ fn test_process_league_with_ties() -> anyhow::Result<()> {
         }),
         Some(BalanceVerified {
             native: Some(coins(
-                (after_tax * Decimal::from_str("0.225")?).u128(),
+                (after_tax.mul_floor(Decimal::from_str("0.225")?)).u128(),
                 DENOM,
             )), // (30% + 15%) / 2
             cw20: None,
@@ -768,7 +783,7 @@ fn test_update_distribution() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -786,7 +801,8 @@ fn test_update_distribution() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -872,7 +888,8 @@ fn test_create_huge_league() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -918,7 +935,7 @@ fn test_process_matches_out_of_order() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -936,7 +953,8 @@ fn test_process_matches_out_of_order() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -1003,7 +1021,7 @@ fn test_multiple_point_adjustments() -> anyhow::Result<()> {
                     .map(|team| MemberBalanceUnchecked {
                         addr: team.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1021,7 +1039,8 @@ fn test_multiple_point_adjustments() -> anyhow::Result<()> {
                     members: teams_to_members(&teams),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -1144,7 +1163,7 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1152,7 +1171,7 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1160,7 +1179,7 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team3.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1168,7 +1187,7 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team4.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1191,7 +1210,8 @@ fn test_league_tiebreaking_logic() -> anyhow::Result<()> {
                     ]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },
@@ -1571,7 +1591,7 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1579,7 +1599,7 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1587,7 +1607,7 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team3.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1595,7 +1615,7 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: team4.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000, DENOM)]),
+                            native: Some(vec![Coin::new(1000u128, DENOM)]),
                             cw20: None,
                             cw721: None,
                         },
@@ -1618,7 +1638,8 @@ fn test_league_tiebreaking_logic_with_aggregates() -> anyhow::Result<()> {
                     ]),
                 })?,
                 admin: None,
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Group".to_string(),
             },
         },

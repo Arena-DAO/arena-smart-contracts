@@ -36,14 +36,15 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             })?,
             admin: Some(Admin::CoreModule {}),
             label: "sudo voting module".to_string(),
-            funds: vec![],
+            funds: None,
+            salt: None,
         };
 
         // Instantiate payment registry
         arena.arena_payment_registry.instantiate(
             &arena_interface::registry::InstantiateMsg {},
             None,
-            None,
+            &[],
         )?;
 
         // Prepare proposal modules
@@ -55,11 +56,13 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                 })?,
                 admin: Some(Admin::CoreModule {}),
                 label: "sudo proposal module".to_string(),
-                funds: vec![],
+                funds: None,
+                salt: None,
             },
             ModuleInstantiateInfo {
                 code_id: arena.dao_dao.dao_proposal_single.code_id()?,
                 msg: to_json_binary(&dao_proposal_single::msg::InstantiateMsg {
+                    delegation_module: None,
                     threshold: Threshold::AbsolutePercentage {
                         percentage: dao_voting::threshold::PercentageThreshold::Majority {},
                     },
@@ -92,7 +95,8 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                             )?,
                                             admin: Some(dao_interface::state::Admin::CoreModule {}),
                                             label: "Tournament Module".to_string(),
-                                            funds: vec![],
+                                            funds: None,
+                                            salt: None,
                                         },
                                         dao_interface::state::ModuleInstantiateInfo {
                                             code_id: arena.arena_wager_module.code_id()?,
@@ -105,7 +109,8 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                             )?,
                                             admin: Some(dao_interface::state::Admin::CoreModule {}),
                                             label: "Wager Module".to_string(),
-                                            funds: vec![],
+                                            funds: None,
+                                            salt: None,
                                         },
                                         dao_interface::state::ModuleInstantiateInfo {
                                             code_id: arena.arena_league_module.code_id()?,
@@ -119,7 +124,8 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                             )?,
                                             admin: Some(dao_interface::state::Admin::CoreModule {}),
                                             label: "League Module".to_string(),
-                                            funds: vec![],
+                                            funds: None,
+                                            salt: None,
                                         },
                                     ]),
                                     rulesets: None,
@@ -143,7 +149,8 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                                 },
                             })?,
                             admin: Some(Admin::CoreModule {}),
-                            funds: vec![],
+                            funds: None,
+                            salt: None,
                             label: "Arena Core".to_string(),
                         },
                     },
@@ -151,7 +158,8 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                     veto: None,
                 })?,
                 admin: Some(Admin::CoreModule {}),
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "Arena Core Proposal".to_string(),
             },
             ModuleInstantiateInfo {
@@ -167,9 +175,11 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                     pre_propose_info: dao_voting::pre_propose::PreProposeInfo::AnyoneMayPropose {},
                     close_proposal_on_execution_failure: true,
                     veto: None,
+                    delegation_module: None,
                 })?,
                 admin: Some(Admin::CoreModule {}),
-                funds: vec![],
+                funds: None,
+                salt: None,
                 label: "DAO Proposal Single".to_string(),
             },
         ];
@@ -187,10 +197,10 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                 voting_module_instantiate_info: voting_module_info,
                 proposal_modules_instantiate_info: proposal_modules,
                 initial_items: None,
-                initial_dao_actions: None,
+                initial_actions: None,
             },
             None,
-            None,
+            &[],
         )?;
 
         // Configuration
@@ -237,7 +247,7 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
                 owner: arena.arena_core.addr_str()?,
             },
             Some(&arena.dao_dao.dao_core.address()?),
-            None,
+            &[],
         )?;
 
         Ok(arena)
@@ -247,17 +257,6 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
         let arena = Self::new(chain);
 
         Ok(arena)
-    }
-
-    fn deployed_state_file_path() -> Option<String> {
-        let crate_path = env!("CARGO_MANIFEST_DIR");
-
-        Some(
-            std::path::PathBuf::from(crate_path)
-                .join("state.json")
-                .display()
-                .to_string(),
-        )
     }
 
     fn get_contracts_mut(
@@ -273,7 +272,6 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             Box::new(&mut self.arena_league_module),
             Box::new(&mut self.arena_escrow),
             Box::new(&mut self.arena_competition_enrollment),
-            Box::new(&mut self.arena_token_gateway),
             Box::new(&mut self.arena_payment_registry),
         ]
     }

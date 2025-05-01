@@ -2,7 +2,7 @@ use crate::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Coin};
 use cw20::Cw20ReceiveMsg;
-use cw721::Cw721ReceiveMsg;
+use cw721::receiver::Cw721ReceiveMsg;
 #[allow(unused_imports)]
 use cw_balance::{
     BalanceVerified, Distribution, MemberBalanceChecked, MemberBalanceUnchecked, MemberPercentage,

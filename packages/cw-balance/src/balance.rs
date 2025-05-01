@@ -4,11 +4,11 @@ use crate::{
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, StdError, StdResult, Uint128,
-    WasmMsg,
+    to_json_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, Empty, StdError, StdResult,
+    Uint128, WasmMsg,
 };
 use cw20::{Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg};
-use cw721::Cw721ExecuteMsg;
+use cw721::msg::Cw721ExecuteMsg;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
@@ -392,7 +392,7 @@ impl BalanceVerified {
                 for token_id in &collection.token_ids {
                     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr: collection.address.to_string(),
-                        msg: to_json_binary(&Cw721ExecuteMsg::SendNft {
+                        msg: to_json_binary(&Cw721ExecuteMsg::<Empty, Empty, Empty>::SendNft {
                             contract: contract_addr.to_string(),
                             token_id: token_id.clone(),
                             msg: cw721_msg.clone().unwrap_or_default(),
@@ -432,10 +432,12 @@ impl BalanceVerified {
                 for token_id in &collection.token_ids {
                     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr: collection.address.to_string(),
-                        msg: to_json_binary(&Cw721ExecuteMsg::TransferNft {
-                            recipient: recipient.to_string(),
-                            token_id: token_id.clone(),
-                        })?,
+                        msg: to_json_binary(
+                            &Cw721ExecuteMsg::<Empty, Empty, Empty>::TransferNft {
+                                recipient: recipient.to_string(),
+                                token_id: token_id.clone(),
+                            },
+                        )?,
                         funds: vec![],
                     }));
                 }

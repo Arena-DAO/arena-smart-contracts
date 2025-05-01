@@ -169,7 +169,8 @@ pub fn create_enrollment(
     let code_info = deps
         .querier
         .query_wasm_code_info(group_contract_info.code_id)?;
-    let canonical_addr = instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
+    let canonical_addr =
+        instantiate2_address(code_info.checksum.as_slice(), &canonical_creator, &salt)?;
 
     msgs.push(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
@@ -218,7 +219,7 @@ pub fn create_enrollment(
             let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
             let code_info = deps.querier.query_wasm_code_info(code_id)?;
             let canonical_addr =
-                instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
+                instantiate2_address(code_info.checksum.as_slice(), &canonical_creator, &salt)?;
 
             msgs.push(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
                 admin: Some(env.contract.address.to_string()),
@@ -318,7 +319,7 @@ pub fn finalize(
     // Check member requirements and expiration
     let min_min_members = get_min_min_members(&enrollment.competition_type);
     let min_members = enrollment.min_members.unwrap_or(min_min_members);
-    let is_expired = is_enrollment_expired(&env.block, date, enrollment.duration_before);
+    let is_expired = is_enrollment_expired(&env.block, &date, enrollment.duration_before);
 
     // Create updated entry with finalized status
     let new_enrollment = EnrollmentEntry {
@@ -371,8 +372,11 @@ pub fn finalize(
         let dao_salt: [u8; 32] = Sha256::digest(dao_binding.as_bytes()).into();
         let canonical_creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
         let dao_code_info = deps.querier.query_wasm_code_info(dao_config.dao_code_id)?;
-        let dao_canonical_addr =
-            instantiate2_address(&dao_code_info.checksum, &canonical_creator, &dao_salt)?;
+        let dao_canonical_addr = instantiate2_address(
+            dao_code_info.checksum.as_slice(),
+            &canonical_creator,
+            &dao_salt,
+        )?;
         let dao_addr = deps.api.addr_humanize(&dao_canonical_addr)?;
 
         // 1. Instantiate cw4-group voting module
@@ -385,7 +389,8 @@ pub fn finalize(
                     address: group_contract.to_string(),
                 },
             })?,
-            funds: vec![],
+            funds: None,
+            salt: None,
         };
 
         // 2. Instantiate proposal module
@@ -413,14 +418,17 @@ pub fn finalize(
                             extension: Empty {},
                         })?,
                         admin: Some(Admin::CoreModule {}),
-                        funds: vec![],
+                        funds: None,
+                        salt: None,
                         label: format!("PreProposeSingle_{}", id),
                     },
                 },
                 close_proposal_on_execution_failure: true,
                 veto: None,
+                delegation_module: None,
             })?,
-            funds: vec![],
+            funds: None,
+            salt: None,
         };
 
         // 3. Instantiate DAO core
@@ -439,7 +447,7 @@ pub fn finalize(
                 image_url: None,
                 initial_items: None,
                 dao_uri: None,
-                initial_dao_actions: None,
+                initial_actions: None,
             })?,
             funds: vec![],
             salt: dao_salt.into(),

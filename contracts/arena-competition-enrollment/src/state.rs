@@ -183,8 +183,7 @@ impl IndexList<EnrollmentEntry> for EnrollmentEntryIndexes<'_> {
     }
 }
 
-pub fn enrollment_entries<'a>() -> IndexedMap<'a, u128, EnrollmentEntry, EnrollmentEntryIndexes<'a>>
-{
+pub fn enrollment_entries<'a>() -> IndexedMap<u128, EnrollmentEntry, EnrollmentEntryIndexes<'a>> {
     let indexes = EnrollmentEntryIndexes {
         category: MultiIndex::new(
             |_x, d: &EnrollmentEntry| d.category_id.unwrap_or(Uint128::zero()).u128(),

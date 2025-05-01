@@ -5,15 +5,11 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
-[features]
-abc = []
-
 [lib]
 doctest = false
 
 [dependencies]
 cw-orch = { workspace = true }
-cw-payroll-factory = { workspace = true }
 dao-dao-core = { workspace = true }
 dao-interface = { workspace = true }
 arena-group = { workspace = true }
@@ -24,9 +20,8 @@ arena-competition-enrollment = { workspace = true }
 arena-core = { workspace = true }
 arena-interface = { workspace = true }
 arena-escrow = { workspace = true }
-arena-token-gateway = { workspace = true }
 arena-payment-registry = { workspace = true }
 arena-discord-identity = { workspace = true }
 cosmwasm-std = { workspace = true }
 
-cw4-group = { package = "abstract-cw4-group", git = "https://github.com/AbstractSDK/cw-plus", branch = "abstract_versions" }
+cw4-group = { package = "abstract-cw4-group", git = "https://github.com/Arena-DAO/cw-plus" }

@@ -10,7 +10,7 @@ use cosmwasm_std::{
     MessageInfo, Response, StdResult, Uint128,
 };
 use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
-use cw721::Cw721ReceiveMsg;
+use cw721::receiver::Cw721ReceiveMsg;
 use cw_balance::{
     BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution, MemberPercentage,
 };

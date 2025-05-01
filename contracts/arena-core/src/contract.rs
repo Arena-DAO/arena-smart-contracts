@@ -18,7 +18,7 @@ use cosmwasm_std::{
     StdError, Uint128, WasmMsg,
 };
 use cw2::{ensure_from_older_version, set_contract_version};
-use cw_utils::parse_reply_instantiate_data;
+use cw_utils::parse_instantiate_response_data;
 use dao_interface::{msg::ExecuteMsg as DAOCoreExecuteMsg, state::ModuleInstantiateCallback};
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:arena-core";
@@ -200,11 +200,11 @@ pub fn execute(
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         COMPETITION_MODULE_REPLY_ID => {
-            let res = parse_reply_instantiate_data(msg.clone())?;
+            let response = msg.result.into_result().map_err(StdError::generic_err)?;
+            let bytes = &response.msg_responses[0].clone().value.to_vec();
+            let res = parse_instantiate_response_data(bytes)?;
             let module_addr = deps.api.addr_validate(&res.contract_address)?;
-            let key = msg
-                .result
-                .unwrap() //this result is handled in parse_reply
+            let key = response
                 .events
                 .iter()
                 .find_map(|e| {

@@ -13,15 +13,10 @@ pub mod arena_league_module;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod arena_payment_registry;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod arena_token_gateway;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod arena_tournament_module;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod arena_wager_module;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cw4_group;
-#[cfg(feature = "abc")]
-#[cfg(not(target_arch = "wasm32"))]
-pub mod cw_abc;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod dao_dao_core;

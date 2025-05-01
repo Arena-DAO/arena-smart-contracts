@@ -46,9 +46,7 @@ pub fn instantiate_contract(
 
         if INITIAL_DUE.has(deps.storage, &member_balance.addr) {
             return Err(ContractError::StdError(
-                cosmwasm_std::StdError::GenericErr {
-                    msg: "Cannot have duplicate addresses in dues".to_string(),
-                },
+                cosmwasm_std::StdError::generic_err("Cannot have duplicate addresses in dues"),
             ));
         }
 

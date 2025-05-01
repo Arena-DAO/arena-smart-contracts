@@ -35,7 +35,7 @@ use cw_ownable::{get_ownership, initialize_owner};
 use cw_storage_plus::{
     Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, SnapshotMap, Strategy,
 };
-use cw_utils::parse_reply_instantiate_data;
+use cw_utils::parse_instantiate_response_data;
 use serde::{de::DeserializeOwned, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -72,24 +72,20 @@ pub struct CompetitionModuleContract<
     CompetitionExt: Serialize + Clone + DeserializeOwned,
     CompetitionInstantiateExt: Serialize + Clone + DeserializeOwned + ToCompetitionExt<CompetitionExt>,
 > {
-    pub config: Item<'static, Config<InstantiateExt>>,
-    pub competition_count: Item<'static, Uint128>,
-    pub competitions: IndexedMap<
-        'static,
-        u128,
-        Competition<CompetitionExt>,
-        CompetitionIndexes<'static, CompetitionExt>,
-    >,
-    pub competitions_v2_3: Map<'static, u128, CompetitionV2_3<CompetitionExt>>,
-    pub competition_evidence: Map<'static, (u128, u128), Evidence>,
-    pub competition_evidence_count: Map<'static, u128, Uint128>,
-    pub competition_result: Map<'static, u128, Option<Distribution<Addr>>>,
-    pub competition_rules: Map<'static, u128, Vec<String>>,
-    pub escrows_to_competitions: Map<'static, &'a Addr, u128>,
-    pub temp_competition: Item<'static, TempCompetition<CompetitionInstantiateExt>>,
-    pub temp_competition_id: Item<'static, u128>,
-    pub stats: SnapshotMap<'static, (u128, &'a Addr, &'a str), StatValue>,
-    pub stat_types: Map<'a, (u128, &'a str), StatType>,
+    pub config: Item<Config<InstantiateExt>>,
+    pub competition_count: Item<Uint128>,
+    pub competitions:
+        IndexedMap<u128, Competition<CompetitionExt>, CompetitionIndexes<'static, CompetitionExt>>,
+    pub competitions_v2_3: Map<u128, CompetitionV2_3<CompetitionExt>>,
+    pub competition_evidence: Map<(u128, u128), Evidence>,
+    pub competition_evidence_count: Map<u128, Uint128>,
+    pub competition_result: Map<u128, Option<Distribution<Addr>>>,
+    pub competition_rules: Map<u128, Vec<String>>,
+    pub escrows_to_competitions: Map<&'a Addr, u128>,
+    pub temp_competition: Item<TempCompetition<CompetitionInstantiateExt>>,
+    pub temp_competition_id: Item<u128>,
+    pub stats: SnapshotMap<(u128, &'a Addr, &'a str), StatValue>,
+    pub stat_types: Map<(u128, &'a str), StatType>,
 
     instantiate_type: PhantomData<InstantiateExt>,
     execute_type: PhantomData<ExecuteExt>,
@@ -169,12 +165,8 @@ impl<
         competitions_status_key: &'static str,
         competitions_category_key: &'static str,
         competitions_host_key: &'static str,
-    ) -> IndexedMap<
-        'static,
-        u128,
-        Competition<CompetitionExt>,
-        CompetitionIndexes<'static, CompetitionExt>,
-    > {
+    ) -> IndexedMap<u128, Competition<CompetitionExt>, CompetitionIndexes<'static, CompetitionExt>>
+    {
         let indexes = CompetitionIndexes {
             status: MultiIndex::new(
                 |_x, d: &Competition<CompetitionExt>| d.status.to_string(),
@@ -700,7 +692,7 @@ impl<
                     deps.api.addr_canonicalize(env.contract.address.as_str())?;
                 let code_info = deps.querier.query_wasm_code_info(code_id)?;
                 let canonical_addr =
-                    instantiate2_address(&code_info.checksum, &canonical_creator, &salt)?;
+                    instantiate2_address(code_info.checksum.as_slice(), &canonical_creator, &salt)?;
 
                 msgs.push(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
                     admin: Some(env.contract.address.to_string()),
@@ -1705,9 +1697,17 @@ impl<
         deps: DepsMut<'_>,
         msg: Reply,
     ) -> Result<Response, CompetitionError> {
-        let instantiate_data = parse_reply_instantiate_data(msg)?;
+        let bytes = &msg
+            .result
+            .into_result()
+            .map_err(StdError::generic_err)?
+            .msg_responses[0]
+            .clone()
+            .value
+            .to_vec();
+        let res = parse_instantiate_response_data(bytes)?;
 
-        let group_contract = deps.api.addr_validate(&instantiate_data.contract_address)?;
+        let group_contract = deps.api.addr_validate(&res.contract_address)?;
         let temp_competition = self.temp_competition.load(deps.storage)?;
         let extension = temp_competition
             .extension

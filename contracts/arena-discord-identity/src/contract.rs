@@ -115,6 +115,7 @@ pub fn execute(
         ExecuteMsg::Withdraw {} => {
             assert_owner(deps.storage, &info.sender)?;
 
+            #[allow(deprecated)]
             let funds = deps
                 .querier
                 .query_all_balances(env.contract.address.to_string())?;

@@ -7,7 +7,6 @@ use orch_interface::{
     arena_escrow::ArenaEscrowContract, arena_group::ArenaGroupContract,
     arena_league_module::ArenaLeagueModuleContract,
     arena_payment_registry::ArenaPaymentRegistryContract,
-    arena_token_gateway::ArenaTokenGatewayContract,
     arena_tournament_module::ArenaTournamentModuleContract,
     arena_wager_module::ArenaWagerModuleContract, dao_dao_core::DaoDaoCoreContract,
 };
@@ -57,7 +56,6 @@ enum DeployComponent {
     Core,
     Tournament,
     Enrollment,
-    TokenGateway,
     CompetitionModules,
     Group,
     Identity,
@@ -85,7 +83,6 @@ impl DeployComponent {
             "dao_core" => Some(Self::DaoCore),
             "tournament" => Some(Self::Tournament),
             "enrollment" => Some(Self::Enrollment),
-            "token_gateway" => Some(Self::TokenGateway),
             "competition_modules" => Some(Self::CompetitionModules),
             "group" => Some(Self::Group),
             "identity" => Some(Self::Identity),
@@ -146,7 +143,6 @@ fn deploy_to_network(network: Network, component: &DeployComponent) -> anyhow::R
         DeployComponent::DaoCore => deploy_dao_core(&daemon)?,
         DeployComponent::Tournament => deploy_tournament(&daemon)?,
         DeployComponent::Enrollment => deploy_enrollment(&daemon)?,
-        DeployComponent::TokenGateway => deploy_token_gateway(&daemon)?,
         DeployComponent::CompetitionModules => deploy_competition_modules(&daemon)?,
         DeployComponent::Group => deploy_group(&daemon)?,
         DeployComponent::Identity => deploy_identity(&daemon)?,
@@ -175,11 +171,6 @@ fn deploy_tournament(daemon: &Daemon) -> anyhow::Result<()> {
 
 fn deploy_enrollment(daemon: &Daemon) -> anyhow::Result<()> {
     ArenaCompetitionEnrollmentContract::new(daemon.clone()).upload()?;
-    Ok(())
-}
-
-fn deploy_token_gateway(daemon: &Daemon) -> anyhow::Result<()> {
-    ArenaTokenGatewayContract::new(daemon.clone()).upload()?;
     Ok(())
 }
 

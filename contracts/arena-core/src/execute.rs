@@ -77,9 +77,9 @@ pub fn update_competition_modules(
 
 pub fn update_tax(deps: DepsMut, env: &Env, tax: Decimal) -> Result<Response, ContractError> {
     if tax >= Decimal::one() {
-        return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "The dao tax must be less than 100%.".to_string(),
-        }));
+        return Err(ContractError::StdError(StdError::generic_err(
+            "The dao tax must be less than 100%.",
+        )));
     }
 
     TAX.save(deps.storage, &tax, env.block.height)?;
@@ -98,9 +98,10 @@ pub fn update_rulesets(
     if let Some(to_disable) = to_disable {
         for id in to_disable {
             rulesets().update(deps.storage, id.u128(), |maybe_ruleset| -> StdResult<_> {
-                let mut ruleset = maybe_ruleset.ok_or(StdError::GenericErr {
-                    msg: format!("Could not find a ruleset with the id {}", id),
-                })?;
+                let mut ruleset = maybe_ruleset.ok_or(StdError::generic_err(format!(
+                    "Could not find a ruleset with the id {}",
+                    id
+                )))?;
                 ruleset.is_enabled = false;
                 Ok(ruleset)
             })?;
