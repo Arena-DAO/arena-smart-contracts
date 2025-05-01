@@ -305,7 +305,10 @@ pub fn update_categories(
         for action in to_edit {
             let id = match action {
                 EditCompetitionCategory::Disable { category_id } => category_id,
-                EditCompetitionCategory::Edit { category_id, name } => {
+                EditCompetitionCategory::Edit {
+                    category_id,
+                    ref name,
+                } => {
                     if name.is_empty() {
                         return Err(ContractError::StdError(StdError::generic_err(
                             "Category name cannot be empty",
