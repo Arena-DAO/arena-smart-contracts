@@ -201,7 +201,12 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
     match msg.id {
         COMPETITION_MODULE_REPLY_ID => {
             let response = msg.result.into_result().map_err(StdError::generic_err)?;
-            let bytes = &response.msg_responses[0].clone().value.to_vec();
+            #[allow(deprecated)]
+            let bytes = response
+                .data
+                .as_ref()
+                .map(|x| x.as_slice())
+                .unwrap_or_else(|| response.msg_responses[0].value.as_slice());
             let res = parse_instantiate_response_data(bytes)?;
             let module_addr = deps.api.addr_validate(&res.contract_address)?;
             let key = response

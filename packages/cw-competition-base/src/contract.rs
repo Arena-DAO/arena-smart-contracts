@@ -1697,14 +1697,13 @@ impl<
         deps: DepsMut<'_>,
         msg: Reply,
     ) -> Result<Response, CompetitionError> {
-        let bytes = &msg
-            .result
-            .into_result()
-            .map_err(StdError::generic_err)?
-            .msg_responses[0]
-            .clone()
-            .value
-            .to_vec();
+        let response = msg.result.into_result().map_err(StdError::generic_err)?;
+        #[allow(deprecated)]
+        let bytes = response
+            .data
+            .as_ref()
+            .map(|x| x.as_slice())
+            .unwrap_or_else(|| response.msg_responses[0].value.as_slice());
         let res = parse_instantiate_response_data(bytes)?;
 
         let group_contract = deps.api.addr_validate(&res.contract_address)?;
