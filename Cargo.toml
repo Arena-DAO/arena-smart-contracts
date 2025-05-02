@@ -71,6 +71,7 @@ arena-league-module = { path = "./contracts/arena-league-module" }
 arena-tournament-module = { path = "./contracts/arena-tournament-module" }
 arena-competition-enrollment = { path = "./contracts/arena-competition-enrollment" }
 arena-payment-registry = { path = "./contracts/arena-payment-registry" }
+arena-team-enrollments = { path = "./contracts/arena-team-enrollments" }
 
 #dao dependencies
 dao-interface = { git = "https://github.com/Arena-DAO/dao-contracts", branch = "arena-dao" }

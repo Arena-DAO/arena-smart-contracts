@@ -325,6 +325,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "arena-team-enrollments"
+version = "2.4.0"
+dependencies = [
+ "cosmwasm-schema 2.2.2",
+ "cosmwasm-std 2.2.2",
+ "cw-orch 0.28.0",
+ "cw-ownable",
+ "cw-storage-plus 2.0.0",
+]
+
+[[package]]
 name = "arena-tournament-module"
 version = "2.4.0"
 dependencies = [
