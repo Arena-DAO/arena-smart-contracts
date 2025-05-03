@@ -26,6 +26,9 @@ pub enum ExecuteMsg {
     /// Applicant applies to a specific entry
     Apply { entry_id: u64 },
 
+    /// Withdraw application from a team entry
+    WithdrawApplication { entry_id: u64 },
+
     /// Creator updates an applicant’s status (approve/reject)
     UpdateApplicantStatus {
         entry_id: u64,

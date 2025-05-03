@@ -328,6 +328,7 @@ dependencies = [
 name = "arena-team-enrollments"
 version = "2.4.0"
 dependencies = [
+ "arena-interface",
  "cosmwasm-schema 2.2.2",
  "cosmwasm-std 2.2.2",
  "cw-orch 0.28.0",

@@ -1,7 +1,8 @@
 use std::fmt;
 
+use arena_interface::competition::types::DaoConfig;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Timestamp, Uint128};
+use cosmwasm_std::{Addr, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 
 /// Enum representing the status of a team entry
@@ -13,6 +14,30 @@ pub enum EntryStatus {
     Created,
     Closed,
     Aborted,
+}
+
+impl EntryStatus {
+    pub fn validate_transition(&self, new_status: &EntryStatus) -> StdResult<()> {
+        match (self, new_status) {
+            // Open can go to anything (excluding no-op)
+            (EntryStatus::Open, s) if s != self => Ok(()),
+
+            // Closed can reopen
+            (EntryStatus::Closed, EntryStatus::Open) => Ok(()),
+
+            // Created and Aborted are terminal
+            (EntryStatus::Created, _) => Err(StdError::generic_err("Created is a final state")),
+            (EntryStatus::Aborted, _) => Err(StdError::generic_err("Aborted is a final state")),
+
+            // No-op transition disallowed
+            (cur, new) if cur == new => {
+                Err(StdError::generic_err("No-op transitions are not allowed"))
+            }
+
+            // All other transitions are invalid
+            _ => Err(StdError::generic_err("Invalid entry status transition")),
+        }
+    }
 }
 
 impl fmt::Display for EntryStatus {
@@ -38,6 +63,36 @@ pub enum ApplicantStatus {
     },
 }
 
+impl ApplicantStatus {
+    pub fn validate_transition(&self, new_status: &ApplicantStatus) -> StdResult<()> {
+        match (self, new_status) {
+            // Default → Approved or Rejected (with reason)
+            (ApplicantStatus::Default, ApplicantStatus::Approved) => Ok(()),
+            (ApplicantStatus::Default, ApplicantStatus::Rejected { reason })
+                if !reason.trim().is_empty() =>
+            {
+                Ok(())
+            }
+
+            // Approved ↔ Rejected (with reason)
+            (ApplicantStatus::Approved, ApplicantStatus::Rejected { reason })
+                if !reason.trim().is_empty() =>
+            {
+                Ok(())
+            }
+            (ApplicantStatus::Rejected { .. }, ApplicantStatus::Approved) => Ok(()),
+
+            // Disallow no-op
+            (cur, new) if cur == new => {
+                Err(StdError::generic_err("No-op transitions are not allowed"))
+            }
+
+            // All other transitions are invalid
+            _ => Err(StdError::generic_err("Invalid applicant status transition")),
+        }
+    }
+}
+
 impl fmt::Display for ApplicantStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -58,6 +113,7 @@ pub struct TeamEntry {
     pub category_id: Option<Uint128>,
     pub status: EntryStatus,
     pub created_at: Timestamp,
+    pub dao_config: DaoConfig,
 }
 
 /// Counter to generate unique IDs
@@ -68,7 +124,7 @@ pub struct TeamEntryIndexes<'a> {
     pub category_status: MultiIndex<'a, (u128, String), TeamEntry, u64>,
 }
 
-impl<'a> IndexList<TeamEntry> for TeamEntryIndexes<'a> {
+impl IndexList<TeamEntry> for TeamEntryIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<TeamEntry>> + '_> {
         let v: Vec<&dyn Index<TeamEntry>> = vec![&self.category_status];
         Box::new(v.into_iter())
@@ -99,7 +155,7 @@ pub struct ApplicantIndexes<'a> {
     pub status: MultiIndex<'a, String, ApplicantStatus, (u64, &'a Addr)>,
 }
 
-impl<'a> IndexList<ApplicantStatus> for ApplicantIndexes<'a> {
+impl IndexList<ApplicantStatus> for ApplicantIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<ApplicantStatus>> + '_> {
         let v: Vec<&dyn Index<ApplicantStatus>> = vec![&self.status];
         Box::new(v.into_iter())
