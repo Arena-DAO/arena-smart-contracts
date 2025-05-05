@@ -1,29 +1,34 @@
 #!/bin/bash
 
 # Change directory to ./contracts
-cd ./contracts
+cd ./contracts || { echo "Failed to change directory to ./contracts. Exiting."; exit 1; }
 
-# Check if the directory change was successful
-if [ $? -ne 0 ]; then
-    echo "Failed to change directory to ./contracts. Exiting."
-    exit 1
-fi
+# Set max number of parallel jobs (adjust for your CPU)
+MAX_JOBS=4
+JOBS=0
 
-# Iterate over each subdirectory in the current directory
+# Loop through all contract directories
 for dir in */; do
-    # Change directory to subdirectory
-    cd "$dir"
+    (
+        cd "$dir" || exit
+        echo "Executing cargo schema in $dir"
+        cargo schema
+        echo "Completed $dir"
+    ) &
 
-    # Execute cargo schema
-    echo "Executing cargo schema in $dir"
-    cargo schema
+    ((JOBS++))
 
-    # Return to the parent directory
-    cd ..
-
-    echo "Completed $dir"
+    # Wait if max parallel jobs are running
+    if [ "$JOBS" -ge "$MAX_JOBS" ]; then
+        wait -n  # Wait for any job to finish
+        ((JOBS--))
+    fi
 done
 
-cd ../scripts
+# Wait for remaining background jobs
+wait
+
+# Continue with JS steps
+cd ../scripts || exit
 npm i
 npm run gen

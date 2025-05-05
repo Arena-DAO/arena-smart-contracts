@@ -1010,6 +1010,7 @@ fn test_dao_host_config() -> anyhow::Result<()> {
             threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
                 percentage: dao_voting::threshold::PercentageThreshold::Majority {},
             },
+            extension: (),
         }),
     };
 

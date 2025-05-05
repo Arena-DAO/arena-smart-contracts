@@ -335,6 +335,14 @@ dependencies = [
  "cw-ownable",
  "cw-storage-plus 2.0.0",
  "cw2 2.0.0",
+ "cw4",
+ "cw4-group",
+ "dao-interface",
+ "dao-pre-propose-single",
+ "dao-proposal-single",
+ "dao-voting",
+ "dao-voting-cw4",
+ "sha2 0.10.9",
 ]
 
 [[package]]

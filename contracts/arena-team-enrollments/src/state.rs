@@ -18,21 +18,23 @@ pub enum EntryStatus {
 
 impl EntryStatus {
     pub fn validate_transition(&self, new_status: &EntryStatus) -> StdResult<()> {
+        use EntryStatus::*;
+
         match (self, new_status) {
-            // Open can go to anything (excluding no-op)
-            (EntryStatus::Open, s) if s != self => Ok(()),
-
-            // Closed can reopen
-            (EntryStatus::Closed, EntryStatus::Open) => Ok(()),
-
-            // Created and Aborted are terminal
-            (EntryStatus::Created, _) => Err(StdError::generic_err("Created is a final state")),
-            (EntryStatus::Aborted, _) => Err(StdError::generic_err("Aborted is a final state")),
-
             // No-op transition disallowed
             (cur, new) if cur == new => {
                 Err(StdError::generic_err("No-op transitions are not allowed"))
             }
+
+            // Open can go to anything
+            (Open, _) => Ok(()),
+
+            // Closed can reopen
+            (Closed, Open) => Ok(()),
+
+            // Created and Aborted are terminal
+            (Created, _) => Err(StdError::generic_err("Created is a final state")),
+            (Aborted, _) => Err(StdError::generic_err("Aborted is a final state")),
 
             // All other transitions are invalid
             _ => Err(StdError::generic_err("Invalid entry status transition")),
@@ -113,7 +115,7 @@ pub struct TeamEntry {
     pub category_id: Option<Uint128>,
     pub status: EntryStatus,
     pub created_at: Timestamp,
-    pub dao_config: DaoConfig,
+    pub dao_config: DaoConfig<u64>,
 }
 
 /// Counter to generate unique IDs
@@ -121,6 +123,7 @@ pub const TEAM_ENTRY_COUNT: Item<u64> = Item::new("team_entry_count");
 
 /// Stores the applicant status keyed by (team_entry_id, applicant address).
 pub const APPLICANTS: Map<(u64, &Addr), ApplicantStatus> = Map::new("applicants");
+pub const APPROVED_APPLICANTS: Map<(u64, &Addr), ()> = Map::new("approved_applicants");
 
 /// Indexes for querying by category_id and status
 pub struct TeamEntryIndexes<'a> {

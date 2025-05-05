@@ -39,7 +39,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             dao_config,
         } => create_entry(deps, env, info, title, description, category_id, dao_config),
         ExecuteMsg::UpdateEntryStatus { entry_id, status } => {
-            update_entry_status(deps, info, entry_id, status)
+            update_entry_status(deps, env, info, entry_id, status)
         }
         ExecuteMsg::Apply { entry_id } => apply(deps, env, info, entry_id),
         ExecuteMsg::WithdrawApplication { entry_id } => withdraw_application(deps, info, entry_id),

@@ -19,7 +19,8 @@ pub enum ExecuteMsg {
         title: String,
         description: String,
         category_id: Option<Uint128>,
-        dao_config: DaoConfig,
+        /// The standard dao config with an extra u64 field for taking in the cw4_group_code_id
+        dao_config: DaoConfig<u64>,
     },
 
     /// Creator updates the status of a team entry

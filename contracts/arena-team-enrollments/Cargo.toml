@@ -13,3 +13,11 @@ cw-ownable = { workspace = true }
 cw-orch = { workspace = true }
 arena-interface = { workspace = true }
 cw2 = { workspace = true }
+sha2 = { workspace = true }
+dao-interface = { workspace = true }
+dao-voting-cw4 = { workspace = true }
+dao-proposal-single = { workspace = true }
+dao-pre-propose-single = { workspace = true }
+dao-voting = { workspace = true }
+cw4-group = { workspace = true }
+cw4 = { workspace = true }

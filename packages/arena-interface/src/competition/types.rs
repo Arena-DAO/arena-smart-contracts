@@ -98,13 +98,15 @@ pub struct EnrollmentEntryResponse {
 }
 
 #[cw_serde]
-pub struct DaoConfig {
+pub struct DaoConfig<T = ()> {
     pub dao_code_id: u64,
     pub cw4_voting_code_id: u64,
     pub proposal_single_code_id: u64,
     pub prepropose_single_code_id: u64,
     pub threshold: Threshold,
     pub max_voting_period: Duration,
+    #[serde(flatten)]
+    pub extension: T,
 }
 
 #[cw_serde]

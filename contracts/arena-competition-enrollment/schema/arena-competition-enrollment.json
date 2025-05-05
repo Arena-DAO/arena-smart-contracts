@@ -101,7 +101,7 @@
               "use_dao_host": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/DaoConfig"
+                    "$ref": "#/definitions/DaoConfig_for_Null"
                   },
                   {
                     "type": "null"
@@ -343,7 +343,7 @@
               "use_dao_host": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/DaoConfig"
+                    "$ref": "#/definitions/DaoConfig_for_Null"
                   },
                   {
                     "type": "null"
@@ -536,7 +536,8 @@
           "denom": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "CompetitionInfoMsg": {
         "type": "object",
@@ -669,7 +670,7 @@
           }
         ]
       },
-      "DaoConfig": {
+      "DaoConfig_for_Null": {
         "type": "object",
         "required": [
           "cw4_voting_code_id",
@@ -1059,7 +1060,6 @@
         "type": "object",
         "required": [
           "code_id",
-          "funds",
           "label",
           "msg"
         ],
@@ -1083,7 +1083,10 @@
           },
           "funds": {
             "description": "Funds to be sent to the instantiated contract.",
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Coin"
             }
@@ -1097,6 +1100,17 @@
             "allOf": [
               {
                 "$ref": "#/definitions/Binary"
+              }
+            ]
+          },
+          "salt": {
+            "description": "Salt to use with instantiate2, if defined. Otherwise uses normal instantiate.",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -1491,7 +1505,8 @@
           "denom": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "CompetitionInfoResponse": {
         "type": "object",
@@ -1651,7 +1666,7 @@
           }
         ]
       },
-      "DaoConfig": {
+      "DaoConfig_for_Null": {
         "type": "object",
         "required": [
           "cw4_voting_code_id",
@@ -1844,7 +1859,7 @@
           "use_dao_host": {
             "anyOf": [
               {
-                "$ref": "#/definitions/DaoConfig"
+                "$ref": "#/definitions/DaoConfig_for_Null"
               },
               {
                 "type": "null"
@@ -2102,7 +2117,7 @@
         "use_dao_host": {
           "anyOf": [
             {
-              "$ref": "#/definitions/DaoConfig"
+              "$ref": "#/definitions/DaoConfig_for_Null"
             },
             {
               "type": "null"
@@ -2133,7 +2148,8 @@
             "denom": {
               "type": "string"
             }
-          }
+          },
+          "additionalProperties": false
         },
         "CompetitionInfoResponse": {
           "type": "object",
@@ -2293,7 +2309,7 @@
             }
           ]
         },
-        "DaoConfig": {
+        "DaoConfig_for_Null": {
           "type": "object",
           "required": [
             "cw4_voting_code_id",
@@ -2598,7 +2614,8 @@
             "denom": {
               "type": "string"
             }
-          }
+          },
+          "additionalProperties": false
         },
         "CompetitionInfoResponse": {
           "type": "object",
@@ -2758,7 +2775,7 @@
             }
           ]
         },
-        "DaoConfig": {
+        "DaoConfig_for_Null": {
           "type": "object",
           "required": [
             "cw4_voting_code_id",
@@ -2951,7 +2968,7 @@
             "use_dao_host": {
               "anyOf": [
                 {
-                  "$ref": "#/definitions/DaoConfig"
+                  "$ref": "#/definitions/DaoConfig_for_Null"
                 },
                 {
                   "type": "null"
