@@ -3,7 +3,7 @@ use std::fmt;
 use arena_interface::competition::types::DaoConfig;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, StdError, StdResult, Timestamp, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 /// Enum representing the status of a team entry
 #[derive(Default)]
@@ -119,6 +119,9 @@ pub struct TeamEntry {
 /// Counter to generate unique IDs
 pub const TEAM_ENTRY_COUNT: Item<u64> = Item::new("team_entry_count");
 
+/// Stores the applicant status keyed by (team_entry_id, applicant address).
+pub const APPLICANTS: Map<(u64, &Addr), ApplicantStatus> = Map::new("applicants");
+
 /// Indexes for querying by category_id and status
 pub struct TeamEntryIndexes<'a> {
     pub category_status: MultiIndex<'a, (u128, String), TeamEntry, u64>,
@@ -149,25 +152,4 @@ pub fn team_entries<'a>() -> IndexedMap<u64, TeamEntry, TeamEntryIndexes<'a>> {
             category_status: category_status_idx,
         },
     )
-}
-
-pub struct ApplicantIndexes<'a> {
-    pub status: MultiIndex<'a, String, ApplicantStatus, (u64, &'a Addr)>,
-}
-
-impl IndexList<ApplicantStatus> for ApplicantIndexes<'_> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<ApplicantStatus>> + '_> {
-        let v: Vec<&dyn Index<ApplicantStatus>> = vec![&self.status];
-        Box::new(v.into_iter())
-    }
-}
-
-pub fn applicants<'a>() -> IndexedMap<(u64, Addr), ApplicantStatus, ApplicantIndexes<'a>> {
-    let status_idx = MultiIndex::new(
-        |_pk, d: &ApplicantStatus| d.to_string(),
-        "applicants",
-        "applicants__status",
-    );
-
-    IndexedMap::new("applicants", ApplicantIndexes { status: status_idx })
 }

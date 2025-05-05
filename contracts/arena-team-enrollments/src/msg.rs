@@ -1,3 +1,4 @@
+use arena_interface::competition::types::DaoConfig;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 
@@ -18,6 +19,7 @@ pub enum ExecuteMsg {
         title: String,
         description: String,
         category_id: Option<Uint128>,
+        dao_config: DaoConfig,
     },
 
     /// Creator updates the status of a team entry
@@ -32,7 +34,7 @@ pub enum ExecuteMsg {
     /// Creator updates an applicant’s status (approve/reject)
     UpdateApplicantStatus {
         entry_id: u64,
-        applicant: Addr,
+        applicant: String,
         status: ApplicantStatus,
     },
 }
@@ -57,14 +59,13 @@ pub enum QueryMsg {
 
     /// Get the applicant status for a user in a given entry
     #[returns(ApplicantResponse)]
-    GetApplicant { entry_id: u64, applicant: Addr },
+    GetApplicant { entry_id: u64, applicant: String },
 
     /// List applicants for a given entry filtered by status
     #[returns(Vec<ApplicantResponse>)]
     ListApplicants {
         entry_id: u64,
-        status: Option<ApplicantStatus>,
-        start_after: Option<Addr>,
+        start_after: Option<String>,
         limit: Option<u32>,
     },
 }
@@ -84,7 +85,6 @@ pub struct TeamEntryResponse {
 /// Response for a single applicant
 #[cw_serde]
 pub struct ApplicantResponse {
-    pub entry_id: u64,
     pub applicant: Addr,
     pub status: ApplicantStatus,
 }
