@@ -752,7 +752,7 @@ fn test_finalize_before_min_members() -> anyhow::Result<()> {
                 .any(|attr| attr.key == "action" && attr.value == "withdraw")));
     }
 
-    // Check balance of user
+    // Check balance of user - original balance
     let balance = mock.query_balance(&teams[0], DENOM)?;
     assert_eq!(balance, Uint128::new(100_000));
 

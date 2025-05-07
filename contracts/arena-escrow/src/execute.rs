@@ -89,7 +89,7 @@ pub fn enrollment_withdraw(
     // Save balance
     if balance.is_empty() {
         // Clear user's balance
-        balance_manager.clear_all_balances(deps.branch())?;
+        balance_manager.clear_user_balance(deps.branch(), &info.sender)?;
     } else {
         // Save updated balance
         balance_manager.save_balance(deps.branch(), &info.sender, &balance)?;
@@ -163,7 +163,7 @@ pub fn withdraw(
         msgs = balance.transmit_all(deps.as_ref(), &info.sender, cw20_msg, cw721_msg)?;
 
         // Clear user's balance
-        balance_manager.clear_all_balances(deps.branch())?;
+        balance_manager.clear_user_balance(deps.branch(), &info.sender)?;
     }
 
     // Update or remove total balance
@@ -282,7 +282,7 @@ fn receive_balance(
 
             // Handle the case where the due balance is fully paid
             if remaining_due.is_empty() {
-                due_manager.clear_all_balances(deps.branch())?;
+                due_manager.clear_user_balance(deps.branch(), &addr)?;
 
                 // Lock if fully funded and send activation message if needed
                 if is_fully_funded(deps.as_ref()) {

@@ -90,6 +90,13 @@ impl<'a> BalanceManager<'a> {
         self.cw721_map.clear(deps.storage);
         Ok(())
     }
+
+    pub fn clear_user_balance(&self, deps: DepsMut, addr: &Addr) -> StdResult<()> {
+        self.native_map.prefix(addr).clear(deps.storage, None);
+        self.cw20_map.prefix(addr).clear(deps.storage, None);
+        self.cw721_map.sub_prefix(addr).clear(deps.storage, None);
+        Ok(())
+    }
 }
 
 pub struct TotalBalanceManager;

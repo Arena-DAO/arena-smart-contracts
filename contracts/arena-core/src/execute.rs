@@ -347,6 +347,12 @@ pub fn update_categories(
     if let Some(to_add) = to_add {
         let mut current_id = COMPETITION_CATEGORIES_COUNT.load(deps.storage)?;
         for category in to_add {
+            if category.name.is_empty() {
+                return Err(ContractError::StdError(StdError::generic_err(
+                    "Category name cannot be empty",
+                )));
+            }
+
             current_id = current_id.checked_add(Uint128::one())?;
 
             let new_category = CompetitionCategory {
