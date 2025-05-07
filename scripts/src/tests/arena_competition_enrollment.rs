@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use arena_competition_enrollment::msg::{CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _};
 use arena_interface::competition::msg::{EscrowContractInfo, ExecuteBaseFns as _, QueryBaseFns};
 use arena_interface::competition::types::CompetitionType;
@@ -554,11 +556,10 @@ fn test_wager() -> anyhow::Result<()> {
     let balance = arena.arena_escrow.balance(team1)?;
     assert_eq!(
         balance,
-        Some(BalanceVerified {
-            native: Some(coins(10260, DENOM)),
-            cw20: None,
-            cw721: None
-        })
+        BalanceVerified {
+            native: BTreeMap::from([(DENOM.to_string(), Uint128::new(10260))]),
+            ..BalanceVerified::default()
+        }
     );
 
     Ok(())

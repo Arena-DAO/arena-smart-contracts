@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use arena_interface::competition::msg::{
     EscrowContractInfo, ExecuteBaseFns as _, QueryBaseFns as _,
 };
@@ -45,17 +47,15 @@ fn test_create_wager() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -127,17 +127,15 @@ fn test_process_wager() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -327,17 +325,15 @@ fn test_wager_with_additional_fees() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -482,17 +478,15 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -583,24 +577,21 @@ fn test_wager_with_preset_distributions() -> anyhow::Result<()> {
     // user3 gets 20% of user1's winnings (266) and 30% of user2's winnings (171) = 437
 
     let expected_user1_balance = BalanceVerified {
-        native: Some(coins(1064, DENOM)), // 1330 - 266 (20% to user3)
-        cw20: None,
-        cw721: None,
+        native: BTreeMap::from([(DENOM.to_string(), Uint128::new(1064))]), // 1330 - 266 (20% to user3)
+        ..BalanceVerified::default()
     };
     let expected_user2_balance = BalanceVerified {
-        native: Some(coins(399, DENOM)), // 570 - 171 (30% to user3)
-        cw20: None,
-        cw721: None,
+        native: BTreeMap::from([(DENOM.to_string(), Uint128::new(399))]), // 570 - 171 (30% to user3)
+        ..BalanceVerified::default()
     };
     let expected_user3_balance = BalanceVerified {
-        native: Some(coins(437, DENOM)), // 266 from user1 + 171 from user2
-        cw20: None,
-        cw721: None,
+        native: BTreeMap::from([(DENOM.to_string(), Uint128::new(437))]), // 266 from user1 + 171 from user2
+        ..BalanceVerified::default()
     };
 
-    assert_eq!(user1_balance, Some(expected_user1_balance));
-    assert_eq!(user2_balance, Some(expected_user2_balance));
-    assert_eq!(user3_balance, Some(expected_user3_balance));
+    assert_eq!(user1_balance, expected_user1_balance);
+    assert_eq!(user2_balance, expected_user2_balance);
+    assert_eq!(user3_balance, expected_user3_balance);
 
     // Check DAO balance
     let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
@@ -630,17 +621,15 @@ fn test_wager_with_draw() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -716,18 +705,16 @@ fn test_wager_with_draw() -> anyhow::Result<()> {
     // user2 gets 1000 * 95%  = 950
 
     let expected_user1_balance = BalanceVerified {
-        native: Some(coins(950, DENOM)), // 1330 - 266 (20% to user3)
-        cw20: None,
-        cw721: None,
+        native: BTreeMap::from([(DENOM.to_string(), Uint128::new(950))]), // 1330 - 266 (20% to user3)
+        ..BalanceVerified::default()
     };
     let expected_user2_balance = BalanceVerified {
-        native: Some(coins(950, DENOM)), // 570 - 171 (30% to user3)
-        cw20: None,
-        cw721: None,
+        native: BTreeMap::from([(DENOM.to_string(), Uint128::new(950))]), // 570 - 171 (30% to user3)
+        ..BalanceVerified::default()
     };
 
-    assert_eq!(user1_balance, Some(expected_user1_balance));
-    assert_eq!(user2_balance, Some(expected_user2_balance));
+    assert_eq!(user1_balance, expected_user1_balance);
+    assert_eq!(user2_balance, expected_user2_balance);
 
     // Check DAO balance
     let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
@@ -757,17 +744,15 @@ fn test_wager_with_malicious_host() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -885,17 +870,15 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -999,19 +982,17 @@ fn test_wager_with_updated_distribution_after_activation() -> anyhow::Result<()>
     // user3 gets 20% of user1's winnings (380) based on the initial distribution
 
     let expected_user1_balance = BalanceVerified {
-        native: Some(coins(1520, DENOM)), // 1900 - 380 (20% to user3)
-        cw20: None,
-        cw721: None,
+        native: BTreeMap::from([(DENOM.to_string(), Uint128::new(1520))]), // 1900 - 380 (20% to user3)
+        ..BalanceVerified::default()
     };
     let expected_user3_balance = BalanceVerified {
-        native: Some(coins(380, DENOM)), // 20% of 1900
-        cw20: None,
-        cw721: None,
+        native: BTreeMap::from([(DENOM.to_string(), Uint128::new(380))]), // 20% of 1900
+        ..BalanceVerified::default()
     };
 
-    assert_eq!(user1_balance, Some(expected_user1_balance));
-    assert_eq!(user2_balance, None);
-    assert_eq!(user3_balance, Some(expected_user3_balance));
+    assert_eq!(user1_balance, expected_user1_balance);
+    assert!(user2_balance.is_empty());
+    assert_eq!(user3_balance, expected_user3_balance);
 
     // Check DAO balance
     let dao_balance = mock.query_balance(&arena.dao_dao.dao_core.address()?, DENOM)?;
@@ -1050,17 +1031,15 @@ fn test_jailed_wager_resolved_by_dao() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -1218,17 +1197,15 @@ fn test_wager_with_stats() -> anyhow::Result<()> {
                     MemberBalanceUnchecked {
                         addr: user1.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                     MemberBalanceUnchecked {
                         addr: user2.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(vec![Coin::new(1000u128, DENOM)]),
-                            cw20: None,
-                            cw721: None,
+                            native: vec![Coin::new(1000u128, DENOM)],
+                            ..BalanceUnchecked::default()
                         },
                     },
                 ],
@@ -1374,9 +1351,8 @@ fn test_wager_with_aggregate_stats() -> anyhow::Result<()> {
                 dues: vec![MemberBalanceUnchecked {
                     addr: user1.to_string(),
                     balance: BalanceUnchecked {
-                        native: Some(vec![Coin::new(1000u128, DENOM)]),
-                        cw20: None,
-                        cw721: None,
+                        native: vec![Coin::new(1000u128, DENOM)],
+                        ..BalanceUnchecked::default()
                     },
                 }],
                 is_enrollment: false,

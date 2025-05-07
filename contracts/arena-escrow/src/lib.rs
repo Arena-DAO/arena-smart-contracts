@@ -1,3 +1,4 @@
+pub mod balance_manager;
 pub mod contract;
 mod error;
 pub mod execute;

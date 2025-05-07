@@ -1,4 +1,7 @@
-use std::iter;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    iter,
+};
 
 use arena_interface::{
     escrow::TransferEscrowOwnershipMsg,
@@ -9,24 +12,24 @@ use cosmwasm_std::{
     ensure, to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, DepsMut, Empty,
     MessageInfo, Response, StdResult, Uint128,
 };
-use cw20::{Cw20CoinVerified, Cw20ReceiveMsg};
+use cw20::Cw20ReceiveMsg;
 use cw721::receiver::Cw721ReceiveMsg;
-use cw_balance::{
-    BalanceError, BalanceVerified, Cw721CollectionVerified, Distribution, MemberPercentage,
-};
+use cw_balance::{BalanceVerified, Distribution, MemberPercentage};
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
+    balance_manager::{BalanceManager, TotalBalanceManager},
     query::is_locked,
     state::{
-        is_fully_funded, BALANCE, DUE, ENROLLMENT_CONTRACT, HAS_DISTRIBUTED, INITIAL_DUE,
-        IS_LOCKED, TOTAL_BALANCE,
+        is_fully_funded, BALANCE_CW20, BALANCE_CW721, BALANCE_NATIVE, DUE_CW20, DUE_CW721,
+        DUE_NATIVE, ENROLLMENT_CONTRACT, HAS_DISTRIBUTED, INITIAL_DUE_CW20, INITIAL_DUE_CW721,
+        INITIAL_DUE_NATIVE, IS_LOCKED,
     },
     ContractError,
 };
 
 pub fn enrollment_withdraw(
-    deps: DepsMut,
+    mut deps: DepsMut,
     info: MessageInfo,
     addrs: Vec<String>,
     entry_fee: Coin,
@@ -40,8 +43,13 @@ pub fn enrollment_withdraw(
         ContractError::Unauthorized {}
     );
 
-    let mut balance = BALANCE.load(deps.storage, &info.sender)?;
-    let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
+    let native_ref = &BALANCE_NATIVE;
+    let cw20_ref = &BALANCE_CW20;
+    let cw721_ref = &BALANCE_CW721;
+
+    let balance_manager = BalanceManager::new(native_ref, cw20_ref, cw721_ref);
+    let mut balance = balance_manager.load_balance(deps.as_ref(), &info.sender)?;
+    let mut total_balance = TotalBalanceManager::load(deps.as_ref())?;
 
     let mut msgs = vec![];
 
@@ -61,29 +69,38 @@ pub fn enrollment_withdraw(
         .collect::<StdResult<Vec<_>>>()?;
 
     // Deduct the full entry fee balance
+    let mut native_map = BTreeMap::new();
+    native_map.insert(
+        entry_fee.denom.clone(),
+        entry_fee
+            .amount
+            .checked_mul(Uint128::new(addrs.len() as u128))?,
+    );
+
     let full_entry_fee_balance = BalanceVerified {
-        native: Some(vec![Coin {
-            denom: entry_fee.denom.clone(),
-            amount: entry_fee
-                .amount
-                .checked_mul(Uint128::new(addrs.len() as u128))?,
-        }]),
-        cw20: None,
-        cw721: None,
+        native: native_map,
+        cw20: BTreeMap::new(),
+        cw721: BTreeMap::new(),
     };
+
     balance = balance.checked_sub(&full_entry_fee_balance)?;
     total_balance = total_balance.checked_sub(&full_entry_fee_balance)?;
 
     // Save balance
     if balance.is_empty() {
-        BALANCE.remove(deps.storage, &info.sender);
+        // Clear user's balance
+        balance_manager.clear_all_balances(deps.branch())?;
     } else {
-        BALANCE.save(deps.storage, &info.sender, &balance)?;
+        // Save updated balance
+        balance_manager.save_balance(deps.branch(), &info.sender, &balance)?;
     }
+
     if total_balance.is_empty() {
-        TOTAL_BALANCE.remove(deps.storage);
+        // Clear total balance
+        TotalBalanceManager::clear(deps)?;
     } else {
-        TOTAL_BALANCE.save(deps.storage, &total_balance)?;
+        // Save updated total balance
+        TotalBalanceManager::save(deps, &total_balance)?;
     }
 
     Ok(Response::new()
@@ -92,7 +109,7 @@ pub fn enrollment_withdraw(
 }
 
 pub fn withdraw(
-    deps: DepsMut,
+    mut deps: DepsMut,
     info: MessageInfo,
     cw20_msg: Option<Binary>,
     cw721_msg: Option<Binary>,
@@ -101,42 +118,59 @@ pub fn withdraw(
         return Err(ContractError::Locked {});
     }
 
-    let mut msgs = vec![];
+    let native_map = &BALANCE_NATIVE;
+    let cw20_map = &BALANCE_CW20;
+    let cw721_map = &BALANCE_CW721;
+    let balance_manager = BalanceManager::new(native_map, cw20_map, cw721_map);
+
+    let due_native_map = &DUE_NATIVE;
+    let due_cw20_map = &DUE_CW20;
+    let due_cw721_map = &DUE_CW721;
+    let due_manager = BalanceManager::new(due_native_map, due_cw20_map, due_cw721_map);
+
+    let initial_due_native_map = &INITIAL_DUE_NATIVE;
+    let initial_due_cw20_map = &INITIAL_DUE_CW20;
+    let initial_due_cw721_map = &INITIAL_DUE_CW721;
+    let initial_due_manager = BalanceManager::new(
+        initial_due_native_map,
+        initial_due_cw20_map,
+        initial_due_cw721_map,
+    );
+
     // Load entire user balance
-    let balance = BALANCE.load(deps.storage, &info.sender)?;
+    let balance = balance_manager.load_balance(deps.as_ref(), &info.sender)?;
 
     // Load the total balance
-    let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
+    let mut total_balance = TotalBalanceManager::load(deps.as_ref())?;
 
-    if balance.is_empty() {
-        BALANCE.remove(deps.storage, &info.sender);
-    } else {
-        // Update total balance and related storage entries
+    let mut msgs = vec![];
+
+    if !balance.is_empty() {
+        // Update total balance
         total_balance = total_balance.checked_sub(&balance)?;
 
         if !HAS_DISTRIBUTED.may_load(deps.storage)?.unwrap_or_default() {
-            // Set due to the initial due
-            if let Some(initial_due) = &INITIAL_DUE.may_load(deps.storage, &info.sender)? {
-                DUE.save(deps.storage, &info.sender, initial_due)?;
+            // Load initial due if it exists
+            if let Ok(initial_due) = initial_due_manager.load_balance(deps.as_ref(), &info.sender) {
+                if !initial_due.is_empty() {
+                    // Set due to the initial due
+                    due_manager.save_balance(deps.branch(), &info.sender, &initial_due)?;
+                }
             }
         }
 
-        // Clear balance
-        BALANCE.remove(deps.storage, &info.sender);
+        // Generate messages to transmit funds
+        msgs = balance.transmit_all(deps.as_ref(), &info.sender, cw20_msg, cw721_msg)?;
 
-        msgs = balance.transmit_all(
-            deps.as_ref(),
-            &info.sender,
-            cw20_msg.clone(),
-            cw721_msg.clone(),
-        )?;
-    };
+        // Clear user's balance
+        balance_manager.clear_all_balances(deps.branch())?;
+    }
 
     // Update or remove total balance
     if total_balance.is_empty() {
-        TOTAL_BALANCE.remove(deps.storage);
+        TotalBalanceManager::clear(deps)?;
     } else {
-        TOTAL_BALANCE.save(deps.storage, &total_balance)?;
+        TotalBalanceManager::save(deps, &total_balance)?;
     }
 
     Ok(Response::new()
@@ -147,10 +181,19 @@ pub fn withdraw(
 
 // This function receives native tokens and updates the balance
 pub fn receive_native(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    if info.funds.is_empty() {
+        return Err(ContractError::EmptyBalance {});
+    }
+
+    let mut native_map = BTreeMap::new();
+    for coin in info.funds {
+        native_map.insert(coin.denom, coin.amount);
+    }
+
     let balance = BalanceVerified {
-        native: Some(info.funds),
-        cw20: None,
-        cw721: None,
+        native: native_map,
+        cw20: BTreeMap::new(),
+        cw721: BTreeMap::new(),
     };
 
     receive_balance(deps, info.sender, balance)
@@ -163,15 +206,14 @@ pub fn receive_cw20(
     cw20_receive_msg: Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
     let sender_addr = deps.api.addr_validate(&cw20_receive_msg.sender)?;
-    let cw20_balance = vec![Cw20CoinVerified {
-        address: info.sender,
-        amount: cw20_receive_msg.amount,
-    }];
+
+    let mut cw20_map = BTreeMap::new();
+    cw20_map.insert(info.sender, cw20_receive_msg.amount);
 
     let balance = BalanceVerified {
-        native: Some(info.funds),
-        cw20: Some(cw20_balance),
-        cw721: None,
+        native: BTreeMap::new(),
+        cw20: cw20_map,
+        cw721: BTreeMap::new(),
     };
 
     receive_balance(deps, sender_addr, balance)
@@ -184,53 +226,70 @@ pub fn receive_cw721(
     cw721_receive_msg: Cw721ReceiveMsg,
 ) -> Result<Response, ContractError> {
     let sender_addr = deps.api.addr_validate(&cw721_receive_msg.sender)?;
-    let cw721_balance = vec![Cw721CollectionVerified {
-        address: info.sender,
-        token_ids: vec![cw721_receive_msg.token_id],
-    }];
+
+    let mut token_ids = BTreeSet::new();
+    token_ids.insert(cw721_receive_msg.token_id);
+
+    let mut cw721_map = BTreeMap::new();
+    cw721_map.insert(info.sender, token_ids);
 
     let balance = BalanceVerified {
-        native: Some(info.funds),
-        cw20: None,
-        cw721: Some(cw721_balance),
+        native: BTreeMap::new(),
+        cw20: BTreeMap::new(),
+        cw721: cw721_map,
     };
 
     receive_balance(deps, sender_addr, balance)
 }
 
 fn receive_balance(
-    deps: DepsMut,
+    mut deps: DepsMut,
     addr: Addr,
     balance: BalanceVerified,
 ) -> Result<Response, ContractError> {
     if balance.is_empty() {
         return Err(ContractError::EmptyBalance {});
     }
-    if HAS_DISTRIBUTED.exists(deps.storage) {
+    if HAS_DISTRIBUTED.may_load(deps.storage)?.unwrap_or_default() {
         return Err(ContractError::AlreadyDistributed {});
     }
 
+    let balance_native_map = &BALANCE_NATIVE;
+    let balance_cw20_map = &BALANCE_CW20;
+    let balance_cw721_map = &BALANCE_CW721;
+    let balance_manager =
+        BalanceManager::new(balance_native_map, balance_cw20_map, balance_cw721_map);
+
+    let due_native_map = &DUE_NATIVE;
+    let due_cw20_map = &DUE_CW20;
+    let due_cw721_map = &DUE_CW721;
+    let due_manager = BalanceManager::new(due_native_map, due_cw20_map, due_cw721_map);
+
     // Update the stored balance for the given address
-    let updated_balance =
-        BALANCE.update(deps.storage, &addr, |existing_balance| -> StdResult<_> {
-            existing_balance.unwrap_or_default().checked_add(&balance)
-        })?;
+    let existing_balance = balance_manager
+        .load_balance(deps.as_ref(), &addr)
+        .unwrap_or_default();
+    let updated_balance = existing_balance.checked_add(&balance)?;
+    balance_manager.save_balance(deps.branch(), &addr, &updated_balance)?;
+
     let mut msgs: Vec<CosmosMsg> = vec![];
 
     // Check if the address has a due balance
-    if let Some(due_balance) = DUE.may_load(deps.storage, &addr)? {
-        let remaining_due = updated_balance.difference_to(&due_balance)?;
+    if let Ok(due_balance) = due_manager.load_balance(deps.as_ref(), &addr) {
+        if !due_balance.is_empty() {
+            // Calculate what's still due
+            let remaining_due = due_balance.difference_to(&updated_balance)?;
 
-        // Handle the case where the due balance is fully paid
-        if remaining_due.is_empty() {
-            DUE.remove(deps.storage, &addr);
+            // Handle the case where the due balance is fully paid
+            if remaining_due.is_empty() {
+                due_manager.clear_all_balances(deps.branch())?;
 
-            // Lock if fully funded and send activation message if needed
-            if is_fully_funded(deps.as_ref()) {
-                IS_LOCKED.save(deps.storage, &true)?;
+                // Lock if fully funded and send activation message if needed
+                if is_fully_funded(deps.as_ref()) {
+                    IS_LOCKED.save(deps.storage, &true)?;
 
-                if let Some(owner) = get_ownership(deps.storage)?.owner {
-                    msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+                    if let Some(owner) = get_ownership(deps.storage)?.owner {
+                        msgs.push(CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
                         contract_addr: owner.to_string(),
                         msg: to_json_binary(
                             &arena_interface::competition::msg::ExecuteBase::ActivateCompetition::<
@@ -240,28 +299,26 @@ fn receive_balance(
                         )?,
                         funds: vec![],
                     }));
+                    }
                 }
+            } else {
+                due_manager.save_balance(deps.branch(), &addr, &remaining_due)?;
             }
-        } else {
-            DUE.save(deps.storage, &addr, &remaining_due)?;
         }
     }
 
     // Update the total balance in storage
-    if TOTAL_BALANCE.exists(deps.storage) {
-        TOTAL_BALANCE.update(deps.storage, |total| total.checked_add(&balance))?;
-    } else {
-        TOTAL_BALANCE.save(deps.storage, &balance)?;
-    }
+    let total_balance = TotalBalanceManager::load(deps.as_ref()).unwrap_or_default();
+    let updated_total = total_balance.checked_add(&balance)?;
+    TotalBalanceManager::save(deps, &updated_total)?;
 
     Ok(Response::new()
         .add_attribute("action", "receive_balance")
-        .add_attribute("balance", updated_balance.to_string())
         .add_messages(msgs))
 }
 
 pub fn distribute(
-    deps: DepsMut,
+    mut deps: DepsMut,
     info: MessageInfo,
     distribution: Option<Distribution<String>>,
     layered_fees: Option<Vec<FeeInformation<String>>>,
@@ -275,7 +332,7 @@ pub fn distribute(
     let group_contract = deps.api.addr_validate(&group_contract)?;
 
     // Load the total balance available for distribution
-    let mut total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
+    let mut total_balance = TotalBalanceManager::load(deps.as_ref()).unwrap_or_default();
 
     let mut msgs = vec![];
     let mut attrs = vec![];
@@ -294,10 +351,7 @@ pub fn distribute(
                 let fee_amounts = total_balance.checked_mul_floor(fee.tax)?;
 
                 // Update total balance
-                total_balance = TOTAL_BALANCE
-                    .update(deps.storage, |x| -> Result<_, BalanceError> {
-                        x.checked_sub(&fee_amounts)
-                    })?;
+                total_balance = total_balance.checked_sub(&fee_amounts)?;
 
                 // Add messages for fee transmission if amounts are not empty
                 if !fee_amounts.is_empty() {
@@ -358,10 +412,15 @@ pub fn distribute(
         }
 
         // Calculate the distribution amounts based on the total balance and distribution
-        let distributed_amounts = total_balance.split(&distribution)?;
+        let distributed_amounts = BalanceVerified::split(&total_balance, &distribution)?;
 
         // Clear existing balance storage
-        BALANCE.clear(deps.storage);
+        let balance_native_map = &BALANCE_NATIVE;
+        let balance_cw20_map = &BALANCE_CW20;
+        let balance_cw721_map = &BALANCE_CW721;
+        let balance_manager =
+            BalanceManager::new(balance_native_map, balance_cw20_map, balance_cw721_map);
+        balance_manager.clear_all_balances(deps.branch())?;
 
         // Query payment registry
         let payment_registry: Option<String> =
@@ -394,19 +453,20 @@ pub fn distribute(
 
                 if let Some(preset_distribution) = preset_distribution {
                     let preset_distribution = preset_distribution.into_checked(deps.as_ref())?;
-                    let new_balances = distributed_amount.balance.split(&preset_distribution)?;
+                    let new_balances =
+                        BalanceVerified::split(&distributed_amount.balance, &preset_distribution)?;
                     has_preset_distribution = true;
 
                     // Update balances based on preset distribution
                     for new_balance in new_balances {
-                        BALANCE.update(
-                            deps.storage,
+                        let existing_balance = balance_manager
+                            .load_balance(deps.as_ref(), &new_balance.addr)
+                            .unwrap_or_default();
+                        let updated_balance = existing_balance.checked_add(&new_balance.balance)?;
+                        balance_manager.save_balance(
+                            deps.branch(),
                             &new_balance.addr,
-                            |old_balance| -> StdResult<_> {
-                                old_balance
-                                    .unwrap_or_default()
-                                    .checked_add(&new_balance.balance)
-                            },
+                            &updated_balance,
                         )?;
                     }
                 }
@@ -414,14 +474,14 @@ pub fn distribute(
 
             if !has_preset_distribution {
                 // Update balance directly if no preset distribution
-                BALANCE.update(
-                    deps.storage,
+                let existing_balance = balance_manager
+                    .load_balance(deps.as_ref(), &distributed_amount.addr)
+                    .unwrap_or_default();
+                let updated_balance = existing_balance.checked_add(&distributed_amount.balance)?;
+                balance_manager.save_balance(
+                    deps.branch(),
                     &distributed_amount.addr,
-                    |old_balance| -> StdResult<_> {
-                        old_balance
-                            .unwrap_or_default()
-                            .checked_add(&distributed_amount.balance)
-                    },
+                    &updated_balance,
                 )?;
             }
         }
@@ -430,7 +490,16 @@ pub fn distribute(
     // Update contract state
     IS_LOCKED.save(deps.storage, &false)?;
     HAS_DISTRIBUTED.save(deps.storage, &true)?;
-    DUE.clear(deps.storage);
+
+    // Clear all due balances
+    let due_native_map = &DUE_NATIVE;
+    let due_cw20_map = &DUE_CW20;
+    let due_cw721_map = &DUE_CW721;
+    let due_manager = BalanceManager::new(due_native_map, due_cw20_map, due_cw721_map);
+    due_manager.clear_all_balances(deps.branch())?;
+
+    // Update total balance
+    TotalBalanceManager::save(deps, &total_balance)?;
 
     Ok(Response::new()
         .add_attribute("action", "distribute")
@@ -463,7 +532,7 @@ pub fn lock(
     Ok(res)
 }
 
-pub fn claw(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn claw(mut deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     // Get the direct owner of this contract
     let owner = get_ownership(deps.storage)?.owner;
 
@@ -482,7 +551,7 @@ pub fn claw(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError>
     }
 
     // Load the total balance to be clawed back
-    let total_balance = TOTAL_BALANCE.may_load(deps.storage)?.unwrap_or_default();
+    let total_balance = TotalBalanceManager::load(deps.as_ref())?;
     if total_balance.is_empty() {
         return Err(ContractError::EmptyBalance {});
     }
@@ -496,12 +565,12 @@ pub fn claw(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError>
     )?;
 
     // Clear all balances
-    BALANCE.clear(deps.storage);
-    TOTAL_BALANCE.remove(deps.storage);
+    BalanceManager::new(&BALANCE_NATIVE, &BALANCE_CW20, &BALANCE_CW721)
+        .clear_all_balances(deps.branch())?;
+    TotalBalanceManager::clear(deps)?;
 
     Ok(Response::new()
         .add_attribute("action", "claw")
         .add_attribute("dao", dao_addr.to_string())
-        .add_attribute("amount", total_balance.to_string())
         .add_messages(msgs))
 }

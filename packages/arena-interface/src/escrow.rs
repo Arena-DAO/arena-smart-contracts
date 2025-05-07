@@ -61,9 +61,9 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    #[returns(Option<BalanceVerified>)]
+    #[returns(BalanceVerified)]
     Balance { addr: String },
-    #[returns(Option<BalanceVerified>)]
+    #[returns(BalanceVerified)]
     Due { addr: String },
     #[returns(Vec<MemberBalanceChecked>)]
     Dues {
@@ -79,7 +79,7 @@ pub enum QueryMsg {
     IsFunded { addr: String },
     #[returns(bool)]
     IsFullyFunded {},
-    #[returns(Option<BalanceVerified>)]
+    #[returns(BalanceVerified)]
     TotalBalance {},
     #[returns(bool)]
     IsLocked {},

@@ -1,4 +1,4 @@
-use crate::{BalanceError, Cw721Collection};
+use crate::{is_contract, BalanceError, Cw721Collection, Distribution, MemberBalanceChecked};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, Empty, StdError, StdResult,
@@ -7,11 +7,11 @@ use cosmwasm_std::{
 use cw20::{Cw20Coin, Cw20ExecuteMsg};
 use cw721::{
     msg::Cw721ExecuteMsg, DefaultOptionalCollectionExtensionMsg, EmptyOptionalNftExtension,
-    EmptyOptionalNftExtensionMsg,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
 #[cw_serde]
+#[derive(Default)]
 pub struct BalanceUnchecked {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub native: Vec<Coin>,
@@ -31,7 +31,7 @@ impl BalanceUnchecked {
     }
 }
 
-fn fold_native_coins(coins: Vec<Coin>) -> StdResult<BTreeMap<String, Uint128>> {
+pub(crate) fn fold_native_coins(coins: Vec<Coin>) -> StdResult<BTreeMap<String, Uint128>> {
     coins
         .into_iter()
         .try_fold(BTreeMap::new(), |mut map, coin| {
@@ -40,7 +40,10 @@ fn fold_native_coins(coins: Vec<Coin>) -> StdResult<BTreeMap<String, Uint128>> {
         })
 }
 
-fn fold_cw20_coins(coins: Vec<Cw20Coin>, deps: Deps) -> StdResult<BTreeMap<Addr, Uint128>> {
+pub(crate) fn fold_cw20_coins(
+    coins: Vec<Cw20Coin>,
+    deps: Deps,
+) -> StdResult<BTreeMap<Addr, Uint128>> {
     coins
         .into_iter()
         .try_fold(BTreeMap::new(), |mut map, coin| {
@@ -50,7 +53,7 @@ fn fold_cw20_coins(coins: Vec<Cw20Coin>, deps: Deps) -> StdResult<BTreeMap<Addr,
         })
 }
 
-fn fold_cw721_collections(
+pub(crate) fn fold_cw721_collections(
     collections: Vec<Cw721Collection>,
     deps: Deps,
 ) -> StdResult<BTreeMap<Addr, BTreeSet<String>>> {
@@ -85,6 +88,77 @@ pub struct BalanceVerified {
 impl BalanceVerified {
     pub fn is_empty(&self) -> bool {
         self.native.is_empty() && self.cw20.is_empty() && self.cw721.is_empty()
+    }
+
+    pub fn split(
+        balance: &BalanceVerified,
+        distribution: &Distribution<Addr>,
+    ) -> Result<Vec<MemberBalanceChecked>, BalanceError> {
+        let mut split_map: BTreeMap<Addr, BalanceVerified> = BTreeMap::new();
+        let mut total_split = BalanceVerified::default();
+
+        for member in &distribution.member_percentages {
+            let portion = balance.checked_mul_floor(member.percentage)?;
+            total_split = total_split.checked_add(&portion)?;
+            let entry = split_map.entry(member.addr.clone()).or_default();
+            *entry = entry.checked_add(&portion)?;
+        }
+
+        let remainder = balance.checked_sub(&total_split)?;
+        if !remainder.is_empty() {
+            let entry = split_map
+                .entry(distribution.remainder_addr.clone())
+                .or_default();
+            *entry = entry.checked_add(&remainder)?;
+        }
+
+        Ok(split_map
+            .into_iter()
+            .map(|(addr, balance)| MemberBalanceChecked { addr, balance })
+            .collect())
+    }
+
+    /// Returns a new balance containing only the elements from self that are not fully covered by other.
+    /// This is different from checked_sub in that it only reduces the amounts for elements that exist in both,
+    /// rather than requiring that all elements in self exist in other.
+    pub fn difference_to(&self, other: &BalanceVerified) -> Result<Self, BalanceError> {
+        let mut result = self.clone();
+
+        // Handle native tokens
+        for (denom, amount) in &other.native {
+            if let Some(self_amount) = result.native.get_mut(denom) {
+                if *self_amount <= *amount {
+                    result.native.remove(denom);
+                } else {
+                    *self_amount -= *amount;
+                }
+            }
+        }
+
+        // Handle CW20 tokens
+        for (token, amount) in &other.cw20 {
+            if let Some(self_amount) = result.cw20.get_mut(token) {
+                if *self_amount <= *amount {
+                    result.cw20.remove(token);
+                } else {
+                    *self_amount -= *amount;
+                }
+            }
+        }
+
+        // Handle CW721 tokens
+        for (contract, token_ids) in &other.cw721 {
+            if let Some(self_token_ids) = result.cw721.get_mut(contract) {
+                for token_id in token_ids {
+                    self_token_ids.remove(token_id);
+                }
+                if self_token_ids.is_empty() {
+                    result.cw721.remove(contract);
+                }
+            }
+        }
+
+        Ok(result)
     }
 
     pub fn transmit_all(

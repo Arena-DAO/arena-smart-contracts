@@ -3,31 +3,28 @@ use cosmwasm_std::{Deps, StdResult};
 use cw_balance::{BalanceVerified, MemberBalanceChecked};
 use cw_utils::maybe_addr;
 
-use crate::state::{
-    load_balance, load_total_balance, paginate_balances_for, BALANCE_CW20, BALANCE_CW721,
-    BALANCE_NATIVE, DUE_CW20, DUE_CW721, DUE_NATIVE, INITIAL_DUE_CW20, INITIAL_DUE_CW721,
-    INITIAL_DUE_NATIVE, IS_LOCKED, TOTAL_BALANCE_CW20, TOTAL_BALANCE_CW721, TOTAL_BALANCE_NATIVE,
+use crate::{
+    balance_manager::{BalanceManager, TotalBalanceManager},
+    state::{
+        paginate_balances_for, BALANCE_CW20, BALANCE_CW721, BALANCE_NATIVE, DUE_CW20, DUE_CW721,
+        DUE_NATIVE, INITIAL_DUE_CW20, INITIAL_DUE_CW721, INITIAL_DUE_NATIVE, IS_LOCKED,
+    },
 };
 
 pub fn balance(deps: Deps, addr: String) -> StdResult<BalanceVerified> {
     let addr = deps.api.addr_validate(&addr)?;
 
-    load_balance(deps, &addr, &BALANCE_NATIVE, &BALANCE_CW20, &BALANCE_CW721)
+    BalanceManager::new(&BALANCE_NATIVE, &BALANCE_CW20, &BALANCE_CW721).load_balance(deps, &addr)
 }
 
 pub fn due(deps: Deps, addr: String) -> StdResult<BalanceVerified> {
     let addr = deps.api.addr_validate(&addr)?;
 
-    load_balance(deps, &addr, &DUE_NATIVE, &DUE_CW20, &DUE_CW721)
+    BalanceManager::new(&DUE_NATIVE, &DUE_CW20, &DUE_CW721).load_balance(deps, &addr)
 }
 
 pub fn total_balance(deps: Deps) -> StdResult<BalanceVerified> {
-    load_total_balance(
-        deps,
-        &TOTAL_BALANCE_NATIVE,
-        &TOTAL_BALANCE_CW20,
-        &TOTAL_BALANCE_CW721,
-    )
+    TotalBalanceManager::load(deps)
 }
 
 pub fn is_locked(deps: Deps) -> bool {

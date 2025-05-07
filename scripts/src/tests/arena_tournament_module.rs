@@ -269,11 +269,11 @@ pub fn test_single_elimination_tournament() -> Result<(), CwOrchError> {
     let balances = arena.arena_escrow.balances(None, None)?;
     assert_eq!(balances.len(), 2);
     assert_eq!(
-        balances[1].balance.native.as_ref().unwrap()[0].amount,
+        balances[1].balance.native[DENOM],
         Uint128::new(23750) // 100k * .95 (Arena tax) * .25 (user share)
     );
     assert_eq!(
-        balances[0].balance.native.as_ref().unwrap()[0].amount,
+        balances[0].balance.native[DENOM],
         Uint128::new(71250) // 100k * .95 (Arena tax) * .75 (user share)
     );
 
@@ -578,19 +578,19 @@ pub fn test_single_elimination_tournament_with_third_place_match() -> Result<(),
     let balances = arena.arena_escrow.balances(None, None)?;
     assert_eq!(balances.len(), 4);
     assert_eq!(
-        balances[0].balance.native.as_ref().unwrap()[0].amount,
+        balances[0].balance.native[DENOM],
         Uint128::new(61750) // 100k * .95 (Arena tax) * .65 (user share)
     );
     assert_eq!(
-        balances[1].balance.native.as_ref().unwrap()[0].amount,
+        balances[1].balance.native[DENOM],
         Uint128::new(9500) // 100k * .95 (Arena tax) * .10 (user share)
     );
     assert_eq!(
-        balances[2].balance.native.as_ref().unwrap()[0].amount,
+        balances[2].balance.native[DENOM],
         Uint128::new(14250) // 100k * .95 (Arena tax) * .15 (user share)
     );
     assert_eq!(
-        balances[3].balance.native.as_ref().unwrap()[0].amount,
+        balances[3].balance.native[DENOM],
         Uint128::new(9500) // 100k * .95 (Arena tax) * .10 (user share)
     );
 
@@ -812,15 +812,15 @@ pub fn test_double_elimination_tournament_with_rebuttal() -> Result<(), CwOrchEr
     let balances = arena.arena_escrow.balances(None, None)?;
     assert_eq!(balances.len(), 3);
     assert_eq!(
-        balances[0].balance.native.as_ref().unwrap()[0].amount,
+        balances[0].balance.native[DENOM],
         Uint128::new(23750) // 100k * .95 (Arena tax) * .25 (user share)
     );
     assert_eq!(
-        balances[1].balance.native.as_ref().unwrap()[0].amount,
+        balances[1].balance.native[DENOM],
         Uint128::new(61750) // 100k * .95 (Arena tax) * .65 (user share)
     );
     assert_eq!(
-        balances[2].balance.native.as_ref().unwrap()[0].amount,
+        balances[2].balance.native[DENOM],
         Uint128::new(9500) // 100k * .95 (Arena tax) * .10 (user share)
     );
 
@@ -1032,15 +1032,15 @@ pub fn test_double_elimination_tournament() -> Result<(), CwOrchError> {
     let balances = arena.arena_escrow.balances(None, None)?;
     assert_eq!(balances.len(), 3);
     assert_eq!(
-        balances[0].balance.native.as_ref().unwrap()[0].amount,
+        balances[0].balance.native[DENOM],
         Uint128::new(23750) // 100k * .95 (Arena tax) * .25 (user share)
     );
     assert_eq!(
-        balances[1].balance.native.as_ref().unwrap()[0].amount,
+        balances[1].balance.native[DENOM],
         Uint128::new(61750) // 100k * .95 (Arena tax) * .65 (user share)
     );
     assert_eq!(
-        balances[2].balance.native.as_ref().unwrap()[0].amount,
+        balances[2].balance.native[DENOM],
         Uint128::new(9500) // 100k * .95 (Arena tax) * .10 (user share)
     );
 
@@ -1175,15 +1175,15 @@ pub fn test_single_elimination_6() -> Result<(), CwOrchError> {
     let balances = arena.arena_escrow.balances(None, None)?;
     assert_eq!(balances.len(), 3);
     assert_eq!(
-        balances[0].balance.native.as_ref().unwrap()[0].amount,
+        balances[0].balance.native[DENOM],
         Uint128::new(5700) // 60k * .95 (Arena tax) * .10 (user share)
     );
     assert_eq!(
-        balances[1].balance.native.as_ref().unwrap()[0].amount,
+        balances[1].balance.native[DENOM],
         Uint128::new(14250) // 60k * .95 (Arena tax) * .25 (user share)
     );
     assert_eq!(
-        balances[2].balance.native.as_ref().unwrap()[0].amount,
+        balances[2].balance.native[DENOM],
         Uint128::new(37050) // 60k * .95 (Arena tax) * .65 (user share)
     );
 
@@ -1431,9 +1431,8 @@ fn create_competition_msg<Chain: ChainState>(
                     .map(|x| MemberBalanceUnchecked {
                         addr: x.to_string(),
                         balance: BalanceUnchecked {
-                            native: Some(coins(10_000u128, DENOM)),
-                            cw20: None,
-                            cw721: None,
+                            native: coins(10_000u128, DENOM),
+                            ..BalanceUnchecked::default()
                         },
                     })
                     .collect(),
