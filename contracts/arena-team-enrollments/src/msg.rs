@@ -5,9 +5,13 @@ use cosmwasm_std::{Addr, Uint128};
 /// Import shared types
 use crate::state::{ApplicantStatus, EntryStatus};
 
-/// Instantiate message (no fields now, but extensible)
+/// Instantiate message
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    /// The owner of the contract
+    /// Should be the Arena Core
+    pub owner: String,
+}
 
 /// Execute messages for the contract
 #[cw_ownable::cw_ownable_execute]

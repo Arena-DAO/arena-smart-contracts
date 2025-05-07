@@ -19,13 +19,16 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
-    _msg: InstantiateMsg,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     TEAM_ENTRY_COUNT.save(deps.storage, &0)?;
-    cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
-    Ok(Response::new().add_attribute("action", "instantiate"))
+    let ownership = cw_ownable::initialize_owner(deps.storage, deps.api, Some(&msg.owner))?;
+
+    Ok(Response::new()
+        .add_attribute("action", "instantiate")
+        .add_attributes(ownership.into_attributes()))
 }
 
 /// Execute entry point

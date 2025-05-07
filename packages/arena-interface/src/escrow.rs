@@ -90,9 +90,9 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct DumpStateResponse {
     pub is_locked: bool,
-    pub total_balance: Option<BalanceVerified>,
-    pub balance: Option<BalanceVerified>,
-    pub due: Option<BalanceVerified>,
+    pub total_balance: BalanceVerified,
+    pub balance: BalanceVerified,
+    pub due: BalanceVerified,
 }
 
 #[cw_serde]
