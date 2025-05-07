@@ -485,7 +485,7 @@ fn test_balance_verified_split() {
     };
 
     // Split the balance
-    let result = BalanceVerified::split(&balance, &distribution).unwrap();
+    let result = BalanceVerified::split(&balance, &distribution, &BTreeMap::new()).unwrap();
 
     // The percentages add up to 50%, so 50% should go to remainder
     assert_eq!(result.len(), 3);
@@ -543,4 +543,105 @@ fn test_balance_verified_split() {
         .get(&Addr::unchecked("cw721_contract"))
         .unwrap();
     assert_eq!(token_set.len(), 2);
+}
+
+#[test]
+fn test_split_with_cw721_routing_and_100_percent_member() {
+    // === TEST 1: Normal split with remainder and routing ===
+    let mut balance = BalanceVerified::default();
+
+    let mut token_set = BTreeSet::new();
+    token_set.insert("nft1".to_string());
+    token_set.insert("nft2".to_string());
+    token_set.insert("nft3".to_string());
+    balance
+        .cw721
+        .insert(Addr::unchecked("nft_contract"), token_set.clone());
+
+    let distribution = Distribution {
+        member_percentages: vec![
+            MemberPercentage {
+                addr: Addr::unchecked("member1"),
+                percentage: Decimal::percent(50),
+            },
+            MemberPercentage {
+                addr: Addr::unchecked("member2"),
+                percentage: Decimal::percent(30),
+            },
+        ],
+        remainder_addr: Addr::unchecked("remainder"),
+    };
+
+    // nft1 → member1, nft2 → member2, nft3 → remainder
+    let mut nft_owners = BTreeMap::new();
+    nft_owners
+        .entry(Addr::unchecked("member1"))
+        .or_insert_with(BTreeMap::new)
+        .entry(Addr::unchecked("nft_contract"))
+        .or_insert_with(BTreeSet::new)
+        .insert("nft1".to_string());
+
+    nft_owners
+        .entry(Addr::unchecked("member2"))
+        .or_insert_with(BTreeMap::new)
+        .entry(Addr::unchecked("nft_contract"))
+        .or_insert_with(BTreeSet::new)
+        .insert("nft2".to_string());
+
+    let result = BalanceVerified::split(&balance, &distribution, &nft_owners).unwrap();
+    assert_eq!(result.len(), 3); // member1, member2, remainder
+
+    let tokens = |r: &MemberBalanceChecked, id| {
+        r.balance
+            .cw721
+            .get(&Addr::unchecked("nft_contract"))
+            .map(|s| s.contains(id))
+            .unwrap_or(false)
+    };
+
+    let member1 = result
+        .iter()
+        .find(|r| r.addr.as_ref() == "member1")
+        .unwrap();
+    assert!(tokens(member1, "nft1"));
+    assert!(!tokens(member1, "nft2"));
+    assert!(!tokens(member1, "nft3"));
+
+    let member2 = result
+        .iter()
+        .find(|r| r.addr.as_ref() == "member2")
+        .unwrap();
+    assert!(tokens(member2, "nft2"));
+    assert!(!tokens(member2, "nft1"));
+    assert!(!tokens(member2, "nft3"));
+
+    let remainder = result
+        .iter()
+        .find(|r| r.addr.as_ref() == "remainder")
+        .unwrap();
+    assert!(tokens(remainder, "nft3"));
+
+    // === TEST 2: 100% to one member → all NFTs should go there, ownership map ignored ===
+    let distribution_all = Distribution {
+        member_percentages: vec![MemberPercentage {
+            addr: Addr::unchecked("member1"),
+            percentage: Decimal::percent(100),
+        }],
+        remainder_addr: Addr::unchecked("remainder"), // irrelevant
+    };
+
+    let result_all = BalanceVerified::split(&balance, &distribution_all, &nft_owners).unwrap();
+
+    assert_eq!(result_all.len(), 1);
+    let only = &result_all[0];
+    assert_eq!(only.addr, Addr::unchecked("member1"));
+
+    let member1_tokens = only
+        .balance
+        .cw721
+        .get(&Addr::unchecked("nft_contract"))
+        .unwrap();
+    assert!(member1_tokens.contains("nft1"));
+    assert!(member1_tokens.contains("nft2"));
+    assert!(member1_tokens.contains("nft3"));
 }

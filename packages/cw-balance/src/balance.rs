@@ -93,6 +93,7 @@ impl BalanceVerified {
     pub fn split(
         balance: &BalanceVerified,
         distribution: &Distribution<Addr>,
+        cw721_owners: &BTreeMap<Addr, BTreeMap<Addr, BTreeSet<String>>>,
     ) -> Result<Vec<MemberBalanceChecked>, BalanceError> {
         let mut split_map: BTreeMap<Addr, BalanceVerified> = BTreeMap::new();
         let mut total_split = BalanceVerified::default();
@@ -104,7 +105,57 @@ impl BalanceVerified {
             *entry = entry.checked_add(&portion)?;
         }
 
-        let remainder = balance.checked_sub(&total_split)?;
+        let mut remainder = balance.checked_sub(&total_split)?;
+
+        if !cw721_owners.is_empty() {
+            let mut routed_nfts: BTreeMap<Addr, BTreeMap<Addr, BTreeSet<String>>> = BTreeMap::new();
+
+            for (contract, token_ids) in &remainder.cw721 {
+                for token_id in token_ids {
+                    // Find the owner in the provided routing map
+                    let mut found = false;
+                    for (owner, contracts) in cw721_owners {
+                        if let Some(ids) = contracts.get(contract) {
+                            if ids.contains(token_id) {
+                                routed_nfts
+                                    .entry(owner.clone())
+                                    .or_default()
+                                    .entry(contract.clone())
+                                    .or_default()
+                                    .insert(token_id.clone());
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // If not found, assign to remainder_addr
+                    if !found {
+                        routed_nfts
+                            .entry(distribution.remainder_addr.clone())
+                            .or_default()
+                            .entry(contract.clone())
+                            .or_default()
+                            .insert(token_id.clone());
+                    }
+                }
+            }
+
+            // Add routed NFTs to the split map
+            for (owner, cw721_map) in routed_nfts {
+                let entry = split_map.entry(owner).or_default();
+                *entry = entry.checked_add(&BalanceVerified {
+                    native: BTreeMap::new(),
+                    cw20: BTreeMap::new(),
+                    cw721: cw721_map,
+                })?;
+            }
+
+            // Clear NFTs from remainder
+            remainder.cw721.clear();
+        }
+
+        // Route remaining native/cw20 to remainder_addr
         if !remainder.is_empty() {
             let entry = split_map
                 .entry(distribution.remainder_addr.clone())

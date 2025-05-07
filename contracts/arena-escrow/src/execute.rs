@@ -366,6 +366,9 @@ pub fn distribute(
             }
         }
 
+        // Build NFT route map per owner for None distribution case
+        let mut owner_nft_map: BTreeMap<Addr, BTreeMap<Addr, BTreeSet<String>>> = BTreeMap::new();
+
         // Create a distribution of all members if not provided
         let distribution = match distribution {
             Some(dist) => dist,
@@ -377,6 +380,24 @@ pub fn distribute(
                         limit: None,
                     },
                 )?;
+
+                if members.len() > 1 {
+                    // Route NFT's back to the original owners
+                    for item in BALANCE_CW721
+                        .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                        .collect::<Vec<StdResult<_>>>()
+                    {
+                        let (owner, contract, token_id) = item?;
+
+                        owner_nft_map
+                            .entry(owner.clone())
+                            .or_default()
+                            .entry(contract.clone())
+                            .or_default()
+                            .insert(token_id.to_string());
+                    }
+                }
+
                 let percentage = Decimal::from_ratio(1u128, members.len() as u128);
                 let remainder_addr = members[0].addr.clone();
                 Distribution {
@@ -412,7 +433,8 @@ pub fn distribute(
         }
 
         // Calculate the distribution amounts based on the total balance and distribution
-        let distributed_amounts = BalanceVerified::split(&total_balance, &distribution)?;
+        let distributed_amounts =
+            BalanceVerified::split(&total_balance, &distribution, &owner_nft_map)?;
 
         // Clear existing balance storage
         let balance_native_map = &BALANCE_NATIVE;
@@ -423,7 +445,7 @@ pub fn distribute(
         balance_manager.clear_all_balances(deps.branch())?;
 
         // Query payment registry
-        let payment_registry: Option<String> =
+        let payment_registry: Option<Addr> =
             deps.querier.query_wasm_smart(
                 info.sender.to_string(),
                 &arena_interface::competition::msg::QueryBase::PaymentRegistry::<
@@ -432,9 +454,6 @@ pub fn distribute(
                     Empty,
                 > {},
             )?;
-        let payment_registry = payment_registry
-            .map(|x| deps.api.addr_validate(&x))
-            .transpose()?;
 
         // Process each distributed amount
         for distributed_amount in distributed_amounts {
@@ -442,7 +461,7 @@ pub fn distribute(
 
             if let Some(ref payment_registry) = payment_registry {
                 // Query preset distribution from payment registry
-                let preset_distribution: Option<Distribution<String>> =
+                let preset_distribution: Option<Distribution<Addr>> =
                     deps.querier.query_wasm_smart(
                         payment_registry.to_string(),
                         &arena_interface::registry::QueryMsg::GetDistribution {
@@ -452,9 +471,34 @@ pub fn distribute(
                     )?;
 
                 if let Some(preset_distribution) = preset_distribution {
-                    let preset_distribution = preset_distribution.into_checked(deps.as_ref())?;
-                    let new_balances =
-                        BalanceVerified::split(&distributed_amount.balance, &preset_distribution)?;
+                    for member_percentage in preset_distribution.member_percentages.iter() {
+                        let addr = &member_percentage.addr;
+
+                        // If the owner_nft_map doesn't already have this address,
+                        // and they actually have NFTs in storage, populate it now.
+                        if !owner_nft_map.contains_key(addr)
+                            && !BALANCE_CW721.sub_prefix(addr).is_empty(deps.storage)
+                        {
+                            for ((collection, token_id), _) in BALANCE_CW721
+                                .sub_prefix(addr)
+                                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                                .collect::<StdResult<Vec<_>>>()?
+                            {
+                                owner_nft_map
+                                    .entry(addr.clone())
+                                    .or_default()
+                                    .entry(collection.clone())
+                                    .or_default()
+                                    .insert(token_id.clone());
+                            }
+                        }
+                    }
+
+                    let new_balances = BalanceVerified::split(
+                        &distributed_amount.balance,
+                        &preset_distribution,
+                        &owner_nft_map,
+                    )?;
                     has_preset_distribution = true;
 
                     // Update balances based on preset distribution
