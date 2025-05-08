@@ -585,8 +585,6 @@ pub fn distribute(
     IS_LOCKED.save(deps.storage, &false)?;
     HAS_DISTRIBUTED.save(deps.storage, &true)?;
 
-    balance_manager.clear_all_balances(deps.branch())?;
-
     TotalBalanceManager::save(deps, &total_balance)?;
 
     Ok(Response::new()
