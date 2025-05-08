@@ -29,3 +29,6 @@ cw-paginate = { workspace = true }
 cw-ownable = { workspace = true }
 arena-interface = { workspace = true }
 cw-orch = { workspace = true }
+dao-interface = { workspace = true }
+dao-voting-cw4 = { workspace = true }
+cw4 = { workspace = true }

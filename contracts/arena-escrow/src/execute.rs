@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    iter,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 use arena_interface::{
     escrow::TransferEscrowOwnershipMsg,
@@ -9,12 +6,12 @@ use arena_interface::{
     group::{self, MemberMsg},
 };
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, DepsMut, Empty,
+    ensure, to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Empty,
     MessageInfo, Response, StdResult, Uint128,
 };
 use cw20::Cw20ReceiveMsg;
 use cw721::receiver::Cw721ReceiveMsg;
-use cw_balance::{BalanceVerified, Distribution, MemberPercentage};
+use cw_balance::{BalanceVerified, Distribution, MemberBalanceChecked, MemberPercentage};
 use cw_ownable::{assert_owner, get_ownership};
 
 use crate::{
@@ -317,6 +314,137 @@ fn receive_balance(
         .add_messages(msgs))
 }
 
+fn apply_layered_fees(
+    deps: Deps,
+    layered_fees: Vec<FeeInformation<String>>,
+    total_balance: &mut BalanceVerified,
+    msgs: &mut Vec<CosmosMsg>,
+    attrs: &mut Vec<(&'static str, String)>,
+) -> Result<(), ContractError> {
+    let validated_fees: Vec<FeeInformation<Addr>> = layered_fees
+        .iter()
+        .map(|fee| fee.into_checked(deps))
+        .collect::<StdResult<_>>()?;
+
+    for fee in validated_fees {
+        let fee_amounts = total_balance.checked_mul_floor(fee.tax)?;
+        *total_balance = total_balance.checked_sub(&fee_amounts)?;
+
+        if !fee_amounts.is_empty() {
+            msgs.extend(fee_amounts.transmit_all(
+                deps,
+                &fee.receiver,
+                fee.cw20_msg,
+                fee.cw721_msg,
+            )?);
+            attrs.push(("Fee", fee.receiver.to_string()));
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_distribution_entry(
+    mut deps: DepsMut,
+    entry: MemberBalanceChecked,
+    activation_height: Option<u64>,
+    payment_registry: Option<Addr>,
+    owner_nft_map: &BTreeMap<Addr, BTreeMap<Addr, BTreeSet<String>>>,
+    balance_manager: &BalanceManager<'_>,
+) -> Result<(), ContractError> {
+    let mut distributed = false;
+
+    // Try preset distribution from registry
+    if let Some(registry_addr) = &payment_registry {
+        let preset_distribution: Option<Distribution<Addr>> = deps.querier.query_wasm_smart(
+            registry_addr.to_string(),
+            &arena_interface::registry::QueryMsg::GetDistribution {
+                addr: entry.addr.to_string(),
+                height: activation_height,
+            },
+        )?;
+
+        if let Some(preset) = preset_distribution {
+            let new_splits = BalanceVerified::split(&entry.balance, &preset, owner_nft_map)?;
+            for split in new_splits {
+                let existing = balance_manager
+                    .load_balance(deps.as_ref(), &split.addr)
+                    .unwrap_or_default();
+                let updated = existing.checked_add(&split.balance)?;
+                balance_manager.save_balance(deps.branch(), &split.addr, &updated)?;
+            }
+            return Ok(()); // Distribution complete
+        }
+    }
+
+    // Fallback: Check if the recipient is a DAO
+    let maybe_voting_module: StdResult<Addr> = deps.querier.query_wasm_smart(
+        entry.addr.to_string(),
+        &dao_interface::msg::QueryMsg::VotingModule {},
+    );
+
+    if let Ok(voting_module_addr) = maybe_voting_module {
+        let maybe_group_contract: StdResult<Addr> = deps.querier.query_wasm_smart(
+            voting_module_addr.to_string(),
+            &dao_voting_cw4::msg::QueryMsg::GroupContract {},
+        );
+
+        if let Ok(group_contract) = maybe_group_contract {
+            let maybe_member_list: StdResult<cw4::MemberListResponse> =
+                deps.querier.query_wasm_smart(
+                    group_contract,
+                    &cw4::Cw4QueryMsg::ListMembers {
+                        start_after: None,
+                        limit: Some(cw_paginate::MAX_LIMIT),
+                    },
+                );
+
+            if let Ok(member_list) = maybe_member_list {
+                let len = member_list.members.len() as u32;
+                if len < cw_paginate::MAX_LIMIT {
+                    // Equal fallback distribution
+                    let percentage = Decimal::from_ratio(1u128, len as u128);
+                    let fallback_dist = Distribution {
+                        member_percentages: member_list
+                            .members
+                            .iter()
+                            .map(|m| MemberPercentage {
+                                addr: Addr::unchecked(m.addr.clone()),
+                                percentage,
+                            })
+                            .collect(),
+                        remainder_addr: entry.addr.clone(),
+                    };
+
+                    let fallback_balances =
+                        BalanceVerified::split(&entry.balance, &fallback_dist, owner_nft_map)?;
+
+                    for fb in fallback_balances {
+                        let existing = balance_manager
+                            .load_balance(deps.as_ref(), &fb.addr)
+                            .unwrap_or_default();
+                        let updated = existing.checked_add(&fb.balance)?;
+                        balance_manager.save_balance(deps.branch(), &fb.addr, &updated)?;
+                    }
+
+                    distributed = true;
+                }
+            }
+        }
+    }
+
+    // If not distributed, assign to original address
+    if !distributed {
+        let existing = balance_manager
+            .load_balance(deps.as_ref(), &entry.addr)
+            .unwrap_or_default();
+        let updated = existing.checked_add(&entry.balance)?;
+        balance_manager.save_balance(deps.branch(), &entry.addr, &updated)?;
+    }
+
+    Ok(())
+}
+
 pub fn distribute(
     mut deps: DepsMut,
     info: MessageInfo,
@@ -328,221 +456,137 @@ pub fn distribute(
     // Ensure the sender is the owner
     assert_owner(deps.storage, &info.sender)?;
 
-    // Validate the group contract
+    // Validate the group contract address
     let group_contract = deps.api.addr_validate(&group_contract)?;
 
-    // Load the total balance available for distribution
+    // Load available balance
     let mut total_balance = TotalBalanceManager::load(deps.as_ref()).unwrap_or_default();
 
     let mut msgs = vec![];
     let mut attrs = vec![];
 
-    if !total_balance.is_empty() {
-        // Process layered fees if provided
-        if let Some(layered_fees) = layered_fees.as_ref() {
-            // Validate the tax info
-            let validated_layered_fees: Vec<FeeInformation<Addr>> = layered_fees
-                .iter()
-                .map(|fee| fee.into_checked(deps.as_ref()))
-                .collect::<StdResult<_>>()?;
+    if total_balance.is_empty() {
+        return Ok(Response::new().add_attribute("action", "distribute_empty"));
+    }
 
-            // Process each fee
-            for fee in validated_layered_fees {
-                let fee_amounts = total_balance.checked_mul_floor(fee.tax)?;
+    // Apply layered fees (if any)
+    if let Some(layered_fees) = layered_fees {
+        apply_layered_fees(
+            deps.as_ref(),
+            layered_fees,
+            &mut total_balance,
+            &mut msgs,
+            &mut attrs,
+        )?;
+    }
 
-                // Update total balance
-                total_balance = total_balance.checked_sub(&fee_amounts)?;
+    // Query group members (used both for initial distribution and fallbacks)
+    let group_members: Vec<MemberMsg<String>> = deps.querier.query_wasm_smart(
+        group_contract.to_string(),
+        &group::QueryMsg::Members {
+            start_after: None,
+            limit: None,
+        },
+    )?;
+    let member_addrs: Vec<Addr> = group_members
+        .iter()
+        .map(|m| deps.api.addr_validate(&m.addr))
+        .collect::<StdResult<_>>()?;
 
-                // Add messages for fee transmission if amounts are not empty
-                if !fee_amounts.is_empty() {
-                    msgs.extend(fee_amounts.transmit_all(
-                        deps.as_ref(),
-                        &fee.receiver,
-                        fee.cw20_msg,
-                        fee.cw721_msg,
-                    )?);
-                    attrs.push(("Fee", fee.receiver.to_string()));
-                }
-            }
-        }
-
-        // Build NFT route map per owner for None distribution case
-        let mut owner_nft_map: BTreeMap<Addr, BTreeMap<Addr, BTreeSet<String>>> = BTreeMap::new();
-
-        // Create a distribution of all members if not provided
-        let distribution = match distribution {
-            Some(dist) => dist,
-            None => {
-                let members: Vec<MemberMsg<String>> = deps.querier.query_wasm_smart(
-                    group_contract.to_string(),
-                    &group::QueryMsg::Members {
-                        start_after: None,
-                        limit: None,
-                    },
-                )?;
-
-                if members.len() > 1 {
-                    // Route NFT's back to the original owners
-                    for item in BALANCE_CW721
-                        .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-                        .collect::<Vec<StdResult<_>>>()
-                    {
-                        let (owner, contract, token_id) = item?;
-
-                        owner_nft_map
-                            .entry(owner.clone())
-                            .or_default()
-                            .entry(contract.clone())
-                            .or_default()
-                            .insert(token_id.to_string());
-                    }
-                }
-
-                let percentage = Decimal::from_ratio(1u128, members.len() as u128);
-                let remainder_addr = members[0].addr.clone();
-                Distribution {
-                    member_percentages: members
-                        .into_iter()
-                        .map(|x| MemberPercentage {
-                            addr: x.addr,
-                            percentage,
-                        })
-                        .collect(),
-                    remainder_addr,
-                }
-            }
-        };
-
-        let distribution = distribution.into_checked(deps.as_ref())?;
-
-        // Validate distribution is valid
-        if !deps.querier.query_wasm_smart::<bool>(
-            group_contract.to_string(),
-            &group::QueryMsg::IsValidDistribution {
-                addrs: distribution
-                    .member_percentages
-                    .iter()
-                    .map(|x| x.addr.to_string())
-                    .chain(iter::once(distribution.remainder_addr.to_string()))
-                    .collect(),
-            },
-        )? {
-            return Err(ContractError::InvalidDistribution {
-                msg: "The distribution must contain only members of the competition".to_string(),
-            });
-        }
-
-        // Calculate the distribution amounts based on the total balance and distribution
-        let distributed_amounts =
-            BalanceVerified::split(&total_balance, &distribution, &owner_nft_map)?;
-
-        // Clear existing balance storage
-        let balance_native_map = &BALANCE_NATIVE;
-        let balance_cw20_map = &BALANCE_CW20;
-        let balance_cw721_map = &BALANCE_CW721;
-        let balance_manager =
-            BalanceManager::new(balance_native_map, balance_cw20_map, balance_cw721_map);
-        balance_manager.clear_all_balances(deps.branch())?;
-
-        // Query payment registry
-        let payment_registry: Option<Addr> =
-            deps.querier.query_wasm_smart(
-                info.sender.to_string(),
-                &arena_interface::competition::msg::QueryBase::PaymentRegistry::<
-                    Empty,
-                    Empty,
-                    Empty,
-                > {},
-            )?;
-
-        // Process each distributed amount
-        for distributed_amount in distributed_amounts {
-            let mut has_preset_distribution = false;
-
-            if let Some(ref payment_registry) = payment_registry {
-                // Query preset distribution from payment registry
-                let preset_distribution: Option<Distribution<Addr>> =
-                    deps.querier.query_wasm_smart(
-                        payment_registry.to_string(),
-                        &arena_interface::registry::QueryMsg::GetDistribution {
-                            addr: distributed_amount.addr.to_string(),
-                            height: activation_height,
-                        },
-                    )?;
-
-                if let Some(preset_distribution) = preset_distribution {
-                    for member_percentage in preset_distribution.member_percentages.iter() {
-                        let addr = &member_percentage.addr;
-
-                        // If the owner_nft_map doesn't already have this address,
-                        // and they actually have NFTs in storage, populate it now.
-                        if !owner_nft_map.contains_key(addr)
-                            && !BALANCE_CW721.sub_prefix(addr).is_empty(deps.storage)
-                        {
-                            for ((collection, token_id), _) in BALANCE_CW721
-                                .sub_prefix(addr)
-                                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-                                .collect::<StdResult<Vec<_>>>()?
-                            {
-                                owner_nft_map
-                                    .entry(addr.clone())
-                                    .or_default()
-                                    .entry(collection.clone())
-                                    .or_default()
-                                    .insert(token_id.clone());
-                            }
-                        }
-                    }
-
-                    let new_balances = BalanceVerified::split(
-                        &distributed_amount.balance,
-                        &preset_distribution,
-                        &owner_nft_map,
-                    )?;
-                    has_preset_distribution = true;
-
-                    // Update balances based on preset distribution
-                    for new_balance in new_balances {
-                        let existing_balance = balance_manager
-                            .load_balance(deps.as_ref(), &new_balance.addr)
-                            .unwrap_or_default();
-                        let updated_balance = existing_balance.checked_add(&new_balance.balance)?;
-                        balance_manager.save_balance(
-                            deps.branch(),
-                            &new_balance.addr,
-                            &updated_balance,
-                        )?;
-                    }
-                }
-            }
-
-            if !has_preset_distribution {
-                // Update balance directly if no preset distribution
-                let existing_balance = balance_manager
-                    .load_balance(deps.as_ref(), &distributed_amount.addr)
-                    .unwrap_or_default();
-                let updated_balance = existing_balance.checked_add(&distributed_amount.balance)?;
-                balance_manager.save_balance(
-                    deps.branch(),
-                    &distributed_amount.addr,
-                    &updated_balance,
-                )?;
-            }
+    // Build owner-NFT map once
+    let mut owner_nft_map: BTreeMap<Addr, BTreeMap<Addr, BTreeSet<String>>> = BTreeMap::new();
+    if member_addrs.len() > 1 {
+        for item in BALANCE_CW721
+            .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+            .collect::<Vec<StdResult<_>>>()
+        {
+            let (owner, contract, token_id) = item?;
+            owner_nft_map
+                .entry(owner)
+                .or_default()
+                .entry(contract)
+                .or_default()
+                .insert(token_id);
         }
     }
 
-    // Update contract state
+    // Use provided distribution or create equal distribution
+    let resolved_distribution = match distribution {
+        Some(dist) => dist,
+        None => {
+            let percentage = Decimal::from_ratio(1u128, member_addrs.len() as u128);
+            Distribution {
+                member_percentages: member_addrs
+                    .iter()
+                    .map(|addr| MemberPercentage {
+                        addr: addr.to_string(),
+                        percentage,
+                    })
+                    .collect(),
+                remainder_addr: member_addrs[0].to_string(),
+            }
+        }
+    };
+
+    let checked_distribution = resolved_distribution.into_checked(deps.as_ref())?;
+
+    // Validate distribution membership
+    let is_valid = deps.querier.query_wasm_smart::<bool>(
+        group_contract.to_string(),
+        &group::QueryMsg::IsValidDistribution {
+            addrs: checked_distribution
+                .member_percentages
+                .iter()
+                .map(|x| x.addr.to_string())
+                .chain(std::iter::once(
+                    checked_distribution.remainder_addr.to_string(),
+                ))
+                .collect(),
+        },
+    )?;
+
+    if !is_valid {
+        return Err(ContractError::InvalidDistribution {
+            msg: "The distribution must contain only members of the competition".to_string(),
+        });
+    }
+
+    // Split total balance using primary distribution
+    let distributed_amounts =
+        BalanceVerified::split(&total_balance, &checked_distribution, &owner_nft_map)?;
+
+    let balance_native_map = &BALANCE_NATIVE;
+    let balance_cw20_map = &BALANCE_CW20;
+    let balance_cw721_map = &BALANCE_CW721;
+    let balance_manager =
+        BalanceManager::new(balance_native_map, balance_cw20_map, balance_cw721_map);
+
+    // Clear all existing balances
+    balance_manager.clear_all_balances(deps.branch())?;
+
+    // Try to get payment registry
+    let payment_registry: Option<Addr> = deps.querier.query_wasm_smart(
+        info.sender.to_string(),
+        &arena_interface::competition::msg::QueryBase::PaymentRegistry::<Empty, Empty, Empty> {},
+    )?;
+
+    for entry in distributed_amounts {
+        handle_distribution_entry(
+            deps.branch(),
+            entry,
+            activation_height,
+            payment_registry.clone(),
+            &owner_nft_map,
+            &balance_manager,
+        )?;
+    }
+
+    // Finalize state
     IS_LOCKED.save(deps.storage, &false)?;
     HAS_DISTRIBUTED.save(deps.storage, &true)?;
 
-    // Clear all due balances
-    let due_native_map = &DUE_NATIVE;
-    let due_cw20_map = &DUE_CW20;
-    let due_cw721_map = &DUE_CW721;
-    let due_manager = BalanceManager::new(due_native_map, due_cw20_map, due_cw721_map);
-    due_manager.clear_all_balances(deps.branch())?;
+    balance_manager.clear_all_balances(deps.branch())?;
 
-    // Update total balance
     TotalBalanceManager::save(deps, &total_balance)?;
 
     Ok(Response::new()
