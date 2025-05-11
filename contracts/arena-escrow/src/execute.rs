@@ -401,7 +401,7 @@ fn handle_distribution_entry(
 
             if let Ok(member_list) = maybe_member_list {
                 let len = member_list.members.len() as u32;
-                if len < cw_paginate::MAX_LIMIT {
+                if len < cw_paginate::MAX_LIMIT && len > 0 {
                     // Equal fallback distribution
                     let percentage = Decimal::from_ratio(1u128, len as u128);
                     let fallback_dist = Distribution {

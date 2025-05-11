@@ -7,7 +7,7 @@ use crate::{
     group::{self},
 };
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Addr, Binary, CosmosMsg, Deps, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Binary, Deps, StdResult, Timestamp, Uint128};
 use cw_balance::Distribution;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use serde::de::DeserializeOwned;
@@ -79,9 +79,6 @@ pub enum ExecuteBase<ExecuteExt, CompetitionInstantiateExt> {
         competition_id: Uint128,
         to_add: Vec<StatType>,
         to_remove: Vec<String>,
-    },
-    Execute {
-        msgs: Vec<CosmosMsg>,
     },
 }
 

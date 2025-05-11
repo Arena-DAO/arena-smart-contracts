@@ -363,24 +363,8 @@ impl<
                 competition_id,
                 stats,
             } => self.execute_input_stats(deps, env, info, competition_id, stats),
-            ExecuteBase::Execute { msgs } => self.execute_execute(deps, env, info, msgs),
             ExecuteBase::Extension { .. } => Ok(Response::default()),
         }
-    }
-
-    pub fn execute_execute(
-        &self,
-        deps: DepsMut,
-        _env: Env,
-        info: MessageInfo,
-        msgs: Vec<CosmosMsg>,
-    ) -> Result<Response, CompetitionError> {
-        let dao = self.query_dao(deps.as_ref())?;
-        ensure_eq!(dao, info.sender, CompetitionError::Unauthorized {});
-
-        Ok(Response::new()
-            .add_attribute("action", "execute")
-            .add_messages(msgs))
     }
 
     #[allow(clippy::too_many_arguments)]
