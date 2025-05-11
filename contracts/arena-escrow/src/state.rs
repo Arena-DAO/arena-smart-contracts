@@ -74,7 +74,8 @@ pub fn paginate_balances_for(
     let mut seen = BTreeSet::new();
     for addr in iter {
         let addr = addr?;
-        if start.as_ref().is_none_or(|s| addr > *s) {
+        #[allow(clippy::unnecessary_map_or)]
+        if start.as_ref().map_or(true, |s| addr > *s) {
             seen.insert(addr);
             if seen.len() == limit {
                 break;
