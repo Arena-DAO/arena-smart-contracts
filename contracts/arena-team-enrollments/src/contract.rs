@@ -2,7 +2,7 @@ use crate::execute::{
     apply, create_entry, update_applicant_status, update_entry_status, withdraw_application,
 };
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::query::{get_applicant, get_entry, list_applicants, list_entries};
+use crate::query::{get_applicant, get_entry, list_applicants, list_entries, list_user_teams};
 use crate::state::TEAM_ENTRY_COUNT;
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
@@ -15,7 +15,7 @@ const CONTRACT_NAME: &str = "crates.io:arena-team-enrollments";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Instantiate contract
-#[entry_point]
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -32,7 +32,7 @@ pub fn instantiate(
 }
 
 /// Execute entry point
-#[entry_point]
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::CreateEntry {
@@ -60,7 +60,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 /// Query entry point
-#[entry_point]
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetEntry { entry_id } => to_json_binary(&get_entry(deps, entry_id)?),
@@ -86,5 +86,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
         } => to_json_binary(&list_applicants(deps, entry_id, start_after, limit)?),
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
+        QueryMsg::ListTeams {
+            user,
+            start_after,
+            limit,
+        } => to_json_binary(&list_user_teams(deps, user, start_after, limit)?),
     }
 }

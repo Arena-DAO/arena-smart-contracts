@@ -1,6 +1,6 @@
 use crate::msg::{ApplicantResponse, TeamEntryResponse};
-use crate::state::{team_entries, EntryStatus, APPLICANTS};
-use cosmwasm_std::{Deps, Order, StdResult, Uint128};
+use crate::state::{team_entries, EntryStatus, APPLICANTS, USER_TEAMS};
+use cosmwasm_std::{Addr, Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 /// Query a single team entry by its ID
@@ -94,6 +94,30 @@ pub fn list_applicants(
         .map(|res| {
             let (applicant, status) = res?;
             Ok(ApplicantResponse { applicant, status })
+        })
+        .collect()
+}
+
+pub fn list_user_teams(
+    deps: Deps,
+    user: String,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<Addr>> {
+    let user = deps.api.addr_validate(&user)?;
+    let start = start_after
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?;
+    let start_bound = start.as_ref().map(Bound::exclusive);
+    let lim = limit.unwrap_or(10).min(50);
+
+    USER_TEAMS
+        .prefix(&user)
+        .range(deps.storage, start_bound, None, Order::Ascending)
+        .take(lim as usize)
+        .map(|res| {
+            let (addr, _) = res?;
+            Ok(addr)
         })
         .collect()
 }

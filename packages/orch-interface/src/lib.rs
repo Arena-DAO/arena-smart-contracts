@@ -13,6 +13,8 @@ pub mod arena_league_module;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod arena_payment_registry;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod arena_team_enrollments;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod arena_tournament_module;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod arena_wager_module;

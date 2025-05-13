@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::state::{
     team_entries, ApplicantStatus, EntryStatus, TeamEntry, APPLICANTS, APPROVED_APPLICANTS,
-    TEAM_ENTRY_COUNT,
+    TEAM_ENTRY_COUNT, USER_TEAMS,
 };
 
 pub fn create_entry(
@@ -71,6 +71,27 @@ pub fn update_entry_status(
         let id = entry_id;
         let cw4_group_code_id = dao_config.extension;
 
+        let weight = 1000;
+        let mut addrs = vec![];
+        let mut members = APPROVED_APPLICANTS
+            .range(deps.storage, None, None, Order::Descending)
+            .map(|x| {
+                x.map(|((_, addr), _)| {
+                    addrs.push(addr.clone());
+
+                    Member {
+                        addr: addr.to_string(),
+                        weight,
+                    }
+                })
+            })
+            .collect::<StdResult<Vec<_>>>()?;
+        members.push(Member {
+            addr: entry.creator.to_string(),
+            weight,
+        });
+        addrs.push(entry.creator);
+
         // Generate predictable DAO address
         let dao_binding = format!("dao_{}{}{}", info.sender, env.block.height, id);
         let dao_salt: [u8; 32] = Sha256::digest(dao_binding.as_bytes()).into();
@@ -93,15 +114,7 @@ pub fn update_entry_status(
                 group_contract: dao_voting_cw4::msg::GroupContract::New {
                     cw4_group_code_id,
                     cw4_group_salt: None,
-                    initial_members: APPROVED_APPLICANTS
-                        .range(deps.storage, None, None, Order::Descending)
-                        .map(|x| {
-                            x.map(|((_, addr), _)| Member {
-                                addr: addr.to_string(),
-                                weight: 1000,
-                            })
-                        })
-                        .collect::<StdResult<_>>()?,
+                    initial_members: members,
                 },
             })?,
             funds: None,
@@ -168,6 +181,10 @@ pub fn update_entry_status(
             salt: dao_salt.into(),
         };
 
+        for addr in addrs {
+            USER_TEAMS.save(deps.storage, (&addr, &dao_addr), &())?;
+        }
+
         Ok(response
             .add_attribute("dao", dao_addr)
             .add_message(dao_instantiate))
@@ -184,6 +201,11 @@ pub fn apply(deps: DepsMut, _env: Env, info: MessageInfo, entry_id: u64) -> StdR
         .load(deps.storage, entry_id)
         .map_err(|_| StdError::generic_err("Team entry does not exist"))?;
 
+    if info.sender == entry.creator {
+        return Err(StdError::generic_err(
+            "The creator is already a member of the enrollment",
+        ));
+    }
     // Validate the entry is open for applications
     if entry.status != crate::state::EntryStatus::Open {
         return Err(StdError::generic_err("Entry is not open for applications"));

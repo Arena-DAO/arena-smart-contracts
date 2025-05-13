@@ -23,5 +23,6 @@ arena-escrow = { workspace = true }
 arena-payment-registry = { workspace = true }
 arena-discord-identity = { workspace = true }
 cosmwasm-std = { workspace = true }
+arena-team-enrollments = { workspace = true }
 
 cw4-group = { package = "abstract-cw4-group", git = "https://github.com/Arena-DAO/cw-plus" }

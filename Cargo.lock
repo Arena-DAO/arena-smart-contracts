@@ -3670,6 +3670,7 @@ dependencies = [
  "arena-interface",
  "arena-league-module",
  "arena-payment-registry",
+ "arena-team-enrollments",
  "arena-tournament-module",
  "arena-wager-module",
  "cosmwasm-std 2.2.2",

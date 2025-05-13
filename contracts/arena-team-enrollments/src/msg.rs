@@ -73,6 +73,14 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
+
+    /// List a user's teams
+    #[returns(Vec<Addr>)]
+    ListTeams {
+        user: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 }
 
 /// Response for a single team entry

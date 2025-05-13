@@ -125,6 +125,9 @@ pub const TEAM_ENTRY_COUNT: Item<u64> = Item::new("team_entry_count");
 pub const APPLICANTS: Map<(u64, &Addr), ApplicantStatus> = Map::new("applicants");
 pub const APPROVED_APPLICANTS: Map<(u64, &Addr), ()> = Map::new("approved_applicants");
 
+/// Stores a map of user teams (user, team)
+pub const USER_TEAMS: Map<(&Addr, &Addr), ()> = Map::new("user_teams");
+
 /// Indexes for querying by category_id and status
 pub struct TeamEntryIndexes<'a> {
     pub category_status: MultiIndex<'a, (u128, String), TeamEntry, u64>,

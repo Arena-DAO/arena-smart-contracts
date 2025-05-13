@@ -7,6 +7,7 @@ use orch_interface::{
     arena_escrow::ArenaEscrowContract, arena_group::ArenaGroupContract,
     arena_league_module::ArenaLeagueModuleContract,
     arena_payment_registry::ArenaPaymentRegistryContract,
+    arena_team_enrollments::ArenaTeamEnrollmentsContract,
     arena_tournament_module::ArenaTournamentModuleContract,
     arena_wager_module::ArenaWagerModuleContract, dao_dao_core::DaoDaoCoreContract,
 };
@@ -56,6 +57,7 @@ enum DeployComponent {
     Core,
     Tournament,
     Enrollment,
+    TeamEnrollments,
     CompetitionModules,
     Group,
     Identity,
@@ -83,6 +85,7 @@ impl DeployComponent {
             "dao_core" => Some(Self::DaoCore),
             "tournament" => Some(Self::Tournament),
             "enrollment" => Some(Self::Enrollment),
+            "team_enrollments" => Some(Self::TeamEnrollments),
             "competition_modules" => Some(Self::CompetitionModules),
             "group" => Some(Self::Group),
             "identity" => Some(Self::Identity),
@@ -138,6 +141,7 @@ fn deploy_to_network(network: Network, component: &DeployComponent) -> anyhow::R
             }
             deploy_registry(&daemon)?;
             deploy_escrow(&daemon)?;
+            deploy_team_enrollments(&daemon)?;
         }
         DeployComponent::Core => deploy_core(&daemon)?,
         DeployComponent::DaoCore => deploy_dao_core(&daemon)?,
@@ -148,6 +152,7 @@ fn deploy_to_network(network: Network, component: &DeployComponent) -> anyhow::R
         DeployComponent::Identity => deploy_identity(&daemon)?,
         DeployComponent::Registry => deploy_registry(&daemon)?,
         DeployComponent::Escrow => deploy_escrow(&daemon)?,
+        DeployComponent::TeamEnrollments => deploy_team_enrollments(&daemon)?,
     }
 
     Ok(())
@@ -171,6 +176,11 @@ fn deploy_tournament(daemon: &Daemon) -> anyhow::Result<()> {
 
 fn deploy_enrollment(daemon: &Daemon) -> anyhow::Result<()> {
     ArenaCompetitionEnrollmentContract::new(daemon.clone()).upload()?;
+    Ok(())
+}
+
+fn deploy_team_enrollments(daemon: &Daemon) -> anyhow::Result<()> {
+    ArenaTeamEnrollmentsContract::new(daemon.clone()).upload()?;
     Ok(())
 }
 
