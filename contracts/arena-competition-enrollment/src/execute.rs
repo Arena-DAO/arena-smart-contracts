@@ -444,7 +444,7 @@ pub fn finalize(
                 automatically_add_cw721s: false,
                 voting_module_instantiate_info: voting_instantiate,
                 proposal_modules_instantiate_info: vec![proposal_instantiate],
-                image_url: None,
+                image_url: dao_config.image_url.clone(),
                 initial_items: None,
                 dao_uri: None,
                 initial_actions: None,

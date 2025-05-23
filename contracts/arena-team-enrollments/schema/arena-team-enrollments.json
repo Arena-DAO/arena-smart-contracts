@@ -300,6 +300,12 @@
             "format": "uint64",
             "minimum": 0.0
           },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "max_voting_period": {
             "$ref": "#/definitions/Duration"
           },

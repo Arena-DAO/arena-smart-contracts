@@ -105,6 +105,7 @@ pub struct DaoConfig<T = ()> {
     pub prepropose_single_code_id: u64,
     pub threshold: Threshold,
     pub max_voting_period: Duration,
+    pub image_url: Option<String>,
     #[serde(flatten)]
     pub extension: T,
 }
