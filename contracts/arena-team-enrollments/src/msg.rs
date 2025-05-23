@@ -83,6 +83,11 @@ pub enum QueryMsg {
     },
 }
 
+#[cw_serde]
+pub enum MigrateMsg {
+    FromCompatible {},
+}
+
 /// Response for a single team entry
 #[cw_serde]
 pub struct TeamEntryResponse {

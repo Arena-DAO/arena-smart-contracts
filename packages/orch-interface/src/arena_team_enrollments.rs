@@ -1,10 +1,10 @@
-use arena_team_enrollments::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use arena_team_enrollments::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cw_orch::interface;
 use cw_orch::prelude::*;
 
 pub const CONTRACT_ID: &str = "arena_team_enrollments";
 
-#[interface(InstantiateMsg, ExecuteMsg, QueryMsg, Empty, id = CONTRACT_ID)]
+#[interface(InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, id = CONTRACT_ID)]
 pub struct ArenaTeamEnrollmentsContract;
 
 impl<Chain> Uploadable for ArenaTeamEnrollmentsContract<Chain> {
@@ -16,10 +16,13 @@ impl<Chain> Uploadable for ArenaTeamEnrollmentsContract<Chain> {
     }
     /// Returns a CosmWasm contract wrapper
     fn wrapper() -> Box<dyn MockContract<Empty>> {
-        Box::new(ContractWrapper::new_with_empty(
-            arena_team_enrollments::contract::execute,
-            arena_team_enrollments::contract::instantiate,
-            arena_team_enrollments::contract::query,
-        ))
+        Box::new(
+            ContractWrapper::new_with_empty(
+                arena_team_enrollments::contract::execute,
+                arena_team_enrollments::contract::instantiate,
+                arena_team_enrollments::contract::query,
+            )
+            .with_migrate(arena_team_enrollments::contract::migrate),
+        )
     }
 }
