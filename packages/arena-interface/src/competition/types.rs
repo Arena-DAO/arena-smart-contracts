@@ -1,7 +1,7 @@
 use std::fmt;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Addr, Coin, Decimal, Empty, Timestamp, Uint128, Uint64};
 use cw_utils::Duration;
 use dao_voting::threshold::Threshold;
 
@@ -98,7 +98,7 @@ pub struct EnrollmentEntryResponse {
 }
 
 #[cw_serde]
-pub struct DaoConfig<T = ()> {
+pub struct DaoConfig<T = Empty> {
     pub dao_code_id: u64,
     pub cw4_voting_code_id: u64,
     pub proposal_single_code_id: u64,
@@ -106,7 +106,7 @@ pub struct DaoConfig<T = ()> {
     pub threshold: Threshold,
     pub max_voting_period: Duration,
     pub image_url: Option<String>,
-    #[serde(flatten)]
+    #[serde(flatten, default)]
     pub extension: T,
 }
 

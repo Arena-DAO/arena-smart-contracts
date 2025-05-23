@@ -101,7 +101,7 @@
               "use_dao_host": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/DaoConfig_for_Null"
+                    "$ref": "#/definitions/DaoConfig_for_Empty"
                   },
                   {
                     "type": "null"
@@ -343,7 +343,7 @@
               "use_dao_host": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/DaoConfig_for_Null"
+                    "$ref": "#/definitions/DaoConfig_for_Empty"
                   },
                   {
                     "type": "null"
@@ -670,7 +670,8 @@
           }
         ]
       },
-      "DaoConfig_for_Null": {
+      "DaoConfig_for_Empty": {
+        "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressible in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
         "type": "object",
         "required": [
           "cw4_voting_code_id",
@@ -1672,7 +1673,8 @@
           }
         ]
       },
-      "DaoConfig_for_Null": {
+      "DaoConfig_for_Empty": {
+        "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressible in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
         "type": "object",
         "required": [
           "cw4_voting_code_id",
@@ -1871,7 +1873,7 @@
           "use_dao_host": {
             "anyOf": [
               {
-                "$ref": "#/definitions/DaoConfig_for_Null"
+                "$ref": "#/definitions/DaoConfig_for_Empty"
               },
               {
                 "type": "null"
@@ -2129,7 +2131,7 @@
         "use_dao_host": {
           "anyOf": [
             {
-              "$ref": "#/definitions/DaoConfig_for_Null"
+              "$ref": "#/definitions/DaoConfig_for_Empty"
             },
             {
               "type": "null"
@@ -2321,7 +2323,8 @@
             }
           ]
         },
-        "DaoConfig_for_Null": {
+        "DaoConfig_for_Empty": {
+          "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressible in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
           "type": "object",
           "required": [
             "cw4_voting_code_id",
@@ -2793,7 +2796,8 @@
             }
           ]
         },
-        "DaoConfig_for_Null": {
+        "DaoConfig_for_Empty": {
+          "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressible in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
           "type": "object",
           "required": [
             "cw4_voting_code_id",
@@ -2992,7 +2996,7 @@
             "use_dao_host": {
               "anyOf": [
                 {
-                  "$ref": "#/definitions/DaoConfig_for_Null"
+                  "$ref": "#/definitions/DaoConfig_for_Empty"
                 },
                 {
                   "type": "null"
