@@ -52,11 +52,14 @@ fn test_create_entry() -> anyhow::Result<()> {
 
     // Query the created entry
     let entry = arena.arena_team_enrollments.get_entry(1)?;
-    assert_eq!(entry.title, "Test Team");
-    assert_eq!(entry.description, "A test team for the competition");
-    assert_eq!(entry.creator, user1);
-    assert_eq!(entry.status, EntryStatus::Open);
-    assert_eq!(entry.category_id, Some(Uint128::new(1)));
+    assert_eq!(entry.team_entry.title, "Test Team");
+    assert_eq!(
+        entry.team_entry.description,
+        "A test team for the competition"
+    );
+    assert_eq!(entry.team_entry.creator, user1);
+    assert_eq!(entry.team_entry.status, EntryStatus::Open);
+    assert_eq!(entry.team_entry.category_id, Some(Uint128::new(1)));
 
     Ok(())
 }
@@ -119,7 +122,7 @@ fn test_list_entries() -> anyhow::Result<()> {
         None,
     )?;
     assert_eq!(category_1_entries.len(), 1);
-    assert_eq!(category_1_entries[0].title, "Team Alpha");
+    assert_eq!(category_1_entries[0].team_entry.title, "Team Alpha");
 
     Ok(())
 }
@@ -169,7 +172,7 @@ fn test_update_entry_status() -> anyhow::Result<()> {
 
     // Verify status was updated
     let entry = arena.arena_team_enrollments.get_entry(1)?;
-    assert_eq!(entry.status, EntryStatus::Closed);
+    assert_eq!(entry.team_entry.status, EntryStatus::Closed);
 
     // Try to update as non-creator (should fail)
     arena.arena_team_enrollments.set_sender(&user2);

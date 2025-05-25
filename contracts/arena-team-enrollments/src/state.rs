@@ -130,7 +130,9 @@ pub const TEAM_ENTRY_COUNT: Item<u64> = Item::new("team_entry_count");
 
 /// Stores the applicant status keyed by (team_entry_id, applicant address).
 pub const APPLICANTS: Map<(u64, &Addr), ApplicantStatus> = Map::new("applicants");
+pub const APPLICANTS_COUNT: Map<u64, u64> = Map::new("applicants_count");
 pub const APPROVED_APPLICANTS: Map<(u64, &Addr), ()> = Map::new("approved_applicants");
+pub const APPROVED_APPLICANTS_COUNT: Map<u64, u64> = Map::new("approved_applicants_count");
 
 /// Stores a map of user teams (user, team)
 pub const USER_TEAMS: Map<(&Addr, &Addr), ()> = Map::new("user_teams");

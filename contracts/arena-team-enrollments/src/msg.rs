@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 
 /// Import shared types
-use crate::state::{ApplicantStatus, EntryStatus, TeamDaoConfig};
+use crate::state::{ApplicantStatus, EntryStatus, TeamDaoConfig, TeamEntry};
 
 /// Instantiate message
 #[cw_serde]
@@ -96,12 +96,10 @@ pub struct CategoryStatusMsg {
 #[cw_serde]
 pub struct TeamEntryResponse {
     pub entry_id: u64,
-    pub creator: Addr,
-    pub title: String,
-    pub description: String,
-    pub category_id: Option<Uint128>,
-    pub status: EntryStatus,
-    pub created_at: u64,
+    #[serde(flatten)]
+    pub team_entry: TeamEntry,
+    pub applicants_count: u64,
+    pub approved_applicants_count: u64,
 }
 
 /// Response for a single applicant

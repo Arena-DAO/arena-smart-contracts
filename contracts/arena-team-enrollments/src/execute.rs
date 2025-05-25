@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 
 use crate::state::{
     team_entries, ApplicantStatus, EntryStatus, TeamDaoConfig, TeamEntry, APPLICANTS,
-    APPROVED_APPLICANTS, TEAM_ENTRY_COUNT, USER_TEAMS,
+    APPLICANTS_COUNT, APPROVED_APPLICANTS, APPROVED_APPLICANTS_COUNT, TEAM_ENTRY_COUNT, USER_TEAMS,
 };
 
 pub fn create_entry(
@@ -223,6 +223,13 @@ pub fn apply(deps: DepsMut, _env: Env, info: MessageInfo, entry_id: u64) -> StdR
 
     // Save the applicant with Default status
     APPLICANTS.save(deps.storage, applicant_key, &ApplicantStatus::Default)?;
+    APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
+        x.unwrap_or_default()
+            .checked_add(1)
+            .ok_or(StdError::generic_err(
+                "Approved applicants is at max capacity",
+            ))
+    })?;
 
     Ok(Response::new()
         .add_attribute("action", "apply")
@@ -248,7 +255,21 @@ pub fn withdraw_application(
     }
 
     APPLICANTS.remove(deps.storage, key);
-    APPROVED_APPLICANTS.remove(deps.storage, key);
+    if APPROVED_APPLICANTS.has(deps.storage, key) {
+        APPROVED_APPLICANTS.remove(deps.storage, key);
+        APPROVED_APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
+            x.unwrap_or_default()
+                .checked_sub(1)
+                .ok_or(StdError::generic_err(
+                    "Approved applicant count underflowed",
+                ))
+        })?;
+    }
+    APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
+        x.unwrap_or_default()
+            .checked_sub(1)
+            .ok_or(StdError::generic_err("Applicant count underflowed"))
+    })?;
 
     Ok(Response::new()
         .add_attribute("action", "withdraw_application")
@@ -279,8 +300,22 @@ pub fn update_applicant_status(
 
     if matches!(current_status, ApplicantStatus::Approved) {
         APPROVED_APPLICANTS.remove(deps.storage, key);
+        APPROVED_APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
+            x.unwrap_or_default()
+                .checked_sub(1)
+                .ok_or(StdError::generic_err(
+                    "Approved applicant count underflowed",
+                ))
+        })?;
     } else if matches!(new_status, ApplicantStatus::Approved) {
         APPROVED_APPLICANTS.save(deps.storage, key, &())?;
+        APPROVED_APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
+            x.unwrap_or_default()
+                .checked_add(1)
+                .ok_or(StdError::generic_err(
+                    "Approved applicants is at max capacity",
+                ))
+        })?;
     }
     APPLICANTS.save(deps.storage, key, &new_status)?;
 

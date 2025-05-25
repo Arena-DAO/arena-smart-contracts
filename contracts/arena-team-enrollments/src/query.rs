@@ -1,19 +1,25 @@
 use crate::msg::{ApplicantResponse, CategoryStatusMsg, TeamEntryResponse};
-use crate::state::{team_entries, APPLICANTS, USER_TEAMS};
+use crate::state::{
+    team_entries, APPLICANTS, APPLICANTS_COUNT, APPROVED_APPLICANTS_COUNT, USER_TEAMS,
+};
 use cosmwasm_std::{Addr, Deps, Order, StdResult};
 use cw_storage_plus::Bound;
 
 /// Query a single team entry by its ID
 pub fn get_entry(deps: Deps, entry_id: u64) -> StdResult<TeamEntryResponse> {
     let entry = team_entries().load(deps.storage, entry_id)?;
+    let applicants_count = APPLICANTS_COUNT
+        .may_load(deps.storage, entry_id)?
+        .unwrap_or_default();
+    let approved_applicants_count = APPROVED_APPLICANTS_COUNT
+        .may_load(deps.storage, entry_id)?
+        .unwrap_or_default();
+
     Ok(TeamEntryResponse {
         entry_id,
-        creator: entry.creator,
-        title: entry.title,
-        description: entry.description,
-        category_id: entry.category_id,
-        status: entry.status,
-        created_at: entry.created_at.seconds(),
+        team_entry: entry,
+        applicants_count,
+        approved_applicants_count,
     })
 }
 
@@ -54,14 +60,18 @@ pub fn list_entries(
         .take(lim)
         .map(|res| {
             let (entry_id, entry) = res?;
+            let applicants_count = APPLICANTS_COUNT
+                .may_load(deps.storage, entry_id)?
+                .unwrap_or_default();
+            let approved_applicants_count = APPROVED_APPLICANTS_COUNT
+                .may_load(deps.storage, entry_id)?
+                .unwrap_or_default();
+
             Ok(TeamEntryResponse {
                 entry_id,
-                creator: entry.creator,
-                title: entry.title,
-                description: entry.description,
-                category_id: entry.category_id,
-                status: entry.status,
-                created_at: entry.created_at.seconds(),
+                team_entry: entry,
+                applicants_count,
+                approved_applicants_count,
             })
         })
         .collect()
