@@ -1,4 +1,3 @@
-use arena_interface::competition::types::DaoConfig;
 use cosmwasm_std::{
     instantiate2_address, to_json_binary, DepsMut, Empty, Env, MessageInfo, Order, Response,
     StdError, StdResult, Uint128, WasmMsg,
@@ -8,8 +7,8 @@ use dao_interface::state::{Admin, ModuleInstantiateInfo};
 use sha2::{Digest, Sha256};
 
 use crate::state::{
-    team_entries, ApplicantStatus, EntryStatus, TeamEntry, APPLICANTS, APPROVED_APPLICANTS,
-    TEAM_ENTRY_COUNT, USER_TEAMS,
+    team_entries, ApplicantStatus, EntryStatus, TeamDaoConfig, TeamEntry, APPLICANTS,
+    APPROVED_APPLICANTS, TEAM_ENTRY_COUNT, USER_TEAMS,
 };
 
 pub fn create_entry(
@@ -19,7 +18,7 @@ pub fn create_entry(
     title: String,
     description: String,
     category_id: Option<Uint128>,
-    dao_config: DaoConfig<u64>,
+    dao_config: TeamDaoConfig,
 ) -> StdResult<Response> {
     let mut id = TEAM_ENTRY_COUNT.load(deps.storage).unwrap_or(0);
     id += 1;
@@ -69,7 +68,10 @@ pub fn update_entry_status(
     if matches!(entry.status, EntryStatus::Created) {
         let dao_config = entry.dao_config;
         let id = entry_id;
-        let cw4_group_code_id = dao_config.extension;
+        let TeamDaoConfig {
+            dao_config,
+            cw4_group_code_id,
+        } = dao_config;
 
         let weight = 1000;
         let mut addrs = vec![];

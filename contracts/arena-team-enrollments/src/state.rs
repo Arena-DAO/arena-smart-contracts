@@ -5,6 +5,13 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
+#[cw_serde]
+pub struct TeamDaoConfig {
+    #[serde(flatten)]
+    pub dao_config: DaoConfig,
+    pub cw4_group_code_id: u64,
+}
+
 /// Enum representing the status of a team entry
 #[derive(Default)]
 #[cw_serde]
@@ -115,7 +122,7 @@ pub struct TeamEntry {
     pub category_id: Option<Uint128>,
     pub status: EntryStatus,
     pub created_at: Timestamp,
-    pub dao_config: DaoConfig<u64>,
+    pub dao_config: TeamDaoConfig,
 }
 
 /// Counter to generate unique IDs

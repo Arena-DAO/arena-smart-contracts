@@ -1,6 +1,6 @@
-use crate::msg::{ApplicantResponse, TeamEntryResponse};
-use crate::state::{team_entries, EntryStatus, APPLICANTS, USER_TEAMS};
-use cosmwasm_std::{Addr, Deps, Order, StdResult, Uint128};
+use crate::msg::{ApplicantResponse, CategoryStatusMsg, TeamEntryResponse};
+use crate::state::{team_entries, APPLICANTS, USER_TEAMS};
+use cosmwasm_std::{Addr, Deps, Order, StdResult};
 use cw_storage_plus::Bound;
 
 /// Query a single team entry by its ID
@@ -20,8 +20,7 @@ pub fn get_entry(deps: Deps, entry_id: u64) -> StdResult<TeamEntryResponse> {
 /// List team entries with optional category_id and status filters
 pub fn list_entries(
     deps: Deps,
-    category_id: Option<Uint128>,
-    status: Option<EntryStatus>,
+    category_status: Option<CategoryStatusMsg>,
     start_after: Option<u64>,
     limit: Option<u32>,
 ) -> StdResult<Vec<TeamEntryResponse>> {
@@ -29,15 +28,16 @@ pub fn list_entries(
     let lim = limit.unwrap_or(10).min(50) as usize;
     let start = start_after.map(|id| id + 1);
 
-    let filtered: Box<dyn Iterator<Item = StdResult<(u64, _)>>> = match (category_id, status) {
-        (Some(cat), Some(st)) => {
+    let filtered: Box<dyn Iterator<Item = StdResult<(u64, _)>>> = match category_status {
+        Some(CategoryStatusMsg {
+            category_id,
+            status,
+        }) => {
             let idx = entries.idx.category_status;
-            Box::new(idx.prefix((cat.u128(), st.to_string())).range(
-                deps.storage,
-                None,
-                None,
-                Order::Ascending,
-            ))
+            Box::new(
+                idx.prefix((category_id.unwrap_or_default().u128(), status.to_string()))
+                    .range(deps.storage, None, None, Order::Ascending),
+            )
         }
         _ => {
             // fallback to full scan

@@ -52,7 +52,7 @@
                 "description": "The standard dao config with an extra u64 field for taking in the cw4_group_code_id",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/DaoConfig_for_uint64"
+                    "$ref": "#/definitions/TeamDaoConfig"
                   }
                 ]
               },
@@ -274,57 +274,6 @@
           }
         ]
       },
-      "DaoConfig_for_uint64": {
-        "type": [
-          "object",
-          "integer"
-        ],
-        "format": "uint64",
-        "minimum": 0.0,
-        "required": [
-          "cw4_voting_code_id",
-          "dao_code_id",
-          "max_voting_period",
-          "prepropose_single_code_id",
-          "proposal_single_code_id",
-          "threshold"
-        ],
-        "properties": {
-          "cw4_voting_code_id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          "dao_code_id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          "image_url": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "max_voting_period": {
-            "$ref": "#/definitions/Duration"
-          },
-          "prepropose_single_code_id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          "proposal_single_code_id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          "threshold": {
-            "$ref": "#/definitions/Threshold"
-          }
-        },
-        "additionalProperties": false
-      },
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
         "type": "string"
@@ -451,6 +400,58 @@
             "additionalProperties": false
           }
         ]
+      },
+      "TeamDaoConfig": {
+        "type": "object",
+        "required": [
+          "cw4_group_code_id",
+          "cw4_voting_code_id",
+          "dao_code_id",
+          "max_voting_period",
+          "prepropose_single_code_id",
+          "proposal_single_code_id",
+          "threshold"
+        ],
+        "properties": {
+          "cw4_group_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "cw4_voting_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "dao_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_voting_period": {
+            "$ref": "#/definitions/Duration"
+          },
+          "prepropose_single_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "proposal_single_code_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "threshold": {
+            "$ref": "#/definitions/Threshold"
+          }
+        },
+        "additionalProperties": false
       },
       "Threshold": {
         "description": "The ways a proposal may reach its passing / failing threshold.",
@@ -584,10 +585,10 @@
           "list_entries": {
             "type": "object",
             "properties": {
-              "category_id": {
+              "category_status": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/Uint128"
+                    "$ref": "#/definitions/CategoryStatusMsg"
                   },
                   {
                     "type": "null"
@@ -609,16 +610,6 @@
                 ],
                 "format": "uint64",
                 "minimum": 0.0
-              },
-              "status": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/EntryStatus"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
               }
             },
             "additionalProperties": false
@@ -744,6 +735,28 @@
       }
     ],
     "definitions": {
+      "CategoryStatusMsg": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Uint128"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/definitions/EntryStatus"
+          }
+        },
+        "additionalProperties": false
+      },
       "EntryStatus": {
         "description": "Enum representing the status of a team entry",
         "type": "string",

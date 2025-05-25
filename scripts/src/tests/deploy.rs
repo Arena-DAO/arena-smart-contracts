@@ -250,6 +250,15 @@ impl<Chain: CwEnv> cw_orch::contract::Deploy<Chain> for Arena<Chain> {
             &[],
         )?;
 
+        // Instantiate the team enrollments module
+        arena.arena_team_enrollments.instantiate(
+            &arena_team_enrollments::msg::InstantiateMsg {
+                owner: arena.arena_core.addr_str()?,
+            },
+            None,
+            &[],
+        )?;
+
         Ok(arena)
     }
 

@@ -1,9 +1,8 @@
-use arena_interface::competition::types::DaoConfig;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 
 /// Import shared types
-use crate::state::{ApplicantStatus, EntryStatus};
+use crate::state::{ApplicantStatus, EntryStatus, TeamDaoConfig};
 
 /// Instantiate message
 #[cw_serde]
@@ -24,7 +23,7 @@ pub enum ExecuteMsg {
         description: String,
         category_id: Option<Uint128>,
         /// The standard dao config with an extra u64 field for taking in the cw4_group_code_id
-        dao_config: DaoConfig<u64>,
+        dao_config: TeamDaoConfig,
     },
 
     /// Creator updates the status of a team entry
@@ -56,8 +55,7 @@ pub enum QueryMsg {
     /// List all entries filtered by optional category_id and status
     #[returns(Vec<TeamEntryResponse>)]
     ListEntries {
-        category_id: Option<Uint128>,
-        status: Option<EntryStatus>,
+        category_status: Option<CategoryStatusMsg>,
         start_after: Option<u64>,
         limit: Option<u32>,
     },
@@ -86,6 +84,12 @@ pub enum QueryMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     FromCompatible {},
+}
+
+#[cw_serde]
+pub struct CategoryStatusMsg {
+    pub category_id: Option<Uint128>,
+    pub status: EntryStatus,
 }
 
 /// Response for a single team entry

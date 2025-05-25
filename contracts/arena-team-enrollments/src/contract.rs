@@ -65,17 +65,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetEntry { entry_id } => to_json_binary(&get_entry(deps, entry_id)?),
         QueryMsg::ListEntries {
-            category_id,
-            status,
+            category_status,
             start_after,
             limit,
-        } => to_json_binary(&list_entries(
-            deps,
-            category_id,
-            status,
-            start_after,
-            limit,
-        )?),
+        } => to_json_binary(&list_entries(deps, category_status, start_after, limit)?),
         QueryMsg::GetApplicant {
             entry_id,
             applicant,

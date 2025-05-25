@@ -2,6 +2,7 @@ pub mod arena_competition_enrollment;
 pub mod arena_core;
 pub mod arena_league_module;
 pub mod arena_payment_registry;
+pub mod arena_team_enrollments;
 pub mod arena_tournament_module;
 pub mod arena_wager_module;
 mod deploy;

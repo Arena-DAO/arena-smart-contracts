@@ -9,6 +9,7 @@ use orch_interface::{
     arena_core::ArenaCoreContract, arena_escrow::ArenaEscrowContract,
     arena_group::ArenaGroupContract, arena_league_module::ArenaLeagueModuleContract,
     arena_payment_registry::ArenaPaymentRegistryContract,
+    arena_team_enrollments::ArenaTeamEnrollmentsContract,
     arena_tournament_module::ArenaTournamentModuleContract,
     arena_wager_module::ArenaWagerModuleContract, cw4_group::Cw4Group,
 };
@@ -24,6 +25,7 @@ pub struct Arena<Chain> {
     pub arena_competition_enrollment: ArenaCompetitionEnrollmentContract<Chain>,
     pub arena_payment_registry: ArenaPaymentRegistryContract<Chain>,
     pub arena_group: ArenaGroupContract<Chain>,
+    pub arena_team_enrollments: ArenaTeamEnrollmentsContract<Chain>,
     pub dao_dao: DaoDao<Chain>,
     pub cw4_group: Cw4Group<Chain>,
 }
@@ -39,6 +41,7 @@ impl<Chain: CwEnv> Arena<Chain> {
             arena_competition_enrollment: ArenaCompetitionEnrollmentContract::new(chain.clone()),
             arena_payment_registry: ArenaPaymentRegistryContract::new(chain.clone()),
             arena_group: ArenaGroupContract::new(chain.clone()),
+            arena_team_enrollments: ArenaTeamEnrollmentsContract::new(chain.clone()),
             dao_dao: DaoDao::new(chain.clone()),
             cw4_group: Cw4Group::new(chain.clone()),
         }
@@ -53,6 +56,7 @@ impl<Chain: CwEnv> Arena<Chain> {
         self.arena_competition_enrollment.upload()?;
         self.arena_payment_registry.upload()?;
         self.arena_group.upload()?;
+        self.arena_team_enrollments.upload()?;
 
         if with_dao_dao {
             self.dao_dao.upload()?;
