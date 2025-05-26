@@ -98,8 +98,9 @@ pub struct TeamEntryResponse {
     pub entry_id: u64,
     #[serde(flatten)]
     pub team_entry: TeamEntry,
-    pub applicants_count: u64,
+    pub pending_applicants_count: u64,
     pub approved_applicants_count: u64,
+    pub rejected_applicants_count: u64,
 }
 
 /// Response for a single applicant

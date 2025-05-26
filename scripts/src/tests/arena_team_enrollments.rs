@@ -436,6 +436,120 @@ fn test_list_applicants() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_applicant_count_tracking() -> anyhow::Result<()> {
+    let mock = MockBech32::new(PREFIX);
+    let (mut arena, _admin) = setup_arena(&mock)?;
+
+    let creator = mock.addr_make("creator");
+    let applicant1 = mock.addr_make("applicant1");
+    let applicant2 = mock.addr_make("applicant2");
+    let applicant3 = mock.addr_make("applicant3");
+
+    let dao_config = TeamDaoConfig {
+        dao_config: DaoConfig {
+            dao_code_id: arena.dao_dao.dao_core.code_id()?,
+            cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
+            proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
+            prepropose_single_code_id: arena.dao_dao.dao_preproprose_single.code_id()?,
+            threshold: Threshold::AbsolutePercentage {
+                percentage: PercentageThreshold::Majority {},
+            },
+            max_voting_period: cw_utils::Duration::Time(604800),
+            image_url: Some("https://example.com/image.png".to_string()),
+        },
+        cw4_group_code_id: arena.cw4_group.code_id()?,
+    };
+
+    // Create entry
+    arena.arena_team_enrollments.set_sender(&creator);
+    arena.arena_team_enrollments.create_entry(
+        dao_config,
+        "Description".to_string(),
+        "Test Team".to_string(),
+        None,
+    )?;
+
+    mock.next_block()?;
+
+    // Initially, no applicants should exist
+    let entry = arena.arena_team_enrollments.get_entry(1)?;
+    assert_eq!(entry.pending_applicants_count, 0);
+    assert_eq!(entry.approved_applicants_count, 0);
+    assert_eq!(entry.rejected_applicants_count, 0);
+
+    // Apply with three users (all start as Default/pending status)
+    arena.arena_team_enrollments.set_sender(&applicant1);
+    arena.arena_team_enrollments.apply(1)?;
+
+    arena.arena_team_enrollments.set_sender(&applicant2);
+    arena.arena_team_enrollments.apply(1)?;
+
+    arena.arena_team_enrollments.set_sender(&applicant3);
+    arena.arena_team_enrollments.apply(1)?;
+
+    mock.next_block()?;
+
+    // Check counts after applications (all should be pending)
+    let entry = arena.arena_team_enrollments.get_entry(1)?;
+    assert_eq!(entry.pending_applicants_count, 3);
+    assert_eq!(entry.approved_applicants_count, 0);
+    assert_eq!(entry.rejected_applicants_count, 0);
+
+    // Approve first applicant (Default -> Approved)
+    arena.arena_team_enrollments.set_sender(&creator);
+    arena.arena_team_enrollments.update_applicant_status(
+        applicant1.to_string(),
+        1,
+        ApplicantStatus::Approved,
+    )?;
+
+    mock.next_block()?;
+
+    // Check counts after approval
+    let entry = arena.arena_team_enrollments.get_entry(1)?;
+    assert_eq!(entry.pending_applicants_count, 2); // decreased by 1
+    assert_eq!(entry.approved_applicants_count, 1); // increased by 1
+    assert_eq!(entry.rejected_applicants_count, 0);
+
+    // Reject second applicant (Default -> Rejected)
+    arena.arena_team_enrollments.update_applicant_status(
+        applicant2.to_string(),
+        1,
+        ApplicantStatus::Rejected {
+            reason: "Not suitable".to_string(),
+        },
+    )?;
+
+    mock.next_block()?;
+
+    // Check counts after rejection
+    let entry = arena.arena_team_enrollments.get_entry(1)?;
+    assert_eq!(entry.pending_applicants_count, 1); // decreased by 1
+    assert_eq!(entry.approved_applicants_count, 1); // unchanged
+    assert_eq!(entry.rejected_applicants_count, 1); // increased by 1
+
+    // Withdraw application from pending applicant
+    arena.arena_team_enrollments.set_sender(&applicant3);
+    arena.arena_team_enrollments.withdraw_application(1)?;
+
+    mock.next_block()?;
+
+    // Check counts after withdrawal
+    let entry = arena.arena_team_enrollments.get_entry(1)?;
+    assert_eq!(entry.pending_applicants_count, 0); // decreased by 1
+    assert_eq!(entry.approved_applicants_count, 1); // unchanged
+    assert_eq!(entry.rejected_applicants_count, 1); // unchanged
+
+    // Final verification: total count should be 2 (withdrew 1)
+    let total_count = entry.pending_applicants_count
+        + entry.approved_applicants_count
+        + entry.rejected_applicants_count;
+    assert_eq!(total_count, 2);
+
+    Ok(())
+}
+
+#[test]
 fn test_list_user_teams() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, _admin) = setup_arena(&mock)?;

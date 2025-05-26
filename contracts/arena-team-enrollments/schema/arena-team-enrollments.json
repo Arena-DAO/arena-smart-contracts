@@ -839,22 +839,18 @@
       "description": "Response for a single team entry",
       "type": "object",
       "required": [
-        "applicants_count",
         "approved_applicants_count",
         "created_at",
         "creator",
         "dao_config",
         "description",
         "entry_id",
+        "pending_applicants_count",
+        "rejected_applicants_count",
         "status",
         "title"
       ],
       "properties": {
-        "applicants_count": {
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 0.0
-        },
         "approved_applicants_count": {
           "type": "integer",
           "format": "uint64",
@@ -883,6 +879,16 @@
           "type": "string"
         },
         "entry_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "pending_applicants_count": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "rejected_applicants_count": {
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
@@ -1336,22 +1342,18 @@
           "description": "Response for a single team entry",
           "type": "object",
           "required": [
-            "applicants_count",
             "approved_applicants_count",
             "created_at",
             "creator",
             "dao_config",
             "description",
             "entry_id",
+            "pending_applicants_count",
+            "rejected_applicants_count",
             "status",
             "title"
           ],
           "properties": {
-            "applicants_count": {
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
-            },
             "approved_applicants_count": {
               "type": "integer",
               "format": "uint64",
@@ -1380,6 +1382,16 @@
               "type": "string"
             },
             "entry_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "pending_applicants_count": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "rejected_applicants_count": {
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0

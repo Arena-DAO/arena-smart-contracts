@@ -1,26 +1,48 @@
 use crate::msg::{ApplicantResponse, CategoryStatusMsg, TeamEntryResponse};
-use crate::state::{
-    team_entries, APPLICANTS, APPLICANTS_COUNT, APPROVED_APPLICANTS_COUNT, USER_TEAMS,
-};
+use crate::state::{applicants, team_entries, ApplicantStatus, APPLICANTS_COUNT, USER_TEAMS};
 use cosmwasm_std::{Addr, Deps, Order, StdResult};
 use cw_storage_plus::Bound;
 
 /// Query a single team entry by its ID
 pub fn get_entry(deps: Deps, entry_id: u64) -> StdResult<TeamEntryResponse> {
     let entry = team_entries().load(deps.storage, entry_id)?;
-    let applicants_count = APPLICANTS_COUNT
-        .may_load(deps.storage, entry_id)?
-        .unwrap_or_default();
-    let approved_applicants_count = APPROVED_APPLICANTS_COUNT
-        .may_load(deps.storage, entry_id)?
-        .unwrap_or_default();
+    let (pending_applicants_count, approved_applicants_count, rejected_applicants_count) =
+        get_applicant_counts(deps, entry_id)?;
 
     Ok(TeamEntryResponse {
         entry_id,
         team_entry: entry,
-        applicants_count,
+        pending_applicants_count,
         approved_applicants_count,
+        rejected_applicants_count,
     })
+}
+
+fn get_applicant_counts(deps: Deps, entry_id: u64) -> StdResult<(u64, u64, u64)> {
+    let pending_applicants_count = APPLICANTS_COUNT
+        .may_load(deps.storage, (entry_id, ApplicantStatus::Default.as_str()))?
+        .unwrap_or_default();
+    let approved_applicants_count = APPLICANTS_COUNT
+        .may_load(deps.storage, (entry_id, ApplicantStatus::Approved.as_str()))?
+        .unwrap_or_default();
+    let rejected_applicants_count = APPLICANTS_COUNT
+        .may_load(
+            deps.storage,
+            (
+                entry_id,
+                ApplicantStatus::Rejected {
+                    reason: String::default(),
+                }
+                .as_str(),
+            ),
+        )?
+        .unwrap_or_default();
+
+    Ok((
+        pending_applicants_count,
+        approved_applicants_count,
+        rejected_applicants_count,
+    ))
 }
 
 /// List team entries with optional category_id and status filters
@@ -41,7 +63,7 @@ pub fn list_entries(
         }) => {
             let idx = entries.idx.category_status;
             Box::new(
-                idx.prefix((category_id.unwrap_or_default().u128(), status.to_string()))
+                idx.prefix((category_id.unwrap_or_default().u128(), status.as_str()))
                     .range(deps.storage, None, None, Order::Ascending),
             )
         }
@@ -60,18 +82,15 @@ pub fn list_entries(
         .take(lim)
         .map(|res| {
             let (entry_id, entry) = res?;
-            let applicants_count = APPLICANTS_COUNT
-                .may_load(deps.storage, entry_id)?
-                .unwrap_or_default();
-            let approved_applicants_count = APPROVED_APPLICANTS_COUNT
-                .may_load(deps.storage, entry_id)?
-                .unwrap_or_default();
+            let (pending_applicants_count, approved_applicants_count, rejected_applicants_count) =
+                get_applicant_counts(deps, entry_id)?;
 
             Ok(TeamEntryResponse {
                 entry_id,
                 team_entry: entry,
-                applicants_count,
+                pending_applicants_count,
                 approved_applicants_count,
+                rejected_applicants_count,
             })
         })
         .collect()
@@ -80,7 +99,7 @@ pub fn list_entries(
 /// Get applicant's status for a specific entry
 pub fn get_applicant(deps: Deps, entry_id: u64, applicant: String) -> StdResult<ApplicantResponse> {
     let applicant = deps.api.addr_validate(&applicant)?;
-    let status = APPLICANTS.load(deps.storage, (entry_id, &applicant))?;
+    let status = applicants().load(deps.storage, (entry_id, &applicant))?;
     Ok(ApplicantResponse { applicant, status })
 }
 
@@ -97,7 +116,7 @@ pub fn list_applicants(
         .transpose()?;
     let start_bound = start.as_ref().map(Bound::exclusive);
 
-    APPLICANTS
+    applicants()
         .prefix(entry_id)
         .range(deps.storage, start_bound, None, Order::Ascending)
         .take(lim as usize)

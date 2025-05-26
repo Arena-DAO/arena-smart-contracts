@@ -7,8 +7,8 @@ use dao_interface::state::{Admin, ModuleInstantiateInfo};
 use sha2::{Digest, Sha256};
 
 use crate::state::{
-    team_entries, ApplicantStatus, EntryStatus, TeamDaoConfig, TeamEntry, APPLICANTS,
-    APPLICANTS_COUNT, APPROVED_APPLICANTS, APPROVED_APPLICANTS_COUNT, TEAM_ENTRY_COUNT, USER_TEAMS,
+    applicants, team_entries, ApplicantStatus, EntryStatus, TeamDaoConfig, TeamEntry,
+    APPLICANTS_COUNT, TEAM_ENTRY_COUNT, USER_TEAMS,
 };
 
 pub fn create_entry(
@@ -75,19 +75,30 @@ pub fn update_entry_status(
 
         let weight = 1000;
         let mut addrs = vec![];
-        let mut members = APPROVED_APPLICANTS
-            .range(deps.storage, None, None, Order::Descending)
-            .map(|x| {
-                x.map(|((_, addr), _)| {
-                    addrs.push(addr.clone());
 
-                    Member {
-                        addr: addr.to_string(),
-                        weight,
+        // Get approved applicants using the IndexedMap
+        let mut members: Vec<Member> = applicants()
+            .idx
+            .entry_status
+            .sub_prefix(entry_id)
+            .range(deps.storage, None, None, Order::Ascending)
+            .filter_map(|item| match item {
+                Ok(((_entry_id, addr), status)) => {
+                    if matches!(status, ApplicantStatus::Approved) {
+                        addrs.push(addr.clone());
+                        Some(Ok(Member {
+                            addr: addr.to_string(),
+                            weight,
+                        }))
+                    } else {
+                        None
                     }
-                })
+                }
+                Err(e) => Some(Err(e)),
             })
             .collect::<StdResult<Vec<_>>>()?;
+
+        // Add the creator as a member
         members.push(Member {
             addr: entry.creator.to_string(),
             weight,
@@ -215,20 +226,21 @@ pub fn apply(deps: DepsMut, _env: Env, info: MessageInfo, entry_id: u64) -> StdR
 
     // Ensure the applicant has not already applied
     let applicant_key = (entry_id, &info.sender);
-    if APPLICANTS.has(deps.storage, applicant_key) {
+    if applicants().has(deps.storage, applicant_key) {
         return Err(StdError::generic_err(
             "You have already applied to this entry",
         ));
     }
 
     // Save the applicant with Default status
-    APPLICANTS.save(deps.storage, applicant_key, &ApplicantStatus::Default)?;
-    APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
+    applicants().save(deps.storage, applicant_key, &ApplicantStatus::Default)?;
+
+    // Update the count for default status
+    let count_key = (entry_id, ApplicantStatus::Default.as_str());
+    APPLICANTS_COUNT.update(deps.storage, count_key, |x| -> StdResult<u64> {
         x.unwrap_or_default()
             .checked_add(1)
-            .ok_or(StdError::generic_err(
-                "Approved applicants is at max capacity",
-            ))
+            .ok_or_else(|| StdError::generic_err("Applicant count overflow"))
     })?;
 
     Ok(Response::new()
@@ -244,7 +256,7 @@ pub fn withdraw_application(
 ) -> StdResult<Response> {
     let key = (entry_id, &info.sender);
 
-    let status = APPLICANTS
+    let status = applicants()
         .may_load(deps.storage, key)?
         .ok_or_else(|| StdError::not_found("Application"))?;
 
@@ -254,21 +266,15 @@ pub fn withdraw_application(
         ));
     }
 
-    APPLICANTS.remove(deps.storage, key);
-    if APPROVED_APPLICANTS.has(deps.storage, key) {
-        APPROVED_APPLICANTS.remove(deps.storage, key);
-        APPROVED_APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
-            x.unwrap_or_default()
-                .checked_sub(1)
-                .ok_or(StdError::generic_err(
-                    "Approved applicant count underflowed",
-                ))
-        })?;
-    }
-    APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
+    // Remove the applicant
+    applicants().remove(deps.storage, key)?;
+
+    // Update the count for the current status
+    let count_key = (entry_id, status.as_str());
+    APPLICANTS_COUNT.update(deps.storage, count_key, |x| -> StdResult<u64> {
         x.unwrap_or_default()
             .checked_sub(1)
-            .ok_or(StdError::generic_err("Applicant count underflowed"))
+            .ok_or_else(|| StdError::generic_err("Applicant count underflow"))
     })?;
 
     Ok(Response::new()
@@ -292,32 +298,32 @@ pub fn update_applicant_status(
 
     let key = (entry_id, &applicant);
 
-    let current_status = APPLICANTS
+    let current_status = applicants()
         .may_load(deps.storage, key)?
         .ok_or_else(|| StdError::not_found("Application"))?;
 
     current_status.validate_transition(&new_status)?;
 
-    if matches!(current_status, ApplicantStatus::Approved) {
-        APPROVED_APPLICANTS.remove(deps.storage, key);
-        APPROVED_APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
-            x.unwrap_or_default()
-                .checked_sub(1)
-                .ok_or(StdError::generic_err(
-                    "Approved applicant count underflowed",
-                ))
-        })?;
-    } else if matches!(new_status, ApplicantStatus::Approved) {
-        APPROVED_APPLICANTS.save(deps.storage, key, &())?;
-        APPROVED_APPLICANTS_COUNT.update(deps.storage, entry_id, |x| {
-            x.unwrap_or_default()
-                .checked_add(1)
-                .ok_or(StdError::generic_err(
-                    "Approved applicants is at max capacity",
-                ))
-        })?;
-    }
-    APPLICANTS.save(deps.storage, key, &new_status)?;
+    // Update counts - decrement old status, increment new status
+    let old_count_key = (entry_id, current_status.as_str());
+    let new_count_key = (entry_id, new_status.as_str());
+
+    // Decrement old status count
+    APPLICANTS_COUNT.update(deps.storage, old_count_key, |x| -> StdResult<u64> {
+        x.unwrap_or_default()
+            .checked_sub(1)
+            .ok_or_else(|| StdError::generic_err("Applicant count underflow"))
+    })?;
+
+    // Increment new status count
+    APPLICANTS_COUNT.update(deps.storage, new_count_key, |x| -> StdResult<u64> {
+        x.unwrap_or_default()
+            .checked_add(1)
+            .ok_or_else(|| StdError::generic_err("Applicant count overflow"))
+    })?;
+
+    // Update the applicant status
+    applicants().save(deps.storage, key, &new_status)?;
 
     Ok(Response::new()
         .add_attribute("action", "update_applicant_status")
