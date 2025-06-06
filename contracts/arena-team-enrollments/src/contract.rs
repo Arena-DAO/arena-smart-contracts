@@ -75,9 +75,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_json_binary(&get_applicant(deps, entry_id, applicant)?),
         QueryMsg::ListApplicants {
             entry_id,
+            status,
             start_after,
             limit,
-        } => to_json_binary(&list_applicants(deps, entry_id, start_after, limit)?),
+        } => to_json_binary(&list_applicants(
+            deps,
+            entry_id,
+            status,
+            start_after,
+            limit,
+        )?),
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::ListTeams {
             user,

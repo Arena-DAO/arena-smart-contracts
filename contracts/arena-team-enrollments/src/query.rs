@@ -103,28 +103,52 @@ pub fn get_applicant(deps: Deps, entry_id: u64, applicant: String) -> StdResult<
     Ok(ApplicantResponse { applicant, status })
 }
 
-/// List all applicants for a specific entry, with optional pagination.
+/// List applicants for a specific entry, optionally filtered by status and paginated.
 pub fn list_applicants(
     deps: Deps,
     entry_id: u64,
+    status: Option<ApplicantStatus>,
     start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<Vec<ApplicantResponse>> {
     let lim = limit.unwrap_or(10).min(50);
+
     let start = start_after
         .map(|addr| deps.api.addr_validate(&addr))
         .transpose()?;
-    let start_bound = start.as_ref().map(Bound::exclusive);
 
-    applicants()
-        .prefix(entry_id)
-        .range(deps.storage, start_bound, None, Order::Ascending)
-        .take(lim as usize)
-        .map(|res| {
-            let (applicant, status) = res?;
-            Ok(ApplicantResponse { applicant, status })
-        })
-        .collect()
+    let results = if let Some(status) = status {
+        let start_bound = start
+            .as_ref()
+            .map(|addr| Bound::exclusive((entry_id, addr)));
+        applicants()
+            .idx
+            .entry_status
+            .prefix((entry_id, status.as_str()))
+            .range(deps.storage, start_bound, None, Order::Ascending)
+            .take(lim as usize)
+            .map(|item| {
+                let ((_, addr), status) = item?;
+                Ok(ApplicantResponse {
+                    applicant: addr,
+                    status,
+                })
+            })
+            .collect()
+    } else {
+        let start_bound = start.as_ref().map(Bound::exclusive);
+        applicants()
+            .prefix(entry_id)
+            .range(deps.storage, start_bound, None, Order::Ascending)
+            .take(lim as usize)
+            .map(|res| {
+                let (applicant, status) = res?;
+                Ok(ApplicantResponse { applicant, status })
+            })
+            .collect()
+    };
+
+    results
 }
 
 pub fn list_user_teams(

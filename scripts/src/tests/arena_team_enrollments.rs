@@ -424,13 +424,72 @@ fn test_list_applicants() -> anyhow::Result<()> {
     // List all applicants
     let applicants = arena
         .arena_team_enrollments
-        .list_applicants(1, None, None)?;
+        .list_applicants(1, None, None, None)?;
     assert_eq!(applicants.len(), 2);
 
-    // Verify applicants are in the list
     let applicant_addrs: Vec<_> = applicants.iter().map(|a| &a.applicant).collect();
     assert!(applicant_addrs.contains(&&applicant1));
     assert!(applicant_addrs.contains(&&applicant2));
+
+    // Accept applicant1
+    arena.arena_team_enrollments.set_sender(&creator);
+    arena.arena_team_enrollments.update_applicant_status(
+        applicant1.clone(),
+        1,
+        ApplicantStatus::Approved,
+    )?;
+
+    // List only "accepted" applicants
+    let accepted = arena.arena_team_enrollments.list_applicants(
+        1,
+        None,
+        None,
+        Some(ApplicantStatus::Approved),
+    )?;
+    assert_eq!(accepted.len(), 1);
+    assert_eq!(accepted[0].applicant, applicant1);
+
+    // List only "pending" applicants
+    let pending = arena.arena_team_enrollments.list_applicants(
+        1,
+        None,
+        None,
+        Some(ApplicantStatus::Default),
+    )?;
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].applicant, applicant2);
+
+    // Reject applicant 2
+    arena.arena_team_enrollments.set_sender(&creator);
+    arena.arena_team_enrollments.update_applicant_status(
+        applicant2.clone(),
+        1,
+        ApplicantStatus::Rejected {
+            reason: "Not accepted".to_string(),
+        },
+    )?;
+
+    // List only "rejected" applicants
+    let pending = arena.arena_team_enrollments.list_applicants(
+        1,
+        None,
+        None,
+        Some(ApplicantStatus::Rejected {
+            reason: "".to_string(),
+        }),
+    )?;
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].applicant, applicant2);
+
+    // Pagination: start after applicant1
+    let paginated = arena.arena_team_enrollments.list_applicants(
+        1,
+        Some(1),
+        Some(applicant2.to_string()),
+        None,
+    )?;
+    assert_eq!(paginated.len(), 1);
+    assert_eq!(paginated[0].applicant, applicant1);
 
     Ok(())
 }

@@ -676,6 +676,16 @@
                   "string",
                   "null"
                 ]
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/ApplicantStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -735,6 +745,38 @@
       }
     ],
     "definitions": {
+      "ApplicantStatus": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "default",
+              "approved"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "rejected"
+            ],
+            "properties": {
+              "rejected": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "CategoryStatusMsg": {
         "type": "object",
         "required": [

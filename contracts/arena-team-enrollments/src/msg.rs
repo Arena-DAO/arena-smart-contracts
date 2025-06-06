@@ -68,6 +68,7 @@ pub enum QueryMsg {
     #[returns(Vec<ApplicantResponse>)]
     ListApplicants {
         entry_id: u64,
+        status: Option<ApplicantStatus>,
         start_after: Option<String>,
         limit: Option<u32>,
     },
