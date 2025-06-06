@@ -1003,6 +1003,8 @@ fn test_dao_host_config() -> anyhow::Result<()> {
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
         use_dao_host: Some(arena_interface::competition::types::DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,

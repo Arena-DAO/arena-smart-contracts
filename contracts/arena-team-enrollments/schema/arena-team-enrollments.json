@@ -428,6 +428,14 @@
             "format": "uint64",
             "minimum": 0.0
           },
+          "dao_description": {
+            "default": "Competition Description",
+            "type": "string"
+          },
+          "dao_name": {
+            "default": "Competition DAO",
+            "type": "string"
+          },
           "image_url": {
             "type": [
               "string",
@@ -1055,6 +1063,14 @@
               "format": "uint64",
               "minimum": 0.0
             },
+            "dao_description": {
+              "default": "Competition Description",
+              "type": "string"
+            },
+            "dao_name": {
+              "default": "Competition DAO",
+              "type": "string"
+            },
             "image_url": {
               "type": [
                 "string",
@@ -1354,6 +1370,14 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
+            },
+            "dao_description": {
+              "default": "Competition Description",
+              "type": "string"
+            },
+            "dao_name": {
+              "default": "Competition DAO",
+              "type": "string"
             },
             "image_url": {
               "type": [

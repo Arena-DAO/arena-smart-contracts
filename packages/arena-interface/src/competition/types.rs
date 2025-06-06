@@ -99,6 +99,10 @@ pub struct EnrollmentEntryResponse {
 
 #[cw_serde]
 pub struct DaoConfig {
+    #[serde(default = "default_name")]
+    pub dao_name: String,
+    #[serde(default = "default_desc")]
+    pub dao_description: String,
     pub dao_code_id: u64,
     pub cw4_voting_code_id: u64,
     pub proposal_single_code_id: u64,
@@ -106,6 +110,13 @@ pub struct DaoConfig {
     pub threshold: Threshold,
     pub max_voting_period: Duration,
     pub image_url: Option<String>,
+}
+
+fn default_name() -> String {
+    "Competition DAO".into()
+}
+fn default_desc() -> String {
+    "Competition Description".into()
 }
 
 #[cw_serde]

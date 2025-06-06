@@ -21,6 +21,8 @@ fn test_create_entry() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -74,6 +76,8 @@ fn test_list_entries() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -137,6 +141,8 @@ fn test_update_entry_status() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -194,6 +200,8 @@ fn test_apply_to_entry() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -256,6 +264,8 @@ fn test_update_applicant_status() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -335,6 +345,8 @@ fn test_withdraw_application() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -390,6 +402,8 @@ fn test_list_applicants() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -506,6 +520,8 @@ fn test_applicant_count_tracking() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -618,6 +634,8 @@ fn test_list_user_teams() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -682,6 +700,8 @@ fn test_entry_status_transitions() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -739,6 +759,8 @@ fn test_apply_to_closed_entry() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
@@ -782,6 +804,8 @@ fn test_reject_and_withdraw_flow() -> anyhow::Result<()> {
 
     let dao_config = TeamDaoConfig {
         dao_config: DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,

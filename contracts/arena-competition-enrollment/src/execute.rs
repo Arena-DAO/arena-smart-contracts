@@ -438,8 +438,8 @@ pub fn finalize(
             label: format!("dao_{}", id),
             msg: to_json_binary(&dao_interface::msg::InstantiateMsg {
                 admin: None,
-                name: format!("Competition DAO {}", id),
-                description: format!("DAO for competition {}", id),
+                name: dao_config.dao_name.clone(),
+                description: dao_config.dao_description.clone(),
                 automatically_add_cw20s: false,
                 automatically_add_cw721s: false,
                 voting_module_instantiate_info: voting_instantiate,

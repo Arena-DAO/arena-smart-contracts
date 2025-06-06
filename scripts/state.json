@@ -31,14 +31,14 @@
   },
   "pion-1": {
     "code_ids": {
-      "arena_competition_enrollment": 11936,
+      "arena_competition_enrollment": 12080,
       "arena_core": 11791,
       "arena_discord_identity": 8604,
       "arena_escrow": 11799,
       "arena_group": 11797,
       "arena_league_module": 11795,
       "arena_payment_registry": 11798,
-      "arena_team_enrollments": 11949,
+      "arena_team_enrollments": 12079,
       "arena_token_gateway": 8729,
       "arena_tournament_module": 11796,
       "arena_wager_module": 11794,

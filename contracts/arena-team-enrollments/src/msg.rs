@@ -13,6 +13,7 @@ pub struct InstantiateMsg {
 }
 
 /// Execute messages for the contract
+#[allow(clippy::large_enum_variant)]
 #[cw_ownable::cw_ownable_execute]
 #[derive(cw_orch::ExecuteFns)]
 #[cw_serde]
