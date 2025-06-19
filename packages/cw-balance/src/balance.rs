@@ -1,5 +1,8 @@
 use crate::{is_contract, BalanceError, Cw721Collection, Distribution, MemberBalanceChecked};
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{
+    cw_serde,
+    schemars::{schema::SchemaObject, JsonSchema},
+};
 use cosmwasm_std::{
     to_json_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, Empty, StdError, StdResult,
     Uint128, WasmMsg,
@@ -74,15 +77,159 @@ pub(crate) fn fold_cw721_collections(
     )
 }
 
-#[cw_serde]
-#[derive(Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct BalanceVerified {
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub native: BTreeMap<String, Uint128>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub cw20: BTreeMap<Addr, Uint128>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub cw721: BTreeMap<Addr, BTreeSet<String>>,
+}
+
+impl serde::Serialize for BalanceVerified {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("BalanceVerified", 3)?;
+
+        if !self.native.is_empty() {
+            state.serialize_field("native", &self.native)?;
+        }
+
+        if !self.cw20.is_empty() {
+            let cw20_strings: BTreeMap<String, Uint128> = self
+                .cw20
+                .iter()
+                .map(|(addr, amount)| (addr.to_string(), *amount))
+                .collect();
+            state.serialize_field("cw20", &cw20_strings)?;
+        }
+
+        if !self.cw721.is_empty() {
+            let cw721_strings: BTreeMap<String, BTreeSet<String>> = self
+                .cw721
+                .iter()
+                .map(|(addr, tokens)| (addr.to_string(), tokens.clone()))
+                .collect();
+            state.serialize_field("cw721", &cw721_strings)?;
+        }
+
+        state.end()
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BalanceVerified {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{self, MapAccess, Visitor};
+        use std::fmt;
+
+        struct BalanceVerifiedVisitor;
+
+        impl<'de> Visitor<'de> for BalanceVerifiedVisitor {
+            type Value = BalanceVerified;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct BalanceVerified")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<BalanceVerified, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut native = None;
+                let mut cw20 = None;
+                let mut cw721 = None;
+
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "native" => {
+                            if native.is_some() {
+                                return Err(de::Error::duplicate_field("native"));
+                            }
+                            native = Some(map.next_value::<BTreeMap<String, Uint128>>()?);
+                        }
+                        "cw20" => {
+                            if cw20.is_some() {
+                                return Err(de::Error::duplicate_field("cw20"));
+                            }
+                            let cw20_strings: BTreeMap<String, Uint128> = map.next_value()?;
+                            let cw20_addrs: BTreeMap<Addr, Uint128> = cw20_strings
+                                .into_iter()
+                                .map(|(addr_str, amount)| (Addr::unchecked(addr_str), amount))
+                                .collect();
+                            cw20 = Some(cw20_addrs);
+                        }
+                        "cw721" => {
+                            if cw721.is_some() {
+                                return Err(de::Error::duplicate_field("cw721"));
+                            }
+                            let cw721_strings: BTreeMap<String, BTreeSet<String>> =
+                                map.next_value()?;
+                            let cw721_addrs: BTreeMap<Addr, BTreeSet<String>> = cw721_strings
+                                .into_iter()
+                                .map(|(addr_str, tokens)| (Addr::unchecked(addr_str), tokens))
+                                .collect();
+                            cw721 = Some(cw721_addrs);
+                        }
+                        _ => {
+                            // Ignore unknown fields
+                            map.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+
+                Ok(BalanceVerified {
+                    native: native.unwrap_or_default(),
+                    cw20: cw20.unwrap_or_default(),
+                    cw721: cw721.unwrap_or_default(),
+                })
+            }
+        }
+
+        deserializer.deserialize_struct(
+            "BalanceVerified",
+            &["native", "cw20", "cw721"],
+            BalanceVerifiedVisitor,
+        )
+    }
+}
+
+impl JsonSchema for BalanceVerified {
+    fn schema_name() -> String {
+        "BalanceVerified".to_string()
+    }
+
+    fn json_schema(
+        gen: &mut cosmwasm_schema::schemars::gen::SchemaGenerator,
+    ) -> cosmwasm_schema::schemars::schema::Schema {
+        use cosmwasm_schema::schemars::{schema::InstanceType, schema::Schema};
+        use std::collections::BTreeMap;
+
+        let mut schema = SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            ..Default::default()
+        };
+
+        let mut properties = BTreeMap::new();
+        properties.insert(
+            "native".to_string(),
+            BTreeMap::<String, Uint128>::json_schema(gen),
+        );
+        properties.insert(
+            "cw20".to_string(),
+            BTreeMap::<String, Uint128>::json_schema(gen),
+        );
+        properties.insert(
+            "cw721".to_string(),
+            BTreeMap::<String, BTreeSet<String>>::json_schema(gen),
+        );
+
+        schema.object().properties = properties;
+        Schema::Object(schema)
+    }
 }
 
 impl BalanceVerified {
