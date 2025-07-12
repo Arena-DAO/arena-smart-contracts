@@ -1,29 +1,23 @@
 #!/bin/bash
+set -euo pipefail
 
-# Change directory to ./contracts
-cd ./contracts
+# Auto-detect CPU cores for optimal parallelism
+MAX_JOBS=${MAX_JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}
 
-# Check if the directory change was successful
-if [ $? -ne 0 ]; then
-    echo "Failed to change directory to ./contracts. Exiting."
-    exit 1
-fi
+echo "Running schema generation with $MAX_JOBS parallel jobs..."
 
-# Iterate over each subdirectory in the current directory
-for dir in */; do
-    # Change directory to subdirectory
-    cd "$dir"
+# Generate schemas in parallel using xargs
+find ./contracts -maxdepth 1 -type d -name "*" ! -name "contracts" | \
+    xargs -I {} -P "$MAX_JOBS" bash -c '
+        dir=$(basename {})
+        echo "Executing cargo schema in $dir"
+        cd {} && cargo schema --quiet
+        echo "✓ Completed $dir"
+    '
 
-    # Execute cargo schema
-    echo "Executing cargo schema in $dir"
-    cargo schema
+echo "All schemas generated. Running codegen..."
 
-    # Return to the parent directory
-    cd ..
-
-    echo "Completed $dir"
-done
-
-cd ../scripts
-npm i
+# Continue with JS steps
+cd scripts
+npm ci --silent
 npm run gen

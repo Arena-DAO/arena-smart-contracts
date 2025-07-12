@@ -1,6 +1,10 @@
 use crate::{
+    balance_manager::BalanceManager,
     execute, migrate, query,
-    state::{self, DUE, ENROLLMENT_CONTRACT, INITIAL_DUE, IS_LOCKED},
+    state::{
+        self, DUE_CW20, DUE_CW721, DUE_NATIVE, ENROLLMENT_CONTRACT, INITIAL_DUE_CW20,
+        INITIAL_DUE_CW721, INITIAL_DUE_NATIVE, IS_LOCKED,
+    },
     ContractError,
 };
 use arena_interface::escrow::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -28,7 +32,7 @@ pub fn instantiate(
 }
 
 pub fn instantiate_contract(
-    deps: DepsMut,
+    mut deps: DepsMut,
     info: &MessageInfo,
     dues: Vec<MemberBalanceUnchecked>,
     is_enrollment: bool,
@@ -41,19 +45,33 @@ pub fn instantiate_contract(
     } else {
         IS_LOCKED.save(deps.storage, &false)?;
     }
+
+    // Safely bind all maps before creating the managers
+    let initial_due_native_map = &INITIAL_DUE_NATIVE;
+    let initial_due_cw20_map = &INITIAL_DUE_CW20;
+    let initial_due_cw721_map = &INITIAL_DUE_CW721;
+    let initial_due_manager = BalanceManager::new(
+        initial_due_native_map,
+        initial_due_cw20_map,
+        initial_due_cw721_map,
+    );
+
+    let due_native_map = &DUE_NATIVE;
+    let due_cw20_map = &DUE_CW20;
+    let due_cw721_map = &DUE_CW721;
+    let due_manager = BalanceManager::new(due_native_map, due_cw20_map, due_cw721_map);
+
+    // Process each member's balance
     for member_balance in dues {
         let member_balance = member_balance.into_checked(deps.as_ref())?;
 
-        if INITIAL_DUE.has(deps.storage, &member_balance.addr) {
-            return Err(ContractError::StdError(
-                cosmwasm_std::StdError::GenericErr {
-                    msg: "Cannot have duplicate addresses in dues".to_string(),
-                },
-            ));
-        }
-
-        INITIAL_DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
-        DUE.save(deps.storage, &member_balance.addr, &member_balance.balance)?;
+        // Save to both initial dues and due balances
+        initial_due_manager.save_balance(
+            deps.branch(),
+            &member_balance.addr,
+            &member_balance.balance,
+        )?;
+        due_manager.save_balance(deps.branch(), &member_balance.addr, &member_balance.balance)?;
     }
 
     Ok(())

@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-core",
-  "contract_version": "2.4.0",
+  "contract_version": "3.0.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -103,7 +103,8 @@
           "denom": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
@@ -275,7 +276,6 @@
         "type": "object",
         "required": [
           "code_id",
-          "funds",
           "label",
           "msg"
         ],
@@ -299,7 +299,10 @@
           },
           "funds": {
             "description": "Funds to be sent to the instantiated contract.",
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Coin"
             }
@@ -313,6 +316,17 @@
             "allOf": [
               {
                 "$ref": "#/definitions/Binary"
+              }
+            ]
+          },
+          "salt": {
+            "description": "Salt to use with instantiate2, if defined. Otherwise uses normal instantiate.",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -842,7 +856,8 @@
           "denom": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
@@ -1346,7 +1361,6 @@
         "type": "object",
         "required": [
           "code_id",
-          "funds",
           "label",
           "msg"
         ],
@@ -1370,7 +1384,10 @@
           },
           "funds": {
             "description": "Funds to be sent to the instantiated contract.",
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Coin"
             }
@@ -1384,6 +1401,17 @@
             "allOf": [
               {
                 "$ref": "#/definitions/Binary"
+              }
+            ]
+          },
+          "salt": {
+            "description": "Salt to use with instantiate2, if defined. Otherwise uses normal instantiate.",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -2640,7 +2668,8 @@
               }
             ]
           }
-        }
+        },
+        "additionalProperties": false
       },
       "CompetitionCategory": {
         "type": "object",

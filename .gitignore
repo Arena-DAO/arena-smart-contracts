@@ -41,3 +41,4 @@ typescript/**
 .env.keys
 scripts/node_modules/
 scripts/codegen/
+.claude/

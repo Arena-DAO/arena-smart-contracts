@@ -18,51 +18,6 @@ pub fn setup_arena(mock: &MockBech32) -> anyhow::Result<(Arena<MockBech32>, Addr
     Ok((arena, admin))
 }
 
-#[cfg(feature = "abc")]
-pub fn setup_vesting(
-    arena: &Arena<MockBech32>,
-    chain_id: String,
-    admin: &Addr,
-) -> anyhow::Result<()> {
-    // Set up the payroll widget
-    arena.dao_dao.cw_payroll_factory.instantiate(
-        &cw_payroll_factory::msg::InstantiateMsg {
-            owner: Some(arena.dao_dao.dao_core.addr_str()?),
-            vesting_code_id: arena.dao_dao.cw_vesting.code_id()?,
-        },
-        Some(&arena.dao_dao.dao_core.address()?),
-        None,
-    )?;
-
-    let item_value = serde_json::to_string(&PayrollData {
-        factories: Factories {
-            chain_factories: [(
-                chain_id,
-                PayrollFactory {
-                    address: arena.dao_dao.cw_payroll_factory.addr_str()?,
-                    version: 2,
-                },
-            )]
-            .into_iter()
-            .collect(),
-        },
-    })?;
-    arena
-        .dao_dao
-        .dao_proposal_sudo
-        .call_as(admin)
-        .proposal_execute(vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: arena.dao_dao.dao_core.addr_str()?,
-            msg: to_json_binary(&dao_interface::msg::ExecuteMsg::SetItem {
-                key: "widget:vesting".to_string(),
-                value: item_value,
-            })?,
-            funds: vec![],
-        })])?;
-
-    Ok(())
-}
-
 pub fn setup_voting_module(
     mock: &MockBech32,
     arena: &Arena<MockBech32>,
@@ -78,11 +33,13 @@ pub fn setup_voting_module(
                 group_contract: GroupContract::New {
                     cw4_group_code_id: arena.cw4_group.code_id()?,
                     initial_members,
+                    cw4_group_salt: None,
                 },
             })?,
             admin: Some(Admin::CoreModule {}),
-            funds: vec![],
+            funds: None,
             label: "DAO Voting CW4".to_owned(),
+            salt: None,
         })?;
 
     // Set the voting module address

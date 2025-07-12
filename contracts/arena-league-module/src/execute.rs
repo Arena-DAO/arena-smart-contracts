@@ -192,9 +192,7 @@ pub fn process_matches(
                     m.result = Some(match_result.match_result);
                     Ok(m)
                 }
-                None => Err(ContractError::StdError(StdError::NotFound {
-                    kind: "Match".to_string(),
-                })),
+                None => Err(ContractError::StdError(StdError::not_found("Match"))),
             }
         })?;
     }
@@ -404,9 +402,9 @@ pub fn update_distribution(
         ));
     }
     if distribution.len() as u64 > league.extension.teams.u64() {
-        return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "Cannot have a distribution size bigger than the teams size".to_string(),
-        }));
+        return Err(ContractError::StdError(StdError::generic_err(
+            "Cannot have a distribution size bigger than the teams size",
+        )));
     }
     if distribution.iter().sum::<Decimal>() != Decimal::one() {
         return Err(ContractError::StdError(StdError::generic_err(

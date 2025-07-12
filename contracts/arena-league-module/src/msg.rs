@@ -107,14 +107,12 @@ impl ToCompetitionExt<LeagueExt> for LeagueInstantiateExt {
             &group::QueryMsg::MembersCount {},
         )?;
         if team_count < Uint64::new(2) {
-            return Err(StdError::GenericErr {
-                msg: "At least 2 teams should be provided".to_string(),
-            });
+            return Err(StdError::generic_err("At least 2 teams should be provided"));
         }
         if Uint64::new(self.distribution.len() as u64) > team_count {
-            return Err(StdError::GenericErr {
-                msg: "Cannot have a distribution size bigger than the teams size".to_string(),
-            });
+            return Err(StdError::generic_err(
+                "Cannot have a distribution size bigger than the teams size",
+            ));
         }
         if self.distribution.iter().sum::<Decimal>() != Decimal::one() {
             return Err(StdError::generic_err("The distribution must sum up to 1"));

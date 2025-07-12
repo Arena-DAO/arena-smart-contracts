@@ -14,8 +14,7 @@ impl IndexList<DiscordProfile> for DiscordProfileIndexes<'_> {
     }
 }
 
-pub fn discord_identity<'a>() -> IndexedMap<'a, &'a Addr, DiscordProfile, DiscordProfileIndexes<'a>>
-{
+pub fn discord_identity<'a>() -> IndexedMap<&'a Addr, DiscordProfile, DiscordProfileIndexes<'a>> {
     let indexes = DiscordProfileIndexes {
         discord_id: MultiIndex::new(
             |_, d: &DiscordProfile| d.user_id.u64(),

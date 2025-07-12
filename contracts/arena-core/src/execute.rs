@@ -77,9 +77,9 @@ pub fn update_competition_modules(
 
 pub fn update_tax(deps: DepsMut, env: &Env, tax: Decimal) -> Result<Response, ContractError> {
     if tax >= Decimal::one() {
-        return Err(ContractError::StdError(StdError::GenericErr {
-            msg: "The dao tax must be less than 100%.".to_string(),
-        }));
+        return Err(ContractError::StdError(StdError::generic_err(
+            "The dao tax must be less than 100%.",
+        )));
     }
 
     TAX.save(deps.storage, &tax, env.block.height)?;
@@ -98,9 +98,10 @@ pub fn update_rulesets(
     if let Some(to_disable) = to_disable {
         for id in to_disable {
             rulesets().update(deps.storage, id.u128(), |maybe_ruleset| -> StdResult<_> {
-                let mut ruleset = maybe_ruleset.ok_or(StdError::GenericErr {
-                    msg: format!("Could not find a ruleset with the id {}", id),
-                })?;
+                let mut ruleset = maybe_ruleset.ok_or(StdError::generic_err(format!(
+                    "Could not find a ruleset with the id {}",
+                    id
+                )))?;
                 ruleset.is_enabled = false;
                 Ok(ruleset)
             })?;
@@ -306,8 +307,15 @@ pub fn update_categories(
                 EditCompetitionCategory::Disable { category_id } => category_id,
                 EditCompetitionCategory::Edit {
                     category_id,
-                    name: _,
-                } => category_id,
+                    ref name,
+                } => {
+                    if name.is_empty() {
+                        return Err(ContractError::StdError(StdError::generic_err(
+                            "Category name cannot be empty",
+                        )));
+                    }
+                    category_id
+                }
             };
             competition_categories().update(
                 deps.storage,
@@ -339,6 +347,12 @@ pub fn update_categories(
     if let Some(to_add) = to_add {
         let mut current_id = COMPETITION_CATEGORIES_COUNT.load(deps.storage)?;
         for category in to_add {
+            if category.name.is_empty() {
+                return Err(ContractError::StdError(StdError::generic_err(
+                    "Category name cannot be empty",
+                )));
+            }
+
             current_id = current_id.checked_add(Uint128::one())?;
 
             let new_category = CompetitionCategory {

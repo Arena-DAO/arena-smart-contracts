@@ -1,61 +1,61 @@
 {
-  "neutron": {
-    "neutron-1": {
-      "code_ids": {
-        "arena_competition_enrollment": 3551,
-        "arena_core": 3187,
-        "arena_discord_identity": 2926,
-        "arena_escrow": 3455,
-        "arena_group": 3186,
-        "arena_league_module": 3367,
-        "arena_payment_registry": 2927,
-        "arena_token_gateway": 2222,
-        "arena_tournament_module": 3454,
-        "arena_wager_module": 3366,
-        "cw_abc": 2042,
-        "cw_payroll_factory": 2052,
-        "dao_dao_core": 2852
-      },
-      "default": {
-        "arena_competition_enrollment": "neutron1zj7yjvj0epy79wtazr84h347jhysz7c0jxp6ys64z7eawah76vksjlgl7c",
-        "arena_core": "neutron10dlj2a9p7e4q0hh8dljw6q8t6x4rg5c32w5wjwngfcgy96ygtm8qgsap9c",
-        "arena_discord_identity": "neutron1trp2yfy9meae6nkux7dp8mwkf5ztks3gpkdjqv0xewevqvspktrsgztphp",
-        "arena_escrow": "neutron1gjljuas7xxne9payj3gmc7du7n5rknn8vv8w8ct9rew3h69rgk8qx2tvzx",
-        "arena_league_module": "neutron1tvatc5rpe3g5w9n4w4839wc4qv6tnwuu4l3y2t8kaxwnlzzsmwgqevkmjk",
-        "arena_payment_registry": "neutron1gjljuas7xxne9payj3gmc7du7n5rknn8vv8w8ct9rew3h69rgk8qx2tvzx",
-        "arena_token_gateway": "neutron15v7gqer0r3c20nlr5s46sfgzepk3z3k7y03605jtvkgn3rjua2gqh2lzaf",
-        "arena_tournament_module": "neutron1yfsr8h06eg6dyglqp6ls02ah4u2z5gt7fm5khuy98tzmnrw2vu6s7hp8qg",
-        "arena_wager_module": "neutron1kqn38z9m8tff858eynszc2p2ftqyln0fpxe5kkm3al784fuytr5qurhzru",
-        "dao_dao_core": "neutron1r6n0effjs6wv0pdcq2wk7nwn4qmahsqvvu9lnj08hhw8pzt9t0lsr8rccf"
-      }
+  "neutron-1": {
+    "code_ids": {
+      "arena_competition_enrollment": 3603,
+      "arena_core": 3601,
+      "arena_discord_identity": 3608,
+      "arena_escrow": 3610,
+      "arena_group": 3607,
+      "arena_league_module": 3605,
+      "arena_payment_registry": 3609,
+      "arena_team_enrollments": 3659,
+      "arena_token_gateway": 2222,
+      "arena_tournament_module": 3606,
+      "arena_wager_module": 3604,
+      "cw_abc": 2042,
+      "cw_payroll_factory": 2052,
+      "dao_dao_core": 2852
     },
-    "pion-1": {
-      "code_ids": {
-        "arena_competition_enrollment": 10864,
-        "arena_core": 10813,
-        "arena_discord_identity": 8604,
-        "arena_escrow": 8735,
-        "arena_group": 10811,
-        "arena_league_module": 8741,
-        "arena_payment_registry": 8734,
-        "arena_token_gateway": 8729,
-        "arena_tournament_module": 8742,
-        "arena_wager_module": 8740,
-        "cw_abc": 6824,
-        "cw_payroll_factory": 6832,
-        "dao_dao_core": 8679
-      },
-      "default": {
-        "arena_competition_enrollment": "neutron16gtf438zpdu09zft6wdttcg5x648xwv88ljfw3gxgr4rjmfxlrdq7n4sxy",
-        "arena_core": "neutron1m94yvyqdexyw5ydvdv5txwu72tl08hr5gvn53u87y08jhchr3w0q4vseca",
-        "arena_group": "neutron1pzh32kr9r4gl0fcgrp69f4us2he5zysfzta096lg932fu6qr4s6srk8atv",
-        "arena_league_module": "neutron1pzh32kr9r4gl0fcgrp69f4us2he5zysfzta096lg932fu6qr4s6srk8atv",
-        "arena_payment_registry": "neutron1rjchvdxmrz3tny5wffm0ekk9672gv8f0pvkk3taxa23d2lyyzh5qt3w2e2",
-        "arena_token_gateway": "neutron1yx4q5esj6mkt9chuex6wgym8pvcqq2n8dj5w9xhhklf3nps9xfesz4lyef",
-        "arena_tournament_module": "neutron1trp2yfy9meae6nkux7dp8mwkf5ztks3gpkdjqv0xewevqvspktrsgztphp",
-        "arena_wager_module": "neutron16nl0tcwt9qujavdakft7ddyw4pwzh5nuzn35tke9m4yfu462z99q6yj66n",
-        "dao_dao_core": "neutron1ehkcl0n6s2jtdw75xsvfxm304mz4hs5z7jt6wn5mk0celpj0epqql4ulxk"
-      }
+    "default": {
+      "arena_competition_enrollment": "neutron1zj7yjvj0epy79wtazr84h347jhysz7c0jxp6ys64z7eawah76vksjlgl7c",
+      "arena_core": "neutron10dlj2a9p7e4q0hh8dljw6q8t6x4rg5c32w5wjwngfcgy96ygtm8qgsap9c",
+      "arena_discord_identity": "neutron1trp2yfy9meae6nkux7dp8mwkf5ztks3gpkdjqv0xewevqvspktrsgztphp",
+      "arena_escrow": "neutron1gjljuas7xxne9payj3gmc7du7n5rknn8vv8w8ct9rew3h69rgk8qx2tvzx",
+      "arena_league_module": "neutron1tvatc5rpe3g5w9n4w4839wc4qv6tnwuu4l3y2t8kaxwnlzzsmwgqevkmjk",
+      "arena_payment_registry": "neutron1gjljuas7xxne9payj3gmc7du7n5rknn8vv8w8ct9rew3h69rgk8qx2tvzx",
+      "arena_token_gateway": "neutron15v7gqer0r3c20nlr5s46sfgzepk3z3k7y03605jtvkgn3rjua2gqh2lzaf",
+      "arena_tournament_module": "neutron1yfsr8h06eg6dyglqp6ls02ah4u2z5gt7fm5khuy98tzmnrw2vu6s7hp8qg",
+      "arena_wager_module": "neutron1kqn38z9m8tff858eynszc2p2ftqyln0fpxe5kkm3al784fuytr5qurhzru",
+      "dao_dao_core": "neutron1r6n0effjs6wv0pdcq2wk7nwn4qmahsqvvu9lnj08hhw8pzt9t0lsr8rccf"
+    }
+  },
+  "pion-1": {
+    "code_ids": {
+      "arena_competition_enrollment": 12080,
+      "arena_core": 11791,
+      "arena_discord_identity": 8604,
+      "arena_escrow": 12203,
+      "arena_group": 11797,
+      "arena_league_module": 11795,
+      "arena_payment_registry": 11798,
+      "arena_team_enrollments": 12079,
+      "arena_token_gateway": 8729,
+      "arena_tournament_module": 11796,
+      "arena_wager_module": 11794,
+      "cw_abc": 6824,
+      "cw_payroll_factory": 6832,
+      "dao_dao_core": 8679
+    },
+    "default": {
+      "arena_competition_enrollment": "neutron16gtf438zpdu09zft6wdttcg5x648xwv88ljfw3gxgr4rjmfxlrdq7n4sxy",
+      "arena_core": "neutron1m94yvyqdexyw5ydvdv5txwu72tl08hr5gvn53u87y08jhchr3w0q4vseca",
+      "arena_group": "neutron1pzh32kr9r4gl0fcgrp69f4us2he5zysfzta096lg932fu6qr4s6srk8atv",
+      "arena_league_module": "neutron1pzh32kr9r4gl0fcgrp69f4us2he5zysfzta096lg932fu6qr4s6srk8atv",
+      "arena_payment_registry": "neutron1rjchvdxmrz3tny5wffm0ekk9672gv8f0pvkk3taxa23d2lyyzh5qt3w2e2",
+      "arena_token_gateway": "neutron1yx4q5esj6mkt9chuex6wgym8pvcqq2n8dj5w9xhhklf3nps9xfesz4lyef",
+      "arena_tournament_module": "neutron1trp2yfy9meae6nkux7dp8mwkf5ztks3gpkdjqv0xewevqvspktrsgztphp",
+      "arena_wager_module": "neutron16nl0tcwt9qujavdakft7ddyw4pwzh5nuzn35tke9m4yfu462z99q6yj66n",
+      "dao_dao_core": "neutron1ehkcl0n6s2jtdw75xsvfxm304mz4hs5z7jt6wn5mk0celpj0epqql4ulxk"
     }
   }
 }

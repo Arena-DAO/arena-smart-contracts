@@ -50,7 +50,7 @@ impl IndexList<CompetitionModule> for CompetitionModuleIndexes<'_> {
 }
 
 pub fn competition_modules<'a>(
-) -> IndexedMap<'a, &'a Addr, CompetitionModule, CompetitionModuleIndexes<'a>> {
+) -> IndexedMap<&'a Addr, CompetitionModule, CompetitionModuleIndexes<'a>> {
     let indexes = CompetitionModuleIndexes {
         is_enabled: MultiIndex::new(
             |_x, d: &CompetitionModule| d.is_enabled.to_string(),
@@ -75,7 +75,7 @@ impl IndexList<CompetitionCategory> for CompetitionCategoryIndexes<'_> {
 }
 
 pub fn competition_categories<'a>(
-) -> IndexedMap<'a, u128, CompetitionCategory, CompetitionCategoryIndexes<'a>> {
+) -> IndexedMap<u128, CompetitionCategory, CompetitionCategoryIndexes<'a>> {
     let indexes = CompetitionCategoryIndexes {
         is_enabled: MultiIndex::new(
             |_x, d: &CompetitionCategory| d.is_enabled.to_string(),
@@ -103,7 +103,7 @@ impl IndexList<Ruleset> for RulesetIndexes<'_> {
     }
 }
 
-pub fn rulesets<'a>() -> IndexedMap<'a, u128, Ruleset, RulesetIndexes<'a>> {
+pub fn rulesets<'a>() -> IndexedMap<u128, Ruleset, RulesetIndexes<'a>> {
     let indexes = RulesetIndexes {
         category_and_is_enabled: MultiIndex::new(
             |_x, d: &Ruleset| get_rulesets_category_and_is_enabled_idx(d.category_id, d.is_enabled),
@@ -128,7 +128,7 @@ impl IndexList<Rating> for RatingIndexes<'_> {
 }
 
 // Ratings are stored by category id and address
-pub fn ratings<'a>() -> IndexedMap<'a, (u128, &'a Addr), Rating, RatingIndexes<'a>> {
+pub fn ratings<'a>() -> IndexedMap<(u128, &'a Addr), Rating, RatingIndexes<'a>> {
     let indexes = RatingIndexes {
         rating: MultiIndex::new(
             |_x, d: &Rating| d.value.atomics().u128(),

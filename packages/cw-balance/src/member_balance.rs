@@ -12,6 +12,7 @@ pub struct MemberBalanceChecked {
 #[cw_serde]
 pub struct MemberBalanceUnchecked {
     pub addr: String,
+    #[serde(flatten)]
     pub balance: BalanceUnchecked,
 }
 

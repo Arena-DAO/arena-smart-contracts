@@ -1,6 +1,6 @@
 {
   "contract_name": "arena-competition-enrollment",
-  "contract_version": "2.4.0",
+  "contract_version": "3.0.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -536,7 +536,8 @@
           "denom": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "CompetitionInfoMsg": {
         "type": "object",
@@ -689,6 +690,20 @@
             "type": "integer",
             "format": "uint64",
             "minimum": 0.0
+          },
+          "dao_description": {
+            "default": "Competition Description",
+            "type": "string"
+          },
+          "dao_name": {
+            "default": "Competition DAO",
+            "type": "string"
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "max_voting_period": {
             "$ref": "#/definitions/Duration"
@@ -1059,7 +1074,6 @@
         "type": "object",
         "required": [
           "code_id",
-          "funds",
           "label",
           "msg"
         ],
@@ -1083,7 +1097,10 @@
           },
           "funds": {
             "description": "Funds to be sent to the instantiated contract.",
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/definitions/Coin"
             }
@@ -1097,6 +1114,17 @@
             "allOf": [
               {
                 "$ref": "#/definitions/Binary"
+              }
+            ]
+          },
+          "salt": {
+            "description": "Salt to use with instantiate2, if defined. Otherwise uses normal instantiate.",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -1491,7 +1519,8 @@
           "denom": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "CompetitionInfoResponse": {
         "type": "object",
@@ -1671,6 +1700,20 @@
             "type": "integer",
             "format": "uint64",
             "minimum": 0.0
+          },
+          "dao_description": {
+            "default": "Competition Description",
+            "type": "string"
+          },
+          "dao_name": {
+            "default": "Competition DAO",
+            "type": "string"
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "max_voting_period": {
             "$ref": "#/definitions/Duration"
@@ -2133,7 +2176,8 @@
             "denom": {
               "type": "string"
             }
-          }
+          },
+          "additionalProperties": false
         },
         "CompetitionInfoResponse": {
           "type": "object",
@@ -2313,6 +2357,20 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
+            },
+            "dao_description": {
+              "default": "Competition Description",
+              "type": "string"
+            },
+            "dao_name": {
+              "default": "Competition DAO",
+              "type": "string"
+            },
+            "image_url": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "max_voting_period": {
               "$ref": "#/definitions/Duration"
@@ -2598,7 +2656,8 @@
             "denom": {
               "type": "string"
             }
-          }
+          },
+          "additionalProperties": false
         },
         "CompetitionInfoResponse": {
           "type": "object",
@@ -2778,6 +2837,20 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
+            },
+            "dao_description": {
+              "default": "Competition Description",
+              "type": "string"
+            },
+            "dao_name": {
+              "default": "Competition DAO",
+              "type": "string"
+            },
+            "image_url": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "max_voting_period": {
               "$ref": "#/definitions/Duration"

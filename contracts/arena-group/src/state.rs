@@ -31,7 +31,7 @@ pub const MEMBER_COUNT: SnapshotItem<Uint64> = SnapshotItem::new(
     "member_count__change",
     cw_storage_plus::Strategy::EveryBlock,
 );
-pub fn members<'a>() -> IndexedSnapshotMap<'a, &'a Addr, MemberData, MemberIndexes<'a>> {
+pub fn members<'a>() -> IndexedSnapshotMap<&'a Addr, MemberData, MemberIndexes<'a>> {
     let indexes = MemberIndexes {
         seed: MultiIndex::new(|_, d| d.seed.u64(), "members", "members__seed"),
     };

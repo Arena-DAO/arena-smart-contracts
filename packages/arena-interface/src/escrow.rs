@@ -2,7 +2,7 @@ use crate::fees::FeeInformation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Coin};
 use cw20::Cw20ReceiveMsg;
-use cw721::Cw721ReceiveMsg;
+use cw721::receiver::Cw721ReceiveMsg;
 #[allow(unused_imports)]
 use cw_balance::{
     BalanceVerified, Distribution, MemberBalanceChecked, MemberBalanceUnchecked, MemberPercentage,
@@ -61,9 +61,9 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    #[returns(Option<BalanceVerified>)]
+    #[returns(BalanceVerified)]
     Balance { addr: String },
-    #[returns(Option<BalanceVerified>)]
+    #[returns(BalanceVerified)]
     Due { addr: String },
     #[returns(Vec<MemberBalanceChecked>)]
     Dues {
@@ -79,7 +79,7 @@ pub enum QueryMsg {
     IsFunded { addr: String },
     #[returns(bool)]
     IsFullyFunded {},
-    #[returns(Option<BalanceVerified>)]
+    #[returns(BalanceVerified)]
     TotalBalance {},
     #[returns(bool)]
     IsLocked {},
@@ -90,9 +90,9 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct DumpStateResponse {
     pub is_locked: bool,
-    pub total_balance: Option<BalanceVerified>,
-    pub balance: Option<BalanceVerified>,
-    pub due: Option<BalanceVerified>,
+    pub total_balance: BalanceVerified,
+    pub balance: BalanceVerified,
+    pub due: BalanceVerified,
 }
 
 #[cw_serde]

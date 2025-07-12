@@ -1,6 +1,6 @@
-use arena_competition_enrollment::msg::{
-    CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _, MigrateMsg,
-};
+use std::collections::BTreeMap;
+
+use arena_competition_enrollment::msg::{CompetitionInfoMsg, ExecuteMsg, ExecuteMsgFns as _};
 use arena_interface::competition::msg::{EscrowContractInfo, ExecuteBaseFns as _, QueryBaseFns};
 use arena_interface::competition::types::CompetitionType;
 use arena_interface::enrollments::QueryMsgFns as _;
@@ -12,12 +12,10 @@ use arena_tournament_module::state::MatchResult;
 use cosmwasm_std::{coin, coins, to_json_binary, CosmosMsg, Decimal, Uint128, Uint64, WasmMsg};
 use cw_balance::{BalanceVerified, Distribution, MemberPercentage};
 use cw_orch::{anyhow, prelude::*};
-use cw_orch_clone_testing::CloneTesting;
 use dao_interface::state::ModuleInstantiateInfo;
 use dao_interface::CoreQueryMsgFns as _;
 use dao_proposal_sudo::msg::ExecuteMsgFns as _;
 use dao_voting_cw4::msg::QueryMsgFns as _;
-use networks::PION_1;
 
 use crate::arena::Arena;
 use crate::tests::helpers::setup_arena;
@@ -99,7 +97,8 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -109,7 +108,7 @@ fn test_competition_enrollment() -> anyhow::Result<()> {
 
     let res = arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
     assert!(res.events.iter().any(|e| e.ty == "wasm"
         && e.attributes
             .iter()
@@ -223,7 +222,8 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -233,7 +233,7 @@ fn test_invalid_enrollment() -> anyhow::Result<()> {
 
     let result = arena
         .arena_competition_enrollment
-        .execute(&invalid_enrollment_msg, None);
+        .execute(&invalid_enrollment_msg, &[]);
     assert!(result.is_err());
 
     Ok(())
@@ -281,7 +281,8 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -291,7 +292,7 @@ fn test_enrollment_capacity() -> anyhow::Result<()> {
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Enroll four members
     for team in teams.iter().take(4) {
@@ -354,7 +355,8 @@ fn test_tournament() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -364,7 +366,7 @@ fn test_tournament() -> anyhow::Result<()> {
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Enroll 4 members
     for team in &teams {
@@ -475,7 +477,8 @@ fn test_wager() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -485,7 +488,7 @@ fn test_wager() -> anyhow::Result<()> {
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Sponsor
     let enrollment = arena.arena_competition_enrollment.enrollment(1u128)?;
@@ -553,11 +556,10 @@ fn test_wager() -> anyhow::Result<()> {
     let balance = arena.arena_escrow.balance(team1)?;
     assert_eq!(
         balance,
-        Some(BalanceVerified {
-            native: Some(coins(10260, DENOM)),
-            cw20: None,
-            cw721: None
-        })
+        BalanceVerified {
+            native: BTreeMap::from([(DENOM.to_string(), Uint128::new(10260))]),
+            ..BalanceVerified::default()
+        }
     );
 
     Ok(())
@@ -608,7 +610,8 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -618,7 +621,7 @@ fn test_successful_league_creation() -> anyhow::Result<()> {
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Enroll 6 members
     for team in &teams {
@@ -683,7 +686,8 @@ fn test_finalize_before_min_members() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -693,7 +697,7 @@ fn test_finalize_before_min_members() -> anyhow::Result<()> {
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Sponsor
     let enrollment = arena.arena_competition_enrollment.enrollment(1u128)?;
@@ -748,7 +752,7 @@ fn test_finalize_before_min_members() -> anyhow::Result<()> {
                 .any(|attr| attr.key == "action" && attr.value == "withdraw")));
     }
 
-    // Check balance of user
+    // Check balance of user - original balance
     let balance = mock.query_balance(&teams[0], DENOM)?;
     assert_eq!(balance, Uint128::new(100_000));
 
@@ -793,7 +797,8 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -803,7 +808,7 @@ fn test_unregistered_competition_enrollment() -> anyhow::Result<()> {
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Enroll only minimum number of members
     let mut teams = vec![];
@@ -889,7 +894,8 @@ fn test_huge_tournament() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
@@ -899,7 +905,7 @@ fn test_huge_tournament() -> anyhow::Result<()> {
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
     let enrollment = arena
         .arena_competition_enrollment
         .enrollment(Uint128::one())?;
@@ -950,38 +956,6 @@ fn test_huge_tournament() -> anyhow::Result<()> {
 }
 
 #[test]
-#[ignore = "RPC blocks"]
-fn test_migration_v2_v2_1() -> anyhow::Result<()> {
-    let app = CloneTesting::new(PION_1)?;
-    let mut arena = Arena::new(app.clone());
-    const ARENA_DAO: &str = "neutron1ehkcl0n6s2jtdw75xsvfxm304mz4hs5z7jt6wn5mk0celpj0epqql4ulxk";
-    let arena_dao_addr = Addr::unchecked(ARENA_DAO);
-
-    arena.arena_group.upload()?;
-    arena.arena_competition_enrollment.upload()?;
-
-    arena
-        .arena_competition_enrollment
-        .set_address(&Addr::unchecked(
-            "neutron16gtf438zpdu09zft6wdttcg5x648xwv88ljfw3gxgr4rjmfxlrdq7n4sxy",
-        ));
-    arena
-        .arena_competition_enrollment
-        .set_sender(&arena_dao_addr);
-
-    arena
-        .arena_competition_enrollment
-        .migrate(&MigrateMsg::FromCompatible {}, 8475)?;
-
-    let enrollments = arena
-        .arena_competition_enrollment
-        .enrollments(None, None, None)?;
-    dbg!(enrollments);
-
-    Ok(())
-}
-
-#[test]
 fn test_dao_host_config() -> anyhow::Result<()> {
     let mock = MockBech32::new(PREFIX);
     let (mut arena, admin) = setup_arena(&mock)?;
@@ -1022,12 +996,15 @@ fn test_dao_host_config() -> anyhow::Result<()> {
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Arena Group".to_string(),
         },
         required_team_size: None,
         escrow_contract_info: default_escrow_contract_info(&arena)?,
         use_dao_host: Some(arena_interface::competition::types::DaoConfig {
+            dao_name: "name".to_string(),
+            dao_description: "description".to_string(),
             dao_code_id: arena.dao_dao.dao_core.code_id()?,
             proposal_single_code_id: arena.dao_dao.dao_proposal_single.code_id()?,
             cw4_voting_code_id: arena.dao_dao.dao_voting_cw4.code_id()?,
@@ -1036,12 +1013,13 @@ fn test_dao_host_config() -> anyhow::Result<()> {
             threshold: dao_voting::threshold::Threshold::AbsolutePercentage {
                 percentage: dao_voting::threshold::PercentageThreshold::Majority {},
             },
+            image_url: None,
         }),
     };
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Enroll all members
     for team in &teams {
@@ -1133,7 +1111,8 @@ fn test_finalize_only_allowed_after_expiration_with_min_members() -> anyhow::Res
             code_id: arena.arena_group.code_id()?,
             msg: to_json_binary(&group::InstantiateMsg { members: None })?,
             admin: None,
-            funds: vec![],
+            funds: None,
+            salt: None,
             label: "Edge Group".to_string(),
         },
         required_team_size: None,
@@ -1143,7 +1122,7 @@ fn test_finalize_only_allowed_after_expiration_with_min_members() -> anyhow::Res
 
     arena
         .arena_competition_enrollment
-        .execute(&create_enrollment_msg, None)?;
+        .execute(&create_enrollment_msg, &[])?;
 
     // Enroll exactly 7 members
     for team in &teams {

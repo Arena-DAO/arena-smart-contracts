@@ -1,14 +1,13 @@
+use arena_team_enrollments::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cw_orch::interface;
 use cw_orch::prelude::*;
 
-use cw_abc::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-
-pub const CONTRACT_ID: &str = "cw_abc";
+pub const CONTRACT_ID: &str = "arena_team_enrollments";
 
 #[interface(InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, id = CONTRACT_ID)]
-pub struct CwAbcContract;
+pub struct ArenaTeamEnrollmentsContract;
 
-impl<Chain> Uploadable for CwAbcContract<Chain> {
+impl<Chain> Uploadable for ArenaTeamEnrollmentsContract<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(_chain: &ChainInfoOwned) -> WasmPath {
         artifacts_dir_from_workspace!()
@@ -19,11 +18,11 @@ impl<Chain> Uploadable for CwAbcContract<Chain> {
     fn wrapper() -> Box<dyn MockContract<Empty>> {
         Box::new(
             ContractWrapper::new_with_empty(
-                cw_abc::contract::execute,
-                cw_abc::contract::instantiate,
-                cw_abc::contract::query,
+                arena_team_enrollments::contract::execute,
+                arena_team_enrollments::contract::instantiate,
+                arena_team_enrollments::contract::query,
             )
-            .with_reply(cw_abc::contract::reply),
+            .with_migrate(arena_team_enrollments::contract::migrate),
         )
     }
 }
